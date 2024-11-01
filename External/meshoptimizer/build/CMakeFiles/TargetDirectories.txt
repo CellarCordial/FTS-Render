@@ -1,0 +1,4 @@
+D:/Document/Code/ThirdParty/meshoptimizer/build/CMakeFiles/meshoptimizer.dir
+D:/Document/Code/ThirdParty/meshoptimizer/build/CMakeFiles/INSTALL.dir
+D:/Document/Code/ThirdParty/meshoptimizer/build/CMakeFiles/ALL_BUILD.dir
+D:/Document/Code/ThirdParty/meshoptimizer/build/CMakeFiles/ZERO_CHECK.dir

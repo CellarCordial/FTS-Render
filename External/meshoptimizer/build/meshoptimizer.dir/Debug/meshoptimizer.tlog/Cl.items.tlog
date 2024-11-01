@@ -1,0 +1,16 @@
+D:\Document\Code\ThirdParty\meshoptimizer\src\allocator.cpp;D:\Document\Code\ThirdParty\meshoptimizer\build\meshoptimizer.dir\Debug\allocator.obj
+D:\Document\Code\ThirdParty\meshoptimizer\src\clusterizer.cpp;D:\Document\Code\ThirdParty\meshoptimizer\build\meshoptimizer.dir\Debug\clusterizer.obj
+D:\Document\Code\ThirdParty\meshoptimizer\src\indexcodec.cpp;D:\Document\Code\ThirdParty\meshoptimizer\build\meshoptimizer.dir\Debug\indexcodec.obj
+D:\Document\Code\ThirdParty\meshoptimizer\src\indexgenerator.cpp;D:\Document\Code\ThirdParty\meshoptimizer\build\meshoptimizer.dir\Debug\indexgenerator.obj
+D:\Document\Code\ThirdParty\meshoptimizer\src\overdrawanalyzer.cpp;D:\Document\Code\ThirdParty\meshoptimizer\build\meshoptimizer.dir\Debug\overdrawanalyzer.obj
+D:\Document\Code\ThirdParty\meshoptimizer\src\overdrawoptimizer.cpp;D:\Document\Code\ThirdParty\meshoptimizer\build\meshoptimizer.dir\Debug\overdrawoptimizer.obj
+D:\Document\Code\ThirdParty\meshoptimizer\src\quantization.cpp;D:\Document\Code\ThirdParty\meshoptimizer\build\meshoptimizer.dir\Debug\quantization.obj
+D:\Document\Code\ThirdParty\meshoptimizer\src\simplifier.cpp;D:\Document\Code\ThirdParty\meshoptimizer\build\meshoptimizer.dir\Debug\simplifier.obj
+D:\Document\Code\ThirdParty\meshoptimizer\src\spatialorder.cpp;D:\Document\Code\ThirdParty\meshoptimizer\build\meshoptimizer.dir\Debug\spatialorder.obj
+D:\Document\Code\ThirdParty\meshoptimizer\src\stripifier.cpp;D:\Document\Code\ThirdParty\meshoptimizer\build\meshoptimizer.dir\Debug\stripifier.obj
+D:\Document\Code\ThirdParty\meshoptimizer\src\vcacheanalyzer.cpp;D:\Document\Code\ThirdParty\meshoptimizer\build\meshoptimizer.dir\Debug\vcacheanalyzer.obj
+D:\Document\Code\ThirdParty\meshoptimizer\src\vcacheoptimizer.cpp;D:\Document\Code\ThirdParty\meshoptimizer\build\meshoptimizer.dir\Debug\vcacheoptimizer.obj
+D:\Document\Code\ThirdParty\meshoptimizer\src\vertexcodec.cpp;D:\Document\Code\ThirdParty\meshoptimizer\build\meshoptimizer.dir\Debug\vertexcodec.obj
+D:\Document\Code\ThirdParty\meshoptimizer\src\vertexfilter.cpp;D:\Document\Code\ThirdParty\meshoptimizer\build\meshoptimizer.dir\Debug\vertexfilter.obj
+D:\Document\Code\ThirdParty\meshoptimizer\src\vfetchanalyzer.cpp;D:\Document\Code\ThirdParty\meshoptimizer\build\meshoptimizer.dir\Debug\vfetchanalyzer.obj
+D:\Document\Code\ThirdParty\meshoptimizer\src\vfetchoptimizer.cpp;D:\Document\Code\ThirdParty\meshoptimizer\build\meshoptimizer.dir\Debug\vfetchoptimizer.obj

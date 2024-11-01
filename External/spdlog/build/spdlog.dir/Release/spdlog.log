@@ -1,0 +1,9 @@
+﻿  Building Custom Rule D:/Document/Code/ThirdParty/spdlog/CMakeLists.txt
+  spdlog.cpp
+  stdout_sinks.cpp
+  color_sinks.cpp
+  file_sinks.cpp
+  async.cpp
+  cfg.cpp
+  bundled_fmtlib_format.cpp
+  spdlog.vcxproj -> D:\Document\Code\ThirdParty\spdlog\build\Release\spdlog.lib
