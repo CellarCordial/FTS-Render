@@ -19,7 +19,7 @@ project(FTSRender)
 		"${PROJECT_SOURCE_DIR}/Source/TaskFlow/*.cpp"
 		"${PROJECT_SOURCE_DIR}/Source/DynamicRHI/*.cpp"
 		"${PROJECT_SOURCE_DIR}/Source/RenderGraph/*.cpp"
-        "${PROJECT_SOURCE_DIR}/Source/RenderPass/*.cpp"
+        	"${PROJECT_SOURCE_DIR}/Source/RenderPass/*.cpp"
 		"${PROJECT_SOURCE_DIR}/Source/GlobalRender.cpp"
 		"${PROJECT_SOURCE_DIR}/Source/main.cpp"
     )
@@ -39,12 +39,12 @@ project(FTSRender)
 		${Target0}
 		PUBLIC
 		DEBUG
-        NOMINMAX
-        D3D12_API
-        NUM_FRAMES_IN_FLIGHT=3
-        CLIENT_WIDTH=1024
-        CLIENT_HEIGHT=768
-        PROJ_DIR="${PROJECT_SOURCE_DIR}/"
+        	NOMINMAX
+        	D3D12_API
+        	NUM_FRAMES_IN_FLIGHT=3
+        	CLIENT_WIDTH=1024
+        	CLIENT_HEIGHT=768
+        	PROJ_DIR="${PROJECT_SOURCE_DIR}/"
 	)
 
     target_include_directories(${Target0} PUBLIC "${PROJECT_SOURCE_DIR}/External/stb")
@@ -65,13 +65,6 @@ project(FTSRender)
     
     target_include_directories(${Target0} PUBLIC "${PROJECT_SOURCE_DIR}/External/meshoptimizer/src")
     target_link_libraries(${Target0} PUBLIC "${PROJECT_SOURCE_DIR}/External/meshoptimizer/build/Debug/meshoptimizer.lib")
-
-    add_custom_command(
-        TARGET ${Target0} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy
-            "${PROJECT_SOURCE_DIR}/External/glfw-3.4.bin.WIN64/lib-static-ucrt/glfw3.dll"
-            $<TARGET_FILE_DIR:${Target0}>
-    )
 
     add_custom_command(
         TARGET ${Target0} POST_BUILD
