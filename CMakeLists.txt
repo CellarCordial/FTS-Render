@@ -74,5 +74,8 @@ project(FTSRender)
         COMMAND ${CMAKE_COMMAND} -E copy
             "${PROJECT_SOURCE_DIR}/External/DirectXShaderCompiler/bin/x64/dxil.dll"
             $<TARGET_FILE_DIR:${Target0}>
+	COMMAND ${CMAKE_COMMAND} -E copy
+            "${PROJECT_SOURCE_DIR}/External/DirectXShaderCompiler/bin/x64/dxcompiler.dll"
+            $<TARGET_FILE_DIR:${Target0}>
     )
     
