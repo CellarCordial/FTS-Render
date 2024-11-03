@@ -78,8 +78,8 @@ namespace FTS
 	BOOL FRenderGraph::TopologyPasses(BOOL bIsPrecompute)
 	{
         std::span<IRenderPass*> Passes;
-        if (bIsPrecompute) Passes = m_pPasses;
-        else               Passes = m_pPrecomputePasses;
+        if (bIsPrecompute) Passes = m_pPrecomputePasses;
+        else               Passes = m_pPasses;
 
 		std::queue<UINT32> Nodes;
 		std::vector<UINT32> TopologyOrder;
@@ -133,6 +133,8 @@ namespace FTS
 				return TopologyMap[crpPass0->dwIndex] < TopologyMap[crpPass1->dwIndex];
 			}
 		);
+
+		return true;
 	}
 
 	BOOL FRenderGraph::Compile()

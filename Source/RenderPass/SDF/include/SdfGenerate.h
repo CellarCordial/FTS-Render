@@ -31,19 +31,20 @@ namespace FTS
     class FSdfGeneratePass : public IRenderPass
     {
     public:
-		FSdfGeneratePass() { Type = ERenderPassType::Precompute; }
+		FSdfGeneratePass() { Type = ERenderPassType::Exclude; }
 
         BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache) override;
         BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache) override;
 
-		void Regenerate() { Type = ERenderPassType::Precompute; }
+        BOOL FinishPass() override;
 
-		BOOL SetMesh(FMesh* pMesh)
-		{
-            ReturnIfFalse(pMesh != nullptr);
-            m_cpMesh = pMesh;
-            m_bResourceWrited = false;
-            return true;
+		void GenerateSdf(FMesh* pMesh) 
+        {
+            if (!pMesh) return;
+
+			m_cpMesh = pMesh;
+			m_bResourceWrited = false;
+            Type = ERenderPassType::Precompute; 
         }
 
     private:

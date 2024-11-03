@@ -59,7 +59,7 @@ namespace FTS
 	{
     public:
         BOOL Setup(IRenderGraph* pRenderGraph);
-        IRenderPass* GetLastPass() { return &m_SdfGeneratePass; }
+        IRenderPass* GetLastPass() { return &m_SdfDebugPass; }
 
     private:
         FSdfGeneratePass m_SdfGeneratePass;

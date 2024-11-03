@@ -179,7 +179,7 @@ namespace FTS
 		FEntity* pBunnyEntity = pWorld->CreateEntity();
 		pWorld->Boardcast(Event::OnGeometryLoad{ .pEntity = pBunnyEntity, .FilesDirectory = "Asset/Bunny" });
 
-		m_SdfGeneratePass.SetMesh(pBunnyEntity->GetComponent<FMesh>());
+		m_SdfGeneratePass.GenerateSdf(pBunnyEntity->GetComponent<FMesh>());
 	}
 
 }

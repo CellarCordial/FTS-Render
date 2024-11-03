@@ -166,49 +166,49 @@ namespace FTS
 
 		ReturnIfFalse(pCmdList->Close());
 
-		if (Type == ERenderPassType::Exclude)
-        {
-			m_Bvh.Clear();
-			m_pBvhNodeBuffer.Reset();
-			m_pBvhVertexBuffer.Reset();
-
-			std::vector<FLOAT> SdfData(SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION);
-			HANDLE FenceEvent = CreateEvent(nullptr, false, false, nullptr);
-
-			UINT64 stRowPitch = 0;
-			UINT64 stRowSize = sizeof(FLOAT) * SDF_RESOLUTION;
-			UINT8* pMappedData = static_cast<UINT8*>(m_pReadBackTexture->Map(FTextureSlice{}, ECpuAccessMode::Read, FenceEvent, &stRowPitch));
-			ReturnIfFalse(pMappedData && stRowPitch == stRowSize);
-
-			UINT8* Dst = reinterpret_cast<UINT8*>(SdfData.data());
-			for (UINT32 z = 0; z < SDF_RESOLUTION; ++z)
-			{
-				for (UINT32 y = 0; y < SDF_RESOLUTION; ++y)
-				{
-					UINT8* Src = pMappedData + stRowPitch * y;
-					memcpy(Dst, Src, stRowSize);
-					Dst += stRowSize;
-				}
-				pMappedData += stRowPitch * SDF_RESOLUTION;
-			}
-
-			std::string strProjDir = PROJ_DIR;
-			std::ofstream fout(strProjDir + "D:/Document/Code/FTSRender/Asset/Sdf/Model");
-
-			UINT64 stIndex = 0;
-			for (UINT32 z = 0; z < SDF_RESOLUTION; ++z)
-				for (UINT32 y = 0; y < SDF_RESOLUTION; ++y)
-					for (UINT32 x = 0; x < SDF_RESOLUTION; ++x)
-						fout << SdfData[stIndex++] << " ";
-
-			m_pSdfOutputTexture.Reset();
-			m_pReadBackTexture.Reset();
-		}
-
         return true;
     }
 
-    BOOL FSdfGeneratePass::BuildBvh()
+	BOOL FSdfGeneratePass::FinishPass()
+	{
+		m_Bvh.Clear();
+		m_pBvhNodeBuffer.Reset();
+		m_pBvhVertexBuffer.Reset();
+
+		std::vector<FLOAT> SdfData(SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION);
+		HANDLE FenceEvent = CreateEvent(nullptr, false, false, nullptr);
+
+		UINT64 stRowPitch = 0;
+		UINT64 stRowSize = sizeof(FLOAT) * SDF_RESOLUTION;
+		UINT8* pMappedData = static_cast<UINT8*>(m_pReadBackTexture->Map(FTextureSlice{}, ECpuAccessMode::Read, FenceEvent, &stRowPitch));
+		ReturnIfFalse(pMappedData && stRowPitch == stRowSize);
+
+		UINT8* Dst = reinterpret_cast<UINT8*>(SdfData.data());
+		for (UINT32 z = 0; z < SDF_RESOLUTION; ++z)
+		{
+			for (UINT32 y = 0; y < SDF_RESOLUTION; ++y)
+			{
+				UINT8* Src = pMappedData + stRowPitch * y;
+				memcpy(Dst, Src, stRowSize);
+				Dst += stRowSize;
+			}
+			pMappedData += stRowPitch * SDF_RESOLUTION;
+		}
+
+		std::string strProjDir = PROJ_DIR;
+		std::ofstream fout(strProjDir + "D:/Document/Code/FTSRender/Asset/Sdf/Model");
+
+		UINT64 stIndex = 0;
+		for (UINT32 z = 0; z < SDF_RESOLUTION; ++z)
+			for (UINT32 y = 0; y < SDF_RESOLUTION; ++y)
+				for (UINT32 x = 0; x < SDF_RESOLUTION; ++x)
+					fout << SdfData[stIndex++] << " ";
+
+		m_pSdfOutputTexture.Reset();
+		m_pReadBackTexture.Reset();
+	}
+
+	BOOL FSdfGeneratePass::BuildBvh()
     {
 		ReturnIfFalse(m_cpMesh != nullptr);
 
