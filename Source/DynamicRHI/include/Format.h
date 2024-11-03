@@ -6,7 +6,7 @@
 namespace FTS
 {
  
-    enum class EFormat : UINT8
+    enum class EFormat : UINT32
     {
         UNKNOWN,
 

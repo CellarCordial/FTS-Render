@@ -527,8 +527,7 @@ namespace FTS
             pDX12TextureSrc->m_Desc.dwArraySize
         );
 
-        IBuffer* pTempBufferDst;
-        ReturnIfFalse(pDst->QueryInterface(IID_IBuffer, PPV_ARG(&pTempBufferDst)));
+		IBuffer* pTempBufferDst = pDX12StagingTextureDst->m_pBuffer.Get();
         FDX12Buffer* pDX12BufferDst = CheckedCast<FDX12Buffer*>(pTempBufferDst);
 
         D3D12_TEXTURE_COPY_LOCATION DstLocation;
@@ -584,8 +583,7 @@ namespace FTS
             pDX12TextureDst->m_Desc.dwArraySize
         );
 
-        IBuffer* pTempBufferSrc;
-        ReturnIfFalse(pSrc->QueryInterface(IID_IBuffer, PPV_ARG(&pTempBufferSrc)));
+        IBuffer* pTempBufferSrc = pDX12StagingTextureSrc->m_pBuffer.Get();
         FDX12Buffer* pDX12BufferSrc = CheckedCast<FDX12Buffer*>(pTempBufferSrc);
 
         D3D12_TEXTURE_COPY_LOCATION DstLocation;
@@ -1640,7 +1638,8 @@ namespace FTS
     BOOL FDX12CommandList::RequireStagingTextureState(IStagingTexture* pStagingTexture, EResourceStates State)
     {
         IBufferStateTrack* pBufferStateTrack = nullptr;
-        ReturnIfFalse(pStagingTexture->QueryInterface(IID_IBufferStateTrack, PPV_ARG(&pBufferStateTrack)));
+		FDX12StagingTexture* pDX12StagingTexture = CheckedCast<FDX12StagingTexture*>(pStagingTexture);
+        ReturnIfFalse(pDX12StagingTexture->m_pBuffer->QueryInterface(IID_IBufferStateTrack, PPV_ARG(&pBufferStateTrack)));
         
         ReturnIfFalse(m_ResourceStateTracker.RequireBufferState(pBufferStateTrack, State));
 

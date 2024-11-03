@@ -158,14 +158,10 @@ namespace FTS
 	{
 		ReturnIfFalse(pCmdList->Open());
 
-		if (!m_bWritedBuffer)
+		if (!m_bResourceWrited)
 		{
 			ReturnIfFalse(pCmdList->WriteBuffer(m_pVertexBuffer.Get(), m_SunDiskVertices.data(), m_SunDiskVertices.size() * sizeof(Vertex)));
-			m_bWritedBuffer = true;
-		}
-		else
-		{
-			if (!m_SunDiskVertices.empty()) m_SunDiskVertices.resize(0);
+			m_bResourceWrited = true;
 		}
 
 		{
@@ -213,4 +209,11 @@ namespace FTS
 
 		return true;
 	}
+
+	BOOL FSunDiskPass::FinishPass()
+	{
+		if (!m_SunDiskVertices.empty()) m_SunDiskVertices.resize(0);
+		return true;
+	}
+
 }

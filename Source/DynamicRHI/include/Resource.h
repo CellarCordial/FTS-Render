@@ -187,6 +187,19 @@ namespace FTS
             Ret.strName = strDebugName;
             return Ret;
         }
+
+		static FTextureDesc CreateReadBack(UINT32 dwWidth, UINT32 dwHeight, UINT32 dwDepth, EFormat Format, std::string strDebugName = "")
+		{
+			FTextureDesc Ret;
+			Ret.dwWidth = dwWidth;
+			Ret.dwHeight = dwHeight;
+			Ret.dwDepth = dwDepth;
+			Ret.Format = Format;
+			Ret.Dimension = ETextureDimension::Texture3D;
+			Ret.InitialState = EResourceStates::CopyDest;
+			Ret.strName = strDebugName;
+			return Ret;
+		}
     };
     
     struct FTextureSlice

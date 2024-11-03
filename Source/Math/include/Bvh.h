@@ -19,8 +19,8 @@ namespace FTS
         struct Node
         {
             FBounds3F Box;
-            UINT32 dwPrimitiveIndex;
-            UINT32 dwPrimitiveNum;
+            UINT32 dwChildIndex;
+            UINT32 dwChildNum;
         };
         static_assert(sizeof(Node) == sizeof(float) * 8);
 
@@ -34,6 +34,18 @@ namespace FTS
         std::span<const FBvh::Node> GetNodes() const { return m_Nodes; }
         std::span<const FBvh::Vertex> GetVertices() const { return m_Vertices; }
 
+        BOOL Empty() const
+        {
+            return m_Nodes.empty() && m_Vertices.empty() && m_dwTriangleNum == 0;
+        }
+
+        void Clear() 
+        { 
+            m_Nodes.clear();
+            m_Vertices.clear();
+            m_dwTriangleNum = 0;
+        }
+
     private:
         std::vector<Node> m_Nodes;
         std::vector<Vertex> m_Vertices;
@@ -42,7 +54,7 @@ namespace FTS
     };
 
 
-        struct FTrianglePrimitive
+    struct FTrianglePrimitive
     {
         FVector3F a, b, c;
         FBounds3F Box;

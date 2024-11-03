@@ -8,7 +8,8 @@
 #include "Core/include/ComCli.h"
 #include "Gui/include/GuiPass.h"
 #include "RenderGraph/include/RenderGraph.h"
-#include "RenderPass/Atomsphere/include/AtmosphereRender.h"
+#include "RenderPass/SDF/include/SdfDebug.h"
+#include "RenderPass/Atomsphere/include/AtmosphereDebug.h"
 #include "Scene/include/Camera.h"
 
 namespace FTS
@@ -44,7 +45,8 @@ namespace FTS
 		TComPtr<ITexture> m_pFinalTexture;
 
 		FGuiPass m_GuiPass;
-		FAtmosphereRender m_AtmosphereRender;
+		FAtmosphereDebugRender m_AtmosphereDebugRender;
+		FSdfDebugRender m_SdfDebugRender;
 		TComPtr<IRenderGraph> m_pRenderGraph;
 	};
 }

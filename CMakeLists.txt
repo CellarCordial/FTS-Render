@@ -11,15 +11,15 @@ project(FTSRender)
     file(
         GLOB_RECURSE 
         CppSource
-		"${PROJECT_SOURCE_DIR}/Source/Gui/*.cpp"
-		"${PROJECT_SOURCE_DIR}/Source/Core/*.cpp"
-		"${PROJECT_SOURCE_DIR}/Source/Math/*.cpp"
-		"${PROJECT_SOURCE_DIR}/Source/Scene/*.cpp"
 		"${PROJECT_SOURCE_DIR}/Source/Shader/*.cpp"
-		"${PROJECT_SOURCE_DIR}/Source/TaskFlow/*.cpp"
-		"${PROJECT_SOURCE_DIR}/Source/DynamicRHI/*.cpp"
-		"${PROJECT_SOURCE_DIR}/Source/RenderGraph/*.cpp"
-        "${PROJECT_SOURCE_DIR}/Source/RenderPass/*.cpp"
+		"${PROJECT_SOURCE_DIR}/Source/Gui/**/*.cpp"
+		"${PROJECT_SOURCE_DIR}/Source/Core/**/*.cpp"
+		"${PROJECT_SOURCE_DIR}/Source/Math/**/*.cpp"
+		"${PROJECT_SOURCE_DIR}/Source/Scene/**/*.cpp"
+		"${PROJECT_SOURCE_DIR}/Source/TaskFlow/**/*.cpp"
+		"${PROJECT_SOURCE_DIR}/Source/DynamicRHI/**/*.cpp"
+		"${PROJECT_SOURCE_DIR}/Source/RenderGraph/**/*.cpp"
+        "${PROJECT_SOURCE_DIR}/Source/RenderPass/**/*.cpp"
 		"${PROJECT_SOURCE_DIR}/Source/GlobalRender.cpp"
 		"${PROJECT_SOURCE_DIR}/Source/main.cpp"
     )
@@ -80,6 +80,9 @@ project(FTSRender)
             $<TARGET_FILE_DIR:${Target0}>
         COMMAND ${CMAKE_COMMAND} -E copy
             "${PROJECT_SOURCE_DIR}/External/DirectXShaderCompiler/bin/x64/dxil.dll"
+            $<TARGET_FILE_DIR:${Target0}>
+        COMMAND ${CMAKE_COMMAND} -E copy
+            "${PROJECT_SOURCE_DIR}/External/DirectXShaderCompiler/bin/x64/dxcompiler.dll"
             $<TARGET_FILE_DIR:${Target0}>
     )
     

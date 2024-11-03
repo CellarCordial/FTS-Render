@@ -1,7 +1,7 @@
-#include "Intersect.hlsli"
+#include "../Intersect.hlsli"
 
 
-struct FPassConstants
+cbuffer gPassConstants : register(b0)
 {
     float3 FrustumA;        uint dwMaxTraceSteps;
     float3 FrustumB;        float AbsThreshold;
@@ -13,7 +13,6 @@ struct FPassConstants
     float3 SdfExtent;       float Pad5;
 };
 
-ConstantBuffer<FPassConstants> gPassCB : register(b0);
 Texture3D<float> gSdf : register(t0);
 SamplerState gSampler : register(s0);
 
@@ -35,31 +34,31 @@ FVertexOutput VS(uint dwVertexID : SV_VertexID)
 
 float4 PS(FVertexOutput In) : SV_Target0
 {
-    float3 o = gPassCB.CameraPosition;
+    float3 o = CameraPosition;
     float3 d = lerp(
-        lerp(gPassCB.FrustumA, gPassCB.FrustumB, In.UV.x),
-        lerp(gPassCB.FrustumC, gPassCB.FrustumD, In.UV.x),
+        lerp(FrustumA, FrustumB, In.UV.x),
+        lerp(FrustumC, FrustumD, In.UV.x),
         In.UV.y
     );
 
-    float fStep = 0.0f;
-    if (!IntersectRayBox(o, d, gPassCB.SdfLower, gPassCB.SdfUpper, fStep)) return float4(0.0f, 0.0f, 0.0f, 1.0f);
+    float fStep;
+    if (!IntersectRayBox(o, d, SdfLower, SdfUpper, fStep)) return float4(0.0f, 0.0f, 0.0f, 1.0f);
 
     uint ix = 0;
-    for (; ix < gPassCB.dwMaxTraceSteps; ++ix)
+    for (; ix < dwMaxTraceSteps; ++ix)
     {
         float3 p = o + fStep * d;
-        float3 uvw = (p - gPassCB.SdfLower) / gPassCB.SdfExtent;
+        float3 uvw = (p - SdfLower) / SdfExtent;
         if (any(saturate(uvw) != uvw)) break;
 
-        float3 Sdf = gSdf.SampleLevel(gSampler, uvw, 0);
-        float3 Udf = abs(Sdf);
-        if (Udf <= gPassCB.AbsThreshold) break;
+        float Sdf = gSdf.Sample(gSampler, uvw);
+        float Udf = abs(Sdf);
+        if (Udf <= AbsThreshold) break;
 
         fStep += Udf;
     }
 
-    float Color = float(ix) / float(gPassCB.dwMaxTraceSteps - 1);
+    float Color = float(ix) / float(dwMaxTraceSteps - 1);
     Color = pow(Color, 1 / 2.2f);
     return float4(Color.xxx, 1.0f);
 }

@@ -33,7 +33,7 @@ namespace FTS
 		BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache) override;
 		BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache) override;
 
-		friend class FAtmosphereRender;
+		friend class FAtmosphereDebugRender;
 
 	private:
 		Constant::SkyLUTPassConstant m_PassConstant;

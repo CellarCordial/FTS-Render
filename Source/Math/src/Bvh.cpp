@@ -28,11 +28,11 @@ namespace FTS
         {
             FBounds3F PrimitiveBox;
             UINT64 stVertexIndex = ix * 3;
-            Union(PrimitiveBox, Vertices[stVertexIndex].Position);
-            Union(PrimitiveBox, Vertices[stVertexIndex + 1].Position);
-            Union(PrimitiveBox, Vertices[stVertexIndex + 2].Position);
+            PrimitiveBox = Union(PrimitiveBox, Vertices[stVertexIndex].Position);
+            PrimitiveBox = Union(PrimitiveBox, Vertices[stVertexIndex + 1].Position);
+            PrimitiveBox = Union(PrimitiveBox, Vertices[stVertexIndex + 2].Position);
 
-            Union(GlobalBox, PrimitiveBox);
+            GlobalBox = Union(GlobalBox, PrimitiveBox);
             PrimitiveBoxes[ix] = ConvertBounds(PrimitiveBox);
             PrimitiveCentroids[ix] = ConvertVector(
                 (Vertices[stVertexIndex].Position + Vertices[stVertexIndex + 1].Position + Vertices[stVertexIndex + 2].Position) / 3.0f
@@ -78,13 +78,13 @@ namespace FTS
                 UINT32 dwPrimitiveEnd = static_cast<UINT32>(m_Vertices.size()) / 3;
 
                 ReturnIfFalse(dwPrimitiveBegin != dwPrimitiveEnd);
-                m_Nodes[ix].dwPrimitiveIndex = dwPrimitiveBegin;
-                m_Nodes[ix].dwPrimitiveNum = dwPrimitiveEnd - dwPrimitiveBegin;
+                m_Nodes[ix].dwChildIndex = dwPrimitiveBegin;
+                m_Nodes[ix].dwChildNum = dwPrimitiveEnd - dwPrimitiveBegin;
             }
             else 
             {
-                m_Nodes[ix].dwPrimitiveIndex = crNode.first_child_or_primitive;
-                m_Nodes[ix].dwPrimitiveNum = 0;
+                m_Nodes[ix].dwChildIndex = crNode.first_child_or_primitive;
+                m_Nodes[ix].dwChildNum = 0;
             }
         }
         
@@ -291,8 +291,8 @@ namespace FTS
             UINT32 dwFirstPrimitiveOffset = rpOrderedPrimitives.size();
             for (UINT32 ix = dwStart; ix < dwEnd; ++ix)
             {
-                UINT32 dwPrimitiveIndex = rPrimitiveInfos[ix].stPrimitiveIndex;
-                rpOrderedPrimitives.push_back(m_pPrimitives[dwPrimitiveIndex]);
+                UINT32 dwChildIndex = rPrimitiveInfos[ix].stPrimitiveIndex;
+                rpOrderedPrimitives.push_back(m_pPrimitives[dwChildIndex]);
             }
             pNode->InitLeaf(dwFirstPrimitiveOffset, dwPartPrimsNum, GlobalBounds);
         }
@@ -314,8 +314,8 @@ namespace FTS
                 UINT32 dwFirstPrimitiveOffset = rpOrderedPrimitives.size();
                 for (UINT32 ix = dwStart; ix < dwEnd; ++ix)
                 {
-                    UINT32 dwPrimitiveIndex = rPrimitiveInfos[ix].stPrimitiveIndex;
-                    rpOrderedPrimitives.push_back(m_pPrimitives[dwPrimitiveIndex]);
+                    UINT32 dwChildIndex = rPrimitiveInfos[ix].stPrimitiveIndex;
+                    rpOrderedPrimitives.push_back(m_pPrimitives[dwChildIndex]);
                 }
                 pNode->InitLeaf(dwFirstPrimitiveOffset, dwPartPrimsNum, GlobalBounds); 
             }
@@ -456,8 +456,8 @@ namespace FTS
                                 UINT32 dwFirstPrimitiveOffset = rpOrderedPrimitives.size();
                                 for (UINT32 ix = dwStart; ix < dwEnd; ++ix)
                                 {
-                                    UINT32 dwPrimitiveIndex = rPrimitiveInfos[ix].stPrimitiveIndex;
-                                    rpOrderedPrimitives.push_back(m_pPrimitives[dwPrimitiveIndex]);
+                                    UINT32 dwChildIndex = rPrimitiveInfos[ix].stPrimitiveIndex;
+                                    rpOrderedPrimitives.push_back(m_pPrimitives[dwChildIndex]);
                                 }
                                 pNode->InitLeaf(dwFirstPrimitiveOffset, dwPartPrimsNum, GlobalBounds);
                                 return pNode;
@@ -480,7 +480,7 @@ namespace FTS
     
     struct FMortonPrimitive
     {
-        UINT32 dwPrimitiveIndex;
+        UINT32 dwChildIndex;
         UINT32 dwMortonCode;
     };
 
@@ -594,7 +594,7 @@ namespace FTS
                 // Initialize MortonPrimitives[ix] for ixth primitive. 
                 constexpr UINT32 dwMortonScale = 1 << MORTON_BITS_NUM;
 
-                MortonPrimitives[ix].dwPrimitiveIndex = rPrimitiveInfos[ix].stPrimitiveIndex;
+                MortonPrimitives[ix].dwChildIndex = rPrimitiveInfos[ix].stPrimitiveIndex;
                 FVector3F CentroidOffset = CentroidBounds.Offset(rPrimitiveInfos[ix].Centroid);
 
                 MortonPrimitives[ix].dwMortonCode = EncodeMorton3(CentroidOffset * dwMortonScale);
@@ -690,9 +690,9 @@ namespace FTS
             UINT32 dwFirstPrimitiveOffset = pdwAtomicOrderedPrimsOffset->fetch_add(dwPrimitivesNum);
             for (UINT32 ix = 0; ix < dwPrimitivesNum; ++ix)
             {
-                UINT32 dwPrimitiveIndex = pMortonPrimitives[ix].dwPrimitiveIndex;
-                rpOrderedPrimitives[dwFirstPrimitiveOffset + ix] = m_pPrimitives[dwPrimitiveIndex];
-                Bounds = Union(Bounds, crPrimitiveInfos[dwPrimitiveIndex].Bounds);
+                UINT32 dwChildIndex = pMortonPrimitives[ix].dwChildIndex;
+                rpOrderedPrimitives[dwFirstPrimitiveOffset + ix] = m_pPrimitives[dwChildIndex];
+                Bounds = Union(Bounds, crPrimitiveInfos[dwChildIndex].Bounds);
             }
             pNode->InitLeaf(dwFirstPrimitiveOffset, dwPrimitivesNum, Bounds);
             return pNode;

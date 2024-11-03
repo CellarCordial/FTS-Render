@@ -3,7 +3,7 @@
 
 #include "../../RenderGraph/include/RenderGraph.h"
 #include "../../Core/include/ComCli.h"
-#include "../../Gui/include/GuiPanel.h"
+#include "GuiPanel.h"
 
 namespace FTS
 {

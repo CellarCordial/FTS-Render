@@ -15,6 +15,8 @@ namespace FTS
         void Reset(); 
         
         BOOL Execution(ICommandList* pCmdList);
+
+        void MenuSetup();
     }
 }
 

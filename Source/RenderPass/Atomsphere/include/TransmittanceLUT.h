@@ -11,14 +11,14 @@ namespace FTS
     class FTransmittanceLUTPass : public IRenderPass
     {
     public:
-        FTransmittanceLUTPass() { Type = ERenderPassType::Compute | ERenderPassType::Once; }
+        FTransmittanceLUTPass() { Type = ERenderPassType::Precompute; }
 
         BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache) override;
         BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache) override;
 
-        void Regenerate() { Type |= ERenderPassType::Regenerate; }
+		void Regenerate() { Type = ERenderPassType::Precompute; }
 
-		friend class FAtmosphereRender;
+		friend class FAtmosphereDebugRender;
 
     private:
         Constant::AtmosphereProperties m_StandardAtomsphereProperties;

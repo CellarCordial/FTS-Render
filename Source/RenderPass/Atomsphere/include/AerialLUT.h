@@ -34,10 +34,10 @@ namespace FTS
 		BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache) override;
 		BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache) override;
 
-		friend class FAtmosphereRender;
+		friend class FAtmosphereDebugRender;
 
 	private:
-		BOOL m_bWritedBuffer = false;
+		BOOL m_bResourceWrited = false;
 		Constant::AerialLUTPassConstant m_PassConstant;
 
 		TComPtr<IBuffer> m_pPassConstantBuffer;

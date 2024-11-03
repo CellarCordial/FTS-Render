@@ -29,7 +29,10 @@ namespace FTS
             crpComponent->Removed(this);
         }
 
-        m_Components.clear();   
+		{
+			std::lock_guard Lock(m_ComponentMutex);
+            m_Components.clear();   
+		}
     }
 
 

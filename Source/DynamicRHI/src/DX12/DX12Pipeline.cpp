@@ -1,4 +1,4 @@
-#include "DX12Pipeline.h"
+﻿#include "DX12Pipeline.h"
 #include "DX12Converts.h"
 #include "../Utils.h"
 #include "DX12Forward.h"
@@ -303,7 +303,7 @@ namespace FTS
     }
 
     FDX12BindlessLayout::FDX12BindlessLayout(const FDX12Context* cpContext, const FBindlessLayoutDesc& crDesc) :
-        m_cpContext(cpContext), m_Desc(crDesc)
+        m_cpContext(cpContext), m_Desc(crDesc), m_RootParameter()
     {
     }
     
@@ -669,7 +669,7 @@ namespace FTS
                     );
 
                     BOOL bFound = false;
-                    IResource* pResource;
+                    IResource* pResource = nullptr;
                     for (UINT32 jx = 0; jx < m_Desc.BindingItems.Size(); ++jx)
                     {
                         const auto& crBinding = m_Desc.BindingItems[jx];

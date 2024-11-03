@@ -14,24 +14,24 @@ float CalcTriangleUdf(float3 a, float3 b, float3 c, float3 p)
     float3 ac = a - c; float3 pc = p - c;
     float3 nor = cross(ba, ac);
 
-    if(sign(dot(cross(ba, nor), pa)) +
-       sign(dot(cross(cb, nor), pb)) +
-       sign(dot(cross(ac, nor), pc)) < 2)
-    {
-        return min(min(
-            dot2(ba * clamp(dot(ba, pa) / dot2(ba), 0.0f, 1.0f) - pa),
-            dot2(cb * clamp(dot(cb, pb) / dot2(cb), 0.0f, 1.0f) - pb)),
-            dot2(ac * clamp(dot(ac, pc) / dot2(ac), 0.0f, 1.0f) - pc));
-    }
-
-    return dot(nor, pa) * dot(nor, pa) / dot2(nor);
+    return sqrt(
+        (sign(dot(cross(ba, nor), pa)) +
+         sign(dot(cross(cb, nor), pb)) +
+         sign(dot(cross(ac, nor), pc)) < 2.0f)
+        ?
+        min(
+            min(dot2(ba * clamp(dot(ba, pa) / dot2(ba), 0.0f, 1.0f) - pa),
+                dot2(cb * clamp(dot(cb, pb) / dot2(cb), 0.0f, 1.0f) - pb)),
+            dot2(ac * clamp(dot(ac, pc) / dot2(ac), 0.0f, 1.0f) - pc)
+        )
+        :
+        dot(nor, pa) * dot(nor, pa) / dot2(nor) );
 }
 
 bool IntersectBoxSphere(float3 Lower, float3 Upper, float3 p, float fRadius)
 {
-    // 使用 dot 来避免开方运算.
     float3 q = clamp(p, Lower, Upper);
-    return dot(p - q, q - p) <= fRadius * fRadius;
+    return dot(p - q, p - q) <= fRadius * fRadius;
 }
 
 bool IntersectTriangleSphere(float3 v0, float3 v1, float3 v2, float3 p, float fRadius)
@@ -76,7 +76,7 @@ bool IntersectRayBox(float3 o, float3 d, float fT0, float fT1, float3 Lower, flo
     return fT0 <= fT1;
 }
 
-float2 IntersectRayBox(float3 o, float3 d, float3 Lower, float3 Upper, out float fStep)
+bool IntersectRayBox(float3 o, float3 d, float3 Lower, float3 Upper, out float fStep)
 {
     float3 InvD = 1.0f / d;
 

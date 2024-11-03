@@ -240,9 +240,9 @@ namespace FTS
         UINT64 m_stLastUsedFenceValue = 0;
         FTextureDesc m_Desc;
 
-    private:
         TComPtr<IBuffer> m_pBuffer;
 
+    private:
         const FDX12Context* m_cpContext;
         D3D12_RESOURCE_DESC m_D3D12ResourceDesc{};
         ECpuAccessMode m_MappedCpuAccessMode = ECpuAccessMode::None;

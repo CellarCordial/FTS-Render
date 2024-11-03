@@ -196,7 +196,11 @@ namespace FTS
 			{
 				Iter->second->Removed(this);
 
-				m_Components.erase(Iter);
+				{
+					std::lock_guard Lock(m_ComponentMutex);
+					m_Components.erase(Iter);
+				}
+
 				return true;
 			}
 			return false;
@@ -205,6 +209,7 @@ namespace FTS
 	private:
 		friend class FWorld;
 
+		std::mutex m_ComponentMutex;
 		std::unordered_map<std::type_index, std::unique_ptr<IComponentContainer>> m_Components;
 		FWorld* m_pWorld;
 
@@ -452,7 +457,11 @@ namespace FTS
 			T* pRet = &pContainer->Data;
 			if (!m_pWorld->Boardcast<Event::OnComponentAssigned<T>>(Event::OnComponentAssigned<T>{ this, pRet })) return nullptr;
 
-			m_Components[TypeIndex] = std::move(pContainer);
+			{
+				std::lock_guard Lock(m_ComponentMutex);
+				m_Components[TypeIndex] = std::move(pContainer);
+			}
+
 			return pRet;
 		}
 	}

@@ -26,22 +26,24 @@ namespace FTS
     public:
         FMultiScatteringLUTPass()
         {
-            Type = ERenderPassType::Compute | ERenderPassType::Once;
+            Type = ERenderPassType::Precompute;
             CreatePoissonDiskSamples();
         }
 
         BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache);
         BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache);
 
-		void Regenerate() { Type |= ERenderPassType::Regenerate; }
+        BOOL FinishPass() override;
 
-		friend class FAtmosphereRender;
+		void Regenerate() { Type = ERenderPassType::Precompute; }
+
+		friend class FAtmosphereDebugRender;
 
     private:
         void CreatePoissonDiskSamples();
 
     private:
-        BOOL m_bWritedBuffer = false;
+        BOOL m_bResourceWrited = false;
         std::vector<FVector2F> m_DirSamples;
         Constant::MultiScatteringPassConstant m_PassConstants;
 

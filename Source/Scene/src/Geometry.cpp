@@ -84,10 +84,8 @@ namespace FTS
 
 		crEvent.pEntity->Assign<std::string>(crEvent.FilesDirectory);
 
-		TaskFlow::Initialize();
 		crEvent.pEntity->Assign<FMesh>();
 		crEvent.pEntity->Assign<FMaterial>();
-		TaskFlow::Destroy();
 
 		gpGLTFModel.reset();
 

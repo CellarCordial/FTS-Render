@@ -70,6 +70,12 @@ namespace FTS
 					m_DrawArguments.resize(stOldSize + pMesh->SubMeshes.size());
 					m_DrawArguments[stOldSize].dwIndexOrVertexCount = static_cast<UINT32>(pMesh->SubMeshes[0].Indices.size());
 
+					if (stOldSize > 0)
+					{
+						m_DrawArguments[stOldSize].dwStartIndexLocation = m_Indices.size();
+						m_DrawArguments[stOldSize].dwStartVertexLocation = m_Vertices.size();
+					}
+
 					for (UINT64 ix = 0; ix < pMesh->SubMeshes.size(); ++ix)
 					{
 						const auto& crSubmesh = pMesh->SubMeshes[ix];
@@ -154,16 +160,11 @@ namespace FTS
 
 		ClearDepthStencilAttachment(pCmdList, m_pFrameBuffer.Get());
 
-		if (!m_bWritedBuffer)
+		if (!m_bResourceWrited)
 		{
 			ReturnIfFalse(pCmdList->WriteBuffer(m_pVertexBuffer.Get(), m_Vertices.data(), m_Vertices.size() * sizeof(FVertex)));
 			ReturnIfFalse(pCmdList->WriteBuffer(m_pIndexBuffer.Get(), m_Indices.data(), m_Indices.size() * sizeof(UINT32)));
-			m_bWritedBuffer = true;
-		}
-		else
-		{
-			m_Vertices.resize(0);
-			m_Indices.resize(0);
+			m_bResourceWrited = true;
 		}
 
 		// Update Constant.
@@ -199,6 +200,13 @@ namespace FTS
 
 		ReturnIfFalse(pCmdList->Close());
 
+		return true;
+	}
+
+	BOOL FShadowMapPass::FinishPass()
+	{
+		m_Vertices.resize(0);
+		m_Indices.resize(0);
 		return true;
 	}
 

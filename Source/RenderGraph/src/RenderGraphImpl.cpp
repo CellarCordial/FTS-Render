@@ -10,6 +10,7 @@
 #include <memory>
 #include <minwindef.h>
 #include <queue>
+#include <span>
 #include <synchapi.h>
 #include <unordered_map>
 
@@ -61,66 +62,95 @@ namespace FTS
     {
         if (pPass != nullptr)
         {
-            m_pPasses.emplace_back(pPass);
-            pPass->dwIndex = static_cast<UINT32>(m_pPasses.size() - 1);
+			if (pPass->Type == ERenderPassType::Precompute)
+			{
+				m_pPrecomputePasses.emplace_back(pPass);
+				pPass->dwIndex = static_cast<UINT32>(m_pPrecomputePasses.size() - 1);
+			}
+			else
+			{
+				m_pPasses.emplace_back(pPass);
+				pPass->dwIndex = static_cast<UINT32>(m_pPasses.size() - 1);
+			}
         }
     }
 
-    BOOL FRenderGraph::Compile()
+	BOOL FRenderGraph::TopologyPasses(BOOL bIsPrecompute)
+	{
+        std::span<IRenderPass*> Passes;
+        if (bIsPrecompute) Passes = m_pPasses;
+        else               Passes = m_pPrecomputePasses;
+
+		std::queue<UINT32> Nodes;
+		std::vector<UINT32> TopologyOrder;
+		std::vector<UINT32> DependentList(Passes.size());
+
+		for (UINT32 ix = 0; ix < Passes.size(); ++ix)
+		{
+			if (Passes[ix]->DependentsIndex.empty()) Nodes.push(ix);
+			DependentList[ix] = Passes[ix]->DependentsIndex.size();
+		}
+
+		while (!Nodes.empty())
+		{
+			UINT32 dwIndex = Nodes.front();
+			TopologyOrder.push_back(dwIndex);
+			Nodes.pop();
+
+			for (UINT32 ix : Passes[dwIndex]->SuccessorsIndex)
+			{
+				DependentList[ix]--;
+				if (DependentList[ix] == 0) Nodes.push(ix);
+			}
+		}
+
+		if (TopologyOrder.size() != Passes.size())
+		{
+			LOG_ERROR("Render pass topology occurs error.");
+			return false;
+		}
+
+		for (UINT32 ix : DependentList)
+		{
+			if (ix != 0)
+			{
+				LOG_ERROR("There is a DAG in RenderPass.");
+				return false;
+			}
+		}
+
+		std::unordered_map<UINT32, UINT32> TopologyMap;
+		for (UINT32 ix = 0; ix < Passes.size(); ++ix)
+		{
+			TopologyMap[TopologyOrder[ix]] = ix;
+		}
+
+		std::sort(
+			Passes.begin(),
+			Passes.end(),
+			[&TopologyMap](const auto& crpPass0, const auto& crpPass1)
+			{
+				return TopologyMap[crpPass0->dwIndex] < TopologyMap[crpPass1->dwIndex];
+			}
+		);
+	}
+
+	BOOL FRenderGraph::Compile()
     {
-        std::queue<UINT32> Nodes;
-        std::vector<UINT32> TopologyOrder;
-        std::vector<UINT32> DependentList(m_pPasses.size());
+		ReturnIfFalse(TopologyPasses(true));
+		m_pPrecomputeCmdLists.resize(m_pPrecomputePasses.size());
+		for (UINT32 ix = 0; ix < m_pPrecomputePasses.size(); ++ix)
+		{
+			ReturnIfFalse(m_pDevice->CreateCommandList(
+				FCommandListDesc{ .QueueType = ECommandQueueType::Graphics },
+				IID_ICommandList,
+				PPV_ARG(m_pPrecomputeCmdLists[ix].GetAddressOf())
+			));
+			ReturnIfFalse(m_pPrecomputePasses[ix]->Compile(m_pDevice.Get(), m_pResourceCache.Get()));
+		}
 
-        for (UINT32 ix = 0; ix < m_pPasses.size(); ++ix)
-        {
-            if (m_pPasses[ix]->DependentsIndex.empty()) Nodes.push(ix);
-            DependentList[ix] = m_pPasses[ix]->DependentsIndex.size();
-        }
 
-        while (!Nodes.empty())
-        {
-            UINT32 dwIndex = Nodes.front();
-            TopologyOrder.push_back(dwIndex);
-            Nodes.pop();
-
-            for (UINT32 ix : m_pPasses[dwIndex]->SuccessorsIndex)
-            {
-                DependentList[ix]--;
-                if (DependentList[ix] == 0) Nodes.push(ix);
-            }
-        }
-
-        if (TopologyOrder.size() != m_pPasses.size())
-        {
-            LOG_ERROR("Render pass topology occurs error.");
-            return false;
-        }
-
-        for (UINT32 ix : DependentList)
-        {
-            if (ix != 0)
-            {
-                LOG_ERROR("There is a DAG in RenderPass.");
-                return false;
-            }
-        }
-
-        std::unordered_map<UINT32, UINT32> TopologyMap;
-        for (UINT32 ix = 0; ix < m_pPasses.size(); ++ix)
-        {
-            TopologyMap[TopologyOrder[ix]] = ix;
-        }
-
-        std::sort(
-            m_pPasses.begin(), 
-            m_pPasses.end(), 
-            [&TopologyMap](const auto& crpPass0, const auto& crpPass1)
-            {
-                return TopologyMap[crpPass0->dwIndex] < TopologyMap[crpPass1->dwIndex];
-            }
-        );
-
+		ReturnIfFalse(TopologyPasses(false));
 
         m_pCmdLists.resize(m_pPasses.size());
         m_PassAsyncTypes.resize(m_pPasses.size());
@@ -167,15 +197,39 @@ namespace FTS
             }
         }
 
-
         return true;
     }
 
+
+	BOOL FRenderGraph::Precompute()
+	{
+		std::vector<ICommandList*> pComputeCmdLists;
+
+		for (UINT32 ix = 0; ix < m_pPrecomputePasses.size(); ++ix)
+		{
+			if (m_pPrecomputePasses[ix]->Type == ERenderPassType::Exclude) continue;
+			
+			ReturnIfFalse(m_pPrecomputePasses[ix]->Execute(m_pPrecomputeCmdLists[ix].Get(), m_pResourceCache.Get()));
+			pComputeCmdLists.push_back(m_pPrecomputeCmdLists[ix].Get());
+
+			m_pPrecomputePasses[ix]->Type = ERenderPassType::Exclude;
+		}
+
+		m_pDevice->ExecuteCommandLists(pComputeCmdLists.data(), pComputeCmdLists.size(), ECommandQueueType::Graphics);
+		m_pDevice->WaitForIdle();
+
+		for (auto* pPass : m_pPrecomputePasses) pPass->FinishPass();
+
+		return true;
+	}
+
+
     BOOL FRenderGraph::Execute()
     {
+		ReturnIfFalse(Precompute());
+
         for (UINT32 ix = 0; ix < m_pPasses.size(); ++ix)
         {
-            if ((m_pPasses[ix]->Type & ERenderPassType::Excluded) == ERenderPassType::Excluded) continue;
             ReturnIfFalse(m_pPasses[ix]->Execute(m_pCmdLists[ix].Get(), m_pResourceCache.Get()));
         }
 
@@ -184,14 +238,6 @@ namespace FTS
 
         for (UINT32 ix = 0; ix < m_pCmdLists.size(); ++ix)
         {
-			if ((m_pPasses[ix]->Type & ERenderPassType::Regenerate) == ERenderPassType::Regenerate)
-			{
-				m_pPasses[ix]->Type &= ~(ERenderPassType::Excluded | ERenderPassType::PendingExclude | ERenderPassType::Regenerate);
-				continue;
-			}
-			if ((m_pPasses[ix]->Type & ERenderPassType::Excluded) == ERenderPassType::Excluded) continue;
-
-
 			if ((m_pPasses[ix]->Type & ERenderPassType::Graphics) == ERenderPassType::Graphics)
 			{
 				if ((m_PassAsyncTypes[ix] & EPassAsyncType::Wait) == EPassAsyncType::Wait)
@@ -236,18 +282,17 @@ namespace FTS
 						pComputeCmdLists.size(),
 						ECommandQueueType::Compute
 					);
-                    ReturnIfFalse(m_stGraphicsWaitValue != INVALID_SIZE_64);
+					ReturnIfFalse(m_stGraphicsWaitValue != INVALID_SIZE_64);
 					pComputeCmdLists.clear();
 				}
 			}
+		}
 
-			if ((m_pPasses[ix]->Type & ERenderPassType::PendingExclude) == ERenderPassType::PendingExclude) m_pPasses[ix]->Type |= ERenderPassType::Excluded;
-			if ((m_pPasses[ix]->Type & ERenderPassType::Once) == ERenderPassType::Once) m_pPasses[ix]->Type |= ERenderPassType::PendingExclude;
-        }
-
-        ReturnIfFalse(m_pDevice->ExecuteCommandLists(pGraphicsCmdLists.data(), pGraphicsCmdLists.size(), ECommandQueueType::Graphics));
-
+        m_pDevice->ExecuteCommandLists(pGraphicsCmdLists.data(), pGraphicsCmdLists.size(), ECommandQueueType::Graphics);
 		m_pDevice->WaitForIdle();
+
+		for (auto* pPass : m_pPasses) pPass->FinishPass();
+
 		m_pDevice->RunGarbageCollection();
         m_PresentFunc();
 

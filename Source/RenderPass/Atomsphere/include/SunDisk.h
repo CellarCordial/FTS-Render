@@ -31,8 +31,10 @@ namespace FTS
 
 		BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache) override;
 		BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache) override;
+		
+		BOOL FinishPass() override;
 
-		friend class FAtmosphereRender;
+		friend class FAtmosphereDebugRender;
 
 	private:
 		void GenerateSunDiskVertices();
@@ -43,7 +45,7 @@ namespace FTS
 			FVector2F Position;
 		};
 
-		BOOL m_bWritedBuffer = false;
+		BOOL m_bResourceWrited = false;
 		FLOAT m_fSunDiskSize = 0.01f;
 		std::vector<Vertex> m_SunDiskVertices;
 		Constant::SunDiskPassConstant m_PassConstant;

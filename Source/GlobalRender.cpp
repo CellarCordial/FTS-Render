@@ -3,6 +3,7 @@
 #include "Shader/ShaderCompiler.h"
 #include "Scene/include/Light.h"
 #include "Scene/include/Geometry.h"
+#include "TaskFlow/include/TaskFlow.h"
 #include <glfw3.h>
 #include <wrl.h>
 
@@ -14,6 +15,7 @@ namespace FTS
 	FGlobalRender::~FGlobalRender()
 	{
 		ShaderCompile::Destroy();
+		TaskFlow::Destroy();
 		glfwDestroyWindow(m_pWindow);
 		glfwTerminate();
 	}
@@ -28,6 +30,7 @@ namespace FTS
 			return false;
 		}
 		ShaderCompile::Initialize();
+		TaskFlow::Initialize();
 
 		// Entity System.
 		{
@@ -36,11 +39,13 @@ namespace FTS
 
 		ReturnIfFalse(D3D12Init());
 		ReturnIfFalse(CreateSamplers());
-		m_AtmosphereRender.SetupDebug(m_pRenderGraph.Get());
+		m_AtmosphereDebugRender.Setup(m_pRenderGraph.Get());
+		//m_SdfDebugRender.Setup(m_pRenderGraph.Get());
 		m_GuiPass.Init(m_pWindow, m_pDevice.Get());
 		m_pRenderGraph->AddPass(&m_GuiPass);
 
-		m_AtmosphereRender.GetLastPass()->Precede(&m_GuiPass);
+		m_AtmosphereDebugRender.GetLastPass()->Precede(&m_GuiPass);
+		//m_SdfDebugRender.GetLastPass()->Precede(&m_GuiPass);
 
 		ReturnIfFalse(CreateCamera());
 

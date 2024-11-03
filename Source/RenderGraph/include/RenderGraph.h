@@ -10,13 +10,12 @@ namespace FTS
 {
     enum class ERenderPassType : UINT8
     {
-        Invalid         = 0,
-        Graphics        = 1 << 0,
-        Compute         = 1 << 1,
-        Once            = 1 << 2,
-		PendingExclude  = 1 << 3,
-		Excluded        = 1 << 4,
-        Regenerate      = 1 << 5
+        Invalid,
+        Graphics,
+        Compute,
+        
+        Precompute,
+		Exclude
     };  
 	FTS_ENUM_CLASS_FLAG_OPERATORS(ERenderPassType);
 
@@ -42,7 +41,8 @@ namespace FTS
 
         virtual BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache) = 0;
         virtual BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache) = 0;
-
+        
+        virtual BOOL FinishPass() { return true; }
 
         void Precede(IRenderPass* pPass) 
         {

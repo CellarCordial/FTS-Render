@@ -26,7 +26,7 @@
 //		BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache);
 //
 //	private:
-//		BOOL m_bWritedBuffer = false;
+//		BOOL m_bResourceWrited = false;
 //		Constant::PassConstant m_PassConstant;
 //
 //		TComPtr<IBuffer> m_pBuffer;
@@ -268,7 +268,7 @@
 //
 //				if (bDirty)
 //				{
-//					m_bWritedBuffer = false;
+//					m_bResourceWrited = false;
 //				}
 //			}
 //		);
@@ -285,11 +285,11 @@
 //			ReturnIfFalse(pCmdList->WriteBuffer(m_pPassConstantBuffer.Get(), &m_PassConstant, sizeof(Constant::AerialLUTPassConstant)));
 //		}
 // 
-//		if (!m_bWritedBuffer)
+//		if (!m_bResourceWrited)
 //		{
 //			ReturnIfFalse(pCmdList->WriteBuffer(pVertexBuffer.Get(), Vertices.data(), sizeof(FVertex) * Vertices.size()));
 //			ReturnIfFalse(pCmdList->WriteBuffer(pIndexBuffer.Get(), Indices.data(), sizeof(EFormat::R16_UINT) * Indices.size()));
-//			m_bWritedBuffer = true;
+//			m_bResourceWrited = true;
 //		}
 //
 //		ReturnIfFalse(pCmdList->SetGraphicsState(GraphicsState));
@@ -334,7 +334,7 @@
 //		void Regenerate() { Type &= ~ERenderPassType::OnceFinished; }
 //
 //	private:
-//		BOOL m_bWritedBuffer = false;
+//		BOOL m_bResourceWrited = false;
 //		Constant::PassConstant m_PassConstant;
 //
 //		TComPtr<IBuffer> m_pBuffer;
@@ -507,7 +507,7 @@
 //
 //				if (bDirty)
 //				{
-//					m_bWritedBuffer = false;
+//					m_bResourceWrited = false;
 //				}
 //			}
 //		);
@@ -527,9 +527,9 @@
 //				ReturnIfFalse(pCmdList->WriteBuffer(m_pPassConstantBuffer.Get(), &m_PassConstant, sizeof(Constant::AerialLUTPassConstant)));
 //			}
 // 
-//			if (!m_bWritedBuffer)
+//			if (!m_bResourceWrited)
 //			{
-//				m_bWritedBuffer = true;
+//				m_bResourceWrited = true;
 //			}
 //
 //

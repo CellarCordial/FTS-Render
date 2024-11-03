@@ -1,4 +1,4 @@
-#include "StateTrack.h"
+﻿#include "StateTrack.h"
 #include "DX12/DX12Forward.h"
 #include <memory>
 #include <utility>
@@ -113,8 +113,15 @@ namespace FTS
         // CPU-visible buffers 不能改变 state
         if (Desc.bIsVolatile || Desc.CpuAccess != ECpuAccessMode::None)
         {
-            LOG_ERROR("CPU-visible buffers can't change state.");
-            return false;
+            if (GetBufferStateTrack(pBuffer)->State == State)
+            {
+                return true;
+            }
+            else
+            {
+				LOG_ERROR("CPU-visible buffers can't change state.");
+				return false;
+            }
         }
 
         FBufferState* pTrack = GetBufferStateTrack(pBuffer);

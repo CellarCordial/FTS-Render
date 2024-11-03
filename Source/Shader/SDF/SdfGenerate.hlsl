@@ -1,9 +1,9 @@
-#include "Intersect.hlsli"
-
 // #define UPPER_BOUND_ESTIMATE_PRECISON 0
 // #define BVH_STACK_SIZE 0
 
-struct FPassConstants
+#include "../Intersect.hlsli"
+
+cbuffer gPassConstants : register(b0)
 {
     float3 SdfLower;    uint dwTriangleNum;
     float3 SdfUpper;    uint dwSignRayNum;
@@ -15,8 +15,8 @@ struct FNode
 {
     float3 Lower;
     float3 Upper;
-    uint dwPrimitiveIndex;
-    uint dwPrimitiveNum;
+    uint dwChildIndex;  // 叶子节点时, 代表 triangle index; 非叶子节点, 代表 node index.
+    uint dwChildNum;
 };
 
 struct FVertex
@@ -24,8 +24,6 @@ struct FVertex
     float3 Position;
     float3 Normal;
 };
-
-ConstantBuffer<FPassConstants> gPassCB : register(b0);
 
 StructuredBuffer<FNode> gNodes : register(t0);
 StructuredBuffer<FVertex> gVertices : register(t1);
@@ -48,27 +46,26 @@ void CS(uint3 ThreadID : SV_DispatchThreadID)
     uint dwWidth, dwHeight, dwDepth;
     gSdf.GetDimensions(dwWidth, dwHeight, dwDepth);
 
-    if (ThreadID.y > dwHeight || ThreadID.z > dwDepth) return;
+    if (ThreadID.y >= dwHeight || ThreadID.z >= dwDepth) return;
 
     // X 轴步长
-    float fDeltaX = 1.05f * gPassCB.SdfExtent.x / dwWidth;
+    float dx = 1.05f * SdfExtent.x / dwWidth;
 
-    float fy = lerp(gPassCB.SdfLower, gPassCB.SdfUpper, (ThreadID.y + 0.5f) / dwHeight);
-    float fz = lerp(gPassCB.SdfLower, gPassCB.SdfUpper, (ThreadID.z + 0.5f) / dwDepth);
+    float fy = lerp(SdfLower.y, SdfUpper.y, (ThreadID.y + 0.5f) / dwHeight);
+    float fz = lerp(SdfLower.z, SdfUpper.z, (ThreadID.z + 0.5f) / dwDepth);
 
-    float fLastUdf = -100.0f * fDeltaX;
-    for (uint x = gPassCB.dwXBegin; x < gPassCB.dwXEnd; ++x)
+    float fLastUdf = -100.0f * dx;
+    for (uint x = dwXBegin; x < dwXEnd; ++x)
     {
-        float fx = lerp(gPassCB.SdfLower, gPassCB.SdfUpper, (x + 0.5f) / dwWidth);
+        float fx = lerp(SdfLower.x, SdfUpper.x, (x + 0.5f) / dwWidth);
 
         // u(q) <= u(p) + ||p - q|| 
-        float fUpperBound = fLastUdf + fDeltaX;
+        float fUpperBound = fLastUdf + dx;
         float fNewSdf = CalcSdf(float3(fx, fy, fz), fUpperBound);
         fLastUdf = abs(fNewSdf);
 
         gSdf[uint3(x, ThreadID.yz)] = fNewSdf;
     }
-
 }
 
 
@@ -81,10 +78,9 @@ float CalcSdf(float3 p, float fUpperBound)
 
     int dwUdfSign = 0;
     
-    [unroll]
-    for (uint ix = 0; ix < gPassCB.dwSignRayNum; ++ix)
+    for (uint ix = 0; ix < dwSignRayNum; ++ix)
     {
-        dwUdfSign += EstimateUdfSign(p, lerp(0.0f, 1.0f, (ix + 0.5f) / gPassCB.dwSignRayNum));
+        dwUdfSign += EstimateUdfSign(p, lerp(0.0f, 1.0f, (ix + 0.5f) / dwSignRayNum));
     }
 
     if (dwUdfSign > 0) return fUdf;
@@ -105,16 +101,16 @@ float CalcSdf(float3 p, float fUpperBound)
 float CalcUpperBound(float3 p, uint dwPrecison)
 {
     FNode Node = gNodes[0];
-    float fLeft = 0.0f;
-    float fRight = distance(0.5f * (Node.Lower + Node.Upper), p) + distance(Node.Lower, Node.Upper);
+    float fNear = 0.0f;
+    float fFar = distance(0.5f * (Node.Lower + Node.Upper), p) + distance(Node.Lower, Node.Upper);
     
     for (uint ix = 0; ix < dwPrecison; ++ix)
     {
-        float fMid = 0.5f * (fLeft + fRight);
-        if (ContainsTriangle(p, fMid)) fRight = fMid;
-        else fLeft = fMid;
+        float fMid = 0.5f * (fNear + fFar);
+        if (ContainsTriangle(p, fMid)) fFar = fMid;
+        else fNear = fMid;
     }
-    return fRight;
+    return fFar;
 }
 
 float CalcUdf(float3 p, float fUpperBound, out uint dwIntersectTriangleIndex)
@@ -128,9 +124,9 @@ float CalcUdf(float3 p, float fUpperBound, out uint dwIntersectTriangleIndex)
         FNode Node = gNodes[fStack[--dwTop]];
         if (!IntersectBoxSphere(Node.Lower, Node.Upper, p, fUpperBound)) continue;
 
-        if (Node.dwPrimitiveNum != 0)
+        if (Node.dwChildNum != 0)
         {
-            for (uint ix = 0, jx = 3 * Node.dwPrimitiveIndex; ix < Node.dwPrimitiveNum; ++ix, jx += 3)
+            for (uint ix = 0, jx = 3 * Node.dwChildIndex; ix < Node.dwChildNum; ++ix, jx += 3)
             {
                 float fUdf = CalcTriangleUdf(
                     gVertices[jx].Position, 
@@ -142,15 +138,14 @@ float CalcUdf(float3 p, float fUpperBound, out uint dwIntersectTriangleIndex)
                 if (fUdf < fUpperBound)
                 {
                     fUpperBound = fUdf;
-                    dwIntersectTriangleIndex = ix + Node.dwPrimitiveIndex;
+                    dwIntersectTriangleIndex = ix + Node.dwChildIndex;
                 }
             }
         }
-
-        [unroll]
-        for (uint ix = 0; ix < Node.dwPrimitiveNum; ++ix)
+        else
         {
-            fStack[dwTop++] = Node.dwPrimitiveIndex + ix;
+            fStack[dwTop++] = Node.dwChildIndex;
+            fStack[dwTop++] = Node.dwChildIndex + 1;
         }
     }
 
@@ -159,7 +154,7 @@ float CalcUdf(float3 p, float fUpperBound, out uint dwIntersectTriangleIndex)
 
 int EstimateUdfSign(float3 p, float fRandom)
 {
-    uint dwRandomTriangleIndex = uint(fRandom) * (gPassCB.dwTriangleNum - 1);
+    uint dwRandomTriangleIndex = uint(fRandom) * (dwTriangleNum - 1);
 
     FVertex v0 = gVertices[dwRandomTriangleIndex * 3 + 0];
     FVertex v1 = gVertices[dwRandomTriangleIndex * 3 + 1];
@@ -179,6 +174,7 @@ int EstimateUdfSign(float3 p, float fRandom)
     return dot(d, v0.Normal + v1.Normal + v2.Normal) < 0 ? 1 : -1; 
 }
 
+// 遍历所有三角形, 发现相交就返回.
 bool ContainsTriangle(float3 p, float fRadius)
 {
     uint fStack[BVH_STACK_SIZE];
@@ -190,9 +186,9 @@ bool ContainsTriangle(float3 p, float fRadius)
         FNode Node = gNodes[fStack[--dwTop]];
         if (!IntersectBoxSphere(Node.Lower, Node.Upper, p, fRadius)) continue;
 
-        if (Node.dwPrimitiveNum != 0)
+        if (Node.dwChildNum != 0) // 是否叶子节点.
         {
-            for (uint ix = 0, jx = 3 * Node.dwPrimitiveIndex; ix < Node.dwPrimitiveNum; ++ix, jx += 3)
+            for (uint ix = 0, jx = 3 * Node.dwChildIndex; ix < Node.dwChildNum; ++ix, jx += 3)
             {
                 if (IntersectTriangleSphere(
                     gVertices[jx].Position, 
@@ -205,11 +201,10 @@ bool ContainsTriangle(float3 p, float fRadius)
             }
             return false;
         }
-
-        [unroll]
-        for (uint ix = 0; ix < Node.dwPrimitiveNum; ++ix)
+        else
         {
-            fStack[dwTop++] = Node.dwPrimitiveIndex + ix;
+            fStack[dwTop++] = Node.dwChildIndex;
+            fStack[dwTop++] = Node.dwChildIndex + 1;
         }
     }
 
@@ -231,9 +226,9 @@ int TraceTriangleIndex(float3 p, float3 d, float fMaxLength)
         FNode Node = gNodes[fStack[--dwTop]];
         if (!IntersectRayBox(p, d, 0, fLength, Node.Lower, Node.Upper)) continue;
 
-        if (Node.dwPrimitiveNum != 0)
+        if (Node.dwChildNum != 0)
         {
-            for (uint ix = 0, jx = 3 * Node.dwPrimitiveIndex; ix < Node.dwPrimitiveNum; ++ix, jx += 3)
+            for (uint ix = 0, jx = 3 * Node.dwChildIndex; ix < Node.dwChildNum; ++ix, jx += 3)
             {
                 float3 p0 = gVertices[jx].Position;
                 float3 p1 = gVertices[jx + 1].Position;
@@ -242,16 +237,15 @@ int TraceTriangleIndex(float3 p, float3 d, float fMaxLength)
                 float fNewLength = 0.0f;
                 if (IntersectRayTriangle(p, d, fLength, p0, p1 - p0, p2 - p0, fNewLength))
                 {
-                    dwTriangleIndex = ix + Node.dwPrimitiveIndex;
+                    dwTriangleIndex = ix + Node.dwChildIndex;
                     fLength = fNewLength;
                 }
             }
         }
-
-        [unroll]
-        for (uint ix = 0; ix < Node.dwPrimitiveNum; ++ix)
+        else
         {
-            fStack[dwTop++] = Node.dwPrimitiveIndex + ix;
+            fStack[dwTop++] = Node.dwChildIndex;
+            fStack[dwTop++] = Node.dwChildIndex + 1;
         }
     }
 

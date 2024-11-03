@@ -5,6 +5,14 @@
 #include "../../../Core/include/ComCli.h"
 #include "../../../Math/include/Matrix.h"
 #include "../../../Scene/include/Geometry.h"
+#include "../../../Core/include/Entity.h"
+#include "TransmittanceLUT.h"
+#include "MultiScatteringLUT.h"
+#include "ShadowMap.h"
+#include "SkyLUT.h"
+#include "AerialLUT.h"
+#include "Sky.h"
+#include "SunDisk.h"
 
 namespace FTS
 {
@@ -46,7 +54,7 @@ namespace FTS
 		BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache);
 		BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache);
 
-		friend class FAtmosphereRender;
+		friend class FAtmosphereDebugRender;
 
 	private:
 		BOOL m_bWritedResource = false;
@@ -79,6 +87,26 @@ namespace FTS
 		UINT64 m_stDrawArgumentsSize = 0;
 	};
 
+	class FAtmosphereDebugRender
+	{
+	public:
+		BOOL Setup(IRenderGraph* pRenderGraph);
+
+		IRenderPass* GetLastPass() { return &m_AtmosphereDebugPass; }
+
+	private:
+		FLOAT m_fWorldScale = 200.0f;
+		FVector3F m_GroundAlbedo = { 0.3f, 0.3f, 0.3f };
+
+		FTransmittanceLUTPass m_TransmittanceLUTPass;
+		FMultiScatteringLUTPass m_MultiScatteringLUTPass;
+		FShadowMapPass m_ShadowMapPass;
+		FSkyLUTPass m_SkyLUTPass;
+		FAerialLUTPass m_AerialLUTPass;
+		FSkyPass m_SkyPass;
+		FSunDiskPass m_SunDiskPass;
+		FAtmosphereDebugPass m_AtmosphereDebugPass;
+	};
 }
 
 

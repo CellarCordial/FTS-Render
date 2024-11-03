@@ -31,10 +31,12 @@ namespace FTS
         BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache);
         BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache);
 
-		friend class FAtmosphereRender;
+        BOOL FinishPass() override;
+
+		friend class FAtmosphereDebugRender;
 
     private:
-        BOOL m_bWritedBuffer = false;
+        BOOL m_bResourceWrited = false;
         std::vector<FVertex> m_Vertices;
         std::vector<UINT32> m_Indices;
         Constant::ShadowMapPassConstant m_PassConstant;

@@ -165,16 +165,11 @@ namespace FTS
 			ReturnIfFalse(pCmdList->WriteBuffer(m_pPassConstantBuffer.Get(), &m_PassConstants, sizeof(Constant::MultiScatteringPassConstant)));
 		}
 		
-		if (!m_bWritedBuffer)
+		if (!m_bResourceWrited)
 		{
 			ReturnIfFalse(pCmdList->WriteBuffer(m_pDirScampleBuffer.Get(), m_DirSamples.data(), m_DirSamples.size() * sizeof(FVector2F)));
-			m_bWritedBuffer = true;
+			m_bResourceWrited = true;
 		}
-		else
-		{
-			if (!m_DirSamples.empty()) m_DirSamples.resize(0);
-		}
-
 
 		FVector2I ThreadGroupNum = {
 			static_cast<UINT32>(Align(MULTI_SCATTERING_LUT_RES, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X),
@@ -188,4 +183,11 @@ namespace FTS
 
         return true;
     }
+
+	BOOL FMultiScatteringLUTPass::FinishPass()
+	{
+		if (!m_DirSamples.empty()) m_DirSamples.resize(0);
+		return true;
+	}
+
 }

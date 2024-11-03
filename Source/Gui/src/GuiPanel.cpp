@@ -2,6 +2,7 @@
 #include <backends/imgui_impl_dx12.h>
 #include <backends/imgui_impl_glfw.h>
 #include "../../DynamicRHI/include/Device.h"
+#include <imgui_file_browser.h>
 
 namespace FTS 
 {
@@ -10,6 +11,9 @@ namespace FTS
         static ImVec4 ClearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
         static std::vector<std::function<void()>> Funcitons;
         static std::mutex Mutex;
+
+        ImGui::FileBrowser* gpFileBrowser = nullptr;
+
 
         void Initialize(GLFWwindow* pWindow, IDevice* pDevice)
         {
@@ -32,10 +36,15 @@ namespace FTS
                 pSrvFontDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
                 pSrvFontDescriptorHeap->GetGPUDescriptorHandleForHeapStart()
             );
+
+            gpFileBrowser = new ImGui::FileBrowser();
+
+			gpFileBrowser->SetTitle("File Browser");
         }
 
         void Destroy()
         {
+            delete gpFileBrowser;
             ImGui_ImplDX12_Shutdown();
             ImGui_ImplGlfw_Shutdown();
             ImGui::DestroyContext();
@@ -47,9 +56,18 @@ namespace FTS
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
             
-            ImGui::Begin("FTSRender");
+            ImGui::Begin("FTSRender", nullptr, ImGuiWindowFlags_MenuBar);
+
+            MenuSetup();
             for (const auto& Function : Funcitons) { Function(); }
             ImGui::End();
+
+            gpFileBrowser->Display();
+
+			if (gpFileBrowser->HasSelected())
+			{
+				gpFileBrowser->ClearSelected();
+			}
 
             ImGui::Render();
 
@@ -58,7 +76,7 @@ namespace FTS
             return true;
         }
 
-        void Add(std::function<void()>&& InFunction)
+		void Add(std::function<void()>&& InFunction)
         {
             std::lock_guard Lock_Guard(Mutex);
             Funcitons.push_back(std::move(InFunction));
@@ -70,7 +88,32 @@ namespace FTS
             Funcitons.clear();
         }
 
-    
+
+		void MenuSetup()
+		{
+            if (ImGui::BeginMenuBar())
+			{
+				if (ImGui::BeginMenu("File"))
+				{
+					if (ImGui::MenuItem("Load"))
+					{
+                        gpFileBrowser->Open();
+					}
+					ImGui::EndMenu();
+				}
+				if (ImGui::BeginMenu("Console"))
+				{
+					ImGui::EndMenu();
+				}
+				if (ImGui::BeginMenu("Log"))
+				{
+					ImGui::EndMenu();
+				}
+
+				ImGui::EndMenuBar();
+			}
+		}
+
     }
 
 }

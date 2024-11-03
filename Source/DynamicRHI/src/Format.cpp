@@ -1,4 +1,4 @@
-#include "../include/Format.h"
+﻿#include "../include/Format.h"
 
 namespace FTS
 {
@@ -84,8 +84,8 @@ namespace FTS
             return gcFormatInfo[0];     // EFormat::UNKNOWN
         }
 
-        const FFormatInfo Ret = gcFormatInfo[static_cast<UINT32>(Format)];
-        
+		FFormatInfo Ret = gcFormatInfo[static_cast<UINT32>(Format)];
+
         assert(Format == Ret.Format && "GetFormatInfo() failed.");
         return Ret;
     }

@@ -43,6 +43,11 @@ namespace FTS
 
         void AddPass(IRenderPass* pPass) override;
 
+        BOOL Precompute();
+    
+    private:
+        BOOL TopologyPasses(BOOL bIsPrecompute);
+
     private:
         TComPtr<IDevice> m_pDevice;
         std::function<void()> m_PresentFunc;
@@ -50,8 +55,12 @@ namespace FTS
         TComPtr<IRenderResourceCache> m_pResourceCache;
 
         std::vector<EPassAsyncType> m_PassAsyncTypes;
-        std::vector<TComPtr<ICommandList>> m_pCmdLists;
+
+		std::vector<TComPtr<ICommandList>> m_pCmdLists;
+		std::vector<TComPtr<ICommandList>> m_pPrecomputeCmdLists;
+
         std::vector<IRenderPass*> m_pPasses;
+        std::vector<IRenderPass*> m_pPrecomputePasses;
 
         UINT64 m_stGraphicsWaitValue = 0;
         UINT64 m_stComputeWaitValue = 0;

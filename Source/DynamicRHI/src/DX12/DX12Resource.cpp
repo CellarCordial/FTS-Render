@@ -1,4 +1,4 @@
-#include "DX12Resource.h"
+﻿#include "DX12Resource.h"
 #include "DX12Converts.h"
 #include "DX12Forward.h"
 #include <combaseapi.h>
@@ -15,10 +15,10 @@ namespace FTS
 
     FDX12Texture::~FDX12Texture() noexcept
     {
-        for (auto Pair : m_RTVIndexMap) m_pDescriptorHeaps->RenderTargetHeap.ReleaseDescriptor(Pair.second);
-        for (auto Pair : m_DSVIndexMap) m_pDescriptorHeaps->DepthStencilHeap.ReleaseDescriptor(Pair.second);
-        for (auto Pair : m_SRVIndexMap) m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptor(Pair.second);
-        for (auto Pair : m_UAVIndexMap) m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptor(Pair.second);
+        for (const auto& Pair : m_RTVIndexMap) m_pDescriptorHeaps->RenderTargetHeap.ReleaseDescriptor(Pair.second);
+        for (const auto& Pair : m_DSVIndexMap) m_pDescriptorHeaps->DepthStencilHeap.ReleaseDescriptor(Pair.second);
+        for (const auto& Pair : m_SRVIndexMap) m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptor(Pair.second);
+        for (const auto& Pair : m_UAVIndexMap) m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptor(Pair.second);
 
         for (auto Index : m_ClearMipLevelUAVIndices) m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptor(Index);
     }
@@ -460,7 +460,7 @@ namespace FTS
         if (pHeap == nullptr || !m_Desc.bIsVirtual || m_pD3D12Resource == nullptr) return false;
 
         FDX12Heap* pDX12Heap = CheckedCast<FDX12Heap*>(pHeap);
-        ReturnIfFailed(pDX12Heap->m_pD3D12Heap.Get() != nullptr);
+        ReturnIfFalse(pDX12Heap->m_pD3D12Heap.Get() != nullptr);
 
         D3D12_CLEAR_VALUE D3D12ClearValue = ConvertClearValue(m_Desc);
         if (FAILED(m_cpContext->pDevice->CreatePlacedResource(
@@ -616,7 +616,7 @@ namespace FTS
         if (pHeap == nullptr || m_pD3D12Resource == nullptr || m_Desc.bIsVirtual) return false;
         
         FDX12Heap* pDX12Heap = CheckedCast<FDX12Heap*>(pHeap);
-        ReturnIfFailed(pDX12Heap->m_pD3D12Heap.Get() != nullptr);
+        ReturnIfFalse(pDX12Heap->m_pD3D12Heap.Get() != nullptr);
 
         if (FAILED(m_cpContext->pDevice->CreatePlacedResource(
             pDX12Heap->m_pD3D12Heap.Get(), 
@@ -731,9 +731,10 @@ namespace FTS
             ViewDesc.Buffer.FirstElement = Range.stByteOffset / 4;
             ViewDesc.Buffer.NumElements = static_cast<UINT32>(Range.stByteSize / 4);
             ViewDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+            break;
         default:
-            assert(!"Invalid Enumeration Value");
-            return;
+			assert(!"Invalid Enumeration Value");
+			return;
         }
 
         m_cpContext->pDevice->CreateUnorderedAccessView(m_pD3D12Resource.Get(), nullptr, &ViewDesc, D3D12_CPU_DESCRIPTOR_HANDLE{ stDescriptorAddress });
@@ -775,9 +776,10 @@ namespace FTS
         BufferDesc.stByteSize = GetRequiredSize();
         BufferDesc.dwStructStride = 0;
         BufferDesc.CpuAccess = m_MappedCpuAccessMode;
+        BufferDesc.InitialState = m_Desc.InitialState;
 
         FDX12Buffer* pBuffer = new FDX12Buffer(m_cpContext, pDescriptorHeaps, BufferDesc);
-        if (pBuffer->QueryInterface(IID_IBuffer, PPV_ARG(m_pBuffer.GetAddressOf())))
+        if (!pBuffer->Initialize() || !pBuffer->QueryInterface(IID_IBuffer, PPV_ARG(m_pBuffer.GetAddressOf())))
         {
             LOG_ERROR("Create staging texture failed.");
             return false;
