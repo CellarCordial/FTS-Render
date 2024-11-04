@@ -10,12 +10,12 @@ namespace FTS
 {
     enum class ERenderPassType : UINT8
     {
-        Invalid,
-        Graphics,
-        Compute,
+        Invalid         = 0,
+        Graphics        = 1 << 1,
+        Compute         = 1 << 2,
         
-        Precompute,
-		Exclude
+        Precompute      = 1 << 3,
+		Exclude         = 1 << 4
     };  
 	FTS_ENUM_CLASS_FLAG_OPERATORS(ERenderPassType);
 

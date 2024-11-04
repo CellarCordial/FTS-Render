@@ -25,7 +25,7 @@ namespace FTS
 	void LoadVerticesBoxFromGLTFPrimitive(const tinygltf::Primitive* cpGLTFPrimitive, FMesh::SubMesh& rSubMesh);
 
 
-	BOOL FGeometrySystem::Initialize(FWorld* pWorld)
+	BOOL FSceneSystem::Initialize(FWorld* pWorld)
 	{
 		if (!gpGLTFLoader) gpGLTFLoader = std::make_unique<tinygltf::TinyGLTF>();
 
@@ -38,7 +38,7 @@ namespace FTS
 		return true;
 	}
 
-	BOOL FGeometrySystem::Destroy()
+	BOOL FSceneSystem::Destroy()
 	{
 		if (gpGLTFLoader) gpGLTFLoader.reset();
 
@@ -46,12 +46,12 @@ namespace FTS
 		return true;
 	}
 
-	void FGeometrySystem::Tick(FWorld* world, FLOAT fDelta)
+	void FSceneSystem::Tick(FWorld* world, FLOAT fDelta)
 	{
 	}
 
 
-	BOOL FGeometrySystem::Publish(FWorld* pWorld, const Event::OnGeometryLoad& crEvent)
+	BOOL FSceneSystem::Publish(FWorld* pWorld, const Event::OnGeometryLoad& crEvent)
 	{
 		ReturnIfFalse(gpGLTFLoader != nullptr && crEvent.pEntity != nullptr);
 
@@ -84,7 +84,7 @@ namespace FTS
 
 		crEvent.pEntity->Assign<std::string>(crEvent.FilesDirectory);
 
-		crEvent.pEntity->Assign<FMesh>();
+		crEvent.pEntity->Assign<FMesh>(FMesh{ .WorldMatrix = crEvent.WorldMatrix });
 		crEvent.pEntity->Assign<FMaterial>();
 
 		gpGLTFModel.reset();
@@ -92,7 +92,7 @@ namespace FTS
 		return true;
 	}
 
-	BOOL FGeometrySystem::Publish(FWorld* pWorld, const Event::OnComponentAssigned<FMesh>& crEvent)
+	BOOL FSceneSystem::Publish(FWorld* pWorld, const Event::OnComponentAssigned<FMesh>& crEvent)
 	{
 		const auto& GLTFScene = gpGLTFModel->scenes[gpGLTFModel->defaultScene];
 
@@ -122,7 +122,7 @@ namespace FTS
 
 		for (UINT32 ix = 0; ix < GLTFScene.nodes.size(); ++ix)
 		{
-			Func(gpGLTFModel->nodes[GLTFScene.nodes[ix]], FMatrix4x4());
+			Func(gpGLTFModel->nodes[GLTFScene.nodes[ix]], crEvent.pComponent->WorldMatrix);
 		}
 
 
@@ -138,16 +138,13 @@ namespace FTS
 
 				LoadIndicesFromGLTFPrimitive(cpPrimitives[ix], rSubMesh);
 				LoadVerticesBoxFromGLTFPrimitive(cpPrimitives[ix], rSubMesh);
-
-
-
 			},
 			cpPrimitives.size()
 		);
 		return true;
 	}
 
-	BOOL FGeometrySystem::Publish(FWorld* pWorld, const Event::OnComponentAssigned<FMaterial>& crEvent)
+	BOOL FSceneSystem::Publish(FWorld* pWorld, const Event::OnComponentAssigned<FMaterial>& crEvent)
 	{
 		std::string strPorjPath = PROJ_DIR;
 		std::string strFilePath = strPorjPath + *crEvent.pEntity->GetComponent<std::string>() + "/";
@@ -221,7 +218,7 @@ namespace FTS
 		return true;
 	}
 
-	BOOL FGeometrySystem::Publish(FWorld* pWorld, const Event::OnComponentAssigned<std::string>& crEvent)
+	BOOL FSceneSystem::Publish(FWorld* pWorld, const Event::OnComponentAssigned<std::string>& crEvent)
 	{
 		return true;
 	}

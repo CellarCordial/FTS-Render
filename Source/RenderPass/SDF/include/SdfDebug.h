@@ -18,12 +18,12 @@ namespace FTS
 		{
 			FVector3F FrustumA;                     UINT32 dwMaxTraceSteps = 1024;
 			FVector3F FrustumB;                     FLOAT fAbsThreshold = 0.01f;
-			FVector3F FrustumC;                     FLOAT Pad0;
-			FVector3F FrustumD;                     FLOAT Pad1;
-			FVector3F CameraPosition;               FLOAT Pad2;
-			FVector3F SdfLower = FVector3F(-1.2f);  FLOAT Pad3;
-			FVector3F SdfUpper = FVector3F(-1.2f);  FLOAT Pad4;
-			FVector3F SdfExtent;                    FLOAT Pad5;
+			FVector3F FrustumC;                     FLOAT Pad0 = 0.0f;
+			FVector3F FrustumD;                     FLOAT Pad1 = 0.0f;
+			FVector3F CameraPosition;               FLOAT Pad2 = 0.0f;
+			FVector3F SdfLower = FVector3F(-2.4f);  FLOAT Pad3 = 0.0f;
+			FVector3F SdfUpper = FVector3F(2.4f);   FLOAT Pad4 = 0.0f;
+			FVector3F SdfExtent;                    FLOAT Pad5 = 0.0f;
 		};
     }
 
@@ -41,7 +41,7 @@ namespace FTS
         BOOL m_bResourcesWrited = false;
         Constant::SdfDebugPassConstants m_PassConstants;
         
-        TComPtr<ITexture> m_pSdfTexture;
+        ITexture* m_pSdfTexture;
 
         TComPtr<IBindingLayout> m_pBindingLayout;
         

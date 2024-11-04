@@ -14,10 +14,10 @@ namespace FTS
     {
 		struct SdfGeneratePassConstants
 		{
-			FVector3F SdfLower = FVector3F(-1.2f);
+			FVector3F SdfLower = FVector3F(-2.4f);
 			UINT32 dwTriangleNum = 0;
 
-			FVector3F SdfUpper = FVector3F(1.2f);
+			FVector3F SdfUpper = FVector3F(2.4f);
 			UINT32 dwSignRayNum = 3;
 
 			FVector3F SdfExtent;
@@ -31,7 +31,7 @@ namespace FTS
     class FSdfGeneratePass : public IRenderPass
     {
     public:
-		FSdfGeneratePass() { Type = ERenderPassType::Exclude; }
+		FSdfGeneratePass() { Type = ERenderPassType::Precompute; }
 
         BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache) override;
         BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache) override;
@@ -44,7 +44,6 @@ namespace FTS
 
 			m_cpMesh = pMesh;
 			m_bResourceWrited = false;
-            Type = ERenderPassType::Precompute; 
         }
 
     private:
@@ -54,6 +53,7 @@ namespace FTS
         FBvh m_Bvh;
 		const FMesh* m_cpMesh = nullptr;
         BOOL m_bResourceWrited = false;
+        UINT32 m_dwBeginX = 0;
 		Constant::SdfGeneratePassConstants m_PassConstants;
 
         TComPtr<IBuffer> m_pBvhNodeBuffer;

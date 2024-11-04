@@ -62,7 +62,7 @@ namespace FTS
     {
         if (pPass != nullptr)
         {
-			if (pPass->Type == ERenderPassType::Precompute)
+			if ((pPass->Type & ERenderPassType::Precompute) == ERenderPassType::Precompute)
 			{
 				m_pPrecomputePasses.emplace_back(pPass);
 				pPass->dwIndex = static_cast<UINT32>(m_pPrecomputePasses.size() - 1);
@@ -209,18 +209,21 @@ namespace FTS
 
 		for (UINT32 ix = 0; ix < m_pPrecomputePasses.size(); ++ix)
 		{
-			if (m_pPrecomputePasses[ix]->Type == ERenderPassType::Exclude) continue;
-			
+			if ((m_pPrecomputePasses[ix]->Type & ERenderPassType::Exclude) == ERenderPassType::Exclude) continue;
+
 			ReturnIfFalse(m_pPrecomputePasses[ix]->Execute(m_pPrecomputeCmdLists[ix].Get(), m_pResourceCache.Get()));
 			pComputeCmdLists.push_back(m_pPrecomputeCmdLists[ix].Get());
-
-			m_pPrecomputePasses[ix]->Type = ERenderPassType::Exclude;
 		}
 
 		m_pDevice->ExecuteCommandLists(pComputeCmdLists.data(), pComputeCmdLists.size(), ECommandQueueType::Graphics);
 		m_pDevice->WaitForIdle();
 
-		for (auto* pPass : m_pPrecomputePasses) pPass->FinishPass();
+		for (auto* pPass : m_pPrecomputePasses)
+		{
+			if ((pPass->Type & ERenderPassType::Exclude) == ERenderPassType::Exclude) continue;
+			pPass->Type |= ERenderPassType::Exclude;
+			ReturnIfFalse(pPass->FinishPass());
+		}
 
 		return true;
 	}
@@ -293,7 +296,7 @@ namespace FTS
         m_pDevice->ExecuteCommandLists(pGraphicsCmdLists.data(), pGraphicsCmdLists.size(), ECommandQueueType::Graphics);
 		m_pDevice->WaitForIdle();
 
-		for (auto* pPass : m_pPasses) pPass->FinishPass();
+		for (auto* pPass : m_pPasses) ReturnIfFalse(pPass->FinishPass());
 
 		m_pDevice->RunGarbageCollection();
         m_PresentFunc();

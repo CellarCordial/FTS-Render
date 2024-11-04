@@ -46,16 +46,16 @@ namespace FTS
 
 		// Texture.
 		{
-			ReturnIfFalse(pDevice->CreateTexture(
-				FTextureDesc::CreateShaderResource(
-					SDF_RESOLUTION,
-					SDF_RESOLUTION,
-					SDF_RESOLUTION,
-					EFormat::R32_FLOAT
-				),
-				IID_ITexture,
-				PPV_ARG(m_pSdfTexture.GetAddressOf())
-			));
+			//ReturnIfFalse(pDevice->CreateTexture(
+			//	FTextureDesc::CreateShaderResource(
+			//		SDF_RESOLUTION,
+			//		SDF_RESOLUTION,
+			//		SDF_RESOLUTION,
+			//		EFormat::R32_FLOAT
+			//	),
+			//	IID_ITexture,
+			//	PPV_ARG(m_pSdfTexture.GetAddressOf())
+			//));
 		}
 
 		// Frame Buffer.
@@ -86,10 +86,11 @@ namespace FTS
 		{
 			ISampler* pLinearClampSampler;
 			ReturnIfFalse(pCache->Require("LinearClampSampler")->QueryInterface(IID_ISampler, PPV_ARG(&pLinearClampSampler)));
-			
+			ReturnIfFalse(pCache->Require("SdfTexture")->QueryInterface(IID_ITexture, PPV_ARG(&m_pSdfTexture)));
+
 			FBindingSetItemArray BindingSetItems(3);
 			BindingSetItems[0] = FBindingSetItem::CreatePushConstants(0, sizeof(Constant::SdfDebugPassConstants));
-			BindingSetItems[1] = FBindingSetItem::CreateTexture_SRV(0, m_pSdfTexture.Get());
+			BindingSetItems[1] = FBindingSetItem::CreateTexture_SRV(0, m_pSdfTexture);
 			BindingSetItems[2] = FBindingSetItem::CreateSampler(0, pLinearClampSampler);
 			ReturnIfFalse(pDevice->CreateBindingSet(
 				FBindingSetDesc{ .BindingItems = BindingSetItems }, 
@@ -135,24 +136,24 @@ namespace FTS
 
 		if (!m_bResourcesWrited)
 		{
-			std::ifstream fInput("D:/Document/Code/FTSRender/Asset/Sdf/Model.sdf");
+			//std::ifstream fInput("D:/Document/Code/FTSRender/Asset/Sdf/Model.sdf");
 
-			m_SdfData.resize(SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION);
+			//m_SdfData.resize(SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION);
 
-			UINT64 stIndex = 0;
-			for (UINT32 z = 0; z < SDF_RESOLUTION; ++z)
-				for (UINT32 y = 0; y < SDF_RESOLUTION; ++y)
-					for (UINT32 x = 0; x < SDF_RESOLUTION; ++x)
-						fInput >> m_SdfData[stIndex++];
+			//UINT64 stIndex = 0;
+			//for (UINT32 z = 0; z < SDF_RESOLUTION; ++z)
+			//	for (UINT32 y = 0; y < SDF_RESOLUTION; ++y)
+			//		for (UINT32 x = 0; x < SDF_RESOLUTION; ++x)
+			//			fInput >> m_SdfData[stIndex++];
 
-			ReturnIfFalse(pCmdList->WriteTexture(
-				m_pSdfTexture.Get(),
-				0,
-				0,
-				reinterpret_cast<UINT8*>(m_SdfData.data()),
-				sizeof(FLOAT) * SDF_RESOLUTION,
-				sizeof(FLOAT) * SDF_RESOLUTION * SDF_RESOLUTION
-			));
+			//ReturnIfFalse(pCmdList->WriteTexture(
+			//	m_pSdfTexture.Get(),
+			//	0,
+			//	0,
+			//	reinterpret_cast<UINT8*>(m_SdfData.data()),
+			//	sizeof(FLOAT) * SDF_RESOLUTION,
+			//	sizeof(FLOAT) * SDF_RESOLUTION * SDF_RESOLUTION
+			//));
 
 			m_bResourcesWrited = true;
 		}
@@ -161,6 +162,8 @@ namespace FTS
 		ReturnIfFalse(pCmdList->SetPushConstants(&m_PassConstants, sizeof(Constant::SdfDebugPassConstants)));
 
 		ReturnIfFalse(pCmdList->Draw(FDrawArguments{ .dwIndexOrVertexCount = 6 }));
+
+		ReturnIfFalse(pCmdList->SetTextureState(m_pSdfTexture, FTextureSubresourceSet{}, EResourceStates::UnorderedAccess));
 
 		ReturnIfFalse(pCmdList->Close());
 		return true;
@@ -171,15 +174,15 @@ namespace FTS
 		ReturnIfFalse(pRenderGraph != nullptr);
 
 		pRenderGraph->AddPass(&m_SdfGeneratePass);
-		//pRenderGraph->AddPass(&m_SdfDebugPass);
-
-		//m_SdfGeneratePass.Precede(&m_SdfDebugPass);
+		pRenderGraph->AddPass(&m_SdfDebugPass);
 
 		FWorld* pWorld = pRenderGraph->GetResourceCache()->GetWorld();
 		FEntity* pBunnyEntity = pWorld->CreateEntity();
 		pWorld->Boardcast(Event::OnGeometryLoad{ .pEntity = pBunnyEntity, .FilesDirectory = "Asset/Bunny" });
 
 		m_SdfGeneratePass.GenerateSdf(pBunnyEntity->GetComponent<FMesh>());
+
+		return true;
 	}
 
 }

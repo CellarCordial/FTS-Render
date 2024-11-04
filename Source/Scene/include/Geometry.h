@@ -98,18 +98,20 @@ namespace FTS
         };
 
         std::vector<SubMesh> SubMeshes;
+        FMatrix4x4 WorldMatrix;
     };
 
-    namespace Event
-    {
-        struct OnGeometryLoad
-        {
-            FEntity* pEntity;
-            std::string FilesDirectory;
-        };
-    };
+	namespace Event
+	{
+		struct OnGeometryLoad
+		{
+			FEntity* pEntity;
+			FMatrix4x4 WorldMatrix;
+			std::string FilesDirectory;
+		};
+	};
 
-	class FGeometrySystem :
+	class FSceneSystem :
 		public IEntitySystem,
 		public TEventSubscriber<Event::OnGeometryLoad>,
 		public TEventSubscriber<Event::OnComponentAssigned<FMesh>>,
