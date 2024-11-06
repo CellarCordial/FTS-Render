@@ -206,8 +206,8 @@ namespace FTS
 
         BOOL GetTextureSubresourceState(ITexture* pTexture, UINT32 dwArraySlice, UINT32 dwMipLevel, EResourceStates* pResourceStates) override;
         BOOL GetBufferState(IBuffer* pBuffer, EResourceStates* pResourceStates) override;
-        BOOL GetDevice(IDevice** ppDevice) override;
-        FCommandListDesc GetDesc() override;
+		IDevice* GetDevice() override;
+		FCommandListDesc GetDesc() override;
         void* GetNativeObject() override;
 
 

@@ -399,7 +399,7 @@
 //			FShaderDesc CSDesc;
 //			CSDesc.strEntryName = "CS";
 //			CSDesc.ShaderType = EShaderType::Compute;
-//			ReturnIfFalse(pDevice->CreateShader(CSDesc, CSData.Data(), CSData.Size(), IID_IShader, PPV_ARG(pCS.GetAddressOf())));
+//			ReturnIfFalse(pDevice->CreateShader(CSDesc, CSData.Data(), CSData.Size(), IID_IShader, PPV_ARG(m_pCS.GetAddressOf())));
 //		}
 //
 //		// Pipeline.
@@ -486,16 +486,16 @@
 //			BindingSetItems[Index] = FBindingSetItem::CreateSampler(Slot, pSampler.Get());
 //			ReturnIfFalse(pDevice->CreateBindingSet(
 //				FBindingSetDesc{ .BindingItems = BindingSetItems },
-//				pBindingLayout.Get(),
+//				m_pBindingLayout.Get(),
 //				IID_IBindingSet,
-//				PPV_ARG(pBindingSet.GetAddressOf())
+//				PPV_ARG(m_pBindingSet.GetAddressOf())
 //			));
 //		}
 //
 //		// Compute State.
 //		{
-//			ComputeState.pBindingSets.PushBack(pBindingSet.Get());
-//			ComputeState.pPipeline = pPipeline.Get();
+//			m_ComputeState.pBindingSets.PushBack(m_pBindingSet.Get());
+//			m_ComputeState.pPipeline = m_pPipeline.Get();
 //		}
 // 
 // 		Gui::Add(

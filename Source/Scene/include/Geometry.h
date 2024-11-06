@@ -5,6 +5,7 @@
 #include "../../Math/include/Vector.h"
 #include "../../Math/include/Matrix.h"
 #include "../../Math/include/Bounds.h"
+#include "../../Math/include/Bvh.h"
 #include "../../Core/include/Entity.h"
 #include "Image.h"
 #include <basetsd.h>
@@ -99,39 +100,15 @@ namespace FTS
 
         std::vector<SubMesh> SubMeshes;
         FMatrix4x4 WorldMatrix;
+        FBounds3F Box;
     };
 
-	namespace Event
-	{
-		struct OnGeometryLoad
-		{
-			FEntity* pEntity;
-			FMatrix4x4 WorldMatrix;
-			std::string FilesDirectory;
-		};
-	};
-
-	class FSceneSystem :
-		public IEntitySystem,
-		public TEventSubscriber<Event::OnGeometryLoad>,
-		public TEventSubscriber<Event::OnComponentAssigned<FMesh>>,
-		public TEventSubscriber<Event::OnComponentAssigned<FMaterial>>,
-		public TEventSubscriber<Event::OnComponentAssigned<std::string>>
-	{
-	public:
-		BOOL Initialize(FWorld* pWorld) override;
-		BOOL Destroy() override;
-
-		void Tick(FWorld* world, FLOAT fDelta) override;
-
-		BOOL Publish(FWorld* pWorld, const Event::OnGeometryLoad& crEvent) override;
-		BOOL Publish(FWorld* pWorld, const Event::OnComponentAssigned<FMesh>& crEvent) override;
-		BOOL Publish(FWorld* pWorld, const Event::OnComponentAssigned<FMaterial>& crEvent) override;
-		BOOL Publish(FWorld* pWorld, const Event::OnComponentAssigned<std::string>& crEvent) override;
-
-	private:
-		FWorld* m_pWorld;
-	};
+    struct FDistanceField
+    {
+        std::string strSdfTextureName;
+        FBounds3F SdfBox;
+        std::shared_ptr<FBvh> pBvh;
+    };
 
 
     namespace Geometry

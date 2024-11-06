@@ -27,7 +27,6 @@ namespace FTS
 		BOOL VulkanInit();
 
 		BOOL CreateSamplers();
-		BOOL CreateCamera();
 
 	private:
 		FTimer m_Timer;

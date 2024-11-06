@@ -6,7 +6,7 @@
 #include "../../../Core/include/ComCli.h"
 #include "../../../Math/include/Vector.h"
 #include "../../../Math/include/Bounds.h"
-#include "../../../Scene/include/Camera.h"
+#include "../../../Scene/include/Scene.h"
 #include "SdfGenerate.h"
 
 
@@ -21,8 +21,8 @@ namespace FTS
 			FVector3F FrustumC;                     FLOAT Pad0 = 0.0f;
 			FVector3F FrustumD;                     FLOAT Pad1 = 0.0f;
 			FVector3F CameraPosition;               FLOAT Pad2 = 0.0f;
-			FVector3F SdfLower = FVector3F(-2.4f);  FLOAT Pad3 = 0.0f;
-			FVector3F SdfUpper = FVector3F(2.4f);   FLOAT Pad4 = 0.0f;
+			FVector3F SdfLower;                     FLOAT Pad3 = 0.0f;
+			FVector3F SdfUpper;                     FLOAT Pad4 = 0.0f;
 			FVector3F SdfExtent;                    FLOAT Pad5 = 0.0f;
 		};
     }
@@ -41,7 +41,7 @@ namespace FTS
         BOOL m_bResourcesWrited = false;
         Constant::SdfDebugPassConstants m_PassConstants;
         
-        ITexture* m_pSdfTexture;
+        ITexture* m_pSdfTexture = nullptr;
 
         TComPtr<IBindingLayout> m_pBindingLayout;
         

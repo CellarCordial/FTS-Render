@@ -420,7 +420,8 @@ namespace FTS
         Desc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
         if (bAllowInputLayout) Desc.Desc_1_1.Flags |= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-           
+        Desc.Desc_1_1.Flags |= D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
+
         if (!D3D12RootParameters.empty())
         {
             Desc.Desc_1_1.pParameters = D3D12RootParameters.data();

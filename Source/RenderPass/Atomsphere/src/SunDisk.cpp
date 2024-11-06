@@ -129,6 +129,7 @@ namespace FTS
 			ReturnIfFalse(pCache->Require("TransmittanceTexture")->QueryInterface(IID_ITexture, PPV_ARG(&pTransmittanceTexture)));
 			ReturnIfFalse(pCache->Require("LinearClampSampler")->QueryInterface(IID_ISampler, PPV_ARG(&pLinearClampSampler)));
 
+
 			FBindingSetItemArray BindingSetItems(4);
 			BindingSetItems[0] = FBindingSetItem::CreateConstantBuffer(0, pAtmospherePropertiesBuffer);
 			BindingSetItems[1] = FBindingSetItem::CreatePushConstants(1, sizeof(Constant::SunDiskPassConstant));
@@ -198,7 +199,6 @@ namespace FTS
 					return true;
 				}
 			);
-
 		}
 
 		ReturnIfFalse(pCmdList->SetGraphicsState(m_GraphicsState));

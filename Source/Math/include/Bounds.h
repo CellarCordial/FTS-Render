@@ -169,14 +169,21 @@ namespace FTS
 			return m_Max;
 		}
 
-		BOOL operator==(const TBounds3<T>& crOther)
+		BOOL operator==(const TBounds3<T>& crOther) const
 		{
 			return m_Max == crOther.m_Max && m_Min == crOther.m_Min;
 		}
 		
-		BOOL operator!=(const TBounds3<T>& crOther)
+		BOOL operator!=(const TBounds3<T>& crOther) const
 		{
 			return m_Max != crOther.m_Max || m_Min != crOther.m_Min;
+		}
+
+		TBounds3<T>& operator=(const TBounds3<T>& crOther)
+		{
+			m_Min = crOther.m_Min;
+			m_Max = crOther.m_Max;
+			return *this;
 		}
 
 		template <typename U>

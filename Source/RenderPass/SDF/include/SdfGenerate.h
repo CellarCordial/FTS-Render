@@ -1,5 +1,5 @@
-#ifndef SAMPLE_SDF_GENERATE_H
-#define SAMPLE_SDF_GENERATE_H
+#ifndef RENDER_PASS_SDF_GENERATE_H
+#define RENDER_PASS_SDF_GENERATE_H
 #include "../../../DynamicRHI/include/CommandList.h"
 #include "../../../RenderGraph/include/RenderGraph.h"
 #include "../../../Core/include/ComCli.h"
@@ -14,10 +14,10 @@ namespace FTS
     {
 		struct SdfGeneratePassConstants
 		{
-			FVector3F SdfLower = FVector3F(-2.4f);
+			FVector3F SdfLower;
 			UINT32 dwTriangleNum = 0;
 
-			FVector3F SdfUpper = FVector3F(2.4f);
+			FVector3F SdfUpper;
 			UINT32 dwSignRayNum = 3;
 
 			FVector3F SdfExtent;
@@ -42,7 +42,7 @@ namespace FTS
         {
             if (!pMesh) return;
 
-			m_cpMesh = pMesh;
+			m_pMesh = pMesh;
 			m_bResourceWrited = false;
         }
 
@@ -51,7 +51,7 @@ namespace FTS
 
     private:
         FBvh m_Bvh;
-		const FMesh* m_cpMesh = nullptr;
+		FMesh* m_pMesh = nullptr;
         BOOL m_bResourceWrited = false;
         UINT32 m_dwBeginX = 0;
 		Constant::SdfGeneratePassConstants m_PassConstants;

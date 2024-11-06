@@ -95,14 +95,8 @@ namespace FTS
         BOOL Initialize();
 
         // ITexture
-        SIZE_T GetNativeView(
-            EViewType ViewType,
-            EFormat Format,
-            FTextureSubresourceSet Subresource,
-            ETextureDimension Dimension,
-            BOOL bIsReadOnlyDSV
-        ) override;
-        BOOL BindMemory(IHeap* pHeap, UINT64 stOffset) override;
+		UINT32 GetViewIndex(EViewType ViewType, FTextureSubresourceSet Subresource, BOOL bIsReadOnlyDSV = false) override;
+		BOOL BindMemory(IHeap* pHeap, UINT64 stOffset) override;
         FMemoryRequirements GetMemoryRequirements() override;
         FTextureDesc TextureGetDesc() const { return m_Desc; }
 
@@ -132,6 +126,8 @@ namespace FTS
         FTextureBindingKeyHashMap<UINT32> m_SRVIndexMap;
         FTextureBindingKeyHashMap<UINT32> m_UAVIndexMap;
         
+		UINT32 m_dwSRVIndex = gdwInvalidViewIndex;
+
         TComPtr<IHeap> m_pHeap;
 
         std::vector<UINT32> m_ClearMipLevelUAVIndices;
@@ -180,6 +176,7 @@ namespace FTS
         FMemoryRequirements GetMemoryRequirements() override;
         BOOL BindMemory(IHeap* pHeap, UINT64 stOffset) override;
         FBufferDesc BufferGetDesc() const { return m_Desc; }
+		UINT32 GetViewIndex(EViewType ViewType, const FBufferRange& crRange) override;
 
         // IBufferStateTrack
         FBufferDesc BufferStateTrackGetDesc() const { return m_Desc; }
@@ -208,6 +205,8 @@ namespace FTS
         
         TComPtr<IHeap> m_pHeap;
 
+        UINT32 m_dwSRVIndex = gdwInvalidViewIndex;
+        UINT32 m_dwUAVIndex = gdwInvalidViewIndex;
         UINT32 m_dwClearUAVIndex = gdwInvalidViewIndex;
     };
 

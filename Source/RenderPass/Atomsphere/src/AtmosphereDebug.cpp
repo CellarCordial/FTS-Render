@@ -1,8 +1,6 @@
 #include "../include/AtmosphereDebug.h"
 #include "../../../Shader/ShaderCompiler.h"
-#include "../../../Scene/include/Image.h"
-#include "../../../Scene/include/Light.h"
-#include "../../../Scene/include/Camera.h"
+#include "../../../Scene/include/Scene.h"
 #include "../../../Gui/include/GuiPanel.h"
 
 namespace FTS
@@ -13,8 +11,8 @@ namespace FTS
 		{
 			FBindingLayoutItemArray BindingLayoutItems(10);
 			BindingLayoutItems[0] = FBindingLayoutItem::CreatePushConstants(0, sizeof(Constant::AtmosphereDebugPassConstant0));
-			BindingLayoutItems[1] = FBindingLayoutItem::CreateConstantBuffer(1);
-			BindingLayoutItems[2] = FBindingLayoutItem::CreateConstantBuffer(2, false);
+			BindingLayoutItems[1] = FBindingLayoutItem::CreateConstantBuffer(1, false);
+			BindingLayoutItems[2] = FBindingLayoutItem::CreateConstantBuffer(2);
 			BindingLayoutItems[3] = FBindingLayoutItem::CreateTexture_SRV(0);
 			BindingLayoutItems[4] = FBindingLayoutItem::CreateTexture_SRV(1);
 			BindingLayoutItems[5] = FBindingLayoutItem::CreateTexture_SRV(2);
@@ -146,8 +144,8 @@ namespace FTS
 
 			FBindingSetItemArray BindingSetItems(10);
 			BindingSetItems[0] = FBindingSetItem::CreatePushConstants(0, sizeof(Constant::AtmosphereDebugPassConstant0));
-			BindingSetItems[2] = FBindingSetItem::CreateConstantBuffer(1, m_pPassConstant1Buffer.Get());
-			BindingSetItems[1] = FBindingSetItem::CreateConstantBuffer(2, pAtmospherePropertiesBuffer);
+			BindingSetItems[1] = FBindingSetItem::CreateConstantBuffer(1, pAtmospherePropertiesBuffer);
+			BindingSetItems[2] = FBindingSetItem::CreateConstantBuffer(2, m_pPassConstant1Buffer.Get());
 			BindingSetItems[3] = FBindingSetItem::CreateTexture_SRV(0, m_pTransmittanceTexture);
 			BindingSetItems[4] = FBindingSetItem::CreateTexture_SRV(1, m_pAerialLUTTexture);
 			BindingSetItems[5] = FBindingSetItem::CreateTexture_SRV(2, pShadowMapTexture);
@@ -298,7 +296,7 @@ namespace FTS
 
 
 		FEntity* pMountainEntity = pWorld->CreateEntity();
-		pWorld->Boardcast(Event::OnGeometryLoad{ .pEntity = pMountainEntity, .FilesDirectory = "Asset/Mountain" });
+		pWorld->Boardcast(Event::OnGeometryLoad{ .pEntity = pMountainEntity, .strModelPath = "Asset/Mountain/terrain.gltf" });
 
 
 		FDirectionalLight Light;

@@ -22,21 +22,16 @@ namespace FTS
         void CopyToShaderVisibleHeap(UINT32 dwDescriptorIndex, UINT32 dwNum = 1u);
 
         UINT32 AllocateDescriptor();
-        
         UINT32 AllocateDescriptors(UINT32 dwNum);
         
         void ReleaseDescriptor(UINT32 dwIndex);
-        
         void ReleaseDescriptors(UINT32 dwBaseIndex, UINT32 dwNum);
         
         D3D12_CPU_DESCRIPTOR_HANDLE GetCpuHandle(UINT32 dwIndex) const;
-        
         D3D12_CPU_DESCRIPTOR_HANDLE GetCpuHandleShaderVisible(UINT32 dwIndex) const;
-        
         D3D12_GPU_DESCRIPTOR_HANDLE GetGpuHandleShaderVisible(UINT32 dwIndex) const;
         
         ID3D12DescriptorHeap* GetShaderVisibleHeap() const;
-
         
     private:
         

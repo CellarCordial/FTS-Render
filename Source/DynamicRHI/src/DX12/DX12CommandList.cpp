@@ -294,13 +294,13 @@ namespace FTS
 
             for (UINT32 ix = Subresource.dwBaseMipLevelIndex; ix < Subresource.dwBaseMipLevelIndex + Subresource.dwMipLevelsNum; ++ix)
             {
-				D3D12_CPU_DESCRIPTOR_HANDLE RtvHandle{pDX12Texture->GetNativeView(
-					EViewType::DX12_RenderTargetView,
-					EFormat::UNKNOWN,
-					Subresource,
-					ETextureDimension::Unknown,
-					false
-				)};
+                UINT32 dwViewIndex = pDX12Texture->GetViewIndex(
+                    EViewType::DX12_RenderTargetView,
+                    Subresource,
+                    false
+                );
+
+				D3D12_CPU_DESCRIPTOR_HANDLE RtvHandle{ m_pDescriptorHeaps->RenderTargetHeap.GetCpuHandle(dwViewIndex) };
 
                 m_pActiveCmdList->pD3D12CommandList->ClearRenderTargetView(RtvHandle, &crClearColor.r, 0, nullptr);
             }
@@ -353,13 +353,13 @@ namespace FTS
             UINT32 dwMaxMipLevel = Subresource.dwBaseMipLevelIndex + Subresource.dwMipLevelsNum;
             for (UINT32 ix = Subresource.dwBaseMipLevelIndex; ix < dwMaxMipLevel; ++ix)
             {
-				D3D12_CPU_DESCRIPTOR_HANDLE RtvHandle{ pDX12Texture->GetNativeView(
-					EViewType::DX12_RenderTargetView,
-					EFormat::UNKNOWN,
-					Subresource,
-					ETextureDimension::Unknown,
-					false
-				) };
+                UINT32 dwViewIndex = pDX12Texture->GetViewIndex(
+                    EViewType::DX12_RenderTargetView,
+                    Subresource,
+                    false
+                );
+
+				D3D12_CPU_DESCRIPTOR_HANDLE RtvHandle{ m_pDescriptorHeaps->RenderTargetHeap.GetCpuHandle(dwViewIndex) };
 
                 FLOAT pfClearValues[4] = { 
                     static_cast<FLOAT>(dwClearColor), 
@@ -435,14 +435,12 @@ namespace FTS
 
         for (UINT32 ix = Subresource.dwBaseMipLevelIndex; ix < Subresource.dwBaseMipLevelIndex + Subresource.dwMipLevelsNum; ++ix)
         {
-
-			D3D12_CPU_DESCRIPTOR_HANDLE DsvHandle{pDX12Texture->GetNativeView(
-				EViewType::DX12_DepthStencilView,
-				EFormat::UNKNOWN,
-				Subresource,
-				ETextureDimension::Unknown,
-				false
-			)};
+            UINT32 dwViewIndex = pDX12Texture->GetViewIndex(
+                EViewType::DX12_DepthStencilView,
+                Subresource,
+                false
+            );
+			D3D12_CPU_DESCRIPTOR_HANDLE DsvHandle{ m_pDescriptorHeaps->DepthStencilHeap.GetCpuHandle(dwViewIndex) };
 
             m_pActiveCmdList->pD3D12CommandList->ClearDepthStencilView(DsvHandle, ClearFlags, fDepth, btStencil, 0, nullptr);
         }
@@ -888,7 +886,7 @@ namespace FTS
             bIsGraphics = false;
         }
 
-        ReturnIfFalse(pDX12RootSignature->m_dwPushConstantSize == stByteSize);
+		ReturnIfFalse(pDX12RootSignature && pDX12RootSignature->m_dwPushConstantSize == stByteSize);
 
         if (bIsGraphics)
         {
@@ -1478,14 +1476,9 @@ namespace FTS
         return true;
     }
 
-    BOOL FDX12CommandList::GetDevice(IDevice** ppDevice)
+    IDevice* FDX12CommandList::GetDevice()
     {
-        if (ppDevice == nullptr) return false;
-        
-        *ppDevice = m_pDevice;
-
-        if (m_pDevice == nullptr) return false;
-        return true; 
+        return m_pDevice;
     }
 
     FCommandListDesc FDX12CommandList::GetDesc()

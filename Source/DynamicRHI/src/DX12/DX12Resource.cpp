@@ -68,19 +68,17 @@ namespace FTS
     }
 
 
-    SIZE_T FDX12Texture::GetNativeView(
+    UINT32 FDX12Texture::GetViewIndex(
         EViewType ViewType,
-        EFormat Format,
         FTextureSubresourceSet Subresource,
-        ETextureDimension Dimension,
         BOOL bIsReadOnlyDSV
     )
     {
         switch (ViewType)
         {
-        case EViewType::DX12_GPU_ShaderResourceView:
+        case EViewType::DX12_GPU_Texture_SRV:
             {
-                FDX12TextureBindingKey BindingKey(Subresource, Format);
+                FDX12TextureBindingKey BindingKey(Subresource, m_Desc.Format);
                 UINT32 dwDescriptorIndex;
                 auto Iter = m_SRVIndexMap.find(BindingKey);
                 if (Iter == m_SRVIndexMap.end())    // If not found, then create one. 
@@ -88,10 +86,10 @@ namespace FTS
                     dwDescriptorIndex = m_pDescriptorHeaps->ShaderResourceHeap.AllocateDescriptor();
                     m_SRVIndexMap[BindingKey] = dwDescriptorIndex;
                     
-                    const D3D12_CPU_DESCRIPTOR_HANDLE cCpuDescriptorHandle = 
+                    const D3D12_CPU_DESCRIPTOR_HANDLE CpuDescriptorHandle = 
                         m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(dwDescriptorIndex);
 
-                    CreateSRV(cCpuDescriptorHandle.ptr, Format, Dimension, Subresource);
+                    CreateSRV(CpuDescriptorHandle.ptr, m_Desc.Format, m_Desc.Dimension, Subresource);
                     m_pDescriptorHeaps->ShaderResourceHeap.CopyToShaderVisibleHeap(dwDescriptorIndex);
                 }
                 else    // If found, then return it directly. 
@@ -99,11 +97,11 @@ namespace FTS
                     dwDescriptorIndex = Iter->second;
                 }
 
-                return m_pDescriptorHeaps->RenderTargetHeap.GetCpuHandle(dwDescriptorIndex).ptr;
+                return dwDescriptorIndex;
             }
-        case EViewType::DX12_GPU_UnorderedAccessView:
+        case EViewType::DX12_GPU_Texture_UAV:
             {
-                FDX12TextureBindingKey BindingKey(Subresource, Format);
+                FDX12TextureBindingKey BindingKey(Subresource, m_Desc.Format);
                 UINT32 dwDescriptorIndex;
                 auto Iter = m_UAVIndexMap.find(BindingKey);
                 if (Iter == m_UAVIndexMap.end())    // If not found, then create one. 
@@ -111,10 +109,10 @@ namespace FTS
                     dwDescriptorIndex = m_pDescriptorHeaps->ShaderResourceHeap.AllocateDescriptor();
                     m_UAVIndexMap[BindingKey] = dwDescriptorIndex;
                     
-                    const D3D12_CPU_DESCRIPTOR_HANDLE cCpuDescriptorHandle = 
+                    const D3D12_CPU_DESCRIPTOR_HANDLE CpuDescriptorHandle = 
                         m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(dwDescriptorIndex);
 
-                    CreateUAV(cCpuDescriptorHandle.ptr, Format, Dimension, Subresource);
+                    CreateUAV(CpuDescriptorHandle.ptr, m_Desc.Format, m_Desc.Dimension, Subresource);
                     m_pDescriptorHeaps->ShaderResourceHeap.CopyToShaderVisibleHeap(dwDescriptorIndex);
                 }
                 else    // If found, then return it directly. 
@@ -122,11 +120,11 @@ namespace FTS
                     dwDescriptorIndex = Iter->second;
                 }
 
-				return m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(dwDescriptorIndex).ptr;
+				return dwDescriptorIndex;
             }
         case EViewType::DX12_RenderTargetView:
             {
-                FDX12TextureBindingKey BindingKey(Subresource, Format);
+                FDX12TextureBindingKey BindingKey(Subresource, m_Desc.Format);
                 UINT32 dwDescriptorIndex;
                 auto Iter = m_RTVIndexMap.find(BindingKey);
                 if (Iter == m_RTVIndexMap.end())    // If not found, then create one. 
@@ -134,21 +132,21 @@ namespace FTS
                     dwDescriptorIndex = m_pDescriptorHeaps->RenderTargetHeap.AllocateDescriptor();
                     m_RTVIndexMap[BindingKey] = dwDescriptorIndex;
                     
-                    const D3D12_CPU_DESCRIPTOR_HANDLE cCpuDescriptorHandle = 
+                    const D3D12_CPU_DESCRIPTOR_HANDLE CpuDescriptorHandle = 
                         m_pDescriptorHeaps->RenderTargetHeap.GetCpuHandle(dwDescriptorIndex);
 
-                    CreateRTV(cCpuDescriptorHandle.ptr, Format, Subresource);
+                    CreateRTV(CpuDescriptorHandle.ptr, m_Desc.Format, Subresource);
                 }
                 else    // If found, then return it directly. 
                 {
                     dwDescriptorIndex = Iter->second;
                 }
 
-				return m_pDescriptorHeaps->RenderTargetHeap.GetCpuHandle(dwDescriptorIndex).ptr;
+				return dwDescriptorIndex;
             }
         case EViewType::DX12_DepthStencilView:
             {
-                FDX12TextureBindingKey BindingKey(Subresource, Format, bIsReadOnlyDSV);
+                FDX12TextureBindingKey BindingKey(Subresource, m_Desc.Format, bIsReadOnlyDSV);
                 UINT32 dwDescriptorIndex;
                 auto Iter = m_DSVIndexMap.find(BindingKey);
                 if (Iter == m_DSVIndexMap.end())    // If not found, then create one. 
@@ -156,18 +154,20 @@ namespace FTS
                     dwDescriptorIndex = m_pDescriptorHeaps->DepthStencilHeap.AllocateDescriptor();
                     m_DSVIndexMap[BindingKey] = dwDescriptorIndex;
                     
-                    const D3D12_CPU_DESCRIPTOR_HANDLE cCpuDescriptorHandle = 
+                    const D3D12_CPU_DESCRIPTOR_HANDLE CpuDescriptorHandle = 
                         m_pDescriptorHeaps->DepthStencilHeap.GetCpuHandle(dwDescriptorIndex);
 
-                    CreateDSV(cCpuDescriptorHandle.ptr, Subresource, bIsReadOnlyDSV);
+                    CreateDSV(CpuDescriptorHandle.ptr, Subresource, bIsReadOnlyDSV);
                 }
                 else    // If found, then return it directly. 
                 {
                     dwDescriptorIndex = Iter->second;
                 }
 
-				return m_pDescriptorHeaps->DepthStencilHeap.GetCpuHandle(dwDescriptorIndex).ptr;
+				return dwDescriptorIndex;
             }
+        default:
+            assert(false && "Invalid enum.");
         }
         return gdwInvalidViewIndex;
     }
@@ -502,6 +502,8 @@ namespace FTS
             m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptor(m_dwClearUAVIndex);
             m_dwClearUAVIndex = gdwInvalidViewIndex;
         }
+		if (m_dwSRVIndex != gdwInvalidViewIndex) m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptor(m_dwSRVIndex);
+		if (m_dwUAVIndex != gdwInvalidViewIndex) m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptor(m_dwUAVIndex);
     }
 
     BOOL FDX12Buffer::Initialize()
@@ -637,7 +639,89 @@ namespace FTS
     }
 
     
-    void FDX12Buffer::CreateCBV(UINT64 stDescriptorAddress, const FBufferRange& crRange)
+	UINT32 FDX12Buffer::GetViewIndex(EViewType ViewType, const FBufferRange& crRange)
+	{
+        BOOL bSrvOrUav = true; // SRV is true, UAV is false.
+        EResourceType ResourceType = EResourceType::None;
+
+        switch (ViewType)
+        {
+        case EViewType::DX12_GPU_TypedBuffer_SRV: 
+            bSrvOrUav = true; 
+            ResourceType = EResourceType::TypedBuffer_SRV; 
+            break;
+		case EViewType::DX12_GPU_StructuredBuffer_SRV:
+			bSrvOrUav = true;
+			ResourceType = EResourceType::StructuredBuffer_SRV;
+			break;
+		case EViewType::DX12_GPU_RawBuffer_SRV:
+			bSrvOrUav = true;
+			ResourceType = EResourceType::RawBuffer_SRV;
+			break;
+
+		case EViewType::DX12_GPU_TypedBuffer_UAV:
+			bSrvOrUav = false;
+			ResourceType = EResourceType::TypedBuffer_UAV;
+			break;
+		case EViewType::DX12_GPU_StructuredBuffer_UAV:
+			bSrvOrUav = false;
+			ResourceType = EResourceType::StructuredBuffer_UAV;
+			break;
+		case EViewType::DX12_GPU_RawBuffer_UAV:
+			bSrvOrUav = false;
+			ResourceType = EResourceType::RawBuffer_UAV;
+			break;
+
+		default:
+			assert(false && "Invalid enum.");
+        }
+
+        if (bSrvOrUav)
+		{
+			UINT32 dwDescriptorIndex;
+			if (m_dwSRVIndex == gdwInvalidViewIndex)
+			{
+				dwDescriptorIndex = m_pDescriptorHeaps->ShaderResourceHeap.AllocateDescriptor();
+				m_dwSRVIndex = dwDescriptorIndex;
+
+				const D3D12_CPU_DESCRIPTOR_HANDLE CpuDescriptorHandle =
+					m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(dwDescriptorIndex);
+
+				CreateSRV(CpuDescriptorHandle.ptr, m_Desc.Format, crRange, ResourceType);
+				m_pDescriptorHeaps->ShaderResourceHeap.CopyToShaderVisibleHeap(dwDescriptorIndex);
+			}
+			else
+			{
+				dwDescriptorIndex = m_dwSRVIndex;
+			}
+
+			return dwDescriptorIndex;
+		}
+        else
+		{
+			UINT32 dwDescriptorIndex;
+			if (m_dwUAVIndex == gdwInvalidViewIndex)
+			{
+				dwDescriptorIndex = m_pDescriptorHeaps->ShaderResourceHeap.AllocateDescriptor();
+				m_dwUAVIndex = dwDescriptorIndex;
+
+				const D3D12_CPU_DESCRIPTOR_HANDLE CpuDescriptorHandle =
+					m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(dwDescriptorIndex);
+
+				CreateUAV(CpuDescriptorHandle.ptr, m_Desc.Format, crRange, ResourceType);
+				m_pDescriptorHeaps->ShaderResourceHeap.CopyToShaderVisibleHeap(dwDescriptorIndex);
+			}
+			else
+			{
+				dwDescriptorIndex = m_dwUAVIndex;
+			}
+
+			return dwDescriptorIndex;
+		}
+        return gdwInvalidViewIndex;
+	}
+
+	void FDX12Buffer::CreateCBV(UINT64 stDescriptorAddress, const FBufferRange& crRange)
     {
         assert(m_Desc.bIsConstantBuffer);
 

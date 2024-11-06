@@ -1,7 +1,6 @@
 ﻿#include "ShaderCompiler.h"
 
-#include <filesystem>
-
+#include "../Core/include/File.h"
 #include <fstream>
 #include <vector>
 #include <winerror.h>
@@ -132,31 +131,6 @@ namespace FTS
     private:
         std::ifstream Input;
     };
-
-    namespace fs = std::filesystem;
-
-    inline bool IsFileExist(const char* InPath)
-    {
-        const fs::path Path(InPath);
-        return fs::exists(Path);
-    }
-    
-    inline fs::file_time_type GetFileLastWriteTime(const char* InPath)
-    {
-        const fs::path Path(InPath);
-        return fs::last_write_time(Path);
-    }
-    
-    inline bool CompareFileWriteTime(const char* FirstFile, const char* SecondFile)
-    {
-        return GetFileLastWriteTime(FirstFile) > GetFileLastWriteTime(SecondFile);
-    }
-
-    inline std::string RemoveFileExtension(const char* InPath)
-    {
-        const fs::path Path(InPath);
-        return Path.filename().replace_extension().string();
-    }
 
     inline LPCWSTR GetTargetProfile(EShaderTarget Target)
     {

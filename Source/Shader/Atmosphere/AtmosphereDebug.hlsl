@@ -7,7 +7,12 @@ cbuffer gPassConstant0 : register(b0)
     float4x4 WorldMatrix;
 };
 
-cbuffer gPassConstant1: register(b1)
+cbuffer gAtomsphereProperties : register(b1)
+{
+    FAtmosphereProperties AP;
+};
+
+cbuffer gPassConstant1: register(b2)
 {
     float3 SunDirection;   
     float fSunTheta;
@@ -26,12 +31,6 @@ cbuffer gPassConstant1: register(b1)
     float3 CameraPosition;
     float PAD;
 };
-
-cbuffer gAtomsphereProperties : register(b2)
-{
-    FAtmosphereProperties AP;
-};
-
 struct FVertexInput
 {
     float3 PositionL : POSITION;

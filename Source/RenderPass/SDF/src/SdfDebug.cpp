@@ -86,16 +86,16 @@ namespace FTS
 		{
 			ISampler* pLinearClampSampler;
 			ReturnIfFalse(pCache->Require("LinearClampSampler")->QueryInterface(IID_ISampler, PPV_ARG(&pLinearClampSampler)));
-			ReturnIfFalse(pCache->Require("SdfTexture")->QueryInterface(IID_ITexture, PPV_ARG(&m_pSdfTexture)));
+			ReturnIfFalse(pCache->Require("GlobalSdfTexture")->QueryInterface(IID_ITexture, PPV_ARG(&m_pSdfTexture)));
 
 			FBindingSetItemArray BindingSetItems(3);
 			BindingSetItems[0] = FBindingSetItem::CreatePushConstants(0, sizeof(Constant::SdfDebugPassConstants));
 			BindingSetItems[1] = FBindingSetItem::CreateTexture_SRV(0, m_pSdfTexture);
 			BindingSetItems[2] = FBindingSetItem::CreateSampler(0, pLinearClampSampler);
 			ReturnIfFalse(pDevice->CreateBindingSet(
-				FBindingSetDesc{ .BindingItems = BindingSetItems }, 
-				m_pBindingLayout.Get(), 
-				IID_IBindingSet, 
+				FBindingSetDesc{ .BindingItems = BindingSetItems },
+				m_pBindingLayout.Get(),
+				IID_IBindingSet,
 				PPV_ARG(m_pBindingSet.GetAddressOf())
 			));
 		}
@@ -108,9 +108,6 @@ namespace FTS
 			m_GraphicsState.ViewportState = FViewportState::CreateSingleViewport(CLIENT_WIDTH, CLIENT_HEIGHT);
 		}
 
-
-
-		m_PassConstants.SdfExtent = m_PassConstants.SdfUpper - m_PassConstants.SdfLower;
 
 		return true;
 	}
@@ -130,33 +127,16 @@ namespace FTS
 					return true;
 				}
 			);
+
+
+			FBounds3F* pGlobalBox;
+			ReturnIfFalse(pCache->RequireConstants("GlobalBox", PPV_ARG(&pGlobalBox)));
+			m_PassConstants.SdfLower = pGlobalBox->m_Min - FVector3F(0.5f);
+			m_PassConstants.SdfUpper = pGlobalBox->m_Max + FVector3F(0.5f);
+			m_PassConstants.SdfExtent = m_PassConstants.SdfUpper - m_PassConstants.SdfLower;
 		}
 		
 		ReturnIfFalse(pCmdList->Open());
-
-		if (!m_bResourcesWrited)
-		{
-			//std::ifstream fInput("D:/Document/Code/FTSRender/Asset/Sdf/Model.sdf");
-
-			//m_SdfData.resize(SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION);
-
-			//UINT64 stIndex = 0;
-			//for (UINT32 z = 0; z < SDF_RESOLUTION; ++z)
-			//	for (UINT32 y = 0; y < SDF_RESOLUTION; ++y)
-			//		for (UINT32 x = 0; x < SDF_RESOLUTION; ++x)
-			//			fInput >> m_SdfData[stIndex++];
-
-			//ReturnIfFalse(pCmdList->WriteTexture(
-			//	m_pSdfTexture.Get(),
-			//	0,
-			//	0,
-			//	reinterpret_cast<UINT8*>(m_SdfData.data()),
-			//	sizeof(FLOAT) * SDF_RESOLUTION,
-			//	sizeof(FLOAT) * SDF_RESOLUTION * SDF_RESOLUTION
-			//));
-
-			m_bResourcesWrited = true;
-		}
 
 		ReturnIfFalse(pCmdList->SetGraphicsState(m_GraphicsState));
 		ReturnIfFalse(pCmdList->SetPushConstants(&m_PassConstants, sizeof(Constant::SdfDebugPassConstants)));
@@ -178,7 +158,7 @@ namespace FTS
 
 		FWorld* pWorld = pRenderGraph->GetResourceCache()->GetWorld();
 		FEntity* pBunnyEntity = pWorld->CreateEntity();
-		pWorld->Boardcast(Event::OnGeometryLoad{ .pEntity = pBunnyEntity, .FilesDirectory = "Asset/Bunny" });
+		pWorld->Boardcast(Event::OnGeometryLoad{ .pEntity = pBunnyEntity, .strModelPath = "Asset/ABeautifulGame/ABeautifulGame.gltf" });
 
 		m_SdfGeneratePass.GenerateSdf(pBunnyEntity->GetComponent<FMesh>());
 

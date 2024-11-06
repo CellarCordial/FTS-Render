@@ -10,7 +10,7 @@ namespace FTS
 {
 #define THREAD_GROUP_SIZE_Y 8
 #define THREAD_GROUP_SIZE_Z 8
-#define SDF_RESOLUTION 128
+#define SDF_RESOLUTION 64
 #define BVH_STACK_SIZE 32
 #define UPPER_BOUND_ESTIMATE_PRESION 6
 #define X_SLICE_SIZE 8
@@ -57,29 +57,6 @@ namespace FTS
 			ReturnIfFalse(pDevice->CreateComputePipeline(PipelineDesc, IID_IComputePipeline, PPV_ARG(m_pPipeline.GetAddressOf())));
 		}
 
-		// Buffer.
-		{
-			ReturnIfFalse(BuildBvh());
-			ReturnIfFalse(pDevice->CreateBuffer(
-				FBufferDesc::CreateStructured(
-					m_Bvh.GetNodes().size() * sizeof(FBvh::Node),
-					sizeof(FBvh::Node),
-					true
-				),
-				IID_IBuffer,
-				PPV_ARG(m_pBvhNodeBuffer.GetAddressOf())
-			));
-			ReturnIfFalse(pDevice->CreateBuffer(
-				FBufferDesc::CreateStructured(
-					m_Bvh.GetVertices().size() * sizeof(FBvh::Vertex),
-					sizeof(FBvh::Vertex),
-					true
-				),
-				IID_IBuffer,
-				PPV_ARG(m_pBvhVertexBuffer.GetAddressOf())
-			));
-		}
-
 		// Texture.
 		{
 			ReturnIfFalse(pDevice->CreateTexture(
@@ -94,46 +71,7 @@ namespace FTS
 				PPV_ARG(m_pSdfOutputTexture.GetAddressOf())
 			));
 			ReturnIfFalse(pCache->Collect(m_pSdfOutputTexture.Get()));
-			//ReturnIfFalse(pDevice->CreateStagingTexture(
-			//	FTextureDesc::CreateReadBack(
-			//		SDF_RESOLUTION,
-			//		SDF_RESOLUTION,
-			//		SDF_RESOLUTION,
-			//		EFormat::R32_FLOAT
-			//	),
-			//	ECpuAccessMode::Read,
-			//	IID_IStagingTexture,
-			//	PPV_ARG(m_pReadBackTexture.GetAddressOf())
-			//));
 		}
-
-		// Binding Set.
-		{
-			FBindingSetItemArray BindingSetItems(4);
-			BindingSetItems[0] = FBindingSetItem::CreatePushConstants(0, sizeof(Constant::SdfGeneratePassConstants));
-			BindingSetItems[1] = FBindingSetItem::CreateStructuredBuffer_SRV(0, m_pBvhNodeBuffer.Get());
-			BindingSetItems[2] = FBindingSetItem::CreateStructuredBuffer_SRV(1, m_pBvhVertexBuffer.Get());
-			BindingSetItems[3] = FBindingSetItem::CreateTexture_UAV(0, m_pSdfOutputTexture.Get());
-			ReturnIfFalse(pDevice->CreateBindingSet(
-				FBindingSetDesc{ .BindingItems = BindingSetItems },
-				m_pBindingLayout.Get(),
-				IID_IBindingSet,
-				PPV_ARG(m_pBindingSet.GetAddressOf())
-			));
-		}
-
-		// Compute State.
-		{
-			m_ComputeState.pBindingSets.PushBack(m_pBindingSet.Get());
-			m_ComputeState.pPipeline = m_pPipeline.Get();
-		}
-
-		UINT64 stTriangleCount = 0;
-		for (const auto& crSubmesh : m_cpMesh->SubMeshes) stTriangleCount += crSubmesh.Indices.size() / 3;
-		m_PassConstants.dwTriangleNum = static_cast<UINT32>(stTriangleCount);
-		m_PassConstants.SdfExtent = m_PassConstants.SdfUpper - m_PassConstants.SdfLower;
-
-
 
         return true;
     }
@@ -144,6 +82,76 @@ namespace FTS
 
 		if (!m_bResourceWrited)
         {
+			IDevice* pDevice = pCmdList->GetDevice();
+
+			// Buffer.
+			{
+				ReturnIfFalse(BuildBvh());
+				ReturnIfFalse(pDevice->CreateBuffer(
+					FBufferDesc::CreateStructured(
+						m_Bvh.GetNodes().size() * sizeof(FBvh::Node),
+						sizeof(FBvh::Node),
+						true
+					),
+					IID_IBuffer,
+					PPV_ARG(m_pBvhNodeBuffer.GetAddressOf())
+				));
+				ReturnIfFalse(pDevice->CreateBuffer(
+					FBufferDesc::CreateStructured(
+						m_Bvh.GetVertices().size() * sizeof(FBvh::Vertex),
+						sizeof(FBvh::Vertex),
+						true
+					),
+					IID_IBuffer,
+					PPV_ARG(m_pBvhVertexBuffer.GetAddressOf())
+				));
+			}
+
+			// Texture.
+			{
+				ReturnIfFalse(pDevice->CreateStagingTexture(
+					FTextureDesc::CreateReadBack(
+						SDF_RESOLUTION,
+						SDF_RESOLUTION,
+						SDF_RESOLUTION,
+						EFormat::R32_FLOAT
+					),
+					ECpuAccessMode::Read,
+					IID_IStagingTexture,
+					PPV_ARG(m_pReadBackTexture.GetAddressOf())
+				));
+			}
+
+			// Binding Set.
+			{
+				FBindingSetItemArray BindingSetItems(4);
+				BindingSetItems[0] = FBindingSetItem::CreatePushConstants(0, sizeof(Constant::SdfGeneratePassConstants));
+				BindingSetItems[1] = FBindingSetItem::CreateStructuredBuffer_SRV(0, m_pBvhNodeBuffer.Get());
+				BindingSetItems[2] = FBindingSetItem::CreateStructuredBuffer_SRV(1, m_pBvhVertexBuffer.Get());
+				BindingSetItems[3] = FBindingSetItem::CreateTexture_UAV(0, m_pSdfOutputTexture.Get());
+				ReturnIfFalse(pDevice->CreateBindingSet(
+					FBindingSetDesc{ .BindingItems = BindingSetItems },
+					m_pBindingLayout.Get(),
+					IID_IBindingSet,
+					PPV_ARG(m_pBindingSet.GetAddressOf())
+				));
+			}
+
+			// Compute State.
+			{
+				m_ComputeState.pBindingSets.PushBack(m_pBindingSet.Get());
+				m_ComputeState.pPipeline = m_pPipeline.Get();
+			}
+
+			UINT64 stTriangleCount = 0;
+			for (const auto& crSubmesh : m_pMesh->SubMeshes) stTriangleCount += crSubmesh.Indices.size() / 3;
+			m_PassConstants.dwTriangleNum = static_cast<UINT32>(stTriangleCount);
+
+			m_PassConstants.SdfLower = m_Bvh.GlobalBox.m_Min - FVector3F(0.5f);
+			m_PassConstants.SdfUpper = m_Bvh.GlobalBox.m_Max + FVector3F(0.5f);
+			m_PassConstants.SdfExtent = m_PassConstants.SdfUpper - m_PassConstants.SdfLower;
+			ReturnIfFalse(pCache->CollectConstants("GlobalBox", &m_Bvh.GlobalBox));
+
 			const auto& crNodes = m_Bvh.GetNodes();
 			const auto& crVertices = m_Bvh.GetVertices();
 			ReturnIfFalse(pCmdList->WriteBuffer(m_pBvhNodeBuffer.Get(), crNodes.data(), crNodes.size() * sizeof(FBvh::Node)));
@@ -155,8 +163,8 @@ namespace FTS
 
 		ReturnIfFalse(pCmdList->SetComputeState(m_ComputeState));
 
-		m_PassConstants.dwXBegin = 0;
-		m_PassConstants.dwXEnd = SDF_RESOLUTION;
+		m_PassConstants.dwXBegin = m_dwBeginX;
+		m_PassConstants.dwXEnd = m_dwBeginX + X_SLICE_SIZE;
 		ReturnIfFalse(pCmdList->SetPushConstants(&m_PassConstants, sizeof(Constant::SdfGeneratePassConstants)));
 		ReturnIfFalse(pCmdList->Dispatch(
 			1,
@@ -164,80 +172,87 @@ namespace FTS
 			static_cast<UINT32>(Align(SDF_RESOLUTION, THREAD_GROUP_SIZE_Z) / THREAD_GROUP_SIZE_Z)
 		));
 
+		ReturnIfFalse(pCmdList->CopyTexture(m_pReadBackTexture.Get(), FTextureSlice{}, m_pSdfOutputTexture.Get(), FTextureSlice{}));
+
 		ReturnIfFalse(pCmdList->Close());
 
 
-		m_dwBeginX = (m_dwBeginX + X_SLICE_SIZE) % SDF_RESOLUTION;
+		m_dwBeginX += X_SLICE_SIZE;
         return true;
     }
 
 	BOOL FSdfGeneratePass::FinishPass()
 	{
-		//if (m_dwGeneratingTimes < SDF_RESOLUTION / X_SLICE_SIZE) Type &= ~ERenderPassType::Exclude;
+		if (m_dwBeginX < SDF_RESOLUTION)
+		{
+			Type &= ~ERenderPassType::Exclude;
+			return true;
+		}
 
-		//m_Bvh.Clear();
-		//m_pBvhNodeBuffer.Reset();
-		//m_pBvhVertexBuffer.Reset();
+		m_Bvh.Clear();
+		m_pBvhNodeBuffer.Reset();
+		m_pBvhVertexBuffer.Reset();
 
-		//std::vector<FLOAT> SdfData(SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION);
-		//HANDLE FenceEvent = CreateEvent(nullptr, false, false, nullptr);
+		std::vector<FLOAT> SdfData(SDF_RESOLUTION * SDF_RESOLUTION * SDF_RESOLUTION);
+		HANDLE FenceEvent = CreateEvent(nullptr, false, false, nullptr);
 
-		//UINT64 stRowPitch = 0;
-		//UINT64 stRowSize = sizeof(FLOAT) * SDF_RESOLUTION;
-		//UINT8* pMappedData = static_cast<UINT8*>(m_pReadBackTexture->Map(FTextureSlice{}, ECpuAccessMode::Read, FenceEvent, &stRowPitch));
-		//ReturnIfFalse(pMappedData && stRowPitch == stRowSize);
+		UINT64 stRowPitch = 0;
+		UINT64 stRowSize = sizeof(FLOAT) * SDF_RESOLUTION;
+		UINT8* pMappedData = static_cast<UINT8*>(m_pReadBackTexture->Map(FTextureSlice{}, ECpuAccessMode::Read, FenceEvent, &stRowPitch));
+		ReturnIfFalse(pMappedData && stRowPitch == stRowSize);
 
-		//UINT8* Dst = reinterpret_cast<UINT8*>(SdfData.data());
-		//for (UINT32 z = 0; z < SDF_RESOLUTION; ++z)
-		//{
-		//	for (UINT32 y = 0; y < SDF_RESOLUTION; ++y)
-		//	{
-		//		UINT8* Src = pMappedData + stRowPitch * y;
-		//		memcpy(Dst, Src, stRowSize);
-		//		Dst += stRowSize;
-		//	}
-		//	pMappedData += stRowPitch * SDF_RESOLUTION;
-		//}
+		UINT8* Dst = reinterpret_cast<UINT8*>(SdfData.data());
+		for (UINT32 z = 0; z < SDF_RESOLUTION; ++z)
+		{
+			for (UINT32 y = 0; y < SDF_RESOLUTION; ++y)
+			{
+				UINT8* Src = pMappedData + stRowPitch * y;
+				memcpy(Dst, Src, stRowSize);
+				Dst += stRowSize;
+			}
+			pMappedData += stRowPitch * SDF_RESOLUTION;
+		}
 
-		//std::string strProjDir = PROJ_DIR;
-		//std::ofstream fout(strProjDir + "Asset/Sdf/Model.sdf");
+		std::string strProjDir = PROJ_DIR;
+		std::ofstream fout(strProjDir + "Asset/Sdf/Bunny.sdf");
 
-		//UINT64 stIndex = 0;
-		//for (UINT32 z = 0; z < SDF_RESOLUTION; ++z)
-		//	for (UINT32 y = 0; y < SDF_RESOLUTION; ++y)
-		//		for (UINT32 x = 0; x < SDF_RESOLUTION; ++x)
-		//			fout << SdfData[stIndex++] << " ";
+		UINT64 stIndex = 0;
+		for (UINT32 z = 0; z < SDF_RESOLUTION; ++z)
+			for (UINT32 y = 0; y < SDF_RESOLUTION; ++y)
+				for (UINT32 x = 0; x < SDF_RESOLUTION; ++x)
+					fout << SdfData[stIndex++] << " ";
 
-		//m_pSdfOutputTexture.Reset();
-		//m_pReadBackTexture.Reset();
+		m_pSdfOutputTexture.Reset();
+		m_pReadBackTexture.Reset();
 		return true;
 	}
 
 	BOOL FSdfGeneratePass::BuildBvh()
     {
-		ReturnIfFalse(m_cpMesh != nullptr);
+		ReturnIfFalse(m_pMesh != nullptr);
 
 		UINT64 stIndicesNum = 0;
-        for (const auto& crMesh : m_cpMesh->SubMeshes)
+        for (const auto& crMesh : m_pMesh->SubMeshes)
         {
 			stIndicesNum += crMesh.Indices.size();
         }
 
         UINT64 ix = 0;
         std::vector<FBvh::Vertex> BvhVertices(stIndicesNum);
-        for (const auto& crMesh : m_cpMesh->SubMeshes)
+        for (const auto& crMesh : m_pMesh->SubMeshes)
         {
             for (auto VertexId : crMesh.Indices)
             {
                 BvhVertices[ix++] = { 
-					crMesh.Vertices[VertexId].Position, 
-					crMesh.Vertices[VertexId].Normal 
+					FVector3F(Mul(FVector4F(crMesh.Vertices[VertexId].Position, 1.0f), crMesh.WorldMatrix)),
+					FVector3F(Mul(FVector4F(crMesh.Vertices[VertexId].Normal, 1.0f), Transpose(Inverse(crMesh.WorldMatrix))))
 				};
             }
         }
         ReturnIfFalse(ix == stIndicesNum);
-
+		  
         m_Bvh.Build(BvhVertices, stIndicesNum / 3);
+		m_pMesh->Box = m_Bvh.GlobalBox;
 
         return true;
     }

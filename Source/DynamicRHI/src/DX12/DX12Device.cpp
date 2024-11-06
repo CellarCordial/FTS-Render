@@ -492,7 +492,7 @@ namespace FTS
 
         if (pDX12RootSignature == nullptr)
         {
-            ReturnIfFailed(BuildRootSignature(
+            ReturnIfFalse(BuildRootSignature(
                 crDesc.pBindingLayouts, 
                 bAllowInputLayout, 
                 IID_IDX12RootSignature, 

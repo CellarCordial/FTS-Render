@@ -1,8 +1,7 @@
 #include "GlobalRender.h"
 #include <d3d12.h>
 #include "Shader/ShaderCompiler.h"
-#include "Scene/include/Light.h"
-#include "Scene/include/Geometry.h"
+#include "Scene/include/Scene.h"
 #include "TaskFlow/include/TaskFlow.h"
 #include <glfw3.h>
 #include <wrl.h>
@@ -35,20 +34,21 @@ namespace FTS
 		// Entity System.
 		{
 			m_World.RegisterSystem(new FSceneSystem());
+
+			FEntity* pEntity = m_World.CreateEntity();
+			pCamera = pEntity->Assign<FCamera>(m_pWindow);
 		}
 
 		ReturnIfFalse(D3D12Init());
 		ReturnIfFalse(CreateSamplers());
-		//m_AtmosphereDebugRender.Setup(m_pRenderGraph.Get());
-		m_SdfDebugRender.Setup(m_pRenderGraph.Get());
+		m_AtmosphereDebugRender.Setup(m_pRenderGraph.Get());
+		//m_SdfDebugRender.Setup(m_pRenderGraph.Get());
 
 		m_GuiPass.Init(m_pWindow, m_pDevice.Get());
 		m_pRenderGraph->AddPass(&m_GuiPass);
 
-		//m_AtmosphereDebugRender.GetLastPass()->Precede(&m_GuiPass);
-		m_SdfDebugRender.GetLastPass()->Precede(&m_GuiPass);
-
-		ReturnIfFalse(CreateCamera());
+		m_AtmosphereDebugRender.GetLastPass()->Precede(&m_GuiPass);
+		//m_SdfDebugRender.GetLastPass()->Precede(&m_GuiPass);
 
 
 
@@ -61,7 +61,7 @@ namespace FTS
 		while (!glfwWindowShouldClose(m_pWindow))
 		{
 			glfwPollEvents();
-			pCamera->HandleInput(m_Timer.Tick());
+			m_World.Tick(m_Timer.Tick());
 			ReturnIfFalse(m_pRenderGraph->Execute());
 		}
 		return true;
@@ -191,18 +191,4 @@ namespace FTS
 
 		return true;
 	}
-
-
-
-	BOOL FGlobalRender::CreateCamera()
-	{
-		ReturnIfFalse(m_pWindow != nullptr);
-		FEntity* pEntity = m_World.CreateEntity();
-		pCamera = pEntity->Assign<FCamera>(m_pWindow);
-
-		pCamera->SetPosition({ 4.087f, 3.6999f, 3.957f });
-		pCamera->SetDirection(0.0f, Degrees(3.687f));
-		return true;
-	}
-
 }

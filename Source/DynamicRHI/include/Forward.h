@@ -125,8 +125,15 @@ namespace FTS
     {
         DX12_RenderTargetView,
         DX12_DepthStencilView,
-        DX12_GPU_ShaderResourceView,
-        DX12_GPU_UnorderedAccessView
+
+        DX12_GPU_Texture_SRV,
+        DX12_GPU_Texture_UAV,
+		DX12_GPU_TypedBuffer_SRV,
+		DX12_GPU_TypedBuffer_UAV,
+		DX12_GPU_StructuredBuffer_SRV,
+		DX12_GPU_StructuredBuffer_UAV,
+		DX12_GPU_RawBuffer_SRV,
+		DX12_GPU_RawBuffer_UAV,
     };
 
     enum class EGraphicsAPI : UINT8

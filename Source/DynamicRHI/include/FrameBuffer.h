@@ -4,7 +4,7 @@
 #include "Format.h"
 #include "Forward.h"
 #include "Resource.h"
-#include "StackArray.h"
+#include "../../Tools/include/StackArray.h"
 
 namespace FTS
 {

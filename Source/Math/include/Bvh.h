@@ -46,11 +46,13 @@ namespace FTS
             m_dwTriangleNum = 0;
         }
 
+        FBounds3F GlobalBox;
+
     private:
         std::vector<Node> m_Nodes;
         std::vector<Vertex> m_Vertices;
+        UINT32 m_dwTriangleNum = 0;
 
-        UINT32 m_dwTriangleNum;
     };
 
 

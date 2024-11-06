@@ -247,13 +247,7 @@ namespace FTS
     struct ITexture : public IResource
     {
         virtual FTextureDesc GetDesc() const = 0;
-        virtual SIZE_T GetNativeView(
-            EViewType ViewType,
-            EFormat Format,
-            FTextureSubresourceSet Subresource,
-            ETextureDimension Dimension,
-            BOOL bIsReadOnlyDSV
-        ) = 0;
+		virtual UINT32 GetViewIndex(EViewType ViewType, FTextureSubresourceSet Subresource, BOOL bIsReadOnlyDSV = false) = 0;
 
         virtual BOOL BindMemory(IHeap* pHeap, UINT64 stOffset) = 0;
         virtual FMemoryRequirements GetMemoryRequirements() = 0;
@@ -386,6 +380,7 @@ namespace FTS
         virtual void Unmap() = 0;
         virtual FMemoryRequirements GetMemoryRequirements() = 0;
         virtual BOOL BindMemory(IHeap* pHeap, UINT64 stOffset) = 0;
+        virtual UINT32 GetViewIndex(EViewType ViewType, const FBufferRange& crRange) = 0;
 
 
 		virtual ~IBuffer() = default;

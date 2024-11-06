@@ -280,7 +280,7 @@ namespace FTS
 
 		TVector4(const TVector4<T>& crVector) : x(crVector.x), y(crVector.y), z(crVector.z), w(crVector.w) {}
 
-		explicit TVector4(const TVector3<T>& crVector) : x(crVector.x), y(crVector.y), z(0) {}
+		explicit TVector4(const TVector3<T>& crVector, T _w = 0) : x(crVector.x), y(crVector.y), z(crVector.z), w(_w) {}
 
 		TVector4& operator=(const TVector4<T>& crVector)
 		{

@@ -20,7 +20,7 @@ namespace FTS
 
     BOOL FBvh::Build(std::span<FBvh::Vertex> Vertices, UINT32 dwTriangleNum)
     {
-        FBounds3F GlobalBox;
+        GlobalBox = FBounds3F();
         std::vector<bvh::BoundingBox<FLOAT>> PrimitiveBoxes(dwTriangleNum);
         std::vector<bvh::Vector3<FLOAT>> PrimitiveCentroids(dwTriangleNum);
 
@@ -49,6 +49,7 @@ namespace FTS
         );
         bvh::LeafCollapser<bvh::Bvh<FLOAT>> LeafCollapser(Bvh);
         LeafCollapser.collapse();
+
 
         
         m_Vertices.clear();

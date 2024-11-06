@@ -51,6 +51,8 @@ void CS(uint3 ThreadID : SV_DispatchThreadID)
     // X 轴步长
     float dx = 1.05f * SdfExtent.x / dwWidth;
 
+    // fx, fy, fz 相当于 voxel 的 uvw.
+
     float fy = lerp(SdfLower.y, SdfUpper.y, (ThreadID.y + 0.5f) / dwHeight);
     float fz = lerp(SdfLower.z, SdfUpper.z, (ThreadID.z + 0.5f) / dwDepth);
 

@@ -130,7 +130,7 @@ namespace FTS
         
         virtual BOOL GetBufferState(IBuffer* pBuffer, /*Out*/EResourceStates* pResourceStates) = 0;
 
-        virtual BOOL GetDevice(IDevice** ppDevice) = 0;
+        virtual IDevice* GetDevice() = 0;
         
         virtual FCommandListDesc GetDesc() = 0;
         

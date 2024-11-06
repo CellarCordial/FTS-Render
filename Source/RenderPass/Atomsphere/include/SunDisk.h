@@ -15,7 +15,7 @@ namespace FTS
 		struct SunDiskPassConstant
 		{
 			FMatrix4x4 WorldViewProj;
-			
+
 			FVector3F SunRadius;
 			FLOAT fSunTheta = 0.0f;
 
@@ -31,7 +31,7 @@ namespace FTS
 
 		BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache) override;
 		BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache) override;
-		
+
 		BOOL FinishPass() override;
 
 		friend class FAtmosphereDebugRender;
@@ -52,16 +52,16 @@ namespace FTS
 
 		TComPtr<IBuffer> m_pPassConstantBuffer;
 		TComPtr<IBuffer> m_pVertexBuffer;
-		
+
 		TComPtr<IBindingLayout> m_pBindingLayout;
 		TComPtr<IInputLayout> m_pInputLayout;
-		
+
 		TComPtr<IShader> m_pVS;
 		TComPtr<IShader> m_pPS;
-		
+
 		TComPtr<IFrameBuffer> m_pFrameBuffer;
 		TComPtr<IGraphicsPipeline> m_pPipeline;
-		
+
 		TComPtr<IBindingSet> m_pBindingSet;
 		FGraphicsState m_GraphicsState;
 	};

@@ -28,7 +28,7 @@ namespace FTS
 
 	private:
 		TComPtr<IFrameBuffer> m_pFrameBuffer;
-		ITexture* m_pFinalTexture;
+		ITexture* m_pFinalTexture = nullptr;
 	};
 
 }
