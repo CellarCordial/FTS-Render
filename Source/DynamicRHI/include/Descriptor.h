@@ -149,8 +149,7 @@ namespace FTS
     struct FBindlessLayoutDesc
     {
         EShaderType ShaderVisibility = EShaderType::All;
-        UINT32 dwFirstSlot = 0;
-        UINT32 dwMaxCapacity = 0;
+		UINT32 dwFirstSlot = 0;
 
         // 不允许 PushConstants 和 VolatileConstantBuffer
         FBindingLayoutItemArray BindingLayoutItems;
@@ -413,7 +412,7 @@ namespace FTS
 
     struct IBindingSet : public IResource
     {
-        virtual BOOL IsDescriptorTable() const = 0;
+        virtual BOOL IsBindless() const = 0;
         virtual FBindingSetDesc GetDesc() const = 0;
         virtual IBindingLayout* GetLayout() const = 0;
 
@@ -423,7 +422,7 @@ namespace FTS
 
     extern const IID IID_IDescriptorTable;
 
-    struct IDescriptorTable : public IBindingSet
+    struct IBindlessSet : public IBindingSet
     {
     public:
 
@@ -434,7 +433,7 @@ namespace FTS
          */
         virtual UINT32 GetCapacity() const = 0;
 
-		virtual ~IDescriptorTable() = default;
+		virtual ~IBindlessSet() = default;
     };
     
 }

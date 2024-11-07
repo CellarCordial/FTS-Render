@@ -130,11 +130,11 @@ namespace FTS
         
         BOOL CreateBindingLayout(const FBindingLayoutDesc& crDesc, CREFIID criid, void** ppvBindingLayout) override;
         BOOL CreateBindlessLayout(const FBindlessLayoutDesc& crDesc, CREFIID criid, void** ppvBindlessLayout) override;
-        BOOL CreateBindingSet(const FBindingSetDesc& crDesc, IBindingLayout* pLayout, CREFIID criid, void** ppvBindingSet) override;
         
-        BOOL CreateDescriptorTable(IBindingLayout* pLayout, CREFIID criid, void** ppvDescriptorTable) override;
-        BOOL ResizeDescriptorTable(IDescriptorTable* pDescriptorTable, UINT32 dwNewSize, BOOL bKeepContents = true) override;
-        BOOL WriteDescriptorTable(IDescriptorTable* pDescriptorTable, const FBindingSetItem& crBindingItem) override;
+        BOOL CreateBindingSet(const FBindingSetDesc& crDesc, IBindingLayout* pLayout, CREFIID criid, void** ppvBindingSet) override;
+        BOOL CreateBindlessSet(IBindingLayout* pLayout, CREFIID criid, void** ppvDescriptorTable) override;
+        BOOL ResizeBindlessSet(IBindlessSet* pDescriptorTable, UINT32 dwNewSize, BOOL bKeepContents = true) override;
+        BOOL WriteBindlessSet(IBindlessSet* pDescriptorTable, const FBindingSetItem& crBindingItem) override;
         
         BOOL CreateCommandList(const FCommandListDesc& crDesc, CREFIID criid, void** ppvCmdList) override;
         UINT64 ExecuteCommandLists(ICommandList* const* pcpCommandLists, UINT64 stCommandListsNum = 1, ECommandQueueType ExecutionQueueType = ECommandQueueType::Graphics) override;

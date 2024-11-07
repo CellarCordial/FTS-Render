@@ -1217,7 +1217,7 @@ namespace FTS
 
     BOOL FDX12CommandList::SetResourceStatesForBindingSet(IBindingSet* pBindingSet)
     {
-        if (pBindingSet->IsDescriptorTable()) return false;
+        if (pBindingSet->IsBindless()) return false;
         FBindingSetDesc BindingSetDesc = pBindingSet->GetDesc();
 
         FDX12BindingSet* pDX12BindingSet = CheckedCast<FDX12BindingSet*>(pBindingSet);
@@ -1671,7 +1671,7 @@ namespace FTS
                 const auto& crLayoutOffset = pDX12RootSignature->m_BindingLayoutIndexMap[ix];
                 UINT32 dwBindingLayoutRootParamOffset = crLayoutOffset.second;
 
-                if (!pBindingSet->IsDescriptorTable())
+                if (!pBindingSet->IsBindless())
                 {
                     if (pBindingSet->GetLayout() != crLayoutOffset.first.Get()) return false;
 
@@ -1738,7 +1738,7 @@ namespace FTS
                                 m_pDescriptorHeaps->ShaderResourceHeap.GetGpuHandleShaderVisible(pDX12BindingSet->m_dwDescriptorTableSRVetcBaseIndex));
                         }
                         
-                        if (pBindingSet->IsDescriptorTable()) return false;
+                        if (pBindingSet->IsBindless()) return false;
                         FBindingSetDesc Desc = pBindingSet->GetDesc();
                         if (Desc.bTrackLiveness)
                             m_pInstance->pReferencedResources.emplace_back(pBindingSet);
@@ -1752,7 +1752,7 @@ namespace FTS
                 }
                 else if (cbUpdateTheSet)
                 {
-                    FDX12DescriptorTable* pDX12DescriptorTable = CheckedCast<FDX12DescriptorTable*>(pBindingSet);
+                    FDX12BindlessSet* pDX12DescriptorTable = CheckedCast<FDX12BindlessSet*>(pBindingSet);
 
                     m_pActiveCmdList->pD3D12CommandList->SetGraphicsRootDescriptorTable(
                         dwBindingLayoutRootParamOffset, 
@@ -1794,7 +1794,7 @@ namespace FTS
                 const auto& crLayoutIndex = pDX12RootSignature->m_BindingLayoutIndexMap[ix];
                 UINT32 dwRootParamOffset = crLayoutIndex.second;
 
-                if (!pBindingSet->IsDescriptorTable())
+                if (!pBindingSet->IsBindless())
                 {
                     IBindingLayout* pTempBindingLayoutForCompare = pBindingSet->GetLayout();
                     ReturnIfFalse(pTempBindingLayoutForCompare != nullptr);
@@ -1865,7 +1865,7 @@ namespace FTS
                                 m_pDescriptorHeaps->ShaderResourceHeap.GetGpuHandleShaderVisible(pDX12BindingSet->m_dwDescriptorTableSRVetcBaseIndex));
                         }
                         
-                        if (pBindingSet->IsDescriptorTable()) return false;
+                        if (pBindingSet->IsBindless()) return false;
                         FBindingSetDesc Desc = pBindingSet->GetDesc();
                         if (Desc.bTrackLiveness)
                             m_pInstance->pReferencedResources.emplace_back(pBindingSet);
@@ -1878,7 +1878,7 @@ namespace FTS
                 }
                 else
                 {
-                    FDX12DescriptorTable* pDX12DescriptorTable = CheckedCast<FDX12DescriptorTable*>(pBindingSet);
+                    FDX12BindlessSet* pDX12DescriptorTable = CheckedCast<FDX12BindlessSet*>(pBindingSet);
 
                     m_pActiveCmdList->pD3D12CommandList->SetComputeRootDescriptorTable(
                         crLayoutIndex.second, 

@@ -100,11 +100,11 @@ namespace FTS
             void** ppvBindingSet
         ) = 0;
         
-        virtual BOOL CreateDescriptorTable(IBindingLayout* pLayout, CREFIID criid, void** ppvDescriptorTable) = 0;
+        virtual BOOL CreateBindlessSet(IBindingLayout* pLayout, CREFIID criid, void** ppvDescriptorTable) = 0;
 
-        virtual BOOL ResizeDescriptorTable(IDescriptorTable* pDescriptorTable, UINT32 dwNewSize, BOOL bKeepContents = true) = 0;
+        virtual BOOL ResizeBindlessSet(IBindlessSet* pDescriptorTable, UINT32 dwNewSize, BOOL bKeepContents = true) = 0;
         
-        virtual BOOL WriteDescriptorTable(IDescriptorTable* pDescriptorTable, const FBindingSetItem& crBindingItem) = 0;
+        virtual BOOL WriteBindlessSet(IBindlessSet* pDescriptorTable, const FBindingSetItem& crBindingItem) = 0;
     
         virtual BOOL CreateCommandList(const FCommandListDesc& crDesc, CREFIID criid, void** ppvCmdList) = 0;
         

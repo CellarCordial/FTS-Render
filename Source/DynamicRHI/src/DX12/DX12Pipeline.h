@@ -252,7 +252,7 @@ namespace FTS
         // IBindingSet
         FBindingSetDesc GetDesc() const override { return m_Desc; }
         IBindingLayout* GetLayout() const override { assert(m_pBindingLayout != nullptr); return m_pBindingLayout.Get();}
-        BOOL IsDescriptorTable() const override { return false; }
+        BOOL IsBindless() const override { return false; }
 
     public:
         
@@ -282,17 +282,17 @@ namespace FTS
     };
 
 
-    class FDX12DescriptorTable :
+    class FDX12BindlessSet :
         public TComObjectRoot<FComMultiThreadModel>,
-        public IDescriptorTable
+        public IBindlessSet
     {
     public:
-        BEGIN_INTERFACE_MAP(FDX12DescriptorTable)
-            INTERFACE_ENTRY(IID_IDescriptorTable, IDescriptorTable)
+        BEGIN_INTERFACE_MAP(FDX12BindlessSet)
+            INTERFACE_ENTRY(IID_IDescriptorTable, IBindlessSet)
         END_INTERFACE_MAP
 
-        FDX12DescriptorTable(const FDX12Context* cpContext, FDX12DescriptorHeaps* pDescriptorHeaps);
-        ~FDX12DescriptorTable() noexcept;
+        FDX12BindlessSet(const FDX12Context* cpContext, FDX12DescriptorHeaps* pDescriptorHeaps);
+        ~FDX12BindlessSet() noexcept;
 
         BOOL Initialize();
 
@@ -300,13 +300,13 @@ namespace FTS
         // IBindingSet
         FBindingSetDesc GetDesc() const override { assert(false); return FBindingSetDesc{}; }
         IBindingLayout* GetLayout() const override { assert(false); return nullptr;}
-        BOOL IsDescriptorTable() const override { return true; }
+        BOOL IsBindless() const override { return true; }
 
         // IDescriptorTable
         UINT32 GetCapacity() const override { return m_dwCapacity; }
 
     public:
-        UINT32 m_dwFirstDescriptorIndex = gdwInvalidViewIndex;
+        UINT32 m_dwFirstDescriptorIndex = 0;
         UINT32 m_dwCapacity = 0;
 
     private:

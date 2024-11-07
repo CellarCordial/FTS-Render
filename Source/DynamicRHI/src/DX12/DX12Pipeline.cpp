@@ -420,7 +420,6 @@ namespace FTS
         Desc.Version = D3D_ROOT_SIGNATURE_VERSION_1_1;
 
         if (bAllowInputLayout) Desc.Desc_1_1.Flags |= D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT;
-        Desc.Desc_1_1.Flags |= D3D12_ROOT_SIGNATURE_FLAG_CBV_SRV_UAV_HEAP_DIRECTLY_INDEXED;
 
         if (!D3D12RootParameters.empty())
         {
@@ -812,18 +811,18 @@ namespace FTS
         m_pDescriptorHeaps->SamplerHeap.ReleaseDescriptors(m_dwDescriptorTableSamplerBaseIndex, pDX12BindingLayout->m_dwDescriptorTableSamplerSize);
     }
 
-    FDX12DescriptorTable::FDX12DescriptorTable(const FDX12Context* cpContext, FDX12DescriptorHeaps* pDescriptorHeaps) :
+    FDX12BindlessSet::FDX12BindlessSet(const FDX12Context* cpContext, FDX12DescriptorHeaps* pDescriptorHeaps) :
         m_cpContext(cpContext), m_pDescriptorHeaps(pDescriptorHeaps)
     {
     }
 
-    BOOL FDX12DescriptorTable::Initialize()
+    BOOL FDX12BindlessSet::Initialize()
     {
         return true;
     }
 
 
-    FDX12DescriptorTable::~FDX12DescriptorTable() noexcept
+    FDX12BindlessSet::~FDX12BindlessSet() noexcept
     {
         m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptors(m_dwFirstDescriptorIndex, m_dwCapacity);
     }

@@ -548,12 +548,12 @@ namespace FTS
         return true;
     }
     
-    BOOL FDX12Device::CreateDescriptorTable(IBindingLayout* pLayout, CREFIID criid, void** ppvDescriptorTable)
+    BOOL FDX12Device::CreateBindlessSet(IBindingLayout* pLayout, CREFIID criid, void** ppvDescriptorTable)
     {
         // pLayout is useless on dx12.
 
-        FDX12DescriptorTable* pDescriptorTable = new FDX12DescriptorTable(&m_Context, m_pDescriptorHeaps.get());
-        if (!pDescriptorTable->Initialize() || !pDescriptorTable->QueryInterface(criid, ppvDescriptorTable))
+        FDX12BindlessSet* pBindlessSet = new FDX12BindlessSet(&m_Context, m_pDescriptorHeaps.get());
+        if (!pBindlessSet->Initialize() || !pBindlessSet->QueryInterface(criid, ppvDescriptorTable))
         {
             LOG_ERROR("Call to IDevice::CreateDescriptorTable failed.");
             return false;
@@ -561,14 +561,14 @@ namespace FTS
         return true;
     }
 
-    BOOL FDX12Device::ResizeDescriptorTable(IDescriptorTable* pDescriptorTable, UINT32 dwNewSize, BOOL bKeepContents)
+    BOOL FDX12Device::ResizeBindlessSet(IBindlessSet* pBindlessSet, UINT32 dwNewSize, BOOL bKeepContents)
     {
-        UINT32 dwCapacity = pDescriptorTable->GetCapacity();
+        UINT32 dwCapacity = pBindlessSet->GetCapacity();
 
         if (dwNewSize == dwCapacity) return true;
 
     
-        FDX12DescriptorTable* pDX12DescriptorTable = CheckedCast<FDX12DescriptorTable*>(pDescriptorTable);
+        FDX12BindlessSet* pDX12DescriptorTable = CheckedCast<FDX12BindlessSet*>(pBindlessSet);
 
         UINT32 dwOriginalFirstViewIndex = pDX12DescriptorTable->m_dwFirstDescriptorIndex;
 
@@ -611,11 +611,11 @@ namespace FTS
         return true;
     }
 
-    BOOL FDX12Device::WriteDescriptorTable(IDescriptorTable* pDescriptorTable, const FBindingSetItem& crBindingItem)
+    BOOL FDX12Device::WriteBindlessSet(IBindlessSet* pDescriptorTable, const FBindingSetItem& crBindingItem)
     {
         if (crBindingItem.dwSlot >= pDescriptorTable->GetCapacity()) return false;
 
-        FDX12DescriptorTable* pDX12DescriptorTable = CheckedCast<FDX12DescriptorTable*>(pDescriptorTable);
+        FDX12BindlessSet* pDX12DescriptorTable = CheckedCast<FDX12BindlessSet*>(pDescriptorTable);
         D3D12_CPU_DESCRIPTOR_HANDLE ViewHandle = m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(pDX12DescriptorTable->m_dwFirstDescriptorIndex);
 
         switch (crBindingItem.Type)
