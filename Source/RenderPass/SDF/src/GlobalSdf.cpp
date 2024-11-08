@@ -104,6 +104,21 @@ namespace FTS
 			m_ComputeState.pPipeline = m_pPipeline.Get();
 		}
 
+
+		pCache->GetWorld()->Each<Event::OnModelTransform>(
+			[this](FEntity* pEntity, Event::OnModelTransform* pEvent) -> BOOL
+			{
+				pEvent->DelegateEvent.AddEvent(
+					[this]() -> BOOL 
+					{
+						this->Type &= ~ERenderPassType::Exclude; 
+						return true;
+					}
+				);
+				return true;
+			}
+		);
+
 		return true;
 	}
 
@@ -171,7 +186,7 @@ namespace FTS
 	BOOL FGlobalSdfPass::FinishPass()
 	{
 		m_ModelSdfDatas.clear();
-
+		m_pMeshSdfTextures.clear();
 		return true;
 	}
 

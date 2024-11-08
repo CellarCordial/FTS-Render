@@ -74,11 +74,13 @@ namespace FTS
 		pWorld->Subscribe<Event::OnComponentAssigned<FMaterial>>(this);
 		pWorld->Subscribe<Event::OnComponentAssigned<std::string>>(this);
 		pWorld->Subscribe<Event::OnComponentAssigned<FDistanceField>>(this);
+		
 
 		FSceneGrid* pSceneGrid = pWorld->CreateEntity()->Assign<FSceneGrid>();
 
 		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
 		pSceneGrid->Chunks.resize(dwChunkNumPerAxis * dwChunkNumPerAxis * dwChunkNumPerAxis);
+
 
 		return true;
 	}
@@ -346,6 +348,8 @@ namespace FTS
 				return true;
 			}
 		);
+
+		ReturnIfFalse(crEvent.DelegateEvent.Broadcast());
 
 		return true;
 	}

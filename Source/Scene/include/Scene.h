@@ -4,6 +4,7 @@
 #include "Geometry.h"
 #include "Image.h"
 #include "Light.h"
+#include "../../Core/include/Delegate.h"
 
 namespace FTS
 {
@@ -11,13 +12,19 @@ namespace FTS
 	{
 		struct OnModelLoad
 		{
+			DeclareDelegateEvent(ModelLoaded);
+
 			FEntity* pEntity = nullptr;
 			std::string strModelPath;
+			ModelLoaded DelegateEvent;
 		};
 
 		struct OnModelTransform
 		{
+			DeclareDelegateEvent(ModelTransformed);
+			
 			FEntity* pEntity = nullptr;
+			ModelTransformed DelegateEvent;
 		};
 	};
 	
@@ -89,6 +96,7 @@ namespace FTS
 		FWorld* m_pWorld = nullptr;
 		std::string m_strModelDirectory;
 		std::string m_strSdfDataPath;
+
 	};
 }
 

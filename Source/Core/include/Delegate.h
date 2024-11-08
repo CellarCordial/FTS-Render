@@ -8,24 +8,22 @@
 
 namespace FTS 
 {
-    #define DeclareDelegateEvent(ClassName, Owner, ...)         \
+    #define DeclareDelegateEvent(ClassName, ...)                \
         class ClassName : public TDelegate<__VA_ARGS__>         \
         {                                                       \
         public:                                                 \
-            friend class Owner;                                 \
             using TDelegate::AddEvent;                          \
             using TDelegate::Broadcast;                         \
-        };
+        }
 
 
-    #define DeclareMultiDelegateEvent(ClassName, Owner, ...)    \
+    #define DeclareMultiDelegateEvent(ClassName, ...)           \
         class ClassName : public TMultiDelegate<__VA_ARGS__>    \
         {                                                       \
         public:                                                 \
-            friend class Owner;                                 \
             using TMultiDelegate::AddEvent;                     \
             using TMultiDelegate::Broadcast;                    \
-        };
+        }
 
 
     template<typename T, typename... Args>
@@ -67,7 +65,7 @@ namespace FTS
             m_DelegateFunc = nullptr;
         }
 
-        BOOL Broadcast(Args... InArguments)
+        BOOL Broadcast(Args... InArguments) const
         {
             if (m_DelegateFunc)
             {
@@ -134,7 +132,7 @@ namespace FTS
             );
         }
 
-        BOOL Broadcast(Args... InArguments)
+        BOOL Broadcast(Args... InArguments) const
         {
             for (const auto& DelegateFunction : m_DelegateArray)
             {
