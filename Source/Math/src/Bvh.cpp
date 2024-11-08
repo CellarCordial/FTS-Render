@@ -14,7 +14,7 @@ namespace FTS
 
     bvh::BoundingBox<FLOAT> ConvertBounds(FBounds3F Bounds)
     {
-        return bvh::BoundingBox<FLOAT>{ ConvertVector(Bounds.m_Min), ConvertVector(Bounds.m_Max) };
+        return bvh::BoundingBox<FLOAT>{ ConvertVector(Bounds.m_Lower), ConvertVector(Bounds.m_Upper) };
     }
 
 
@@ -109,7 +109,7 @@ namespace FTS
         FBvhPrimitiveInfo(UINT64 stPrimIndex, const FBounds3F& crBounds) :
             stPrimitiveIndex(stPrimIndex),
             Bounds(crBounds),
-            Centroid(0.5f * crBounds.m_Min + 0.5f * crBounds.m_Max)
+            Centroid(0.5f * crBounds.m_Lower + 0.5f * crBounds.m_Upper)
         {
         }
     };
@@ -309,7 +309,7 @@ namespace FTS
 
             // Partition primitives into two sets and build children. 
             UINT32 dwMid = (dwStart + dwEnd) / 2;
-            if (CentroidBounds.m_Max[dwDimension] == CentroidBounds.m_Min[dwDimension])
+            if (CentroidBounds.m_Upper[dwDimension] == CentroidBounds.m_Lower[dwDimension])
             {
                 // Create leaf FBvhBuildNode. 
                 UINT32 dwFirstPrimitiveOffset = rpOrderedPrimitives.size();
@@ -328,7 +328,7 @@ namespace FTS
                 case ESplitMethod::Middle:
                     {
                         // Partition primitives through node's midpoint
-                        FLOAT fDimensionMid = (CentroidBounds.m_Min[dwDimension] + CentroidBounds.m_Max[dwDimension]) / 2.0f;
+                        FLOAT fDimensionMid = (CentroidBounds.m_Lower[dwDimension] + CentroidBounds.m_Upper[dwDimension]) / 2.0f;
                         FBvhPrimitiveInfo* pMidPrimitiveInfo = std::partition(
                             &rPrimitiveInfos[dwStart], 
                             &rPrimitiveInfos[dwEnd - 1] + 1, 
@@ -797,12 +797,12 @@ namespace FTS
         FBounds3F CentroidBounds;
         for (UINT32 ix = dwStart; ix < dwEnd; ++ix)
         {
-            FVector3F Centroid((rpTreeletRoots[ix]->Bounds.m_Min + rpTreeletRoots[ix]->Bounds.m_Max) * 0.5f);
+            FVector3F Centroid((rpTreeletRoots[ix]->Bounds.m_Lower + rpTreeletRoots[ix]->Bounds.m_Upper) * 0.5f);
             CentroidBounds = Union(CentroidBounds, Centroid);
         }
 
         UINT32 dwDimension = CentroidBounds.MaxExtent();
-        // NE(CentroidBounds.m_Max[dwDimension], CentroidBounds.m_Min[dwDimension]);
+        // NE(CentroidBounds.m_Upper[dwDimension], CentroidBounds.m_Lower[dwDimension]);
 
         // Allocate _BucketInfo_ for SAH partition buckets. 
         struct FBucketInfo
@@ -817,11 +817,11 @@ namespace FTS
 
         for (UINT32 ix = dwStart; ix < dwEnd; ++ix)
         {
-            FLOAT fCentroid = (rpTreeletRoots[ix]->Bounds.m_Min[dwDimension] + rpTreeletRoots[ix]->Bounds.m_Max[dwDimension]) * 0.5f;
+            FLOAT fCentroid = (rpTreeletRoots[ix]->Bounds.m_Lower[dwDimension] + rpTreeletRoots[ix]->Bounds.m_Upper[dwDimension]) * 0.5f;
 
             UINT32 dwBucketIndex = dwBucketsNum * 
-                                   ((fCentroid - CentroidBounds.m_Min[dwDimension]) / 
-                                   (CentroidBounds.m_Max[dwDimension] - CentroidBounds.m_Min[dwDimension]));
+                                   ((fCentroid - CentroidBounds.m_Lower[dwDimension]) / 
+                                   (CentroidBounds.m_Upper[dwDimension] - CentroidBounds.m_Lower[dwDimension]));
 
             if (dwBucketIndex == dwBucketsNum) dwBucketIndex -= 1;
             // GE(dwBucketIndex, 0);
@@ -868,11 +868,11 @@ namespace FTS
             &rpTreeletRoots[dwEnd - 1] + 1, 
             [=](const FBvhBuildNode* cpNode)
             {
-                FLOAT fCentroid = (cpNode->Bounds.m_Min[dwDimension] + cpNode->Bounds.m_Max[dwDimension]) * 0.5f;
+                FLOAT fCentroid = (cpNode->Bounds.m_Lower[dwDimension] + cpNode->Bounds.m_Upper[dwDimension]) * 0.5f;
 
                 UINT32 dwBucketIndex = dwBucketsNum *
-                                   ((fCentroid - CentroidBounds.m_Min[dwDimension]) / 
-                                   (CentroidBounds.m_Max[dwDimension] - CentroidBounds.m_Min[dwDimension]));
+                                   ((fCentroid - CentroidBounds.m_Lower[dwDimension]) / 
+                                   (CentroidBounds.m_Upper[dwDimension] - CentroidBounds.m_Lower[dwDimension]));
                 if (dwBucketIndex == dwBucketsNum) dwBucketIndex -= 1;
                 // GE(dwBucketIndex, 0);
                 // LT(dwBucketIndex, dwBucketsNum);

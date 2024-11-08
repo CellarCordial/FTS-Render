@@ -131,8 +131,8 @@ namespace FTS
 
 			FBounds3F* pGlobalBox;
 			ReturnIfFalse(pCache->RequireConstants("GlobalBox", PPV_ARG(&pGlobalBox)));
-			m_PassConstants.SdfLower = pGlobalBox->m_Min - FVector3F(0.5f);
-			m_PassConstants.SdfUpper = pGlobalBox->m_Max + FVector3F(0.5f);
+			m_PassConstants.SdfLower = pGlobalBox->m_Lower - 0.5f;
+			m_PassConstants.SdfUpper = pGlobalBox->m_Upper + 0.5f;
 			m_PassConstants.SdfExtent = m_PassConstants.SdfUpper - m_PassConstants.SdfLower;
 		}
 		
@@ -158,7 +158,7 @@ namespace FTS
 
 		FWorld* pWorld = pRenderGraph->GetResourceCache()->GetWorld();
 		FEntity* pBunnyEntity = pWorld->CreateEntity();
-		pWorld->Boardcast(Event::OnGeometryLoad{ .pEntity = pBunnyEntity, .strModelPath = "Asset/ABeautifulGame/ABeautifulGame.gltf" });
+		pWorld->Boardcast(Event::OnModelLoad{ .pEntity = pBunnyEntity, .strModelPath = "Asset/ABeautifulGame/ABeautifulGame.gltf" });
 
 		m_SdfGeneratePass.GenerateSdf(pBunnyEntity->GetComponent<FMesh>());
 

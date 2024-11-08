@@ -9,27 +9,53 @@ namespace FTS
 {
 	namespace Event
 	{
-		struct OnGeometryLoad
+		struct OnModelLoad
 		{
 			FEntity* pEntity = nullptr;
 			std::string strModelPath;
+		};
+
+		struct OnModelTransform
+		{
+			FEntity* pEntity = nullptr;
 		};
 	};
 	
 	struct FTransform
 	{
-		FVector3F Translation = { 0.0f, 0.0f, 0.0f };
+		FVector3F Position = { 0.0f, 0.0f, 0.0f };
 		FVector3F Rotation = { 0.0f, 0.0f, 0.0f };
 		FVector3F Scale = { 1.0f, 1.0f, 1.0f };
+
+		FMatrix4x4 WorldMatrix() const
+		{
+			return FMatrix4x4(Mul(Translate(Position), Mul(Rotate(Rotation), ::FTS::Scale(Scale))));
+		}
 	};
 
-	inline const UINT32 gdwVoxelNumPerChunk = 32;
+	struct FDistanceField
+	{
+		std::string strSdfTextureName;
+		FMatrix4x4 LocalMatrix;
+		FMatrix4x4 WorldMatrix;
+		FMatrix4x4 CoordMatrix;
+		FBounds3F SdfBox;
+
+		std::shared_ptr<FBvh> pBvh;
+
+		void TransformUpdate(const FTransform* cpTransform);
+	};
+
+	inline const UINT32 gdwGlobalSdfResolution = 256;
+	inline const UINT32 gdwVoxelNumPerChunk = 16;
+	inline const UINT32 gdwMaxGIDistance = 512;
 
 	struct FSceneGrid
 	{
 		struct Chunk
 		{
 			std::vector<FEntity*> pModelEntities;
+			BOOL bModelMoved = true;
 		};
 		
 		std::vector<Chunk> Chunks;
@@ -37,7 +63,8 @@ namespace FTS
 
 	class FSceneSystem :
 		public IEntitySystem,
-		public TEventSubscriber<Event::OnGeometryLoad>,
+		public TEventSubscriber<Event::OnModelLoad>,
+		public TEventSubscriber<Event::OnModelTransform>,
 		public TEventSubscriber<Event::OnComponentAssigned<FMesh>>,
 		public TEventSubscriber<Event::OnComponentAssigned<FCamera>>,
 		public TEventSubscriber<Event::OnComponentAssigned<FMaterial>>,
@@ -50,7 +77,8 @@ namespace FTS
 
 		void Tick(FWorld* world, FLOAT fDelta) override;
 
-		BOOL Publish(FWorld* pWorld, const Event::OnGeometryLoad& crEvent) override;
+		BOOL Publish(FWorld* pWorld, const Event::OnModelLoad& crEvent) override;
+		BOOL Publish(FWorld* pWorld, const Event::OnModelTransform& crEvent) override;
 		BOOL Publish(FWorld* pWorld, const Event::OnComponentAssigned<FMesh>& crEvent) override;
 		BOOL Publish(FWorld* pWorld, const Event::OnComponentAssigned<FCamera>& crEvent) override;
 		BOOL Publish(FWorld* pWorld, const Event::OnComponentAssigned<FMaterial>& crEvent) override;

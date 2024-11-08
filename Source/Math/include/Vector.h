@@ -23,6 +23,14 @@ namespace FTS
 
 		TVector2(const TVector2<T>& crVector) : x(crVector.x), y(crVector.y) {}
 
+		template <typename U>
+		requires std::is_arithmetic_v<U>
+		explicit TVector2(const TVector2<U>& crVector) :
+			x(static_cast<T>(crVector.x)),
+			y(static_cast<T>(crVector.y))
+		{
+		}
+
 		TVector2& operator=(const TVector2<T>& crVector)
 		{
 			x = crVector.x;
@@ -30,9 +38,28 @@ namespace FTS
 			return *this;
 		}
 
+		template <typename U>
+		requires std::is_arithmetic_v<U>
+		TVector2& operator=(const TVector2<U>& crVector)
+		{
+			x = static_cast<T>(crVector.x);
+			y = static_cast<T>(crVector.y);
+			return *this;
+		}
+
 		TVector2<T> operator+(const TVector2<T>& crVector) const { return TVector2(x + crVector.x, y + crVector.y); }
 
 		TVector2<T> operator-(const TVector2<T>& crVector) const { return TVector2(x - crVector.x, y - crVector.y); }
+
+		TVector2<T> operator+(T Value) const
+		{
+			return TVector2(x + Value, y + Value);
+		}
+
+		TVector2<T> operator-(T Value) const
+		{
+			return TVector2(x - Value, y - Value);
+		}
 
 		TVector2<T> operator-() const { return TVector2(-x, -y); }
 
@@ -146,6 +173,15 @@ namespace FTS
 
 		TVector3(const TVector3<T>& crVector) : x(crVector.x), y(crVector.y), z(crVector.z) {}
 
+		template <typename U>
+		requires std::is_arithmetic_v<U>
+		explicit TVector3(const TVector3<U>& crVector) :
+			x(static_cast<T>(crVector.x)),
+			y(static_cast<T>(crVector.y)),
+			z(static_cast<T>(crVector.z))
+		{
+		}
+
 		TVector3& operator=(const TVector3<T>& crVector)
 		{
 			x = crVector.x;
@@ -154,9 +190,29 @@ namespace FTS
 			return *this;
 		}
 
+		template <typename U>
+		requires std::is_arithmetic_v<U>
+		TVector3& operator=(const TVector3<U>& crVector)
+		{
+			x = static_cast<T>(crVector.x);
+			y = static_cast<T>(crVector.y);
+			z = static_cast<T>(crVector.z);
+			return *this;
+		}
+
 		TVector3<T> operator+(const TVector3<T>& crVector) const { return TVector3(x + crVector.x, y + crVector.y, z + crVector.z); }
 
 		TVector3<T> operator-(const TVector3<T>& crVector) const { return TVector3(x - crVector.x, y - crVector.y, z - crVector.z); }
+
+		TVector3<T> operator+(T Value) const
+		{
+			return TVector3(x + Value, y + Value, z + Value);
+		}
+
+		TVector3<T> operator-(T Value) const
+		{
+			return TVector3(x - Value, y - Value, z - Value);
+		}
 
 		TVector3<T> operator-() const { return TVector3(-x, -y, -z); }
 
@@ -280,7 +336,17 @@ namespace FTS
 
 		TVector4(const TVector4<T>& crVector) : x(crVector.x), y(crVector.y), z(crVector.z), w(crVector.w) {}
 
-		explicit TVector4(const TVector3<T>& crVector, T _w = 0) : x(crVector.x), y(crVector.y), z(crVector.z), w(_w) {}
+		explicit TVector4(const TVector3<T>& crVector, T _w = 1) : x(crVector.x), y(crVector.y), z(crVector.z), w(_w) {}
+
+		template <typename U>
+		requires std::is_arithmetic_v<U>
+		explicit TVector4(const TVector4<U>& crVector) :
+			x(static_cast<T>(crVector.x)),
+			y(static_cast<T>(crVector.y)),
+			z(static_cast<T>(crVector.z)),
+			w(static_cast<T>(crVector.w))
+		{
+		}
 
 		TVector4& operator=(const TVector4<T>& crVector)
 		{
@@ -288,6 +354,17 @@ namespace FTS
 			y = crVector.y;
 			z = crVector.z;
 			w = crVector.w;
+			return *this;
+		}
+
+		template <typename U>
+		requires std::is_arithmetic_v<U>
+		TVector4& operator=(const TVector4<U>& crVector)
+		{
+			x = static_cast<T>(crVector.x);
+			y = static_cast<T>(crVector.y);
+			z = static_cast<T>(crVector.z);
+			w = static_cast<T>(crVector.w);
 			return *this;
 		}
 
@@ -299,6 +376,16 @@ namespace FTS
 		TVector4<T> operator-(const TVector4<T>& crVector) const
 		{
 			return TVector4(x - crVector.x, y - crVector.y, z - crVector.z, w - crVector.w);
+		}
+
+		TVector4<T> operator+(T Value) const
+		{
+			return TVector4(x + Value, y + Value, z + Value, w + Value);
+		}
+
+		TVector4<T> operator-(T Value) const
+		{
+			return TVector4(x - Value, y - Value, z - Value, w - Value);
 		}
 
 		TVector4<T> operator-() const { return TVector4(-x, -y, -z, -w); }

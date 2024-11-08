@@ -142,7 +142,14 @@ namespace FTS
      * @param fTheta 角度制
      * 
      */
-    FMatrix4x4 Rotate(FLOAT fTheta/*degrees*/, const FVector3F& crAxis);
+	FMatrix4x4 Rotate(FLOAT fTheta/*degrees*/, const FVector3F& crAxis);
+	
+    // 返回
+    // 绕 X 轴旋转 crRotation.x 角度,
+    // 绕 Y 轴旋转 crRotation.y 角度
+    // 绕 Z 轴旋转 crRotation.z 角度
+    // 的变换
+    FMatrix4x4 Rotate(const FVector3F& crRotation);
 
     FMatrix4x4 LookAtLeftHand(const FVector3F& crPos, const FVector3F& crLook, const FVector3F& crUp);
     FMatrix4x4 OrthographicLeftHand(FLOAT fWidth, FLOAT fHeight, FLOAT fNearZ, FLOAT fFarZ);

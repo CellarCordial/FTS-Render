@@ -412,7 +412,12 @@ namespace FTS
         return Ret;
     }
 
-    FMatrix4x4 OrthographicLeftHand(FLOAT fWidth, FLOAT fHeight, FLOAT fNearZ, FLOAT fFarZ)
+	FTS::FMatrix4x4 Rotate(const FVector3F& crRotation)
+	{
+        return Mul(RotateX(crRotation.x), Mul(RotateY(crRotation.y), RotateZ(crRotation.z)));
+	}
+
+	FMatrix4x4 OrthographicLeftHand(FLOAT fWidth, FLOAT fHeight, FLOAT fNearZ, FLOAT fFarZ)
 	{
 		return FMatrix4x4(
             2.0f / fWidth, 0.0f,           0.0f,                       0.0f,
@@ -469,12 +474,13 @@ namespace FTS
 		auto L = Normalize(crLook - crPos);
 		auto R = Normalize(Cross(crUp, L));
 		auto U = Cross(L, R);
-		return Transpose(Inverse(FMatrix4x4(
-            R.x, U.x, L.x, crPos.x,
-			R.y, U.y, L.y, crPos.y,
-			R.z, U.z, L.z, crPos.z,
-			0, 0, 0, 1
-        )));
+
+        return Inverse(FMatrix4x4(
+            R.x,     R.y,     R.z,     0.0f,
+            U.x,     U.y,     U.z,     0.0f,
+            L.x,     L.y,     L.z,     0.0f,
+            crPos.x, crPos.y, crPos.z, 1.0f
+        ));
     }
 
 

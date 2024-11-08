@@ -24,6 +24,17 @@ namespace FTS
 				IID_IBindingLayout,
 				PPV_ARG(m_pBindingLayout.GetAddressOf())
 			));
+
+			FBindingLayoutItemArray BindlessLayoutItems(1);
+			BindlessLayoutItems[0] = FBindingLayoutItem::CreateBindless_SRV();
+			ReturnIfFalse(pDevice->CreateBindlessLayout(
+				FBindlessLayoutDesc{ 
+					.BindingLayoutItems = BindlessLayoutItems, 
+					.dwFirstSlot = 1 
+				}, 
+				IID_IBindingLayout, 
+				PPV_ARG(m_pBindlessLayout.GetAddressOf())
+			));
 		}
 
 		// Shader.
@@ -48,13 +59,10 @@ namespace FTS
 			FComputePipelineDesc PipelineDesc;
 			PipelineDesc.CS = m_pCS.Get();
 			PipelineDesc.pBindingLayouts.PushBack(m_pBindingLayout.Get());
+			PipelineDesc.pBindingLayouts.PushBack(m_pBindlessLayout.Get());
 			ReturnIfFalse(pDevice->CreateComputePipeline(PipelineDesc, IID_IComputePipeline, PPV_ARG(m_pPipeline.GetAddressOf())));
 		}
 
-		// Buffer.
-		{
-
-		}
 
 		// Texture.
 		{
@@ -92,6 +100,7 @@ namespace FTS
 		// Compute State.
 		{
 			m_ComputeState.pBindingSets.PushBack(m_pBindingSet.Get());
+			m_ComputeState.pBindingSets.PushBack(m_pBindlessSet.Get());
 			m_ComputeState.pPipeline = m_pPipeline.Get();
 		}
 
@@ -100,12 +109,68 @@ namespace FTS
 
 	BOOL FGlobalSdfPass::Execute(ICommandList* pCmdList, IRenderResourceCache* pCache)
 	{
+		ReturnIfFalse(pCmdList->Open());
+
+		IDevice* pDevice = pCmdList->GetDevice();
+		// Update.
+		{
+			pCache->GetWorld()->Each<FMesh, FDistanceField, FTransform>(
+				[this, pCache](FEntity* pEntity, FMesh* pMesh, FDistanceField* pDF, FTransform* pTransform) -> BOOL
+				{
+					m_ModelSdfDatas.emplace_back(
+						Constant::ModelSdfData{
+							.LocalMatrix = pDF->LocalMatrix,
+							.WorldMatrix = pDF->WorldMatrix,
+							.CoordMatrix = pDF->CoordMatrix,
+							.SdfLower = pDF->SdfBox.m_Lower,
+							.SdfUpper = pDF->SdfBox.m_Upper
+						}
+					);
+
+					auto& rSdfTexture = m_pMeshSdfTextures.emplace_back();
+					ReturnIfFalse(pCache->Require(pDF->strSdfTextureName.c_str())->QueryInterface(
+						IID_ITexture, 
+						PPV_ARG(rSdfTexture.GetAddressOf())
+					));
+					return true;
+				}
+			);
+			ReturnIfFalse(pDevice->CreateBuffer(
+				FBufferDesc::CreateStructured(
+					m_ModelSdfDatas.size() * sizeof(Constant::ModelSdfData),
+					sizeof(Constant::ModelSdfData),
+					true,
+					"ModelSdfDataBuffer"
+				),
+				IID_IBuffer,
+				PPV_ARG(m_pModelSdfDataBuffer.GetAddressOf())
+			));
+			ReturnIfFalse(pCache->Collect(m_pModelSdfDataBuffer.Get()));
+
+			ReturnIfFalse(pCmdList->WriteBuffer(
+				m_pModelSdfDataBuffer.Get(), 
+				m_ModelSdfDatas.data(), 
+				m_ModelSdfDatas.size() * sizeof(Constant::ModelSdfData)
+			));
+
+			m_pBindlessSet->Resize(static_cast<UINT32>(m_pMeshSdfTextures.size()), false);
+			for (UINT32 ix = 0; ix < m_pMeshSdfTextures.size(); ++ix)
+			{
+				m_pBindlessSet->SetSlot(FBindingSetItem::CreateTexture_SRV(0, m_pMeshSdfTextures[ix].Get()), ix + 1);
+			}
+		}
+
+
+		ReturnIfFalse(pCmdList->SetComputeState(m_ComputeState));
+		
+		
 
 		return true;
 	}
 
 	BOOL FGlobalSdfPass::FinishPass()
 	{
+		m_ModelSdfDatas.clear();
 
 		return true;
 	}

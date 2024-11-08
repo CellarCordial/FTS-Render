@@ -1,11 +1,10 @@
 #include "../include/Geometry.h"
-
+#include "../include/Scene.h"
 
 #include <memory>
 #include <string>
 namespace FTS
 {
-
 	namespace Geometry
 	{
 		FMesh CreateBox(FLOAT width, FLOAT height, FLOAT depth, UINT32 numSubdivisions)
@@ -623,5 +622,6 @@ namespace FTS
 		}
 
 	}
+
 
 }

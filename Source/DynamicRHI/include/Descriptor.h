@@ -45,6 +45,40 @@ namespace FTS
         UINT16 wSize        : 16;   /**< For push constants. */
 
 
+        static FBindingLayoutItem CreateBindless_SRV(UINT32 dwRegisterSpace = 0)
+        {
+			FBindingLayoutItem Ret;
+            // 只要是个 SRV 就行.
+			Ret.Type = EResourceType::Texture_SRV;
+            Ret.dwRegisterSpace = dwRegisterSpace;
+			return Ret;
+        }
+
+		static FBindingLayoutItem CreateBindless_UAV(UINT32 dwRegisterSpace = 0)
+		{
+			FBindingLayoutItem Ret;
+			// 只要是个 UAV 就行.
+			Ret.Type = EResourceType::Texture_UAV;
+			Ret.dwRegisterSpace = dwRegisterSpace;
+			return Ret;
+		}
+
+		static FBindingLayoutItem CreateBindless_CBV(UINT32 dwRegisterSpace = 0)
+		{
+			FBindingLayoutItem Ret;
+			Ret.Type = EResourceType::ConstantBuffer;
+			Ret.dwRegisterSpace = dwRegisterSpace;
+			return Ret;
+		}
+
+		static FBindingLayoutItem CreateBindless_Sampler(UINT32 dwRegisterSpace = 0)
+		{
+			FBindingLayoutItem Ret;
+			Ret.Type = EResourceType::ConstantBuffer;
+			Ret.dwRegisterSpace = dwRegisterSpace;
+			return Ret;
+		}
+
         static FBindingLayoutItem CreateTexture_SRV(UINT32 dwSlot)
         {
             FBindingLayoutItem Ret;
@@ -148,11 +182,11 @@ namespace FTS
 
     struct FBindlessLayoutDesc
     {
-        EShaderType ShaderVisibility = EShaderType::All;
-		UINT32 dwFirstSlot = 0;
-
         // 不允许 PushConstants 和 VolatileConstantBuffer
         FBindingLayoutItemArray BindingLayoutItems;
+		
+        UINT32 dwFirstSlot = 0;
+        EShaderType ShaderVisibility = EShaderType::All;
     };
 
     extern const IID IID_IBindingLayout;
@@ -191,7 +225,6 @@ namespace FTS
         static FBindingSetItem CreateTexture_SRV(
             UINT32 dwSlot,
             ITexture* pTexture,
-            ETextureDimension Dimension = ETextureDimension::Texture2D,
             FTextureSubresourceSet Subresource = gAllSubresource
         )
         {

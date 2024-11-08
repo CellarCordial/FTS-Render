@@ -147,8 +147,8 @@ namespace FTS
 			for (const auto& crSubmesh : m_pMesh->SubMeshes) stTriangleCount += crSubmesh.Indices.size() / 3;
 			m_PassConstants.dwTriangleNum = static_cast<UINT32>(stTriangleCount);
 
-			m_PassConstants.SdfLower = m_Bvh.GlobalBox.m_Min - FVector3F(0.5f);
-			m_PassConstants.SdfUpper = m_Bvh.GlobalBox.m_Max + FVector3F(0.5f);
+			m_PassConstants.SdfLower = m_Bvh.GlobalBox.m_Lower - 0.5f;
+			m_PassConstants.SdfUpper = m_Bvh.GlobalBox.m_Upper + 0.5f;
 			m_PassConstants.SdfExtent = m_PassConstants.SdfUpper - m_PassConstants.SdfLower;
 			ReturnIfFalse(pCache->CollectConstants("GlobalBox", &m_Bvh.GlobalBox));
 
@@ -252,7 +252,6 @@ namespace FTS
         ReturnIfFalse(ix == stIndicesNum);
 		  
         m_Bvh.Build(BvhVertices, stIndicesNum / 3);
-		m_pMesh->Box = m_Bvh.GlobalBox;
 
         return true;
     }

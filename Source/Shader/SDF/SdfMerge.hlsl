@@ -1,6 +1,6 @@
-// #define THREAD_GROUP_SIZE_X 0 
-// #define THREAD_GROUP_SIZE_Y 0
-// #define THREAD_GROUP_SIZE_Z 0
+#define THREAD_GROUP_SIZE_X 0 
+#define THREAD_GROUP_SIZE_Y 0
+#define THREAD_GROUP_SIZE_Z 0
 
 struct FModelSdfData
 {
@@ -61,7 +61,14 @@ float CalcSdf(float fMinSdf, uint dwSdfIndex, float3 VoxelWorldPos)
     // 到 sdf 包围盒的距离已经大于当前最小距离.
     if (fMinSdf <= fDistanceToSdf) return fMinSdf;
 
-    float3 uvw = mul(float4(SdfLocalPosClamped, 1.0f), SdfData.CoordMatrix);
+    // float3 uvw = mul(float4(SdfLocalPosClamped, 1.0f), SdfData.CoordMatrix);
+
+    float3 SdfExtent = SdfData.SdfUpper - SdfData.SdfLower;
+    float u = (SdfLocalPosClamped.x - SdfData.SdfLower.x) / SdfExtent.x;
+    float v = (SdfData.SdfUpper.y - SdfLocalPosClamped.y) / SdfExtent.y;
+    float w = (SdfLocalPosClamped.z - SdfData.SdfLower.z) / SdfExtent.z;
+    float3 uvw = float3(u, v, w);
+
     float sdf = gMeshSdfTextures[dwSdfIndex].SampleLevel(gSampler, uvw, 0);
     // Voxel 在 MeshSdf 内.
     if (fDistanceToSdf < 0.001f) return min(sdf, fMinSdf);

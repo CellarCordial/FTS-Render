@@ -296,7 +296,7 @@ namespace FTS
 
 
 		FEntity* pMountainEntity = pWorld->CreateEntity();
-		pWorld->Boardcast(Event::OnGeometryLoad{ .pEntity = pMountainEntity, .strModelPath = "Asset/Mountain/terrain.gltf" });
+		pWorld->Boardcast(Event::OnModelLoad{ .pEntity = pMountainEntity, .strModelPath = "Asset/Mountain/terrain.gltf" });
 
 
 		FDirectionalLight Light;

@@ -14,7 +14,7 @@ namespace FTS
 		{
 			FMatrix4x4 VoxelWorldMatrix;
 			FVector3I VoxelOffset;  FLOAT fGIMaxDistance = 500;
-			UINT32 dwMeshSdfCount;   FVector3I PAD;
+			UINT32 dwMeshSdfCount = 0;   FVector3I PAD;
 		};
 		
 		struct ModelSdfData
@@ -31,7 +31,7 @@ namespace FTS
 	class FGlobalSdfPass : public IRenderPass
 	{
 	public:
-		FGlobalSdfPass() { Type = ERenderPassType::Compute; }
+		FGlobalSdfPass() { Type = ERenderPassType::Precompute | ERenderPassType::Exclude; }
 
 		BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache) override;
 		BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache) override;
@@ -41,16 +41,20 @@ namespace FTS
 	private:
 		BOOL m_bResourceWrited = false;
 		Constant::GlobalSdfConstants m_PassConstant;
+		std::vector<Constant::ModelSdfData> m_ModelSdfDatas;
 
-		TComPtr<ITexture> m_pGlobalSdfTexture;
 		TComPtr<IBuffer> m_pModelSdfDataBuffer;
+		TComPtr<ITexture> m_pGlobalSdfTexture;
+		std::vector<TComPtr<ITexture>> m_pMeshSdfTextures;
 
 		TComPtr<IBindingLayout> m_pBindingLayout;
+		TComPtr<IBindingLayout> m_pBindlessLayout;
 
 		TComPtr<IShader> m_pCS;
 		TComPtr<IComputePipeline> m_pPipeline;
 
 		TComPtr<IBindingSet> m_pBindingSet;
+		TComPtr<IBindlessSet> m_pBindlessSet;
 		FComputeState m_ComputeState;
 
 	};

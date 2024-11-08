@@ -16,6 +16,44 @@
 
 namespace FTS
 {
+	void FDistanceField::TransformUpdate(const FTransform* cpTransform)
+	{
+		SdfBox.m_Lower = FVector3F(Mul(FVector4F(SdfBox.m_Lower, 1.0f), Scale(cpTransform->Scale)));
+		SdfBox.m_Upper = FVector3F(Mul(FVector4F(SdfBox.m_Upper, 1.0f), Scale(cpTransform->Scale)));
+
+		std::array<FVector3F, 8> BoxVertices;
+		BoxVertices[0] = SdfBox.m_Lower;
+		BoxVertices[1] = FVector3F(SdfBox.m_Lower.x, SdfBox.m_Upper.y, SdfBox.m_Lower.z);
+		BoxVertices[2] = FVector3F(SdfBox.m_Upper.x, SdfBox.m_Upper.y, SdfBox.m_Lower.z);
+		BoxVertices[3] = FVector3F(SdfBox.m_Upper.x, SdfBox.m_Lower.y, SdfBox.m_Lower.z);
+		BoxVertices[4] = SdfBox.m_Upper;
+		BoxVertices[7] = FVector3F(SdfBox.m_Upper.x, SdfBox.m_Lower.y, SdfBox.m_Upper.z);
+		BoxVertices[5] = FVector3F(SdfBox.m_Lower.x, SdfBox.m_Lower.y, SdfBox.m_Upper.z);
+		BoxVertices[6] = FVector3F(SdfBox.m_Lower.x, SdfBox.m_Upper.y, SdfBox.m_Upper.z);
+
+		FBounds3F NewSdfBox;
+		for (const auto& rVertex : BoxVertices)
+		{
+			NewSdfBox = Union(NewSdfBox, FVector3F(Mul(FVector4F(rVertex, 1.0f), Rotate(cpTransform->Rotation))));
+		}
+		SdfBox = NewSdfBox;
+
+		WorldMatrix = Mul(Translate(cpTransform->Position), Rotate(cpTransform->Rotation));
+		LocalMatrix = Inverse(WorldMatrix);
+
+		FVector3F SdfExtent = SdfBox.m_Upper - SdfBox.m_Lower;
+		CoordMatrix = FMatrix4x4(
+			1.0f / SdfExtent.x, 0.0f, 0.0f, 0.0f,
+			0.0f, -1.0f / SdfExtent.y, 0.0f, 0.0f,
+			0.0f, 0.0f, 1.0f / SdfExtent.z, 0.0f,
+			-SdfBox.m_Lower.x / SdfExtent.x,
+			SdfBox.m_Upper.y / SdfExtent.y,
+			-SdfBox.m_Lower.x / SdfExtent.x,
+			1.0f
+		);
+	}
+
+
 	static std::unique_ptr<tinygltf::TinyGLTF> gpGLTFLoader;
 	static std::unique_ptr<tinygltf::Model> gpGLTFModel;
 
@@ -30,11 +68,18 @@ namespace FTS
 
 		m_pWorld = pWorld;
 
-		pWorld->Subscribe<Event::OnGeometryLoad>(this);
+		pWorld->Subscribe<Event::OnModelLoad>(this);
+		pWorld->Subscribe<Event::OnModelTransform>(this);
 		pWorld->Subscribe<Event::OnComponentAssigned<FMesh>>(this);
 		pWorld->Subscribe<Event::OnComponentAssigned<FMaterial>>(this);
 		pWorld->Subscribe<Event::OnComponentAssigned<std::string>>(this);
 		pWorld->Subscribe<Event::OnComponentAssigned<FDistanceField>>(this);
+
+		FSceneGrid* pSceneGrid = pWorld->CreateEntity()->Assign<FSceneGrid>();
+
+		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
+		pSceneGrid->Chunks.resize(dwChunkNumPerAxis * dwChunkNumPerAxis * dwChunkNumPerAxis);
+
 		return true;
 	}
 
@@ -58,7 +103,7 @@ namespace FTS
 	}
 
 
-	BOOL FSceneSystem::Publish(FWorld* pWorld, const Event::OnGeometryLoad& crEvent)
+	BOOL FSceneSystem::Publish(FWorld* pWorld, const Event::OnModelLoad& crEvent)
 	{
 		ReturnIfFalse(gpGLTFLoader != nullptr && crEvent.pEntity != nullptr);
 
@@ -143,7 +188,6 @@ namespace FTS
 
 				LoadIndicesFromGLTFPrimitive(cpPrimitives[ix], rSubMesh);
 				LoadVerticesBoxFromGLTFPrimitive(cpPrimitives[ix], rSubMesh);
-				pMesh->Box = Union(pMesh->Box, rSubMesh.Box);
 			},
 			cpPrimitives.size()
 		);
@@ -255,13 +299,54 @@ namespace FTS
 		FDistanceField* pDistanceField = crEvent.pComponent;
 		pDistanceField->pBvh = std::make_shared<FBvh>();
 		pDistanceField->pBvh->Build(BvhVertices, stIndicesNum / 3);
-		pDistanceField->SdfBox = pDistanceField->pBvh->GlobalBox;
+		pDistanceField->SdfBox.m_Lower = pDistanceField->pBvh->GlobalBox.m_Lower - 0.5f;
+		pDistanceField->SdfBox.m_Upper = pDistanceField->pBvh->GlobalBox.m_Upper + 0.5f;
 		
 		return true;
 	}
 
 	BOOL FSceneSystem::Publish(FWorld* pWorld, const Event::OnComponentAssigned<FCamera>& crEvent)
 	{
+		return true;
+	}
+
+	BOOL FSceneSystem::Publish(FWorld* pWorld, const Event::OnModelTransform& crEvent)
+	{
+		FTransform* pTransform = crEvent.pEntity->GetComponent<FTransform>();
+		FDistanceField* pDistanceField = crEvent.pEntity->GetComponent<FDistanceField>();
+
+		FBounds3F OldSdfBox = pDistanceField->SdfBox;
+		pDistanceField->TransformUpdate(pTransform);
+		FBounds3F NewSdfBox = pDistanceField->SdfBox;
+		pWorld->Each<FSceneGrid>(
+			[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
+			{
+				UINT32 dwVoxelSize = gdwMaxGIDistance / gdwGlobalSdfResolution;
+				UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
+				FLOAT fChunkSize = 1.0f * gdwVoxelNumPerChunk * dwVoxelSize;
+				FLOAT fGridSize = 1.0f * fChunkSize * dwChunkNumPerAxis;
+
+				auto FuncMark = [&](const FBounds3F& crBox)
+				{
+					FVector3I UniformLower = FVector3I((crBox.m_Lower + fGridSize / 2.0f) / fChunkSize);
+					FVector3I UniformUpper = FVector3I((crBox.m_Upper + fGridSize / 2.0f) / fChunkSize);
+
+					UINT32 dwStartIndex = UniformLower.x + UniformLower.y * dwChunkNumPerAxis + UniformLower.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
+					UINT32 dwEndIndex = UniformUpper.x + UniformUpper.y * dwChunkNumPerAxis + UniformUpper.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
+
+					for (UINT32 ix = dwStartIndex; ix <= dwEndIndex; ++ix)
+					{
+						pGrid->Chunks[ix].bModelMoved = true;
+					}
+				};
+
+				FuncMark(OldSdfBox);
+				FuncMark(NewSdfBox);
+
+				return true;
+			}
+		);
+
 		return true;
 	}
 
@@ -439,8 +524,7 @@ namespace FTS
 			if (bTan) rSubMesh.Vertices[ix].Tangent = TangentStream[ix];
 			if (bUV) rSubMesh.Vertices[ix].UV = UVStream[ix];
 		}
-
-		rSubMesh.Box = CreateAABB(PositionStream);
 	}
+
 
 }

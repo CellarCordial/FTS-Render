@@ -130,17 +130,17 @@ namespace FTS
 			T Max = std::numeric_limits<T>::max();
 			T Min = std::numeric_limits<T>::lowest();
 
-			m_Min = TVector3<T>(Max, Max, Max);
-			m_Max = TVector3<T>(Min, Min, Min);
+			m_Lower = TVector3<T>(Max, Max, Max);
+			m_Upper = TVector3<T>(Min, Min, Min);
 		}
 
 		TBounds3(T MinX, T MinY, T MinZ, T MaxX, T MaxY, T MaxZ) :
-			m_Min(MinX, MinY, MinZ),
-			m_Max(MaxX, MaxY, MaxZ)
+			m_Lower(MinX, MinY, MinZ),
+			m_Upper(MaxX, MaxY, MaxZ)
 		{
 		}
 
-		explicit TBounds3(const TVector3<T>& crPoint) : m_Min(crPoint), m_Max(crPoint) {}
+		explicit TBounds3(const TVector3<T>& crPoint) : m_Lower(crPoint), m_Upper(crPoint) {}
 		
 
 		/**
@@ -151,45 +151,45 @@ namespace FTS
 		 */
 		TBounds3(const TVector3<T>& crPoint1, const TVector3<T>& crPoint2)
 		{
-			m_Max = Max(crPoint1, crPoint2);
-			m_Min = Min(crPoint1, crPoint2);
+			m_Upper = Max(crPoint1, crPoint2);
+			m_Lower = Min(crPoint1, crPoint2);
 		}
 
 		const TVector3<T>& operator[](UINT32 dwIndex) const
 		{
 			// FCHECK(dwIndex <= 1);
-			if (dwIndex == 0) return m_Min;
-			return m_Max;
+			if (dwIndex == 0) return m_Lower;
+			return m_Upper;
 		}
 
 		TVector3<T>& operator[](UINT32 dwIndex)
 		{
 			// FCHECK(dwIndex <= 1);
-			if (dwIndex == 0) return m_Min;
-			return m_Max;
+			if (dwIndex == 0) return m_Lower;
+			return m_Upper;
 		}
 
 		BOOL operator==(const TBounds3<T>& crOther) const
 		{
-			return m_Max == crOther.m_Max && m_Min == crOther.m_Min;
+			return m_Upper == crOther.m_Upper && m_Lower == crOther.m_Lower;
 		}
 		
 		BOOL operator!=(const TBounds3<T>& crOther) const
 		{
-			return m_Max != crOther.m_Max || m_Min != crOther.m_Min;
+			return m_Upper != crOther.m_Upper || m_Lower != crOther.m_Lower;
 		}
 
 		TBounds3<T>& operator=(const TBounds3<T>& crOther)
 		{
-			m_Min = crOther.m_Min;
-			m_Max = crOther.m_Max;
+			m_Lower = crOther.m_Lower;
+			m_Upper = crOther.m_Upper;
 			return *this;
 		}
 
 		template <typename U>
 		explicit operator TBounds3<U>() const
 		{
-			return TBounds3<U>(TVector3<U>(m_Min), TVector3<U>(m_Max));
+			return TBounds3<U>(TVector3<U>(m_Lower), TVector3<U>(m_Upper));
 		}
 
 		// 获取包围盒八个顶点之一的坐标，Corner 属于 [0, 7], 分别对应8个顶点
@@ -203,7 +203,7 @@ namespace FTS
 		}
 
 		// 返回沿框的对角线从最小点指向最大点的向量
-		TVector3<T> Diagonal() const { return m_Max - m_Min; }
+		TVector3<T> Diagonal() const { return m_Upper - m_Lower; }
 
 		T SurfaceArea() const
 		{
@@ -228,33 +228,33 @@ namespace FTS
 
 		FVector3F Extent() const
 		{
-			return m_Max - m_Min;
+			return m_Upper - m_Lower;
 		}
 
 		// 每个维度的给定量在框的两个顶点之间线性插值，获取一个指向包围盒内部的向量
 		TVector3<T> Lerp(const TVector3<T>& crPoint) const
 		{
 			return TVector3<T>(
-				Lerp(crPoint.x, m_Min.x, m_Max.x),
-				Lerp(crPoint.y, m_Min.y, m_Max.y),
-				Lerp(crPoint.z, m_Min.z, m_Max.z)
+				Lerp(crPoint.x, m_Lower.x, m_Upper.x),
+				Lerp(crPoint.y, m_Lower.y, m_Upper.y),
+				Lerp(crPoint.z, m_Lower.z, m_Upper.z)
 			);
 		}
 
 		// 获取点相对包围盒最小顶点的偏移，并归一化
 		TVector3<T> Offset(const TVector3<T>& crPoint) const
 		{
-			TVector3<T> o = crPoint - m_Min;
-			if (m_Max.x > m_Min.x) o.x /= m_Max.x - m_Min.x;
-			if (m_Max.y > m_Min.y) o.y /= m_Max.y - m_Min.y;
-			if (m_Max.z > m_Min.z) o.z /= m_Max.z - m_Min.z;
+			TVector3<T> o = crPoint - m_Lower;
+			if (m_Upper.x > m_Lower.x) o.x /= m_Upper.x - m_Lower.x;
+			if (m_Upper.y > m_Lower.y) o.y /= m_Upper.y - m_Lower.y;
+			if (m_Upper.z > m_Lower.z) o.z /= m_Upper.z - m_Lower.z;
 			return o;
 		}
 
 		void BoundingSphere(TVector3<T>* pCenter, FLOAT* pfRadius) const
 		{
-			*pCenter = (m_Min + m_Max) / 2;
-			*pfRadius = Inside(*pCenter, *this) ? Distance(*pCenter, m_Max) : 0;
+			*pCenter = (m_Lower + m_Upper) / 2;
+			*pfRadius = Inside(*pCenter, *this) ? Distance(*pCenter, m_Upper) : 0;
 		}
 
 		
@@ -280,8 +280,8 @@ namespace FTS
 
 				// 若 crRay.m_Dir[ix], 即光线 crRay 与正在求交的的平面平行或在平面内，则 fInvDir 会变为 INF, 这样也能正确工作
 				FLOAT fInvDir = 1.0f / crRay.m_Dir[ix];
-				FLOAT fTNear = (m_Min[ix] - crRay.m_Ori[ix]) * fInvDir;
-				FLOAT fTFar = (m_Max[ix] - crRay.m_Ori[ix]) * fInvDir;
+				FLOAT fTNear = (m_Lower[ix] - crRay.m_Ori[ix]) * fInvDir;
+				FLOAT fTFar = (m_Upper[ix] - crRay.m_Ori[ix]) * fInvDir;
 
 				if (fTNear > fTFar) std::swap(fTNear, fTFar);
 
@@ -354,7 +354,7 @@ namespace FTS
 			return fT0 < crRay.m_fMax && fT1 > 0;
 		}
 
-		TVector3<T> m_Min, m_Max;
+		TVector3<T> m_Lower, m_Upper;
 	};
 
     
@@ -362,14 +362,14 @@ namespace FTS
 	template <typename T>
 	TBounds3<T> Union(const TBounds3<T>& crBounds, const TVector3<T>& crPoint)
 	{
-		return TBounds3<T>(Min(crBounds.m_Min, crPoint), Max(crBounds.m_Max, crPoint));
+		return TBounds3<T>(Min(crBounds.m_Lower, crPoint), Max(crBounds.m_Upper, crPoint));
 	}
 
 	// 组合两个包围盒
 	template <typename T>
 	TBounds3<T> Union(const TBounds3<T>& crBounds1, const TBounds3<T>& crBounds2)
 	{
-		return TBounds3<T>(Min(crBounds1.m_Min, crBounds2.m_Min), Max(crBounds1.m_Max, crBounds2.m_Max));
+		return TBounds3<T>(Min(crBounds1.m_Lower, crBounds2.m_Lower), Max(crBounds1.m_Upper, crBounds2.m_Upper));
 	}
 
 	// 组合包围盒和点
@@ -388,25 +388,40 @@ namespace FTS
 
 	// 获取两个包围盒相交处的包围盒
 	template <typename T>
-	TBounds3<T> Intersect(const TBounds3<T>& crBounds1, const TBounds3<T>& crBounds2)
+	TBounds3<T> IntersectBox(const TBounds3<T>& crBounds1, const TBounds3<T>& crBounds2)
 	{
-		return TBounds3<T>(Max(crBounds1.m_Min, crBounds2.m_Min), Min(crBounds1.m_Max, crBounds2.m_Max));
+		return TBounds3<T>(Max(crBounds1.m_Lower, crBounds2.m_Lower), Min(crBounds1.m_Upper, crBounds2.m_Upper));
 	}
 
 	// 获取两个包围盒相交处的包围盒
 	template <typename T>
-	TBounds2<T> Intersect(const TBounds2<T>& crBounds1, const TBounds2<T>& crBounds2)
+	TBounds2<T> IntersectBox(const TBounds2<T>& crBounds1, const TBounds2<T>& crBounds2)
 	{
 		return TBounds2<T>(Max(crBounds1.m_Min, crBounds2.m_Min), Min(crBounds1.m_Max, crBounds2.m_Max));
+	}
+
+	template <typename T>
+	BOOL Intersect(const TBounds3<T>& crBounds1, const TBounds3<T>& crBounds2)
+	{
+		return	crBounds1.m_Lower.x < crBounds2.m_Upper.x && crBounds1.m_Upper.x > crBounds2.m_Lower.x &&
+				crBounds1.m_Lower.y < crBounds2.m_Upper.y && crBounds1.m_Upper.y > crBounds2.m_Lower.y &&
+				crBounds1.m_Lower.z < crBounds2.m_Upper.z && crBounds1.m_Upper.z > crBounds2.m_Lower.z;
+	}
+
+	template <typename T>
+	BOOL Intersect(const TBounds2<T>& crBounds1, const TBounds2<T>& crBounds2)
+	{
+		return	crBounds1.m_Lower.x < crBounds2.m_Upper.x && crBounds1.m_Upper.x > crBounds2.m_Lower.x &&
+				crBounds1.m_Lower.y < crBounds2.m_Upper.y && crBounds1.m_Upper.y > crBounds2.m_Lower.y;
 	}
 
 	// 判断是否相交/重叠
 	template <typename T>
 	BOOL Overlaps(const TBounds3<T>& crBounds1, const TBounds3<T>& crBounds2)
 	{
-		const BOOL x = crBounds1.m_Max.x > crBounds2.m_Min.x && crBounds1.m_Min.x < crBounds2.m_Max.x;
-		const BOOL y = crBounds1.m_Max.y > crBounds2.m_Min.y && crBounds1.m_Min.y < crBounds2.m_Max.y;
-		const BOOL z = crBounds1.m_Max.z > crBounds2.m_Min.z && crBounds1.m_Min.x < crBounds2.m_Max.z;
+		const BOOL x = crBounds1.m_Upper.x > crBounds2.m_Lower.x && crBounds1.m_Lower.x < crBounds2.m_Upper.x;
+		const BOOL y = crBounds1.m_Upper.y > crBounds2.m_Lower.y && crBounds1.m_Lower.y < crBounds2.m_Upper.y;
+		const BOOL z = crBounds1.m_Upper.z > crBounds2.m_Lower.z && crBounds1.m_Lower.x < crBounds2.m_Upper.z;
 
 		return x && y && z;
 	}
@@ -424,9 +439,9 @@ namespace FTS
 	template <typename T>
 	BOOL Inside(const TVector3<T>& crPoint, const TBounds3<T>& crBound)
 	{
-		return	crPoint.x >= crBound.m_Min.x && crPoint.x <= crBound.m_mMax.x &&
-				crPoint.y >= crBound.m_Min.y && crPoint.y <= crBound.m_mMax.y &&
-				crPoint.z >= crBound.m_Min.z && crPoint.z <= crBound.m_mMax.z;
+		return	crPoint.x >= crBound.m_Lower.x && crPoint.x <= crBound.m_mMax.x &&
+				crPoint.y >= crBound.m_Lower.y && crPoint.y <= crBound.m_mMax.y &&
+				crPoint.z >= crBound.m_Lower.z && crPoint.z <= crBound.m_mMax.z;
 	}
 
 	// 判断点是否在包围盒内
@@ -441,9 +456,9 @@ namespace FTS
 	template <typename T>
 	BOOL InsideExclusive(const TVector3<T>& crPoint, const TBounds3<T>& crBound)
 	{
-		return	crPoint.x >= crBound.m_Min.x && crPoint.x < crBound.m_mMax.x &&
-				crPoint.y >= crBound.m_Min.y && crPoint.y < crBound.m_mMax.y &&
-				crPoint.z >= crBound.m_Min.z && crPoint.z < crBound.m_mMax.z;
+		return	crPoint.x >= crBound.m_Lower.x && crPoint.x < crBound.m_mMax.x &&
+				crPoint.y >= crBound.m_Lower.y && crPoint.y < crBound.m_mMax.y &&
+				crPoint.z >= crBound.m_Lower.z && crPoint.z < crBound.m_mMax.z;
 	}
 
 	// 判断点是否在包围盒内，不包含上边界
@@ -459,8 +474,8 @@ namespace FTS
 	TBounds3<T> Expand(const TBounds3<T>& crBound, U Delta)
 	{
 		return TBounds3<T>(
-			crBound.m_Min - TVector3<U>(Delta),
-			crBound.m_Max + TVector3<U>(Delta)
+			crBound.m_Lower - TVector3<U>(Delta),
+			crBound.m_Upper + TVector3<U>(Delta)
 		);
 	}
 

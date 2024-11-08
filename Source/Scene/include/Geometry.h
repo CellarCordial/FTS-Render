@@ -93,22 +93,14 @@ namespace FTS
             std::vector<UINT32> Indices;
             
             FMatrix4x4 WorldMatrix;
-            FBounds3F Box;
-
             UINT32 dwMaterialIndex;
         };
 
         std::vector<SubMesh> SubMeshes;
         FMatrix4x4 WorldMatrix;
-        FBounds3F Box;
+        BOOL bCulling = false;
     };
 
-    struct FDistanceField
-    {
-        std::string strSdfTextureName;
-        FBounds3F SdfBox;
-        std::shared_ptr<FBvh> pBvh;
-    };
 
 
     namespace Geometry
