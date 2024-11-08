@@ -821,8 +821,114 @@ namespace FTS
         return true;
     }
 
+	BOOL FDX12BindlessSet::SetSlot(const FBindingSetItem& crItem, UINT32 dwSlot)
+	{
+		if (crItem.dwSlot >= m_dwCapacity) return false;
 
-    FDX12BindlessSet::~FDX12BindlessSet() noexcept
+		D3D12_CPU_DESCRIPTOR_HANDLE ViewHandle = m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(m_dwFirstDescriptorIndex);
+
+		switch (crItem.Type)
+		{
+		case EResourceType::Texture_SRV:
+		{
+			FDX12Texture* pDX12Texture = CheckedCast<FDX12Texture*>(crItem.pResource);
+			pDX12Texture->CreateSRV(ViewHandle.ptr, crItem.Format, crItem.Dimension, crItem.Subresource);
+			break;
+		}
+		case EResourceType::Texture_UAV:
+		{
+			FDX12Texture* pDX12Texture = CheckedCast<FDX12Texture*>(crItem.pResource);
+			pDX12Texture->CreateUAV(ViewHandle.ptr, crItem.Format, crItem.Dimension, crItem.Subresource);
+			break;
+		}
+		case EResourceType::TypedBuffer_SRV:
+		case EResourceType::StructuredBuffer_SRV:
+		case EResourceType::RawBuffer_SRV:
+		{
+			FDX12Buffer* pDX12Buffer = CheckedCast<FDX12Buffer*>(crItem.pResource);
+			pDX12Buffer->CreateSRV(ViewHandle.ptr, crItem.Format, crItem.Range, crItem.Type);
+			break;
+		}
+		case EResourceType::TypedBuffer_UAV:
+		case EResourceType::StructuredBuffer_UAV:
+		case EResourceType::RawBuffer_UAV:
+		{
+			FDX12Buffer* pDX12Buffer = CheckedCast<FDX12Buffer*>(crItem.pResource);
+			pDX12Buffer->CreateUAV(ViewHandle.ptr, crItem.Format, crItem.Range, crItem.Type);
+			break;
+		}
+		case EResourceType::ConstantBuffer:
+		{
+			FDX12Buffer* pDX12Buffer = CheckedCast<FDX12Buffer*>(crItem.pResource);
+			pDX12Buffer->CreateCBV(ViewHandle.ptr, crItem.Range);
+			break;
+		}
+
+		case EResourceType::VolatileConstantBuffer:
+			assert(!"Attempted to bind a volatile constant buffer to a bindless set.");
+
+		default:
+			assert(!"Invalid Enumeration Value");
+			return false;
+		}
+
+		m_pDescriptorHeaps->ShaderResourceHeap.CopyToShaderVisibleHeap(m_dwFirstDescriptorIndex + crItem.dwSlot);
+
+		return true;
+	}
+
+	void FDX12BindlessSet::Resize(UINT32 dwNewSize, BOOL bKeepContents)
+	{
+		if (dwNewSize == m_dwCapacity) return;
+
+		UINT32 dwOldCapacity = m_dwCapacity;
+
+		UINT32 dwOldFirstViewIndex = m_dwFirstDescriptorIndex;
+
+		if (dwNewSize <= dwOldCapacity)
+		{
+			m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptors(dwOldFirstViewIndex + dwNewSize, dwOldCapacity - dwNewSize);
+			m_dwCapacity = dwNewSize;
+
+			if (!bKeepContents && dwNewSize > 0)
+			{
+				m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptors(dwOldFirstViewIndex, dwNewSize);
+			}
+			return;
+		}
+        else
+        {
+			if (!bKeepContents && dwOldCapacity > 0)
+			{
+				m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptors(dwOldFirstViewIndex, dwOldCapacity);
+			}
+
+			UINT32 dwNewFirstViewIndex = m_pDescriptorHeaps->ShaderResourceHeap.AllocateDescriptors(dwNewSize);
+			m_dwFirstDescriptorIndex = dwNewFirstViewIndex;
+
+			if (bKeepContents && dwOldCapacity > 0)
+			{
+				m_cpContext->pDevice->CopyDescriptorsSimple(
+					dwOldCapacity,
+					m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(dwNewFirstViewIndex),
+					m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(dwOldFirstViewIndex),
+					D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+				);
+				m_cpContext->pDevice->CopyDescriptorsSimple(
+					dwOldCapacity,
+					m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandleShaderVisible(dwNewFirstViewIndex),
+					m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(dwOldFirstViewIndex),
+					D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+				);
+
+				m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptors(dwOldFirstViewIndex, dwOldCapacity);
+			}
+
+			m_dwCapacity = dwNewSize;
+        }
+	}
+
+	FDX12BindlessSet::~FDX12BindlessSet() noexcept
     {
         m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptors(m_dwFirstDescriptorIndex, m_dwCapacity);
     }

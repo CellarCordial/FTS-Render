@@ -302,8 +302,10 @@ namespace FTS
         IBindingLayout* GetLayout() const override { assert(false); return nullptr;}
         BOOL IsBindless() const override { return true; }
 
-        // IDescriptorTable
+        // IBindlessSet
         UINT32 GetCapacity() const override { return m_dwCapacity; }
+		void Resize(UINT32 dwNewSize, BOOL bKeepContents) override;
+		BOOL SetSlot(const FBindingSetItem& crItem, UINT32 dwSlot) override;
 
     public:
         UINT32 m_dwFirstDescriptorIndex = 0;
