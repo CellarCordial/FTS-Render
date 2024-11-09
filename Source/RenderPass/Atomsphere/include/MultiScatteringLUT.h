@@ -35,7 +35,7 @@ namespace FTS
 
         BOOL FinishPass() override;
 
-		void Regenerate() { Type = ERenderPassType::Precompute; }
+		void Regenerate() { Type &= ~ERenderPassType::Exclude; }
 
 		friend class FAtmosphereDebugRender;
 

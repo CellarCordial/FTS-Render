@@ -5,6 +5,7 @@
 #include "Image.h"
 #include "Light.h"
 #include "../../Core/include/Delegate.h"
+#include <unordered_set>
 
 namespace FTS
 {
@@ -61,7 +62,7 @@ namespace FTS
 	{
 		struct Chunk
 		{
-			std::vector<FEntity*> pModelEntities;
+			std::unordered_set<FEntity*> pModelEntities;
 			BOOL bModelMoved = true;
 		};
 		
@@ -75,7 +76,6 @@ namespace FTS
 		public TEventSubscriber<Event::OnComponentAssigned<FMesh>>,
 		public TEventSubscriber<Event::OnComponentAssigned<FCamera>>,
 		public TEventSubscriber<Event::OnComponentAssigned<FMaterial>>,
-		public TEventSubscriber<Event::OnComponentAssigned<std::string>>,
 		public TEventSubscriber<Event::OnComponentAssigned<FDistanceField>>
 	{
 	public:
@@ -89,7 +89,6 @@ namespace FTS
 		BOOL Publish(FWorld* pWorld, const Event::OnComponentAssigned<FMesh>& crEvent) override;
 		BOOL Publish(FWorld* pWorld, const Event::OnComponentAssigned<FCamera>& crEvent) override;
 		BOOL Publish(FWorld* pWorld, const Event::OnComponentAssigned<FMaterial>& crEvent) override;
-		BOOL Publish(FWorld* pWorld, const Event::OnComponentAssigned<std::string>& crEvent) override;
 		BOOL Publish(FWorld* pWorld, const Event::OnComponentAssigned<FDistanceField>& crEvent) override;
 
 	private:

@@ -187,6 +187,7 @@ namespace FTS
 	BOOL FMultiScatteringLUTPass::FinishPass()
 	{
 		if (!m_DirSamples.empty()) m_DirSamples.resize(0);
+
 		return true;
 	}
 

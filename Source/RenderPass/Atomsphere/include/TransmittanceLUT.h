@@ -16,7 +16,7 @@ namespace FTS
         BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache) override;
         BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache) override;
 
-		void Regenerate() { Type = ERenderPassType::Precompute; }
+		void Regenerate() { Type &= ~ERenderPassType::Exclude; }
 
 		friend class FAtmosphereDebugRender;
 

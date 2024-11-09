@@ -25,8 +25,12 @@ namespace FTS
 
         if (FAILED(m_crContext.pDevice->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(m_pDescriptorHeap.GetAddressOf())))) return false;
 
-
         m_StartCpuHandle = m_pDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+        if (HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+        {
+            m_StartCpuHandle.ptr += m_dwStride;
+            m_bAllocatedDescriptors[0] = true;
+        }
 
         if (bShaderVisible)
         {
@@ -37,6 +41,13 @@ namespace FTS
 
             m_StartCpuHandleShaderVisible = m_pShaderVisibleDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
             m_StartGpuHandleShaderVisible = m_pShaderVisibleDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+
+            if (HeapType == D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV)
+            {
+				m_StartCpuHandleShaderVisible.ptr += m_dwStride;
+                m_StartGpuHandleShaderVisible.ptr += m_dwStride;
+            }
+
         }
 
         return true;

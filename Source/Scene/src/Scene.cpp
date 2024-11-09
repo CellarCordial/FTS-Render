@@ -12,6 +12,7 @@
 #include "../../Core/include/ComRoot.h"
 #include "../../Core/include/ComIntf.h"
 #include "../../Core/include/File.h"
+#include "../../Gui/include/GuiPanel.h"
 
 
 namespace FTS
@@ -72,7 +73,6 @@ namespace FTS
 		pWorld->Subscribe<Event::OnModelTransform>(this);
 		pWorld->Subscribe<Event::OnComponentAssigned<FMesh>>(this);
 		pWorld->Subscribe<Event::OnComponentAssigned<FMaterial>>(this);
-		pWorld->Subscribe<Event::OnComponentAssigned<std::string>>(this);
 		pWorld->Subscribe<Event::OnComponentAssigned<FDistanceField>>(this);
 		
 
@@ -80,7 +80,6 @@ namespace FTS
 
 		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
 		pSceneGrid->Chunks.resize(dwChunkNumPerAxis * dwChunkNumPerAxis * dwChunkNumPerAxis);
-
 
 		return true;
 	}
@@ -102,6 +101,20 @@ namespace FTS
 				return true;
 			}
 		);
+
+		//if (ImGui::FileBrowserHasSelected())
+		//{
+		//	const auto& FilePath = ImGui::FileBrowserGetSelected();
+		//	if (FilePath.extension() == ".gltf")
+		//	{
+		//		std::string strFilePath = FilePath.string();
+
+		//		m_pWorld->Boardcast(Event::OnModelLoad{
+		//			.pEntity = m_pWorld->CreateEntity(),
+		//			.strModelPath = strFilePath.substr(strFilePath.find("Asset"))
+		//		});
+		//	}
+		//}
 	}
 
 
@@ -269,11 +282,6 @@ namespace FTS
 		return true;
 	}
 
-	BOOL FSceneSystem::Publish(FWorld* pWorld, const Event::OnComponentAssigned<std::string>& crEvent)
-	{
-		return true;
-	}
-
 	BOOL FSceneSystem::Publish(FWorld* pWorld, const Event::OnComponentAssigned<FDistanceField>& crEvent)
 	{
 		const FMesh* pMesh = crEvent.pEntity->GetComponent<FMesh>();
@@ -328,7 +336,7 @@ namespace FTS
 				FLOAT fChunkSize = 1.0f * gdwVoxelNumPerChunk * dwVoxelSize;
 				FLOAT fGridSize = 1.0f * fChunkSize * dwChunkNumPerAxis;
 
-				auto FuncMark = [&](const FBounds3F& crBox)
+				auto FuncMark = [&](const FBounds3F& crBox, BOOL bInsertOrErase)
 				{
 					FVector3I UniformLower = FVector3I((crBox.m_Lower + fGridSize / 2.0f) / fChunkSize);
 					FVector3I UniformUpper = FVector3I((crBox.m_Upper + fGridSize / 2.0f) / fChunkSize);
@@ -339,11 +347,13 @@ namespace FTS
 					for (UINT32 ix = dwStartIndex; ix <= dwEndIndex; ++ix)
 					{
 						pGrid->Chunks[ix].bModelMoved = true;
+						if (bInsertOrErase) pGrid->Chunks[ix].pModelEntities.insert(crEvent.pEntity);
+						else				pGrid->Chunks[ix].pModelEntities.erase(crEvent.pEntity);
 					}
 				};
 
-				FuncMark(OldSdfBox);
-				FuncMark(NewSdfBox);
+				FuncMark(OldSdfBox, false);
+				FuncMark(NewSdfBox, true);
 
 				return true;
 			}
