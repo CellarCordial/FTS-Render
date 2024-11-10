@@ -32,6 +32,13 @@ T CheckedCast(U u)
 	if (!(bool)) { LOG_ERROR(#bool); return false; }
 #endif
 
+#ifdef DEBUG 
+#define ReturnIfFalse(bool)      \
+        if (!(bool)) { LOG_ERROR(#bool); return false; }
+#elif RELEASE  
+#define ReturnIfFalse(bool) (void)(bool)
+#endif
+
 namespace FTS
 {
 	typedef BOOL(_IntfEntryFunc)(void* pv, CREFIID criid, void** ppv, UINT32 dw);

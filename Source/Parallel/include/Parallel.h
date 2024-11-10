@@ -2,7 +2,6 @@
 #define TASK_FLOW_H
 
 
-#include <span>
 #include <memory>
 #include <vector>
 #include <functional>
@@ -72,19 +71,19 @@ namespace FTS
             auto Func = std::bind(std::forward<F>(InFunc), std::forward<Args>(Arguments)...);
             Nodes.emplace_back(std::make_unique<FTaskNode>([Func]() -> BOOL { return Func(); }));
             return Nodes.back().get();
-        }
+		}
 
-        template <typename T, typename... Args>
-        FTask Emplace(T* Instance, void(T::*MemberFunc)(Args...), Args... Arguments)
-        {
-            static_assert(std::is_same<decltype(InFunc(Arguments...)), BOOL>::value, "Thread work must return bool.");
-            TotalTaskNum++;
-            
-            auto Func = [Instance, MemberFunc](Args... FuncArgs) { (Instance->*MemberFunc)(std::forward<Args>(FuncArgs)...); };
-            
-            Nodes.emplace_back(std::make_unique<FTaskNode>([=]() -> BOOL { return Func(Arguments...); }));
-            return Nodes.back().get();
-        }
+		template <typename T, typename... Args>
+		FTask Emplace(T* Instance, void(T::* MemberFunc)(Args...), Args... Arguments)
+		{
+			static_assert(std::is_same<decltype(InFunc(Arguments...)), BOOL>::value, "Thread work must return bool.");
+			TotalTaskNum++;
+
+			auto Func = [Instance, MemberFunc](Args... FuncArgs) { (Instance->*MemberFunc)(std::forward<Args>(FuncArgs)...); };
+
+			Nodes.emplace_back(std::make_unique<FTaskNode>([=]() -> BOOL { return Func(Arguments...); }));
+			return Nodes.back().get();
+		}
 
         void Reset()
         {
@@ -93,7 +92,7 @@ namespace FTS
             TotalTaskNum = 0;
         }
 
-        std::span<FTaskNode*> GetSrcNodes()
+        const std::vector<FTaskNode*>& GetSrcNodes()
         {
             SrcNodes.clear();
             for (const auto& Node : Nodes)
@@ -118,7 +117,7 @@ namespace FTS
         std::vector<std::unique_ptr<FTaskNode>> Nodes;
     };
 
-    namespace TaskFlow
+    namespace Parallel
     {
         void Initialize();
         void Destroy();
@@ -132,24 +131,7 @@ namespace FTS
             return (Run(Arguments), ...);
         }
 
-        UINT64 BeginThreadImpl(std::function<BOOL()>&& rrFunc);
-
-        template <typename T, typename... Args>
-        UINT64 BeginThread(T* Instance, BOOL(T::*MemberFunc)(Args...), Args... Arguments)
-        {
-            auto Func = [Instance, MemberFunc](Args... FuncArgs) -> BOOL { return (Instance->*MemberFunc)(std::forward<Args>(FuncArgs)...); };
-            return BeginThreadImpl( [=]() -> BOOL { return Func(Arguments...); } );
-        }
-
-        template <typename F, typename... Args>
-        UINT64 BeginThread(F&& InFunc, Args&&... Arguments)
-        {
-            static_assert(std::is_same<decltype(InFunc(Arguments...)), BOOL>::value, "Thread work must return bool.");
-
-            auto Func = std::bind(std::forward<F>(InFunc), std::forward<Args>(Arguments)...);
-            return BeginThreadImpl( [=]() -> BOOL { return Func(Arguments...); } );
-        }
-
+        UINT64 BeginThread(std::function<BOOL()>&& rrFunc);
         void ParallelFor(std::function<void(UINT64)> Func, UINT64 stCount, UINT32 dwChunkSize = 1);
         void ParallelFor(std::function<void(UINT64, UINT64)> Func, UINT64 stX, UINT64 stY);
         BOOL ThreadFinished(UINT64 stIndex);

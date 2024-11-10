@@ -151,13 +151,13 @@ namespace FTS
 
 		// Update Constant.
 		{
-			pCache->GetWorld()->Each<FDirectionalLight>(
+			ReturnIfFalse(pCache->GetWorld()->Each<FDirectionalLight>(
 				[this](FEntity* pEntity, FDirectionalLight* pLight) -> BOOL
 				{
 					m_PassConstants.SunIntensity = FVector3F(pLight->fIntensity * pLight->Color);
 					return true;
 				}
-			);
+			));
 			FVector3F* pGroundAlbedo;
 			ReturnIfFalse(pCache->RequireConstants("GroundAlbedo", PPV_ARG(&pGroundAlbedo)));
 			m_PassConstants.GroundAlbedo = *pGroundAlbedo;

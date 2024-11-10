@@ -4,6 +4,7 @@
 #include "../../../Core/include/ComCli.h"
 #include "../../../Math/include/Vector.h"
 #include "../../../Math/include/Matrix.h"
+#include "../../../Math/include/Bounds.h"
 #include <memory>
 
 namespace FTS
@@ -40,6 +41,7 @@ namespace FTS
 
 	private:
 		BOOL m_bResourceWrited = false;
+		FBounds3F m_GlobalBox;
 		Constant::GlobalSdfConstants m_PassConstant;
 		std::vector<Constant::ModelSdfData> m_ModelSdfDatas;
 
@@ -48,12 +50,14 @@ namespace FTS
 		std::vector<TComPtr<ITexture>> m_pMeshSdfTextures;
 
 		TComPtr<IBindingLayout> m_pBindingLayout;
+		TComPtr<IBindingLayout> m_pDynamicBindingLayout;
 		TComPtr<IBindingLayout> m_pBindlessLayout;
 
 		TComPtr<IShader> m_pCS;
 		TComPtr<IComputePipeline> m_pPipeline;
 
 		TComPtr<IBindingSet> m_pBindingSet;
+		TComPtr<IBindingSet> m_pDynamicBindingSet;
 		TComPtr<IBindlessSet> m_pBindlessSet;
 		FComputeState m_ComputeState;
 

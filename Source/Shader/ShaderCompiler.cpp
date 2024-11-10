@@ -1,7 +1,6 @@
 ﻿#include "ShaderCompiler.h"
 
 #include "../Core/include/File.h"
-#include <fstream>
 #include <vector>
 #include <winerror.h>
 #include "../Core/include/ComCli.h"
@@ -9,128 +8,7 @@
 
 namespace FTS 
 {
-    /**
-     * @brief       Only for Integer, std::vector and std::string serialization
-     * 
-     */
-    class FBinaryOutput 
-    {
-    public:
-        FBinaryOutput(const std::string& InFileName) : Output(InFileName, std::ios::binary) {}
-        ~FBinaryOutput() { Output.close(); }
-
-        template <typename... Args>
-        void operator()(Args&&... Arguments)
-        {
-            Process(std::forward<Args>(Arguments)...);
-        }
-
-    public:
-        void SaveBinaryData(const void* InData, INT64 InSize)
-        {
-            if (Output.is_open())
-            {
-                Output.write(static_cast<const char*>(InData), InSize);
-            }
-        }
-
-    private:
-        template <typename T>
-        void Process(T&& InValue)
-        {
-            ProcessImpl(InValue);
-        }
-
-        template <typename T>
-        void ProcessImpl(const std::vector<T>& InValue)
-        {
-            UINT64 Size = InValue.size();
-            SaveBinaryData(&Size, sizeof(UINT64));
-            for (const T& Element : InValue)
-            {
-                ProcessImpl(Element);
-            }
-        }
-
-        void ProcessImpl(const std::string& InValue)
-        {
-            UINT64 Size = InValue.size();
-            SaveBinaryData(&Size, sizeof(UINT64));
-            SaveBinaryData(InValue.data(), static_cast<INT64>(Size));
-        }
-
-        void ProcessImpl(UINT64 InValue)
-        {
-            SaveBinaryData(&InValue, sizeof(UINT64));
-        }
-
-    private:
-        std::ofstream Output;
-    };
-
-
-    /**
-     * @brief       Only for Integer, std::vector and std::string serialization
-     * 
-     */
-    class FBinaryInput
-    {
-    public:
-        FBinaryInput(const std::string& InFileName) : Input(InFileName, std::ios::binary) {}
-        ~FBinaryInput() noexcept { Input.close(); }
-
-        template <typename... Args>
-        void operator()(Args&&... Arguments)
-        {
-            Process(std::forward<Args>(Arguments)...);
-        }
-
-    public:
-        void LoadBinaryData(void* OutData, INT64 InSize)
-        {
-            if (Input.is_open())
-            {
-                Input.read(static_cast<char*>(OutData), InSize);
-            }
-        }
-
-    private:
-        template <typename T>
-        void Process(T&& InValue)
-        {
-            ProcessImpl(InValue);
-        }
-
-        template <typename T>
-        void ProcessImpl(std::vector<T>& OutValue)
-        {
-            UINT64 Size = 0;
-            LoadBinaryData(&Size, sizeof(UINT64));
-
-            OutValue.resize(Size);
-            for (T& Element : OutValue)
-            {
-                ProcessImpl(Element);
-            }
-        }
-
-        void ProcessImpl(std::string& OutValue)
-        {
-            UINT64 Size = 0;
-            LoadBinaryData(&Size, sizeof(UINT64));
-
-            OutValue.resize(Size);
-            LoadBinaryData(OutValue.data(), static_cast<INT64>(Size));
-        }
-        
-        void ProcessImpl(UINT64& OutValue)
-        {
-            LoadBinaryData(&OutValue, sizeof(UINT64));
-        }
-        
-    private:
-        std::ifstream Input;
-    };
+    
 
     inline LPCWSTR GetTargetProfile(EShaderTarget Target)
     {
@@ -367,7 +245,7 @@ namespace FTS
             return;
         }
 
-        FBinaryOutput Output(InCachePath);
+        Serialization::BinaryOutput Output(InCachePath);
         Output(InData.strIncludeShaderFiles);
         Output(InData.pData.size());
         Output.SaveBinaryData(InData.pData.data(), InData.pData.size());
@@ -377,7 +255,7 @@ namespace FTS
     {
         FShaderData ShaderData;
         
-        FBinaryInput Input(InCachePath);
+        Serialization::BinaryInput Input(InCachePath);
         Input(ShaderData.strIncludeShaderFiles);
 
         UINT64 ByteCodeSize = 0;

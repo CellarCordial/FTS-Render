@@ -115,7 +115,7 @@ namespace FTS
 	{
 		ReturnIfFalse(pCmdList->Open());
 
-		pCache->GetWorld()->Each<FCamera>(
+		ReturnIfFalse(pCache->GetWorld()->Each<FCamera>(
 			[this](FEntity* pEntity, FCamera* pCamera) -> BOOL
 			{
 				auto Frustum = pCamera->GetFrustumDirections();
@@ -125,7 +125,7 @@ namespace FTS
 				m_PassConstant.FrustumD = Frustum.D;
 				return true;
 			}
-		);
+		));
 		ClearColorAttachment(pCmdList, m_pFrameBuffer.Get(), 0);
 		ClearDepthStencilAttachment(pCmdList, m_pFrameBuffer.Get());
 

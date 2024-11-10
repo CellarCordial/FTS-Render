@@ -101,13 +101,13 @@ namespace FTS
 
 		// Update Constant.
 		{
-			pCache->GetWorld()->Each<Constant::AtmosphereProperties>(
+			ReturnIfFalse(pCache->GetWorld()->Each<Constant::AtmosphereProperties>(
 				[this](FEntity* pEntity, Constant::AtmosphereProperties* pProperties) -> BOOL
 				{
 					m_StandardAtomsphereProperties = pProperties->ToStandardUnit();
 					return true;
 				}
-			);
+			));
 			ReturnIfFalse(pCmdList->WriteBuffer(m_pAtomspherePropertiesBuffer.Get(), &m_StandardAtomsphereProperties, sizeof(Constant::AtmosphereProperties)));
 		}
 

@@ -10,7 +10,7 @@ namespace FTS
         static ImVec4 ClearColor = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
         static std::vector<std::function<void()>> Funcitons;
         static std::mutex Mutex;
-
+        static ImGui::FileBrowser* gpFileBrowser = nullptr;
 
         void Initialize(GLFWwindow* pWindow, IDevice* pDevice)
         {
@@ -33,10 +33,15 @@ namespace FTS
                 pSrvFontDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
                 pSrvFontDescriptorHeap->GetGPUDescriptorHandleForHeapStart()
             );
+
+            gpFileBrowser = new ImGui::FileBrowser();
+            gpFileBrowser->SetTitle("File Browser");
+            gpFileBrowser->SetTypeFilters({ ".gltf" });
         }
 
         void Destroy()
         {
+            delete gpFileBrowser;
             ImGui_ImplDX12_Shutdown();
             ImGui_ImplGlfw_Shutdown();
             ImGui::DestroyContext();
@@ -53,6 +58,8 @@ namespace FTS
             MenuSetup();
             for (const auto& Function : Funcitons) { Function(); }
             ImGui::End();
+
+            gpFileBrowser->Display();
 
             ImGui::Render();
 
@@ -78,26 +85,33 @@ namespace FTS
 		{
             if (ImGui::BeginMenuBar())
 			{
-				if (ImGui::BeginMenu("File"))
+				if (ImGui::MenuItem("File"))
 				{
-					if (ImGui::MenuItem("Load"))
-					{
-					}
-					ImGui::EndMenu();
+                    gpFileBrowser->Open();
 				}
-				if (ImGui::BeginMenu("Console"))
+				if (ImGui::MenuItem("Console"))
 				{
-					ImGui::EndMenu();
-				}
-				if (ImGui::BeginMenu("Log"))
-				{
-					ImGui::EndMenu();
-				}
 
+				}
+				if (ImGui::MenuItem("Log"))
+				{
+
+				}
 				ImGui::EndMenuBar();
 			}
 		}
 
+        BOOL HasFileSelected()
+        {
+            return gpFileBrowser->HasSelected();
+        }
+
+        std::string GetSelectedFilePath()
+        {
+            std::string str = gpFileBrowser->GetSelected().string();
+            gpFileBrowser->ClearSelected();
+            return str;
+        }
     }
 
 }

@@ -63,7 +63,7 @@ namespace FTS
 
 		// Load Vertices.
 		{
-			pCache->GetWorld()->Each<FMesh>(
+			ReturnIfFalse(pCache->GetWorld()->Each<FMesh>(
 				[this](FEntity* pEntity, FMesh* pMesh) -> BOOL
 				{
 					UINT64 stOldSize = m_DrawArguments.size();
@@ -92,7 +92,7 @@ namespace FTS
 
 					return true;
 				}
-			);
+			));
 		}
 
 		// Buffer.
@@ -169,17 +169,17 @@ namespace FTS
 
 		// Update Constant.
 		{
-			pCache->GetWorld()->Each<FDirectionalLight>(
+			ReturnIfFalse(pCache->GetWorld()->Each<FDirectionalLight>(
 				[this](FEntity* pEntity, FDirectionalLight* pLight) -> BOOL
 				{
 					m_PassConstant.DirectionalLightViewProj = pLight->ViewProj;
 					return true;
 				}
-			);
+			));
 		}
 
 		UINT64 stSubmeshIndex = 0;
-		pCache->GetWorld()->Each<FMesh>(
+		ReturnIfFalse(pCache->GetWorld()->Each<FMesh>(
 			[this, pCmdList, &stSubmeshIndex](FEntity* pEntity, FMesh* pMesh) -> BOOL
 			{
 				for (UINT64 ix = 0; ix < pMesh->SubMeshes.size(); ++ix)
@@ -193,7 +193,7 @@ namespace FTS
 				}
 				return true;
 			}
-		);
+		));
 		ReturnIfFalse(stSubmeshIndex == m_DrawArguments.size());
 
 		ReturnIfFalse(pCmdList->SetTextureState(m_pShadowMapTexture.Get(), FTextureSubresourceSet{}, EResourceStates::NonPixelShaderResource));

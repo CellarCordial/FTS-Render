@@ -22,7 +22,7 @@ namespace FTS
 
 		virtual BOOL Initialize(FWorld* pWorld) = 0;
 		virtual BOOL Destroy() = 0;
-		virtual void Tick(FWorld* world, FLOAT fDelta) = 0;
+		virtual BOOL Tick(FWorld* world, FLOAT fDelta) = 0;
 	};
 
 	struct IEventSubscriber

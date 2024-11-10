@@ -2,7 +2,7 @@
 #include <d3d12.h>
 #include "Shader/ShaderCompiler.h"
 #include "Scene/include/Scene.h"
-#include "TaskFlow/include/TaskFlow.h"
+#include "Parallel/include/Parallel.h"
 #include <glfw3.h>
 #include <wrl.h>
 
@@ -14,7 +14,7 @@ namespace FTS
 	FGlobalRender::~FGlobalRender()
 	{
 		ShaderCompile::Destroy();
-		TaskFlow::Destroy();
+		Parallel::Destroy();
 		glfwDestroyWindow(m_pWindow);
 		glfwTerminate();
 	}
@@ -29,7 +29,7 @@ namespace FTS
 			return false;
 		}
 		ShaderCompile::Initialize();
-		TaskFlow::Initialize();
+		Parallel::Initialize();
 
 		// Entity System.
 		{

@@ -4,7 +4,7 @@
 #include "../../../RenderGraph/include/RenderGraph.h"
 #include "../../../Core/include/ComCli.h"
 #include "../../../Math/include/Vector.h"
-#include "../../../Scene/include/Geometry.h"
+#include "../../../Scene/include/Scene.h"
 #include "../../../Math/include/Bvh.h"
 #include <memory>
 
@@ -31,29 +31,20 @@ namespace FTS
     class FSdfGeneratePass : public IRenderPass
     {
     public:
-		FSdfGeneratePass() { Type = ERenderPassType::Precompute; }
+		FSdfGeneratePass() { Type = ERenderPassType::Precompute | ERenderPassType::Exclude; }
 
         BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache) override;
         BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache) override;
 
         BOOL FinishPass() override;
 
-		void GenerateSdf(FMesh* pMesh) 
-        {
-            if (!pMesh) return;
-
-			m_pMesh = pMesh;
-			m_bResourceWrited = false;
-        }
-
     private:
         BOOL BuildBvh();
 
     private:
-        FBvh m_Bvh;
-		FMesh* m_pMesh = nullptr;
-        BOOL m_bResourceWrited = false;
         UINT32 m_dwBeginX = 0;
+        BOOL m_bResourceWrited = false;
+        FDistanceField* m_pDistanceField = nullptr;
 		Constant::SdfGeneratePassConstants m_PassConstants;
 
         TComPtr<IBuffer> m_pBvhNodeBuffer;

@@ -170,7 +170,7 @@ namespace FTS
 			ReturnIfFalse(pCache->RequireConstants("WorldScale", PPV_ARG(&pfWorldScale)));
 
 			FVector3F LightDirection;
-			pCache->GetWorld()->Each<FDirectionalLight>(
+			ReturnIfFalse(pCache->GetWorld()->Each<FDirectionalLight>(
 				[this, &LightDirection](FEntity* pEntity, FDirectionalLight* pLight) -> BOOL
 				{
 					m_PassConstant.fSunTheta = std::asin(-pLight->Direction.y);
@@ -179,9 +179,9 @@ namespace FTS
 					LightDirection = pLight->Direction;
 					return true;
 				}
-			);
+			));
 
-			pCache->GetWorld()->Each<FCamera>(
+			ReturnIfFalse(pCache->GetWorld()->Each<FCamera>(
 				[&](FEntity* pEntity, FCamera* pCamera) -> BOOL
 				{
 					m_PassConstant.fCameraHeight = pCamera->Position.y * (*pfWorldScale);
@@ -198,7 +198,7 @@ namespace FTS
 
 					return true;
 				}
-			);
+			));
 		}
 
 		ReturnIfFalse(pCmdList->SetGraphicsState(m_GraphicsState));

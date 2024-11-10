@@ -204,7 +204,7 @@ namespace FTS
 				(1.0f * CLIENT_HEIGHT) / m_BlueNoiseImage.Height
 			};
 
-			pCache->GetWorld()->Each<FDirectionalLight>(
+			ReturnIfFalse(pCache->GetWorld()->Each<FDirectionalLight>(
 				[this](FEntity* pEntity, FDirectionalLight* pLight) -> BOOL
 				{
 					m_PassConstant1.SunDirection = pLight->Direction;
@@ -213,22 +213,22 @@ namespace FTS
 					m_PassConstant1.ShadowViewProj = pLight->ViewProj;
 					return true;
 				}
-			);
+			));
 
 
-			pCache->GetWorld()->Each<FCamera>(
+			ReturnIfFalse(pCache->GetWorld()->Each<FCamera>(
 				[this](FEntity* pEntity, FCamera* pCamera) -> BOOL
 				{
 					m_PassConstant0.ViewProj = pCamera->GetViewProj();
 					m_PassConstant1.CameraPos = pCamera->Position;
 					return true;
 				}
-			);
+			));
 
 			ReturnIfFalse(pCmdList->WriteBuffer(m_pPassConstant1Buffer.Get(), &m_PassConstant1, sizeof(Constant::AtmosphereDebugPassConstant1)));
 
 			UINT64 stSubmeshIndex = 0;
-			pCache->GetWorld()->Each<FMesh>(
+			ReturnIfFalse(pCache->GetWorld()->Each<FMesh>(
 				[this, pCmdList, &stSubmeshIndex](FEntity* pEntity, FMesh* pMesh) -> BOOL
 				{
 					for (UINT64 ix = 0; ix < pMesh->SubMeshes.size(); ++ix)
@@ -242,7 +242,7 @@ namespace FTS
 					}
 					return true;
 				}
-			);
+			));
 			ReturnIfFalse(stSubmeshIndex == m_stDrawArgumentsSize);
 		}
 
@@ -295,8 +295,10 @@ namespace FTS
 		Constant::AtmosphereProperties* pProperties = pEntity->Assign<Constant::AtmosphereProperties>();
 
 
-		FEntity* pMountainEntity = pWorld->CreateEntity();
-		pWorld->Boardcast(Event::OnModelLoad{ .pEntity = pMountainEntity, .strModelPath = "Asset/Mountain/terrain.gltf" });
+		ReturnIfFalse(pWorld->Boardcast(Event::OnModelLoad{ 
+			.pEntity = pWorld->CreateEntity(),
+			.strModelPath = "Asset/Mountain/terrain.gltf" 
+		}));
 
 
 		FDirectionalLight Light;

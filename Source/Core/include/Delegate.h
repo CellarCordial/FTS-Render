@@ -49,17 +49,6 @@ namespace FTS
             m_DelegateFunc = std::move(Func);
         }
 
-        template <typename F>
-        void AddEvent(F* Instance, BOOL(F::*MemberFunc)(Args...))
-        {
-            assert(Instance != nullptr && "Try to use nullptr member function.");
-
-            m_DelegateFunc = [Instance, MemberFunc](Args&&... InArguments) -> BOOL
-            {
-                return (Instance->*MemberFunc)(std::forward<Args>(InArguments)...);
-            };
-        }
-
         void RemoveEvent()
         {
             m_DelegateFunc = nullptr;
@@ -85,19 +74,6 @@ namespace FTS
         void AddEvent(std::function<BOOL(Args...)> Func)
         {
             m_DelegateArray.emplace_back(std::move(Func));
-        }
-
-        template <typename F>
-        void AddEvent(F* Instance, BOOL(F::*MemberFunc)(Args...))
-        {
-            assert(Instance != nullptr && "Try to use nullptr member function.");
-
-            m_DelegateArray.emplace_back(
-                [Instance, MemberFunc](Args&&... InArguments) -> BOOL
-                {
-                    return (Instance->*MemberFunc)(std::forward<Args>(InArguments)...);
-                }
-            );
         }
 
         void RemoveEvent(std::function<BOOL(Args...)> Func)

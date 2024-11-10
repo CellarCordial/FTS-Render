@@ -9,24 +9,23 @@
 
 namespace FTS
 {
+	struct FDistanceField;
+
 	namespace Event
 	{
 		struct OnModelLoad
 		{
-			DeclareDelegateEvent(ModelLoaded);
-
 			FEntity* pEntity = nullptr;
 			std::string strModelPath;
-			ModelLoaded DelegateEvent;
 		};
 
 		struct OnModelTransform
 		{
-			DeclareDelegateEvent(ModelTransformed);
-			
 			FEntity* pEntity = nullptr;
-			ModelTransformed DelegateEvent;
 		};
+
+		DeclareDelegateEvent(GenerateSdf, FDistanceField*);
+		DeclareDelegateEvent(UpdateSceneGrid);
 	};
 	
 	struct FTransform
@@ -44,19 +43,23 @@ namespace FTS
 	struct FDistanceField
 	{
 		std::string strSdfTextureName;
+		
 		FMatrix4x4 LocalMatrix;
 		FMatrix4x4 WorldMatrix;
 		FMatrix4x4 CoordMatrix;
 		FBounds3F SdfBox;
-
-		std::shared_ptr<FBvh> pBvh;
+		
+		std::vector<UINT8> SdfData;
+		FBvh Bvh;
 
 		void TransformUpdate(const FTransform* cpTransform);
+		BOOL CheckSdfFileExist() const { return !SdfData.empty(); }
 	};
 
 	inline const UINT32 gdwGlobalSdfResolution = 256;
 	inline const UINT32 gdwVoxelNumPerChunk = 16;
 	inline const UINT32 gdwMaxGIDistance = 512;
+	inline const UINT32 gdwSdfResolution = 64;
 
 	struct FSceneGrid
 	{
@@ -74,7 +77,6 @@ namespace FTS
 		public TEventSubscriber<Event::OnModelLoad>,
 		public TEventSubscriber<Event::OnModelTransform>,
 		public TEventSubscriber<Event::OnComponentAssigned<FMesh>>,
-		public TEventSubscriber<Event::OnComponentAssigned<FCamera>>,
 		public TEventSubscriber<Event::OnComponentAssigned<FMaterial>>,
 		public TEventSubscriber<Event::OnComponentAssigned<FDistanceField>>
 	{
@@ -82,12 +84,11 @@ namespace FTS
 		BOOL Initialize(FWorld* pWorld) override;
 		BOOL Destroy() override;
 
-		void Tick(FWorld* world, FLOAT fDelta) override;
+		BOOL Tick(FWorld* world, FLOAT fDelta) override;
 
 		BOOL Publish(FWorld* pWorld, const Event::OnModelLoad& crEvent) override;
 		BOOL Publish(FWorld* pWorld, const Event::OnModelTransform& crEvent) override;
 		BOOL Publish(FWorld* pWorld, const Event::OnComponentAssigned<FMesh>& crEvent) override;
-		BOOL Publish(FWorld* pWorld, const Event::OnComponentAssigned<FCamera>& crEvent) override;
 		BOOL Publish(FWorld* pWorld, const Event::OnComponentAssigned<FMaterial>& crEvent) override;
 		BOOL Publish(FWorld* pWorld, const Event::OnComponentAssigned<FDistanceField>& crEvent) override;
 
@@ -95,7 +96,6 @@ namespace FTS
 		FWorld* m_pWorld = nullptr;
 		std::string m_strModelDirectory;
 		std::string m_strSdfDataPath;
-
 	};
 }
 

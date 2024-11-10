@@ -36,23 +36,22 @@ namespace FTS
 
         BOOL Empty() const
         {
-            return m_Nodes.empty() && m_Vertices.empty() && m_dwTriangleNum == 0;
+            return m_Nodes.empty() && m_Vertices.empty() && dwTriangleNum == 0;
         }
 
         void Clear() 
         { 
             m_Nodes.clear();
             m_Vertices.clear();
-            m_dwTriangleNum = 0;
+            dwTriangleNum = 0;
         }
 
         FBounds3F GlobalBox;
+        UINT32 dwTriangleNum = 0;
 
     private:
         std::vector<Node> m_Nodes;
         std::vector<Vertex> m_Vertices;
-        UINT32 m_dwTriangleNum = 0;
-
     };
 
 

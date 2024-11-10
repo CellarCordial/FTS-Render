@@ -115,7 +115,7 @@ namespace FTS
 	{
 		// Update Constant.
 		{
-			pCache->GetWorld()->Each<FCamera>(
+			ReturnIfFalse(pCache->GetWorld()->Each<FCamera>(
 				[this](FEntity* pEntity, FCamera* pCamera) -> BOOL
 				{
 					FCamera::FrustumDirections Directions = pCamera->GetFrustumDirections();
@@ -126,7 +126,7 @@ namespace FTS
 					m_PassConstants.CameraPosition = pCamera->Position;
 					return true;
 				}
-			);
+			));
 
 
 			FBounds3F* pGlobalBox;
@@ -154,13 +154,8 @@ namespace FTS
 		ReturnIfFalse(pRenderGraph != nullptr);
 
 		pRenderGraph->AddPass(&m_SdfGeneratePass);
+		pRenderGraph->AddPass(&m_GlobalSdfPass);
 		pRenderGraph->AddPass(&m_SdfDebugPass);
-
-		FWorld* pWorld = pRenderGraph->GetResourceCache()->GetWorld();
-		FEntity* pBunnyEntity = pWorld->CreateEntity();
-		pWorld->Boardcast(Event::OnModelLoad{ .pEntity = pBunnyEntity, .strModelPath = "Asset/ABeautifulGame/ABeautifulGame.gltf" });
-
-		m_SdfGeneratePass.GenerateSdf(pBunnyEntity->GetComponent<FMesh>());
 
 		return true;
 	}

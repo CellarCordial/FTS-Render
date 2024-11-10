@@ -131,7 +131,7 @@ namespace FTS
 			ReturnIfFalse(pCache->RequireConstants("WorldScale", PPV_ARG(&pfWorldScale)));
 			m_PassConstant.fWorldScale = *pfWorldScale;
 
-			pCache->GetWorld()->Each<FCamera>(
+			ReturnIfFalse(pCache->GetWorld()->Each<FCamera>(
 				[this](FEntity* pEntity, FCamera* pCamera) -> BOOL
 				{
 					m_PassConstant.fCameraHeight = m_PassConstant.fWorldScale * pCamera->Position.y;
@@ -144,8 +144,8 @@ namespace FTS
 					m_PassConstant.FrustumD = Frustum.D;
 					return true;
 				}
-			);
-			pCache->GetWorld()->Each<FDirectionalLight>(
+			));
+			ReturnIfFalse(pCache->GetWorld()->Each<FDirectionalLight>(
 				[this](FEntity* pEntity, FDirectionalLight* pLight) -> BOOL
 				{
 					m_PassConstant.SunDir = pLight->Direction;
@@ -153,7 +153,7 @@ namespace FTS
 					m_PassConstant.ShadowViewProj = pLight->ViewProj;
 					return true;
 				}
-			);
+			));
 
 			ReturnIfFalse(pCmdList->WriteBuffer(m_pPassConstantBuffer.Get(), &m_PassConstant, sizeof(Constant::AerialLUTPassConstant)));
 		}

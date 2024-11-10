@@ -3,7 +3,7 @@
 #include "bvh/leaf_collapser.hpp"
 #include "bvh/locally_ordered_clustering_builder.hpp"
 #include "../../Core/include/ComRoot.h"
-#include "../../TaskFlow/include/TaskFlow.h"
+#include "../../Parallel/include/Parallel.h"
 
 namespace FTS 
 {
@@ -89,7 +89,7 @@ namespace FTS
             }
         }
         
-        m_dwTriangleNum = dwTriangleNum;
+        dwTriangleNum = dwTriangleNum;
 
         return false;
     }
@@ -587,9 +587,9 @@ namespace FTS
         }
 
         // Compute Morton indices of primitives. 
-        TaskFlow::Initialize();
+        Parallel::Initialize();
         std::vector<FMortonPrimitive> MortonPrimitives(rPrimitiveInfos.size());
-        TaskFlow::ParallelFor(
+        Parallel::ParallelFor(
             [&](UINT64 ix)
             {
                 // Initialize MortonPrimitives[ix] for ixth primitive. 
@@ -629,7 +629,7 @@ namespace FTS
         // Create LBVHs for treelets in parallel. 
         std::atomic<UINT32> dwAtomicTotal(0), dwAtomicOrderedPrimsOffset(0);
         rpOrderedPrimitives.resize(m_pPrimitives.size());
-        TaskFlow::ParallelFor(
+        Parallel::ParallelFor(
             [&](UINT64 ix)
             {
                 // Generate ix_th LBVH treelet. 
@@ -653,7 +653,7 @@ namespace FTS
         );
         *pdwTotalNodes = dwAtomicTotal;
 
-        TaskFlow::Destroy();
+        Parallel::Destroy();
 
         // Create and return SAH BVH from LBVH treelets. 
         std::vector<FBvhBuildNode*> pFinishedTreelets; 

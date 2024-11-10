@@ -8,21 +8,27 @@ namespace FTS
 #define THREAD_GROUP_SIZE_X 8
 #define THREAD_GROUP_SIZE_Y 8
 #define THREAD_GROUP_SIZE_Z 8
-#define GLOBAL_SDF_RESOLUTION 256
 
 	BOOL FGlobalSdfPass::Compile(IDevice* pDevice, IRenderResourceCache* pCache)
 	{
 		// Binding Layout.
 		{
-			FBindingLayoutItemArray BindingLayoutItems(4);
+			FBindingLayoutItemArray BindingLayoutItems(3);
 			BindingLayoutItems[0] = FBindingLayoutItem::CreatePushConstants(0, sizeof(Constant::GlobalSdfConstants));
 			BindingLayoutItems[1] = FBindingLayoutItem::CreateSampler(0);
 			BindingLayoutItems[2] = FBindingLayoutItem::CreateTexture_UAV(0);
-			BindingLayoutItems[3] = FBindingLayoutItem::CreateStructuredBuffer_SRV(0);
 			ReturnIfFalse(pDevice->CreateBindingLayout(
 				FBindingLayoutDesc{ .BindingLayoutItems = BindingLayoutItems },
 				IID_IBindingLayout,
 				PPV_ARG(m_pBindingLayout.GetAddressOf())
+			));
+
+			FBindingLayoutItemArray DynamicBindingLayoutItems(1);
+			DynamicBindingLayoutItems[0] = FBindingLayoutItem::CreateStructuredBuffer_SRV(0);
+			ReturnIfFalse(pDevice->CreateBindingLayout(
+				FBindingLayoutDesc{ .BindingLayoutItems = DynamicBindingLayoutItems },
+				IID_IBindingLayout,
+				PPV_ARG(m_pDynamicBindingLayout.GetAddressOf())
 			));
 
 			FBindingLayoutItemArray BindlessLayoutItems(1);
@@ -45,7 +51,7 @@ namespace FTS
 			CSCompileDesc.Target = EShaderTarget::Compute;
 			CSCompileDesc.strDefines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
 			CSCompileDesc.strDefines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
-			CSCompileDesc.strDefines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Z));
+			CSCompileDesc.strDefines.push_back("THREAD_GROUP_SIZE_Z=" + std::to_string(THREAD_GROUP_SIZE_Z));
 			FShaderData CSData = ShaderCompile::CompileShader(CSCompileDesc);
 
 			FShaderDesc CSDesc;
@@ -59,6 +65,7 @@ namespace FTS
 			FComputePipelineDesc PipelineDesc;
 			PipelineDesc.CS = m_pCS.Get();
 			PipelineDesc.pBindingLayouts.PushBack(m_pBindingLayout.Get());
+			PipelineDesc.pBindingLayouts.PushBack(m_pDynamicBindingLayout.Get());
 			PipelineDesc.pBindingLayouts.PushBack(m_pBindlessLayout.Get());
 			ReturnIfFalse(pDevice->CreateComputePipeline(PipelineDesc, IID_IComputePipeline, PPV_ARG(m_pPipeline.GetAddressOf())));
 		}
@@ -68,15 +75,16 @@ namespace FTS
 		{
 			ReturnIfFalse(pDevice->CreateTexture(
 				FTextureDesc::CreateReadWrite(
-					GLOBAL_SDF_RESOLUTION, 
-					GLOBAL_SDF_RESOLUTION, 
-					GLOBAL_SDF_RESOLUTION, 
+					gdwGlobalSdfResolution,
+					gdwGlobalSdfResolution,
+					gdwGlobalSdfResolution,
 					EFormat::R32_FLOAT, 
 					"GlobalSdfTexture"
 				),
 				IID_ITexture,
 				PPV_ARG(m_pGlobalSdfTexture.GetAddressOf())
 			));
+			ReturnIfFalse(pCache->Collect(m_pGlobalSdfTexture.Get()));
 		}
 
 		// Binding Set.
@@ -84,11 +92,10 @@ namespace FTS
 			ISampler* pLinearClampSampler;
 			ReturnIfFalse(pCache->Require("LinearClampSampler")->QueryInterface(IID_ISampler, PPV_ARG(&pLinearClampSampler)));
  
-			FBindingSetItemArray BindingSetItems(4);
+			FBindingSetItemArray BindingSetItems(3);
 			BindingSetItems[0] = FBindingSetItem::CreatePushConstants(0, sizeof(Constant::GlobalSdfConstants));
 			BindingSetItems[1] = FBindingSetItem::CreateSampler(0, pLinearClampSampler);
 			BindingSetItems[2] = FBindingSetItem::CreateTexture_UAV(0, m_pGlobalSdfTexture.Get());
-			BindingSetItems[3] = FBindingSetItem::CreateStructuredBuffer_SRV(0, m_pModelSdfDataBuffer.Get());
 			ReturnIfFalse(pDevice->CreateBindingSet(
 				FBindingSetDesc{ .BindingItems = BindingSetItems },
 				m_pBindingLayout.Get(),
@@ -100,15 +107,16 @@ namespace FTS
 		// Compute State.
 		{
 			m_ComputeState.pBindingSets.PushBack(m_pBindingSet.Get());
-			m_ComputeState.pBindingSets.PushBack(m_pBindlessSet.Get());
 			m_ComputeState.pPipeline = m_pPipeline.Get();
 		}
 
+		m_GlobalBox = FBounds3F(- 1.0f * gdwMaxGIDistance / 2.0f, 1.0f * gdwMaxGIDistance / 2.0f);
+		ReturnIfFalse(pCache->CollectConstants("GlobalBox", &m_GlobalBox));
 
-		pCache->GetWorld()->Each<Event::OnModelTransform>(
-			[this](FEntity* pEntity, Event::OnModelTransform* pEvent) -> BOOL
+		ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateSceneGrid>(
+			[this](FEntity* pEntity, Event::UpdateSceneGrid* pEvent) -> BOOL
 			{
-				pEvent->DelegateEvent.AddEvent(
+				pEvent->AddEvent(
 					[this]() -> BOOL 
 					{
 						this->Type &= ~ERenderPassType::Exclude; 
@@ -117,7 +125,7 @@ namespace FTS
 				);
 				return true;
 			}
-		);
+		));
 
 		return true;
 	}
@@ -129,7 +137,7 @@ namespace FTS
 		IDevice* pDevice = pCmdList->GetDevice();
 		// Update.
 		{
-			pCache->GetWorld()->Each<FMesh, FDistanceField, FTransform>(
+			ReturnIfFalse((pCache->GetWorld()->Each<FMesh, FDistanceField, FTransform>(
 				[this, pCache](FEntity* pEntity, FMesh* pMesh, FDistanceField* pDF, FTransform* pTransform) -> BOOL
 				{
 					m_ModelSdfDatas.emplace_back(
@@ -144,12 +152,12 @@ namespace FTS
 
 					auto& rSdfTexture = m_pMeshSdfTextures.emplace_back();
 					ReturnIfFalse(pCache->Require(pDF->strSdfTextureName.c_str())->QueryInterface(
-						IID_ITexture, 
+						IID_ITexture,
 						PPV_ARG(rSdfTexture.GetAddressOf())
 					));
 					return true;
 				}
-			);
+			)));
 			ReturnIfFalse(pDevice->CreateBuffer(
 				FBufferDesc::CreateStructured(
 					m_ModelSdfDatas.size() * sizeof(Constant::ModelSdfData),
@@ -168,11 +176,23 @@ namespace FTS
 				m_ModelSdfDatas.size() * sizeof(Constant::ModelSdfData)
 			));
 
+			FBindingSetItemArray BindingSetItems(1);
+			BindingSetItems[0] = FBindingSetItem::CreateStructuredBuffer_SRV(0, m_pModelSdfDataBuffer.Get());
+			ReturnIfFalse(pDevice->CreateBindingSet(
+				FBindingSetDesc{ .BindingItems = BindingSetItems },
+				m_pDynamicBindingLayout.Get(),
+				IID_IBindingSet,
+				PPV_ARG(m_pDynamicBindingSet.GetAddressOf())
+			));
+
 			m_pBindlessSet->Resize(static_cast<UINT32>(m_pMeshSdfTextures.size()), false);
 			for (UINT32 ix = 0; ix < m_pMeshSdfTextures.size(); ++ix)
 			{
 				m_pBindlessSet->SetSlot(FBindingSetItem::CreateTexture_SRV(0, m_pMeshSdfTextures[ix].Get()), ix + 1);
 			}
+
+			m_ComputeState.pBindingSets.PushBack(m_pDynamicBindingSet.Get());
+			m_ComputeState.pBindingSets.PushBack(m_pBindlessSet.Get());
 		}
 
 

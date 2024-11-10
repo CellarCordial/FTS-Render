@@ -1,6 +1,6 @@
-#define THREAD_GROUP_SIZE_X 0 
-#define THREAD_GROUP_SIZE_Y 0
-#define THREAD_GROUP_SIZE_Z 0
+// #define THREAD_GROUP_SIZE_X 0 
+// #define THREAD_GROUP_SIZE_Y 0
+// #define THREAD_GROUP_SIZE_Z 0
 
 struct FModelSdfData
 {
@@ -36,7 +36,7 @@ float CalcSdf(float fMinSdf, uint dwSdfIndex, float3 VoxelWorldPos);
 void CS(uint3 ThreadID : SV_DispatchThreadID)
 {
     uint3 VoxelID = VoxelOffset + ThreadID;
-    float3 VoxelWorldPos = mul(float4(VoxelID, 1.0f), VoxelWorldMatrix);
+    float3 VoxelWorldPos = mul(float4(VoxelID, 1.0f), VoxelWorldMatrix).xyz;
 
     float fMinSdf = fGIMaxDistance;
 
@@ -76,6 +76,5 @@ float CalcSdf(float fMinSdf, uint dwSdfIndex, float3 VoxelWorldPos)
     // 精度非常低.
     return min(fMinSdf, sqrt(sdf * sdf + fDistanceToSdf *fDistanceToSdf));
 }
-
 
 #endif

@@ -8,6 +8,7 @@
 #include "../../../Math/include/Bounds.h"
 #include "../../../Scene/include/Scene.h"
 #include "SdfGenerate.h"
+#include "GlobalSdf.h"
 
 
 namespace FTS 
@@ -63,6 +64,7 @@ namespace FTS
 
     private:
         FSdfGeneratePass m_SdfGeneratePass;
+        FGlobalSdfPass m_GlobalSdfPass;
         FSdfDebugPass m_SdfDebugPass;
 	};
 }

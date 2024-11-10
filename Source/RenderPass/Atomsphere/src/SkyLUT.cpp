@@ -131,21 +131,21 @@ namespace FTS
 			FLOAT* pfWorldScale;
 			ReturnIfFalse(pCache->RequireConstants("WorldScale", PPV_ARG(&pfWorldScale)));
 
-			pCache->GetWorld()->Each<FCamera>(
+			ReturnIfFalse(pCache->GetWorld()->Each<FCamera>(
 				[this, pfWorldScale](FEntity* pEntity, FCamera* pCamera) -> BOOL
 				{
 					m_PassConstant.CameraPosition = pCamera->Position * (*pfWorldScale);
 					return true;
 				}
-			);
-			pCache->GetWorld()->Each<FDirectionalLight>(
+			));
+			ReturnIfFalse(pCache->GetWorld()->Each<FDirectionalLight>(
 				[this](FEntity* pEntity, FDirectionalLight* pLight) -> BOOL
 				{
 					m_PassConstant.SunDir = pLight->Direction;
 					m_PassConstant.SunIntensity = FVector3F(pLight->fIntensity * pLight->Color);
 					return true;
 				}
-			);
+			));
 			ReturnIfFalse(pCmdList->WriteBuffer(m_pPassConstantBuffer.Get(), &m_PassConstant, sizeof(Constant::SkyLUTPassConstant)));
 		}
 

@@ -7,7 +7,7 @@
 #include <filesystem>
 #include <json.hpp>
 #include "../../Math/include/Quaternion.h"
-#include "../../TaskFlow/include/TaskFlow.h"
+#include "../../Parallel/include/Parallel.h"
 #include "../include/Image.h"
 #include "../../Core/include/ComRoot.h"
 #include "../../Core/include/ComIntf.h"
@@ -74,8 +74,9 @@ namespace FTS
 		pWorld->Subscribe<Event::OnComponentAssigned<FMesh>>(this);
 		pWorld->Subscribe<Event::OnComponentAssigned<FMaterial>>(this);
 		pWorld->Subscribe<Event::OnComponentAssigned<FDistanceField>>(this);
+		pWorld->CreateEntity()->Assign<Event::GenerateSdf>();
+		pWorld->CreateEntity()->Assign<Event::UpdateSceneGrid>();
 		
-
 		FSceneGrid* pSceneGrid = pWorld->CreateEntity()->Assign<FSceneGrid>();
 
 		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
@@ -92,29 +93,50 @@ namespace FTS
 		return true;
 	}
 
-	void FSceneSystem::Tick(FWorld* world, FLOAT fDelta)
+	BOOL FSceneSystem::Tick(FWorld* world, FLOAT fDelta)
 	{
-		world->Each<FCamera>(
+		ReturnIfFalse(world->Each<FCamera>(
 			[fDelta](FEntity* pEntity, FCamera* pCamera) -> BOOL
 			{
 				pCamera->HandleInput(fDelta);
 				return true;
 			}
-		);
+		));
 
-		//if (ImGui::FileBrowserHasSelected())
-		//{
-		//	const auto& FilePath = ImGui::FileBrowserGetSelected();
-		//	if (FilePath.extension() == ".gltf")
-		//	{
-		//		std::string strFilePath = FilePath.string();
+		// Load Model.
+		{
+			UINT64 stThreadID = INVALID_SIZE_64;
+			FEntity* pModelEntity = nullptr;
 
-		//		m_pWorld->Boardcast(Event::OnModelLoad{
-		//			.pEntity = m_pWorld->CreateEntity(),
-		//			.strModelPath = strFilePath.substr(strFilePath.find("Asset"))
-		//		});
-		//	}
-		//}
+			if (Gui::HasFileSelected() && pModelEntity == nullptr)
+			{
+				std::string strFilePath = Gui::GetSelectedFilePath();
+				pModelEntity = m_pWorld->CreateEntity();
+
+				stThreadID = Parallel::BeginThread(
+					[&]() 
+					{ 
+						return m_pWorld->Boardcast(Event::OnModelLoad{
+							.pEntity = pModelEntity,
+							.strModelPath = strFilePath.substr(strFilePath.find("Asset"))
+						});
+					}
+				);
+			}
+
+			if (pModelEntity && Parallel::ThreadFinished(stThreadID) && Parallel::ThreadSuccess(stThreadID))
+			{
+				ReturnIfFalse(m_pWorld->Each<Event::GenerateSdf>(
+					[&](FEntity* pEntity, Event::GenerateSdf* pEvent) -> BOOL
+					{
+						return pEvent->Broadcast(pModelEntity->GetComponent<FDistanceField>());
+					}
+				));
+				stThreadID = INVALID_SIZE_64;
+			}
+		}
+
+		return true;
 	}
 
 
@@ -153,6 +175,8 @@ namespace FTS
 		crEvent.pEntity->Assign<FDistanceField>();
 
 		gpGLTFModel.reset();
+		m_strSdfDataPath.clear();
+		m_strModelDirectory.clear();
 
 		return true;
 	}
@@ -194,7 +218,7 @@ namespace FTS
 		auto& rSubMeshes = pMesh->SubMeshes;
 		rSubMeshes.resize(cpPrimitives.size());
 
-		TaskFlow::ParallelFor(
+		Parallel::ParallelFor(
 			[&](UINT64 ix)
 			{
 				auto& rSubMesh = rSubMeshes[ix];
@@ -223,7 +247,7 @@ namespace FTS
 
 		rpMaterial->SubMaterials.resize(gpGLTFModel->materials.size());
 
-		TaskFlow::ParallelFor(
+		Parallel::ParallelFor(
 			[&rpMaterial, &strFilePath](UINT64 ix)
 			{
 				auto& rSubMaterial = rpMaterial->SubMaterials[ix];
@@ -284,39 +308,92 @@ namespace FTS
 
 	BOOL FSceneSystem::Publish(FWorld* pWorld, const Event::OnComponentAssigned<FDistanceField>& crEvent)
 	{
-		const FMesh* pMesh = crEvent.pEntity->GetComponent<FMesh>();
+		FDistanceField* pDistanceField = crEvent.pComponent;
+		pDistanceField->strSdfTextureName = *crEvent.pEntity->GetComponent<std::string>() + "SdfTexture";
 
-		UINT64 stIndicesNum = 0;
-		for (const auto& crMesh : pMesh->SubMeshes)
+		BOOL bLoadFromFile = false;
+		if (IsFileExist(m_strSdfDataPath.c_str()))
 		{
-			stIndicesNum += crMesh.Indices.size();
-		}
+			Serialization::BinaryInput Input(m_strSdfDataPath);
 
-		UINT64 ix = 0;
-		std::vector<FBvh::Vertex> BvhVertices(stIndicesNum);
-		for (const auto& crMesh : pMesh->SubMeshes)
-		{
-			for (auto VertexId : crMesh.Indices)
+			UINT32 dwMeshSdfResolution = 0;
+			Input(dwMeshSdfResolution);
+
+			if (dwMeshSdfResolution == gdwSdfResolution)
 			{
-				BvhVertices[ix++] = {
-					FVector3F(Mul(FVector4F(crMesh.Vertices[VertexId].Position, 1.0f), crMesh.WorldMatrix)),
-					FVector3F(Mul(FVector4F(crMesh.Vertices[VertexId].Normal, 1.0f), Transpose(Inverse(crMesh.WorldMatrix))))
-				};
+				Input(
+					pDistanceField->SdfBox.m_Lower.x,
+					pDistanceField->SdfBox.m_Lower.y,
+					pDistanceField->SdfBox.m_Lower.z,
+					pDistanceField->SdfBox.m_Upper.x,
+					pDistanceField->SdfBox.m_Upper.y,
+					pDistanceField->SdfBox.m_Upper.z
+				);
+
+				UINT64 stDataSize = static_cast<UINT64>(gdwSdfResolution) * gdwSdfResolution * gdwSdfResolution;
+				pDistanceField->SdfData.resize(stDataSize);
+				Input.LoadBinaryData(pDistanceField->SdfData.data(), stDataSize);
+
+				bLoadFromFile = true;
 			}
 		}
-		ReturnIfFalse(ix == stIndicesNum);
 
-		FDistanceField* pDistanceField = crEvent.pComponent;
-		pDistanceField->pBvh = std::make_shared<FBvh>();
-		pDistanceField->pBvh->Build(BvhVertices, stIndicesNum / 3);
-		pDistanceField->SdfBox.m_Lower = pDistanceField->pBvh->GlobalBox.m_Lower - 0.5f;
-		pDistanceField->SdfBox.m_Upper = pDistanceField->pBvh->GlobalBox.m_Upper + 0.5f;
+		if (!bLoadFromFile)
+		{
+			const FMesh* pMesh = crEvent.pEntity->GetComponent<FMesh>();
+
+			UINT64 stIndicesNum = 0;
+			for (const auto& crMesh : pMesh->SubMeshes)
+			{
+				stIndicesNum += crMesh.Indices.size();
+			}
+
+			UINT64 ix = 0;
+			std::vector<FBvh::Vertex> BvhVertices(stIndicesNum);
+			for (const auto& crMesh : pMesh->SubMeshes)
+			{
+				for (auto VertexId : crMesh.Indices)
+				{
+					BvhVertices[ix++] = {
+						FVector3F(Mul(FVector4F(crMesh.Vertices[VertexId].Position, 1.0f), crMesh.WorldMatrix)),
+						FVector3F(Mul(FVector4F(crMesh.Vertices[VertexId].Normal, 1.0f), Transpose(Inverse(crMesh.WorldMatrix))))
+					};
+				}
+			}
+			ReturnIfFalse(ix == stIndicesNum);
+
+			pDistanceField->Bvh.Build(BvhVertices, stIndicesNum / 3);
+			pDistanceField->SdfBox.m_Lower = pDistanceField->Bvh.GlobalBox.m_Lower - 0.5f;
+			pDistanceField->SdfBox.m_Upper = pDistanceField->Bvh.GlobalBox.m_Upper + 0.5f;
+		}
+
+
+
+		pDistanceField->TransformUpdate(crEvent.pEntity->GetComponent<FTransform>());
+		ReturnIfFalse(pWorld->Each<FSceneGrid>(
+			[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
+			{
+				UINT32 dwVoxelSize = gdwMaxGIDistance / gdwGlobalSdfResolution;
+				UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
+				FLOAT fChunkSize = 1.0f * gdwVoxelNumPerChunk * dwVoxelSize;
+				FLOAT fGridSize = 1.0f * fChunkSize * dwChunkNumPerAxis;
+
+				FVector3I UniformLower = FVector3I((pDistanceField->SdfBox.m_Lower + fGridSize / 2.0f) / fChunkSize);
+				FVector3I UniformUpper = FVector3I((pDistanceField->SdfBox.m_Upper + fGridSize / 2.0f) / fChunkSize);
+
+				UINT32 dwStartIndex = UniformLower.x + UniformLower.y * dwChunkNumPerAxis + UniformLower.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
+				UINT32 dwEndIndex = UniformUpper.x + UniformUpper.y * dwChunkNumPerAxis + UniformUpper.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
+
+				for (UINT32 ix = dwStartIndex; ix <= dwEndIndex; ++ix)
+				{
+					pGrid->Chunks[ix].bModelMoved = true;
+					pGrid->Chunks[ix].pModelEntities.insert(crEvent.pEntity);
+				}
+
+				return true;
+			}
+		));
 		
-		return true;
-	}
-
-	BOOL FSceneSystem::Publish(FWorld* pWorld, const Event::OnComponentAssigned<FCamera>& crEvent)
-	{
 		return true;
 	}
 
@@ -328,7 +405,7 @@ namespace FTS
 		FBounds3F OldSdfBox = pDistanceField->SdfBox;
 		pDistanceField->TransformUpdate(pTransform);
 		FBounds3F NewSdfBox = pDistanceField->SdfBox;
-		pWorld->Each<FSceneGrid>(
+		ReturnIfFalse(pWorld->Each<FSceneGrid>(
 			[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
 			{
 				UINT32 dwVoxelSize = gdwMaxGIDistance / gdwGlobalSdfResolution;
@@ -357,11 +434,14 @@ namespace FTS
 
 				return true;
 			}
+		));
+
+		return pWorld->Each<Event::UpdateSceneGrid>(
+			[](FEntity* pEntity, Event::UpdateSceneGrid* pEvent) -> BOOL
+			{
+				return pEvent->Broadcast();
+			}
 		);
-
-		ReturnIfFalse(crEvent.DelegateEvent.Broadcast());
-
-		return true;
 	}
 
 	FMatrix4x4 GetMatrixFromGLTFNode(const tinygltf::Node& crGLTFNode)

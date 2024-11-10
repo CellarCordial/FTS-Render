@@ -753,6 +753,10 @@ namespace FTS
                             bFound = true;
                             break;
                         }
+                        else
+                        {
+                            continue;
+                        }
                     }
 
                     if (pResource) m_pRefResources.push_back(pResource);

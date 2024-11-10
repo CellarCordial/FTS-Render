@@ -17,8 +17,10 @@ namespace FTS
         
         BOOL Execution(ICommandList* pCmdList);
 
-        void MenuSetup();
-    }
+		void MenuSetup();
+		BOOL HasFileSelected();
+        std::string GetSelectedFilePath();
+	}
 }
 
 

@@ -134,6 +134,12 @@ namespace FTS
 			m_Upper = TVector3<T>(Min, Min, Min);
 		}
 
+		TBounds3(T Min, T Max) :
+			m_Lower(Min, Min, Min),
+			m_Upper(Max, Max, Max)
+		{
+		}
+
 		TBounds3(T MinX, T MinY, T MinZ, T MaxX, T MaxY, T MaxZ) :
 			m_Lower(MinX, MinY, MinZ),
 			m_Upper(MaxX, MaxY, MaxZ)

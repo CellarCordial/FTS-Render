@@ -1,12 +1,13 @@
-#include "../include/TaskFlow.h"
+#include "../include/Parallel.h"
 #include <functional>
 #include <queue>
 #include "ThreadPool.h"
 #include "../../Core/include/ComRoot.h"
+#include "../../Math/include/Common.h"
 
 namespace FTS 
 {
-    namespace TaskFlow 
+    namespace Parallel 
     {
         template <typename T>
         class TTaskQueue
@@ -58,11 +59,7 @@ namespace FTS
 
         void ParallelFor(std::function<void(UINT64)> Func, UINT64 stCount, UINT32 dwChunkSize)
         {
-            if (stCount == 0)
-            {
-                LOG_WARN("Task count is 0 for ParallerFor().");
-                return;
-            }
+            if (stCount == 0) return;
 
             assert(stCount >= dwChunkSize);
             gpPool->ParallelFor(Func, stCount, dwChunkSize);
@@ -70,27 +67,24 @@ namespace FTS
 
         void ParallelFor(std::function<void(UINT64, UINT64)> Func, UINT64 stX, UINT64 stY)
         {
-			if (stX == 0 || stY == 0)
-			{
-				LOG_WARN("Task count is 0 for ParallerFor().");
-				return;
-			}
-
+			if (stX == 0 || stY == 0) return;
 
             gpPool->ParallelFor(Func, stX, stY);
         }
 
         BOOL ThreadFinished(UINT64 stIndex)
         {
+            if (stIndex == INVALID_SIZE_64) return false;
             return gpPool->ThreadFinished(stIndex);
         }
 
         BOOL ThreadSuccess(UINT64 stIndex)
         {
-            return gpPool->ThreadSuccess(stIndex);
+			if (stIndex == INVALID_SIZE_64) return false;
+			return gpPool->ThreadSuccess(stIndex);
         }
 
-        UINT64 BeginThreadImpl(std::function<BOOL()>&& rrFunc)
+        UINT64 BeginThread(std::function<BOOL()>&& rrFunc)
         {
             return gpPool->Submit(std::move(rrFunc));
         }
