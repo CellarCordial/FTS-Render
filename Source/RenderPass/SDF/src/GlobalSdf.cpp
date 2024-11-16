@@ -86,11 +86,15 @@ namespace FTS
 				}
 			}
 
-			ReturnIfFalse(pCmdList->WriteBuffer(
-				m_pModelSdfDataBuffer.Get(),
-				m_ModelSdfDatas.data(),
-				m_ModelSdfDatas.size() * sizeof(Constant::ModelSdfData)
-			));
+			//ReturnIfFalse(!m_ModelSdfDatas.empty());
+			if (!m_ModelSdfDatas.empty())
+			{
+				ReturnIfFalse(pCmdList->WriteBuffer(
+					m_pModelSdfDataBuffer.Get(),
+					m_ModelSdfDatas.data(),
+					m_ModelSdfDatas.size() * sizeof(Constant::ModelSdfData)
+				));
+			}
 		}
 
 
@@ -139,10 +143,12 @@ namespace FTS
 						rPassConstants.dwModelSdfBegin = dwModelIndex;
 						rPassConstants.dwModelSdfEnd = dwModelIndex + rChunk.pModelEntities.size();
 						rPassConstants.fGIMaxDistance = gfSceneGridSize;
+
+						UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
 						rPassConstants.VoxelOffset = {
-							ix % gdwGlobalSdfResolution,
-							ix / gdwGlobalSdfResolution,
-							ix / (gdwGlobalSdfResolution * gdwGlobalSdfResolution)
+							ix % dwChunkNumPerAxis,
+							(ix / dwChunkNumPerAxis) % dwChunkNumPerAxis,
+							ix / (dwChunkNumPerAxis * dwChunkNumPerAxis)
 						};
 						rPassConstants.VoxelOffset *= gdwVoxelNumPerChunk;
 

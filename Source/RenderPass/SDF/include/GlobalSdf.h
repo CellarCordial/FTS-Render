@@ -14,9 +14,13 @@ namespace FTS
 		struct GlobalSdfConstants
 		{
 			FMatrix4x4 VoxelWorldMatrix;
-			FVector3I VoxelOffset;  FLOAT fGIMaxDistance = 500;
+			
+			FVector3I VoxelOffset;  
+			FLOAT fGIMaxDistance = 500;
+			
 			UINT32 dwModelSdfBegin = 0;
 			UINT32 dwModelSdfEnd = 0;
+			FVector2I PAD;
 		};
 		
 		struct ModelSdfData

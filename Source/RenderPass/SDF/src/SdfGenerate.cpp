@@ -208,8 +208,6 @@ namespace FTS
 					}
 				));
 			}
-
-			ReturnIfFalse(pCmdList->Close());
 		}
 		else
 		{
@@ -231,7 +229,8 @@ namespace FTS
 			));
 		}
 
-        return true;
+		ReturnIfFalse(pCmdList->Close());
+		return true;
     }
 
 	BOOL FSdfGeneratePass::FinishPass()
@@ -265,7 +264,7 @@ namespace FTS
 			}
 
 			std::string strSdfName = m_pDistanceField->strSdfTextureName.substr(0, m_pDistanceField->strSdfTextureName.find("SdfTexture")) + ".sdf";
-			Serialization::BinaryOutput Out(std::string(PROJ_DIR) + "Asset/Sdf/" + strSdfName);
+			Serialization::BinaryOutput Out(std::string(PROJ_DIR) + "Asset/SDF/" + strSdfName);
 
 			Out(
 				gdwSdfResolution,
@@ -276,7 +275,7 @@ namespace FTS
 				m_pDistanceField->SdfBox.m_Upper.y,
 				m_pDistanceField->SdfBox.m_Upper.z
 			);
-			Out.SaveBinaryData(SdfData.data(), SdfData.size() * sizeof(UINT8));
+			Out.SaveBinaryData(SdfData.data(), SdfData.size() * sizeof(FLOAT));
 
 			m_pReadBackTexture.Reset();
 			m_pBvhNodeBuffer.Reset();

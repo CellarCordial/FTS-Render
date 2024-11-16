@@ -51,8 +51,6 @@ namespace FTS
 		//m_AtmosphereDebugRender.GetLastPass()->Precede(&m_GuiPass);
 		m_SdfDebugRender.GetLastPass()->Precede(&m_GuiPass);
 
-
-
 		return true;
 	}
 

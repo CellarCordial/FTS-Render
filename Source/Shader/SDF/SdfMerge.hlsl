@@ -24,7 +24,7 @@ cbuffer gPassConstant : register(b0)
 
 
 StructuredBuffer<FModelSdfData> gModelSdfDatas : register(t0);
-Texture3D<float> gMeshSdfTextures[] : register(t1);
+Texture3D<float> gModelSdfTextures[] : register(t1);
 SamplerState gSampler : register(s0);
 
 RWTexture3D<float> gGlobalSdfTexture : register(u0);
@@ -69,12 +69,12 @@ float CalcSdf(float fMinSdf, uint dwSdfIndex, float3 VoxelWorldPos)
     float w = (SdfLocalPosClamped.z - SdfData.SdfLower.z) / SdfExtent.z;
     float3 uvw = float3(u, v, w);
 
-    float sdf = gMeshSdfTextures[dwSdfIndex].SampleLevel(gSampler, uvw, 0);
+    float sdf = gModelSdfTextures[dwSdfIndex].SampleLevel(gSampler, uvw, 0);
     // Voxel 在 MeshSdf 内.
     if (fDistanceToSdf < 0.001f) return min(sdf, fMinSdf);
 
     // 精度非常低.
-    return min(fMinSdf, sqrt(sdf * sdf + fDistanceToSdf *fDistanceToSdf));
+    return min(fMinSdf, sdf + fDistanceToSdf);
 }
 
 #endif

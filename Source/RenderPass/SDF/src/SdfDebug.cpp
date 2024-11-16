@@ -45,20 +45,6 @@ namespace FTS
 			ReturnIfFalse(pDevice->CreateShader(ShaderDesc, PSData.Data(), PSData.Size(), IID_IShader, PPV_ARG(m_pPS.GetAddressOf())));
 		}
 
-		// Texture.
-		{
-			//ReturnIfFalse(pDevice->CreateTexture(
-			//	FTextureDesc::CreateShaderResource(
-			//		SDF_RESOLUTION,
-			//		SDF_RESOLUTION,
-			//		SDF_RESOLUTION,
-			//		EFormat::R32_FLOAT
-			//	),
-			//	IID_ITexture,
-			//	PPV_ARG(m_pSdfTexture.GetAddressOf())
-			//));
-		}
-
 		// Frame Buffer.
 		{
 			ITexture* pFinalTexture;

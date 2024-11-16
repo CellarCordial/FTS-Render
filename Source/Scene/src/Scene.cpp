@@ -350,9 +350,10 @@ namespace FTS
 					pDistanceField->SdfBox.m_Upper.z
 				);
 
-				UINT64 stDataSize = static_cast<UINT64>(gdwSdfResolution) * gdwSdfResolution * gdwSdfResolution;
+				UINT64 stDataSize = static_cast<UINT64>(gdwSdfResolution) * gdwSdfResolution * gdwSdfResolution * sizeof(FLOAT);
 				pDistanceField->SdfData.resize(stDataSize);
 				Input.LoadBinaryData(pDistanceField->SdfData.data(), stDataSize);
+				LOG_INFO("Loaded " + m_strSdfDataPath);
 
 				bLoadFromFile = true;
 			}

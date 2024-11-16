@@ -56,6 +56,12 @@ namespace FTS
 		BOOL CheckSdfFileExist() const { return !SdfData.empty(); }
 	};
 
+	struct FSurfaceCache
+	{
+		std::array<FImage, 6> Cards;
+
+	};
+
 	inline const FLOAT gfSceneGridSize = 512.0f;
 	inline const UINT32 gdwGlobalSdfResolution = 256u;
 	inline const UINT32 gdwVoxelNumPerChunk = 32u;
