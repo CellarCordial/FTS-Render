@@ -15,7 +15,8 @@ namespace FTS
 		{
 			FMatrix4x4 VoxelWorldMatrix;
 			FVector3I VoxelOffset;  FLOAT fGIMaxDistance = 500;
-			UINT32 dwMeshSdfCount = 0;   FVector3I PAD;
+			UINT32 dwModelSdfBegin = 0;
+			UINT32 dwModelSdfEnd = 0;
 		};
 		
 		struct ModelSdfData
@@ -39,27 +40,41 @@ namespace FTS
 
 		BOOL FinishPass() override;
 
+
 	private:
-		BOOL m_bResourceWrited = false;
+		BOOL PipelineSetup(IDevice* pDevice);
+		BOOL ComputeStateSetup(IDevice* pDevice, IRenderResourceCache* pCache);
+
+	private:
 		FBounds3F m_GlobalBox;
-		Constant::GlobalSdfConstants m_PassConstant;
+		BOOL m_bGlobalSdfInited = false;
+		UINT32 m_dwModelSdfDataDefaultCount = 32;
+		std::vector<Constant::GlobalSdfConstants> m_PassConstants;
 		std::vector<Constant::ModelSdfData> m_ModelSdfDatas;
 
 		TComPtr<IBuffer> m_pModelSdfDataBuffer;
 		TComPtr<ITexture> m_pGlobalSdfTexture;
-		std::vector<TComPtr<ITexture>> m_pMeshSdfTextures;
+		std::vector<ITexture*> m_pMeshSdfTextures;
 
 		TComPtr<IBindingLayout> m_pBindingLayout;
 		TComPtr<IBindingLayout> m_pDynamicBindingLayout;
 		TComPtr<IBindingLayout> m_pBindlessLayout;
 
+		TComPtr<IBindingLayout> m_pClearPassBindingLayout;
+
 		TComPtr<IShader> m_pCS;
 		TComPtr<IComputePipeline> m_pPipeline;
+
+		TComPtr<IShader> m_pClearPassCS;
+		TComPtr<IComputePipeline> m_pClearPassPipeline;
 
 		TComPtr<IBindingSet> m_pBindingSet;
 		TComPtr<IBindingSet> m_pDynamicBindingSet;
 		TComPtr<IBindlessSet> m_pBindlessSet;
 		FComputeState m_ComputeState;
+
+		TComPtr<IBindingSet> m_pClearPassBindingSet;
+		FComputeState m_ClearPassComputeState;
 
 	};
 }

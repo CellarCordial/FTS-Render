@@ -54,6 +54,28 @@ namespace FTS
 		);
 	}
 
+	FSceneGrid::FSceneGrid()
+	{
+		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
+		FLOAT fVoxelSize = gfSceneGridSize / gdwGlobalSdfResolution;
+		FLOAT fChunkSize = gdwVoxelNumPerChunk * fVoxelSize;
+
+		Chunks.resize(dwChunkNumPerAxis * dwChunkNumPerAxis * dwChunkNumPerAxis);
+		std::vector<FBounds3F> Boxes(dwChunkNumPerAxis * dwChunkNumPerAxis * dwChunkNumPerAxis);
+		for (UINT32 z = 0; z < dwChunkNumPerAxis; ++z)
+			for (UINT32 y = 0; y < dwChunkNumPerAxis; ++y)
+				for (UINT32 x = 0; x < dwChunkNumPerAxis; ++x)
+				{
+					FVector3F Lower = {
+						-gfSceneGridSize * 0.5f + x * fChunkSize,
+						-gfSceneGridSize * 0.5f + y * fChunkSize,
+						-gfSceneGridSize * 0.5f + z * fChunkSize
+					};
+					Boxes[x + y * dwChunkNumPerAxis + z * dwChunkNumPerAxis * dwChunkNumPerAxis] = FBounds3F(Lower, Lower + fChunkSize);
+				}
+		FBounds3F GlobalBox(FVector3F(-gfSceneGridSize * 0.5f), FVector3F(gfSceneGridSize * 0.5f));
+		Bvh.Build(Boxes, GlobalBox);
+	}
 
 	static std::unique_ptr<tinygltf::TinyGLTF> gpGLTFLoader;
 	static std::unique_ptr<tinygltf::Model> gpGLTFModel;
@@ -77,10 +99,7 @@ namespace FTS
 		pWorld->CreateEntity()->Assign<Event::GenerateSdf>();
 		pWorld->CreateEntity()->Assign<Event::UpdateSceneGrid>();
 		
-		FSceneGrid* pSceneGrid = pWorld->CreateEntity()->Assign<FSceneGrid>();
-
-		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
-		pSceneGrid->Chunks.resize(dwChunkNumPerAxis * dwChunkNumPerAxis * dwChunkNumPerAxis);
+		m_pSceneGrid = pWorld->CreateEntity()->Assign<FSceneGrid>();
 
 		return true;
 	}
@@ -105,17 +124,17 @@ namespace FTS
 
 		// Load Model.
 		{
-			UINT64 stThreadID = INVALID_SIZE_64;
-			FEntity* pModelEntity = nullptr;
+			static UINT64 stThreadID = INVALID_SIZE_64;
+			static FEntity* pModelEntity = nullptr;
 
 			if (Gui::HasFileSelected() && pModelEntity == nullptr)
 			{
-				std::string strFilePath = Gui::GetSelectedFilePath();
 				pModelEntity = m_pWorld->CreateEntity();
-
 				stThreadID = Parallel::BeginThread(
-					[&]() 
+					[this]()
 					{ 
+						std::string strFilePath = Gui::GetSelectedFilePath();
+						ReplaceBackSlashes(strFilePath);
 						return m_pWorld->Boardcast(Event::OnModelLoad{
 							.pEntity = pModelEntity,
 							.strModelPath = strFilePath.substr(strFilePath.find("Asset"))
@@ -133,6 +152,7 @@ namespace FTS
 					}
 				));
 				stThreadID = INVALID_SIZE_64;
+				pModelEntity = nullptr;
 			}
 		}
 
@@ -363,36 +383,35 @@ namespace FTS
 			ReturnIfFalse(ix == stIndicesNum);
 
 			pDistanceField->Bvh.Build(BvhVertices, stIndicesNum / 3);
-			pDistanceField->SdfBox.m_Lower = pDistanceField->Bvh.GlobalBox.m_Lower - 0.5f;
-			pDistanceField->SdfBox.m_Upper = pDistanceField->Bvh.GlobalBox.m_Upper + 0.5f;
+
+			UINT32 dwMaxAxis = pDistanceField->Bvh.GlobalBox.MaxAxis();
+			FLOAT fMaxExtent = pDistanceField->Bvh.GlobalBox.m_Upper[dwMaxAxis] - pDistanceField->Bvh.GlobalBox.m_Lower[dwMaxAxis];
+			pDistanceField->SdfBox.m_Lower = FVector3F(-fMaxExtent - 0.5f);
+			pDistanceField->SdfBox.m_Upper = FVector3F(fMaxExtent + 0.5f);
 		}
 
-
-
 		pDistanceField->TransformUpdate(crEvent.pEntity->GetComponent<FTransform>());
-		ReturnIfFalse(pWorld->Each<FSceneGrid>(
-			[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
+		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
+		FLOAT fVoxelSize = gfSceneGridSize / gdwGlobalSdfResolution;
+		FLOAT fChunkSize = gdwVoxelNumPerChunk * fVoxelSize;
+		FLOAT fGridSize = fChunkSize * dwChunkNumPerAxis;
+
+		FVector3I UniformLower = FVector3I((pDistanceField->SdfBox.m_Lower + fGridSize / 2.0f) / fChunkSize);
+		FVector3I UniformUpper = FVector3I((pDistanceField->SdfBox.m_Upper + fGridSize / 2.0f) / fChunkSize);
+
+		for (UINT32 z = UniformLower.z; z <= UniformUpper.z; ++z)
+		{
+			for (UINT32 y = UniformLower.y; y <= UniformUpper.y; ++y)
 			{
-				UINT32 dwVoxelSize = gdwMaxGIDistance / gdwGlobalSdfResolution;
-				UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
-				FLOAT fChunkSize = 1.0f * gdwVoxelNumPerChunk * dwVoxelSize;
-				FLOAT fGridSize = 1.0f * fChunkSize * dwChunkNumPerAxis;
-
-				FVector3I UniformLower = FVector3I((pDistanceField->SdfBox.m_Lower + fGridSize / 2.0f) / fChunkSize);
-				FVector3I UniformUpper = FVector3I((pDistanceField->SdfBox.m_Upper + fGridSize / 2.0f) / fChunkSize);
-
-				UINT32 dwStartIndex = UniformLower.x + UniformLower.y * dwChunkNumPerAxis + UniformLower.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
-				UINT32 dwEndIndex = UniformUpper.x + UniformUpper.y * dwChunkNumPerAxis + UniformUpper.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
-
-				for (UINT32 ix = dwStartIndex; ix <= dwEndIndex; ++ix)
+				for (UINT32 x = UniformLower.x; x <= UniformUpper.x; ++x)
 				{
-					pGrid->Chunks[ix].bModelMoved = true;
-					pGrid->Chunks[ix].pModelEntities.insert(crEvent.pEntity);
+					UINT32 dwIndex = x + y * dwChunkNumPerAxis + z * dwChunkNumPerAxis * dwChunkNumPerAxis;
+					m_pSceneGrid->Chunks[dwIndex].bModelMoved = true;
+					m_pSceneGrid->Chunks[dwIndex].pModelEntities.insert(crEvent.pEntity);
 				}
-
-				return true;
 			}
-		));
+		}
+
 		
 		return true;
 	}
@@ -405,36 +424,29 @@ namespace FTS
 		FBounds3F OldSdfBox = pDistanceField->SdfBox;
 		pDistanceField->TransformUpdate(pTransform);
 		FBounds3F NewSdfBox = pDistanceField->SdfBox;
-		ReturnIfFalse(pWorld->Each<FSceneGrid>(
-			[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
+
+		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
+		FLOAT fVoxelSize = gfSceneGridSize / gdwGlobalSdfResolution;
+		FLOAT fChunkSize = 1.0f * gdwVoxelNumPerChunk * fVoxelSize;
+
+		auto FuncMark = [&](const FBounds3F& crBox, BOOL bInsertOrErase)
 			{
-				UINT32 dwVoxelSize = gdwMaxGIDistance / gdwGlobalSdfResolution;
-				UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
-				FLOAT fChunkSize = 1.0f * gdwVoxelNumPerChunk * dwVoxelSize;
-				FLOAT fGridSize = 1.0f * fChunkSize * dwChunkNumPerAxis;
+				FVector3I UniformLower = FVector3I((crBox.m_Lower + gfSceneGridSize / 2.0f) / fChunkSize);
+				FVector3I UniformUpper = FVector3I((crBox.m_Upper + gfSceneGridSize / 2.0f) / fChunkSize);
 
-				auto FuncMark = [&](const FBounds3F& crBox, BOOL bInsertOrErase)
+				UINT32 dwStartIndex = UniformLower.x + UniformLower.y * dwChunkNumPerAxis + UniformLower.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
+				UINT32 dwEndIndex = UniformUpper.x + UniformUpper.y * dwChunkNumPerAxis + UniformUpper.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
+
+				for (UINT32 ix = dwStartIndex; ix <= dwEndIndex; ++ix)
 				{
-					FVector3I UniformLower = FVector3I((crBox.m_Lower + fGridSize / 2.0f) / fChunkSize);
-					FVector3I UniformUpper = FVector3I((crBox.m_Upper + fGridSize / 2.0f) / fChunkSize);
+					m_pSceneGrid->Chunks[ix].bModelMoved = true;
+					if (bInsertOrErase) m_pSceneGrid->Chunks[ix].pModelEntities.insert(crEvent.pEntity);
+					else				m_pSceneGrid->Chunks[ix].pModelEntities.erase(crEvent.pEntity);
+				}
+			};
 
-					UINT32 dwStartIndex = UniformLower.x + UniformLower.y * dwChunkNumPerAxis + UniformLower.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
-					UINT32 dwEndIndex = UniformUpper.x + UniformUpper.y * dwChunkNumPerAxis + UniformUpper.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
-
-					for (UINT32 ix = dwStartIndex; ix <= dwEndIndex; ++ix)
-					{
-						pGrid->Chunks[ix].bModelMoved = true;
-						if (bInsertOrErase) pGrid->Chunks[ix].pModelEntities.insert(crEvent.pEntity);
-						else				pGrid->Chunks[ix].pModelEntities.erase(crEvent.pEntity);
-					}
-				};
-
-				FuncMark(OldSdfBox, false);
-				FuncMark(NewSdfBox, true);
-
-				return true;
-			}
-		));
+		FuncMark(OldSdfBox, false);
+		FuncMark(NewSdfBox, true);
 
 		return pWorld->Each<Event::UpdateSceneGrid>(
 			[](FEntity* pEntity, Event::UpdateSceneGrid* pEvent) -> BOOL
@@ -619,6 +631,5 @@ namespace FTS
 			if (bUV) rSubMesh.Vertices[ix].UV = UVStream[ix];
 		}
 	}
-
 
 }

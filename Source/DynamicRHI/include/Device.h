@@ -109,11 +109,18 @@ namespace FTS
             UINT64 stCommandListsNum = 1,
             ECommandQueueType ExecutionQueueType = ECommandQueueType::Graphics
         ) = 0;
+
+#if USE_RAY_TRACING
+		virtual BOOL CreateRayTracingPipeline(const RayTracing::FPipelineDesc& crDesc, CREFIID criid, void** ppvPipeline) = 0;
+		virtual BOOL CreateAccelStruct(const RayTracing::FAccelStructDesc& crDesc, CREFIID criid, void** ppvAccelStruct) = 0;
+
+		virtual FMemoryRequirements GetAccelStructMemoryRequirements(RayTracing::IAccelStruct* pAccelStruct) = 0;
+		virtual BOOL BindAccelStructMemory(RayTracing::IAccelStruct* pAccelStruct, IHeap* pHeap, UINT64 stOffset = 0) = 0;
+#endif
         
         virtual BOOL QueueWaitForCommandList(ECommandQueueType WaitQueueType, ECommandQueueType ExecutionQueueType, UINT64 stInstance) = 0;
 
         virtual void WaitForIdle() = 0;
-
         virtual void RunGarbageCollection() = 0;
 
 

@@ -16,7 +16,7 @@ namespace FTS
         ~FThreadPool();
 
         UINT64 Submit(std::function<BOOL()> Func);
-        BOOL WaitForIdle();
+        void WaitForIdle(UINT32 dwIndex = 1);
 
         BOOL ThreadFinished(UINT64 stIndex);
         BOOL ThreadSuccess(UINT64 stIndex);
@@ -31,7 +31,7 @@ namespace FTS
         std::atomic<BOOL> m_Done = false;
 
         std::vector<std::thread> m_Threads;
-        std::list<std::future<BOOL>> m_Futures;
+        std::vector<std::future<BOOL>> m_Futures;
         TConcurrentQueue<std::function<void()>> m_PoolTaskQueue;
     };
 

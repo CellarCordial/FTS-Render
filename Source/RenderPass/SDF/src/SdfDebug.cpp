@@ -2,6 +2,7 @@
 #include "../../../Gui/include/GuiPass.h"
 #include "../../../Core/include/ComRoot.h"
 #include "../../../Shader/ShaderCompiler.h"
+#include "../../../Scene/include/Scene.h"
 #include <fstream>
 
 namespace FTS
@@ -129,10 +130,8 @@ namespace FTS
 			));
 
 
-			FBounds3F* pGlobalBox;
-			ReturnIfFalse(pCache->RequireConstants("GlobalBox", PPV_ARG(&pGlobalBox)));
-			m_PassConstants.SdfLower = pGlobalBox->m_Lower - 0.5f;
-			m_PassConstants.SdfUpper = pGlobalBox->m_Upper + 0.5f;
+			m_PassConstants.SdfLower = FVector3F(-gfSceneGridSize * 0.5f);
+			m_PassConstants.SdfUpper = FVector3F(gfSceneGridSize * 0.5f);
 			m_PassConstants.SdfExtent = m_PassConstants.SdfUpper - m_PassConstants.SdfLower;
 		}
 		

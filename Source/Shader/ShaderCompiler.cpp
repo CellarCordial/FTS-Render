@@ -14,12 +14,12 @@ namespace FTS
     {
         switch (Target)
         {
-        case EShaderTarget::Vertex  : return L"vs_6_6";
-        case EShaderTarget::Hull    : return L"hs_6_6";
-        case EShaderTarget::Domain  : return L"ds_6_6";
-        case EShaderTarget::Geometry: return L"gs_6_6";
-        case EShaderTarget::Pixel   : return L"ps_6_6";
-        case EShaderTarget::Compute : return L"cs_6_6";
+        case EShaderTarget::Vertex  : return L"vs_6_5";
+        case EShaderTarget::Hull    : return L"hs_6_5";
+        case EShaderTarget::Domain  : return L"ds_6_5";
+        case EShaderTarget::Geometry: return L"gs_6_5";
+        case EShaderTarget::Pixel   : return L"ps_6_5";
+        case EShaderTarget::Compute : return L"cs_6_5";
         default:
             assert(false && "There is no such shader target.");
             return L"";

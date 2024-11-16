@@ -2,7 +2,6 @@
 #define GUI_PANEL_H
 #include <imgui.h>
 #include <glfw3.h>
-#include <imgui_file_browser.h>
 #include "../../DynamicRHI/include/Device.h"
 
 namespace FTS 

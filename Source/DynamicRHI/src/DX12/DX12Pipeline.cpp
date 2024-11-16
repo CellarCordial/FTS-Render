@@ -408,11 +408,11 @@ namespace FTS
                     pDX12BindingLayout->m_RootParameters.end()
                 );
 
-                m_dwPushConstantSize = pDX12BindingLayout->m_dwPushConstantSize;
-                if (m_dwPushConstantSize > 0)
+                if (pDX12BindingLayout->m_dwPushConstantSize != 0)
                 {
-                    m_dwRootParameterPushConstantsIndex = pDX12BindingLayout->m_dwRootParameterPushConstantsIndex + dwOffset;
-                }
+                    m_dwPushConstantSize = pDX12BindingLayout->m_dwPushConstantSize;
+					m_dwRootParameterPushConstantsIndex = pDX12BindingLayout->m_dwRootParameterPushConstantsIndex + dwOffset;
+				}
             }
         }
 

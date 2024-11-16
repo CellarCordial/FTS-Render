@@ -10,7 +10,7 @@ project(FTSRender)
 
     file(
         GLOB_RECURSE 
-        CppSource
+        FTSRenderSource
 		"${PROJECT_SOURCE_DIR}/Source/Shader/*.cpp"
 		"${PROJECT_SOURCE_DIR}/Source/Gui/**/*.cpp"
 		"${PROJECT_SOURCE_DIR}/Source/Core/**/*.cpp"
@@ -33,7 +33,7 @@ project(FTSRender)
         "${PROJECT_SOURCE_DIR}/External/imgui/backends/imgui_impl_opengl3.cpp"
     )
 
-	add_executable(${Target0} ${CppSource} ${ImguiSource})
+	add_executable(${Target0} ${FTSRenderSource} ${ImguiSource})
 
 	target_compile_definitions(
 		${Target0}
@@ -41,6 +41,7 @@ project(FTSRender)
 		DEBUG
         NOMINMAX
         D3D12_API
+        USE_RAY_TRACING=0
         NUM_FRAMES_IN_FLIGHT=3
         CLIENT_WIDTH=1024
         CLIENT_HEIGHT=768
@@ -85,4 +86,49 @@ project(FTSRender)
             "${PROJECT_SOURCE_DIR}/External/DirectXShaderCompiler/bin/x64/dxcompiler.dll"
             $<TARGET_FILE_DIR:${Target0}>
     )
-    
+
+
+#roject(VulkanTest)
+#	set(Target1 VulkanTest)
+#
+#   file(
+#       GLOB_RECURSE 
+#       VulkanTestSource
+#		"${PROJECT_SOURCE_DIR}/VulkanTest/*.cpp"
+#   )
+#
+#	add_executable(${Target1} ${VulkanTestSource})
+#
+#   target_compile_definitions(
+#		${Target1}
+#		PUBLIC
+#		DEBUG
+#       NOMINMAX
+#       NUM_FRAMES_IN_FLIGHT=3
+#       CLIENT_WIDTH=1024
+#       CLIENT_HEIGHT=768
+#       PROJ_DIR="${PROJECT_SOURCE_DIR}/"
+#	)
+#
+#
+#   target_include_directories(${Target1} PUBLIC "${PROJECT_SOURCE_DIR}/External/stb")
+#
+#   target_include_directories(${Target1} PUBLIC "${PROJECT_SOURCE_DIR}/External/VulkanSDK/Include")
+#   target_link_libraries(${Target1} PUBLIC "${PROJECT_SOURCE_DIR}/External/VulkanSDK/Lib/vulkan-1.lib")
+#   
+#   target_include_directories(${Target1} PUBLIC "${PROJECT_SOURCE_DIR}/External/glfw-3.4.bin.WIN64/include/GLFW")
+#   target_link_libraries(${Target1} PUBLIC "${PROJECT_SOURCE_DIR}/External/glfw-3.4.bin.WIN64/lib-static-ucrt/glfw3dll.lib")
+#
+#   target_include_directories(${Target1} PUBLIC "${PROJECT_SOURCE_DIR}/External/spdlog/include")
+#   target_link_libraries(${Target1} PUBLIC "${PROJECT_SOURCE_DIR}/External/spdlog/build/Release/spdlog.lib")
+#
+#    add_custom_command(
+#       TARGET ${Target1} POST_BUILD
+#       COMMAND ${CMAKE_COMMAND} -E copy
+#           "${PROJECT_SOURCE_DIR}/External/glfw-3.4.bin.WIN64/lib-static-ucrt/glfw3.dll"
+#           $<TARGET_FILE_DIR:${Target1}>
+#   )
+
+
+
+

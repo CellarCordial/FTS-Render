@@ -1,6 +1,7 @@
 #include "../include/GuiPanel.h"
 #include <backends/imgui_impl_dx12.h>
 #include <backends/imgui_impl_glfw.h>
+#include <imgui_file_browser.h>
 #include "../../DynamicRHI/include/Device.h"
 
 namespace FTS 
@@ -34,7 +35,8 @@ namespace FTS
                 pSrvFontDescriptorHeap->GetGPUDescriptorHandleForHeapStart()
             );
 
-            gpFileBrowser = new ImGui::FileBrowser();
+            std::string strAssetPath = "Asset";
+            gpFileBrowser = new ImGui::FileBrowser(0, PROJ_DIR + strAssetPath);
             gpFileBrowser->SetTitle("File Browser");
             gpFileBrowser->SetTypeFilters({ ".gltf" });
         }

@@ -24,8 +24,8 @@ namespace FTS
 			FEntity* pEntity = nullptr;
 		};
 
-		DeclareDelegateEvent(GenerateSdf, FDistanceField*);
 		DeclareDelegateEvent(UpdateSceneGrid);
+		DeclareDelegateEvent(GenerateSdf, FDistanceField*);
 	};
 	
 	struct FTransform
@@ -56,20 +56,24 @@ namespace FTS
 		BOOL CheckSdfFileExist() const { return !SdfData.empty(); }
 	};
 
-	inline const UINT32 gdwGlobalSdfResolution = 256;
-	inline const UINT32 gdwVoxelNumPerChunk = 16;
-	inline const UINT32 gdwMaxGIDistance = 512;
-	inline const UINT32 gdwSdfResolution = 64;
+	inline const FLOAT gfSceneGridSize = 512.0f;
+	inline const UINT32 gdwGlobalSdfResolution = 256u;
+	inline const UINT32 gdwVoxelNumPerChunk = 32u;
+	inline const UINT32 gdwSdfResolution = 64u;
 
 	struct FSceneGrid
 	{
 		struct Chunk
 		{
 			std::unordered_set<FEntity*> pModelEntities;
-			BOOL bModelMoved = true;
+			BOOL bModelMoved = false;
 		};
 		
 		std::vector<Chunk> Chunks;
+		std::vector<FBounds3F> Boxes;
+		FBvh Bvh;
+
+		FSceneGrid();
 	};
 
 	class FSceneSystem :
@@ -94,6 +98,7 @@ namespace FTS
 
 	private:
 		FWorld* m_pWorld = nullptr;
+		FSceneGrid* m_pSceneGrid = nullptr;
 		std::string m_strModelDirectory;
 		std::string m_strSdfDataPath;
 	};

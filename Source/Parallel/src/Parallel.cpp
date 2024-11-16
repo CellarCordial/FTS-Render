@@ -132,7 +132,8 @@ namespace FTS
                 }
             }
 
-            return gpPool->WaitForIdle();
+            gpPool->WaitForIdle();
+            return true;
         }
     }
 

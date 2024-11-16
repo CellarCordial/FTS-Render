@@ -165,8 +165,8 @@ namespace FTS
 
 
 				m_PassConstants.dwTriangleNum = m_pDistanceField->Bvh.dwTriangleNum;
-				m_PassConstants.SdfLower = m_pDistanceField->SdfBox.m_Lower - 0.5f;
-				m_PassConstants.SdfUpper = m_pDistanceField->SdfBox.m_Upper + 0.5f;
+				m_PassConstants.SdfLower = m_pDistanceField->SdfBox.m_Lower;
+				m_PassConstants.SdfUpper = m_pDistanceField->SdfBox.m_Upper;
 				m_PassConstants.SdfExtent = m_PassConstants.SdfUpper - m_PassConstants.SdfLower;
 
 				const auto& crNodes = m_pDistanceField->Bvh.GetNodes();
@@ -200,6 +200,13 @@ namespace FTS
 					m_pSdfOutputTexture.Get(), 
 					FTextureSlice{}
 				));
+
+				ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateSceneGrid>(
+					[](FEntity* pEntity, Event::UpdateSceneGrid* pEvent) -> BOOL
+					{
+						return pEvent->Broadcast();
+					}
+				));
 			}
 
 			ReturnIfFalse(pCmdList->Close());
@@ -212,8 +219,15 @@ namespace FTS
 				0,
 				0,
 				m_pDistanceField->SdfData.data(),
-				gdwSdfResolution* dwPixelSize,
-				gdwSdfResolution* gdwSdfResolution* dwPixelSize
+				gdwSdfResolution * dwPixelSize,
+				gdwSdfResolution * gdwSdfResolution* dwPixelSize
+			));
+
+			ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateSceneGrid>(
+				[](FEntity* pEntity, Event::UpdateSceneGrid* pEvent) -> BOOL
+				{
+					return pEvent->Broadcast();
+				}
 			));
 		}
 
@@ -267,12 +281,14 @@ namespace FTS
 			m_pReadBackTexture.Reset();
 			m_pBvhNodeBuffer.Reset();
 			m_pBvhVertexBuffer.Reset();
-			m_pSdfOutputTexture.Reset();
-
 			m_pDistanceField->Bvh.Clear();
-			m_pDistanceField = nullptr;
-			m_bResourceWrited = false;
+
+			LOG_INFO(strSdfName + " bake finished.");
 		}
+
+		m_pSdfOutputTexture.Reset();
+		m_pDistanceField = nullptr;
+		m_bResourceWrited = false;
 		
 		return true;
 	}

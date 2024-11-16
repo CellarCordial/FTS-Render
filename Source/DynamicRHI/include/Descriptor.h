@@ -453,7 +453,7 @@ namespace FTS
     };
 
 
-    extern const IID IID_IDescriptorTable;
+    extern const IID IID_IBindlessSet;
 
     struct IBindlessSet : public IBindingSet
     {

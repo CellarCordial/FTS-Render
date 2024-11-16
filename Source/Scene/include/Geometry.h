@@ -36,11 +36,11 @@ namespace FTS
 
         struct SubMaterial
         {
-            FLOAT fDiffuseFactor[4];
-            FLOAT fRoughnessFactor;
-            FLOAT fMetallicFactor;
-            FLOAT fOcclusionFactor;
-            FLOAT fEmissiveFactor[3];
+			FLOAT fDiffuseFactor[4] = { 0.0f };
+			FLOAT fRoughnessFactor = 0.0f;
+			FLOAT fMetallicFactor = 0.0f;
+			FLOAT fOcclusionFactor = 0.0f;
+			FLOAT fEmissiveFactor[3] = { 0.0f };
 
             FImage Images[TextureType_Num];
 

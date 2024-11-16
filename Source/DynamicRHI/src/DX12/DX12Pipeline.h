@@ -288,7 +288,7 @@ namespace FTS
     {
     public:
         BEGIN_INTERFACE_MAP(FDX12BindlessSet)
-            INTERFACE_ENTRY(IID_IDescriptorTable, IBindlessSet)
+            INTERFACE_ENTRY(IID_IBindlessSet, IBindlessSet)
         END_INTERFACE_MAP
 
         FDX12BindlessSet(const FDX12Context* cpContext, FDX12DescriptorHeaps* pDescriptorHeaps);

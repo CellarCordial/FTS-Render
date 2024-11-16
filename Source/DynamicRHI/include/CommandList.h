@@ -2,7 +2,9 @@
 #define RHI_COMMAND_LIST_H
 
 #include "Draw.h"
-
+#if USE_RAY_TRACING
+#include "RayTracing.h"
+#endif
 namespace FTS
 {
     enum class ECommandQueueType : UINT8
@@ -127,16 +129,35 @@ namespace FTS
             UINT32 dwMipLevel,
             EResourceStates* pResourceStates
         ) = 0;
-        
+
+#if USE_RAY_TRACING
+		virtual void SetRayTracingState(const RayTracing::FPipelineState& crState) = 0;
+		virtual void DispatchRays(const RayTracing::FDispatchRaysArguments& crArguments) = 0;
+
+		virtual void CompactBottomLevelAccelStructs() = 0;
+		virtual void BuildBottomLevelAccelStruct(
+            RayTracing::IAccelStruct* pAccelStruct, 
+            const RayTracing::FGeometryDesc& crGeometryDesc, 
+            UINT64 stNumGeometries,
+			RayTracing::EAccelStructBuildFlags Flags = RayTracing::EAccelStructBuildFlags::None
+        ) = 0;
+		virtual void BuildTopLevelAccelStruct(
+            RayTracing::IAccelStruct* pAccelStruct, 
+            const RayTracing::FInstanceDesc& crInstanceDesc, 
+            UINT64 stNumInstances,
+			RayTracing::EAccelStructBuildFlags Flags = RayTracing::EAccelStructBuildFlags::None
+        ) = 0;
+
+		virtual void SetAccelStructState(RayTracing::IAccelStruct* as, EResourceStates State) = 0;
+#endif        
+
         virtual BOOL GetBufferState(IBuffer* pBuffer, /*Out*/EResourceStates* pResourceStates) = 0;
-
         virtual IDevice* GetDevice() = 0;
-        
         virtual FCommandListDesc GetDesc() = 0;
-        
-
         virtual void* GetNativeObject() = 0;
         
+
+        virtual ~ICommandList() = default;
     };
 }
 

@@ -19,8 +19,8 @@ namespace FTS
         struct Node
         {
             FBounds3F Box;
-            UINT32 dwChildIndex;
-            UINT32 dwChildNum;
+            UINT32 dwChildIndex = 0;
+            UINT32 dwChildNum = 0;
         };
         static_assert(sizeof(Node) == sizeof(float) * 8);
 
@@ -30,7 +30,8 @@ namespace FTS
             FVector3F Normal;
         };
 
-        BOOL Build(std::span<FBvh::Vertex> Vertices, UINT32 dwTriangleNum);
+		void Build(std::span<FBounds3F> Boxes, const FBounds3F& crGlobalBox);
+		void Build(std::span<FBvh::Vertex> Vertices, UINT32 dwTriangleNum);
         std::span<const FBvh::Node> GetNodes() const { return m_Nodes; }
         std::span<const FBvh::Vertex> GetVertices() const { return m_Vertices; }
 

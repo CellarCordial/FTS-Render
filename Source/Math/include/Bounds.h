@@ -224,7 +224,7 @@ namespace FTS
 		}
 
 		// 返回三轴中最长轴的索引
-		UINT32 MaxExtent() const
+		UINT32 MaxAxis() const
 		{
 			TVector3<T> Vec = Diagonal();
 			if (Vec.x > Vec.y && Vec.x > Vec.z) return 0;

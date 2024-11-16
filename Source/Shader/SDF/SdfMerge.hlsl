@@ -19,7 +19,7 @@ cbuffer gPassConstant : register(b0)
     float4x4 VoxelWorldMatrix;
 
     uint3 VoxelOffset;  float fGIMaxDistance;
-    uint dwMeshSdfCount;   float3 PAD;
+    uint dwModelSdfBegin; uint dwModelSdfEnd;
 };
 
 
@@ -40,7 +40,7 @@ void CS(uint3 ThreadID : SV_DispatchThreadID)
 
     float fMinSdf = fGIMaxDistance;
 
-    for (uint ix = 0; ix < dwMeshSdfCount; ++ix)
+    for (uint ix = dwModelSdfBegin; ix < dwModelSdfEnd; ++ix)
     {
         fMinSdf = CalcSdf(fMinSdf, ix, VoxelWorldPos);
     }

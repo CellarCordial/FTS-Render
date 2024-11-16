@@ -30,6 +30,16 @@ namespace FTS
 		return Path.filename().replace_extension().string();
 	}
 
+	inline void ReplaceBackSlashes(std::string& rstr) 
+	{
+		std::string::size_type Pos = 0;
+		while ((Pos = rstr.find("\\", Pos)) != std::string::npos) 
+		{
+			rstr.replace(Pos, 1, "/");
+			Pos += 1;
+		}
+	}
+
 
 	namespace Serialization
 	{

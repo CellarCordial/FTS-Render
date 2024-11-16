@@ -18,7 +18,7 @@ namespace FTS
     }
 
 
-    BOOL FBvh::Build(std::span<FBvh::Vertex> Vertices, UINT32 dwTriangleNum)
+    void FBvh::Build(std::span<FBvh::Vertex> Vertices, UINT32 dwTriangleNum)
     {
         GlobalBox = FBounds3F();
         std::vector<bvh::BoundingBox<FLOAT>> PrimitiveBoxes(dwTriangleNum);
@@ -78,7 +78,7 @@ namespace FTS
 
                 UINT32 dwPrimitiveEnd = static_cast<UINT32>(m_Vertices.size()) / 3;
 
-                ReturnIfFalse(dwPrimitiveBegin != dwPrimitiveEnd);
+                assert(dwPrimitiveBegin != dwPrimitiveEnd);
                 m_Nodes[ix].dwChildIndex = dwPrimitiveBegin;
                 m_Nodes[ix].dwChildNum = dwPrimitiveEnd - dwPrimitiveBegin;
             }
@@ -91,11 +91,53 @@ namespace FTS
         
         dwTriangleNum = dwTriangleNum;
 
-        return false;
     }
 
 
     
+    void FBvh::Build(std::span<FBounds3F> Boxes, const FBounds3F& crGlobalBox)
+	{
+		std::vector<bvh::BoundingBox<FLOAT>> BvhBoxes(Boxes.size());
+		std::vector<bvh::Vector3<FLOAT>> BvhCentroids(Boxes.size());
+		for (UINT32 ix = 0; ix < Boxes.size(); ++ix)
+		{
+			BvhBoxes[ix] = ConvertBounds(Boxes[ix]);
+			BvhCentroids[ix] = ConvertVector((Boxes[ix].m_Upper + Boxes[ix].m_Lower) * 0.5f);
+		}
+
+		bvh::Bvh<FLOAT> Bvh;
+		bvh::LocallyOrderedClusteringBuilder<bvh::Bvh<FLOAT>, UINT32> BvhBuilder(Bvh);
+		BvhBuilder.build(
+			ConvertBounds(GlobalBox),
+			BvhBoxes.data(),
+			BvhCentroids.data(),
+            Boxes.size()
+		);
+
+		m_Nodes.resize(Bvh.node_count);
+		for (SIZE_T ix = 0; ix < Bvh.node_count; ++ix)
+		{
+			const auto& crNode = Bvh.nodes[ix];
+			m_Nodes[ix].Box = FBounds3F(
+				crNode.bounds[0], crNode.bounds[2], crNode.bounds[4],
+				crNode.bounds[1], crNode.bounds[3], crNode.bounds[5]
+			);
+
+			if (crNode.is_leaf())
+			{
+                assert(crNode.primitive_count == 1);
+
+				m_Nodes[ix].dwChildIndex = Bvh.primitive_indices[crNode.first_child_or_primitive];
+				m_Nodes[ix].dwChildNum = 1;
+			}
+			else
+			{
+				m_Nodes[ix].dwChildIndex = crNode.first_child_or_primitive;
+				m_Nodes[ix].dwChildNum = 0;
+			}
+		}
+	}
+
 #define MORTON_BITS_NUM  10
 #define MORTON_HIGH_BITS 12
 
@@ -305,7 +347,7 @@ namespace FTS
             {
                 CentroidBounds = Union(CentroidBounds, rPrimitiveInfos[ix].Centroid);
             }
-            UINT32 dwDimension = CentroidBounds.MaxExtent();
+            UINT32 dwDimension = CentroidBounds.MaxAxis();
 
             // Partition primitives into two sets and build children. 
             UINT32 dwMid = (dwStart + dwEnd) / 2;
@@ -801,7 +843,7 @@ namespace FTS
             CentroidBounds = Union(CentroidBounds, Centroid);
         }
 
-        UINT32 dwDimension = CentroidBounds.MaxExtent();
+        UINT32 dwDimension = CentroidBounds.MaxAxis();
         // NE(CentroidBounds.m_Upper[dwDimension], CentroidBounds.m_Lower[dwDimension]);
 
         // Allocate _BucketInfo_ for SAH partition buckets. 

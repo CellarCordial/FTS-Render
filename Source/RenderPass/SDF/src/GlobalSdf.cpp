@@ -11,6 +11,184 @@ namespace FTS
 
 	BOOL FGlobalSdfPass::Compile(IDevice* pDevice, IRenderResourceCache* pCache)
 	{
+		ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateSceneGrid>(
+			[this](FEntity* pEntity, Event::UpdateSceneGrid* pEvent) -> BOOL
+			{
+				pEvent->AddEvent(
+					[this]()
+					{
+						Type &= ~ERenderPassType::Exclude;
+						return true;
+					}
+				);
+				return true;
+			}
+		));
+
+		ReturnIfFalse(PipelineSetup(pDevice));
+		ReturnIfFalse(ComputeStateSetup(pDevice, pCache));
+		return true;
+	}
+
+	BOOL FGlobalSdfPass::Execute(ICommandList* pCmdList, IRenderResourceCache* pCache)
+	{
+		ReturnIfFalse(pCmdList->Open());
+
+		BOOL bUpdateModelSdfDataRes = (pCache->GetWorld()->Each<FSceneGrid>(
+			[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
+			{
+				for (const auto& crChunk : pGrid->Chunks)
+				{
+					if (crChunk.bModelMoved)
+					{
+						for (const auto* cpModel : crChunk.pModelEntities)
+						{
+							FDistanceField* pDF = cpModel->GetComponent<FDistanceField>();
+							m_ModelSdfDatas.emplace_back(
+								Constant::ModelSdfData{
+									.LocalMatrix = pDF->LocalMatrix,
+									.WorldMatrix = pDF->WorldMatrix,
+									.CoordMatrix = pDF->CoordMatrix,
+									.SdfLower = pDF->SdfBox.m_Lower,
+									.SdfUpper = pDF->SdfBox.m_Upper
+								}
+							);
+						}
+					}
+				}
+				return true;
+			}
+		));
+		ReturnIfFalse(bUpdateModelSdfDataRes);
+
+		IDevice* pDevice = pCmdList->GetDevice();
+
+		// Buffer
+		{
+			if (m_ModelSdfDatas.size() > m_dwModelSdfDataDefaultCount)
+			{
+				m_pModelSdfDataBuffer.Reset();
+				m_dwModelSdfDataDefaultCount = static_cast<UINT32>(m_ModelSdfDatas.size());
+
+				ReturnIfFalse(pDevice->CreateBuffer(
+					FBufferDesc::CreateStructured(
+						m_ModelSdfDatas.size() * sizeof(Constant::ModelSdfData),
+						sizeof(Constant::ModelSdfData),
+						true
+					),
+					IID_IBuffer,
+					PPV_ARG(m_pModelSdfDataBuffer.GetAddressOf())
+				));
+
+				// Compute State.
+				{
+					m_ComputeState.pBindingSets[1] = m_pDynamicBindingSet.Get();
+				}
+			}
+
+			ReturnIfFalse(pCmdList->WriteBuffer(
+				m_pModelSdfDataBuffer.Get(),
+				m_ModelSdfDatas.data(),
+				m_ModelSdfDatas.size() * sizeof(Constant::ModelSdfData)
+			));
+		}
+
+
+		UINT32 dwModelIndex = 0;
+		BOOL bResOfGLobalSdfPassExecute = pCache->GetWorld()->Each<FSceneGrid>(
+			[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
+			{
+				for (UINT32 ix = 0; ix < pGrid->Chunks.size(); ++ix)
+				{
+					auto& rChunk = pGrid->Chunks[ix];
+					if (rChunk.bModelMoved)
+					{
+						// Buffer & Texture.
+						{
+							for (const auto* cpEntity : rChunk.pModelEntities)
+							{
+								FDistanceField* pDF = cpEntity->GetComponent<FDistanceField>();
+
+								auto& rSdfTexture = m_pMeshSdfTextures.emplace_back();
+								ReturnIfFalse(pCache->Require(pDF->strSdfTextureName.c_str())->QueryInterface(
+									IID_ITexture,
+									PPV_ARG(&rSdfTexture)
+								));
+							}
+						}
+
+						if (!m_pMeshSdfTextures.empty())
+						{
+							// Binding Set.
+							{
+								m_pBindlessSet->Resize(static_cast<UINT32>(m_pMeshSdfTextures.size()), false);
+								for (UINT32 ix = 0; ix < m_pMeshSdfTextures.size(); ++ix)
+								{
+									m_pBindlessSet->SetSlot(FBindingSetItem::CreateTexture_SRV(0, m_pMeshSdfTextures[ix]), ix + 1);
+								}
+							}
+
+							ReturnIfFalse(pCmdList->SetComputeState(m_ComputeState));
+						}
+						else
+						{
+							ReturnIfFalse(pCmdList->SetComputeState(m_ClearPassComputeState));
+						}
+
+						auto& rPassConstants = m_PassConstants.emplace_back();
+						rPassConstants.dwModelSdfBegin = dwModelIndex;
+						rPassConstants.dwModelSdfEnd = dwModelIndex + rChunk.pModelEntities.size();
+						rPassConstants.fGIMaxDistance = gfSceneGridSize;
+						rPassConstants.VoxelOffset = {
+							ix % gdwGlobalSdfResolution,
+							ix / gdwGlobalSdfResolution,
+							ix / (gdwGlobalSdfResolution * gdwGlobalSdfResolution)
+						};
+						rPassConstants.VoxelOffset *= gdwVoxelNumPerChunk;
+
+						FLOAT fVoxelSize = gfSceneGridSize / gdwGlobalSdfResolution;
+						FLOAT fOffset = -gfSceneGridSize * 0.5f + fVoxelSize * 0.5f;
+						rPassConstants.VoxelWorldMatrix = {
+							fVoxelSize, 0.0f,		0.0f,		0.0f,
+							0.0f,		fVoxelSize, 0.0f,		0.0f,
+							0.0f,		0.0f,		fVoxelSize, 0.0f,
+							fOffset,	fOffset,	fOffset,	1.0f
+						};
+						ReturnIfFalse(pCmdList->SetPushConstants(&rPassConstants, sizeof(Constant::GlobalSdfConstants)));
+
+						FVector3I ThreadGroupNum = {
+							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
+							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
+							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
+						};
+
+						ReturnIfFalse(pCmdList->Dispatch(ThreadGroupNum.x, ThreadGroupNum.y, ThreadGroupNum.z));
+
+						m_pMeshSdfTextures.clear();
+						rChunk.bModelMoved = false;
+						dwModelIndex += rChunk.pModelEntities.size();
+					}
+				}
+				return true;
+			}
+		);
+
+		ReturnIfFalse(bResOfGLobalSdfPassExecute);
+		ReturnIfFalse(pCmdList->Close());
+
+		return true;
+	}
+
+	BOOL FGlobalSdfPass::FinishPass()
+	{
+		m_ModelSdfDatas.clear();
+		m_PassConstants.clear();
+		return true;
+	}
+
+
+	BOOL FGlobalSdfPass::PipelineSetup(IDevice* pDevice)
+	{
 		// Binding Layout.
 		{
 			FBindingLayoutItemArray BindingLayoutItems(3);
@@ -34,12 +212,21 @@ namespace FTS
 			FBindingLayoutItemArray BindlessLayoutItems(1);
 			BindlessLayoutItems[0] = FBindingLayoutItem::CreateBindless_SRV();
 			ReturnIfFalse(pDevice->CreateBindlessLayout(
-				FBindlessLayoutDesc{ 
-					.BindingLayoutItems = BindlessLayoutItems, 
-					.dwFirstSlot = 1 
-				}, 
-				IID_IBindingLayout, 
+				FBindlessLayoutDesc{
+					.BindingLayoutItems = BindlessLayoutItems,
+					.dwFirstSlot = 1
+				},
+				IID_IBindingLayout,
 				PPV_ARG(m_pBindlessLayout.GetAddressOf())
+			));
+
+			FBindingLayoutItemArray ClearBindingLayoutItems(2);
+			ClearBindingLayoutItems[0] = FBindingLayoutItem::CreatePushConstants(0, sizeof(Constant::GlobalSdfConstants));
+			ClearBindingLayoutItems[1] = FBindingLayoutItem::CreateTexture_UAV(0);
+			ReturnIfFalse(pDevice->CreateBindingLayout(
+				FBindingLayoutDesc{ .BindingLayoutItems = ClearBindingLayoutItems },
+				IID_IBindingLayout,
+				PPV_ARG(m_pClearPassBindingLayout.GetAddressOf())
 			));
 		}
 
@@ -58,6 +245,11 @@ namespace FTS
 			CSDesc.strEntryName = "CS";
 			CSDesc.ShaderType = EShaderType::Compute;
 			ReturnIfFalse(pDevice->CreateShader(CSDesc, CSData.Data(), CSData.Size(), IID_IShader, PPV_ARG(m_pCS.GetAddressOf())));
+
+
+			CSCompileDesc.strShaderName = "SDF/SdfClear.hlsl";
+			FShaderData ClearPassCSData = ShaderCompile::CompileShader(CSCompileDesc);
+			ReturnIfFalse(pDevice->CreateShader(CSDesc, ClearPassCSData.Data(), ClearPassCSData.Size(), IID_IShader, PPV_ARG(m_pClearPassCS.GetAddressOf())));
 		}
 
 		// Pipeline.
@@ -68,8 +260,30 @@ namespace FTS
 			PipelineDesc.pBindingLayouts.PushBack(m_pDynamicBindingLayout.Get());
 			PipelineDesc.pBindingLayouts.PushBack(m_pBindlessLayout.Get());
 			ReturnIfFalse(pDevice->CreateComputePipeline(PipelineDesc, IID_IComputePipeline, PPV_ARG(m_pPipeline.GetAddressOf())));
+
+			FComputePipelineDesc ClearPassPipelineDesc;
+			ClearPassPipelineDesc.CS = m_pClearPassCS.Get();
+			ClearPassPipelineDesc.pBindingLayouts.PushBack(m_pClearPassBindingLayout.Get());
+			ReturnIfFalse(pDevice->CreateComputePipeline(ClearPassPipelineDesc, IID_IComputePipeline, PPV_ARG(m_pClearPassPipeline.GetAddressOf())));
 		}
 
+		return true;
+	}
+
+	BOOL FGlobalSdfPass::ComputeStateSetup(IDevice* pDevice, IRenderResourceCache* pCache)
+	{
+		// Buffer.
+		{
+			ReturnIfFalse(pDevice->CreateBuffer(
+				FBufferDesc::CreateStructured(
+					m_dwModelSdfDataDefaultCount * sizeof(Constant::ModelSdfData),
+					sizeof(Constant::ModelSdfData),
+					true
+				),
+				IID_IBuffer,
+				PPV_ARG(m_pModelSdfDataBuffer.GetAddressOf())
+			));
+		}
 
 		// Texture.
 		{
@@ -78,7 +292,7 @@ namespace FTS
 					gdwGlobalSdfResolution,
 					gdwGlobalSdfResolution,
 					gdwGlobalSdfResolution,
-					EFormat::R32_FLOAT, 
+					EFormat::R32_FLOAT,
 					"GlobalSdfTexture"
 				),
 				IID_ITexture,
@@ -91,7 +305,7 @@ namespace FTS
 		{
 			ISampler* pLinearClampSampler;
 			ReturnIfFalse(pCache->Require("LinearClampSampler")->QueryInterface(IID_ISampler, PPV_ARG(&pLinearClampSampler)));
- 
+
 			FBindingSetItemArray BindingSetItems(3);
 			BindingSetItems[0] = FBindingSetItem::CreatePushConstants(0, sizeof(Constant::GlobalSdfConstants));
 			BindingSetItems[1] = FBindingSetItem::CreateSampler(0, pLinearClampSampler);
@@ -102,111 +316,41 @@ namespace FTS
 				IID_IBindingSet,
 				PPV_ARG(m_pBindingSet.GetAddressOf())
 			));
-		}
 
-		// Compute State.
-		{
-			m_ComputeState.pBindingSets.PushBack(m_pBindingSet.Get());
-			m_ComputeState.pPipeline = m_pPipeline.Get();
-		}
-
-		m_GlobalBox = FBounds3F(- 1.0f * gdwMaxGIDistance / 2.0f, 1.0f * gdwMaxGIDistance / 2.0f);
-		ReturnIfFalse(pCache->CollectConstants("GlobalBox", &m_GlobalBox));
-
-		ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateSceneGrid>(
-			[this](FEntity* pEntity, Event::UpdateSceneGrid* pEvent) -> BOOL
-			{
-				pEvent->AddEvent(
-					[this]() -> BOOL 
-					{
-						this->Type &= ~ERenderPassType::Exclude; 
-						return true;
-					}
-				);
-				return true;
-			}
-		));
-
-		return true;
-	}
-
-	BOOL FGlobalSdfPass::Execute(ICommandList* pCmdList, IRenderResourceCache* pCache)
-	{
-		ReturnIfFalse(pCmdList->Open());
-
-		IDevice* pDevice = pCmdList->GetDevice();
-		// Update.
-		{
-			ReturnIfFalse((pCache->GetWorld()->Each<FMesh, FDistanceField, FTransform>(
-				[this, pCache](FEntity* pEntity, FMesh* pMesh, FDistanceField* pDF, FTransform* pTransform) -> BOOL
-				{
-					m_ModelSdfDatas.emplace_back(
-						Constant::ModelSdfData{
-							.LocalMatrix = pDF->LocalMatrix,
-							.WorldMatrix = pDF->WorldMatrix,
-							.CoordMatrix = pDF->CoordMatrix,
-							.SdfLower = pDF->SdfBox.m_Lower,
-							.SdfUpper = pDF->SdfBox.m_Upper
-						}
-					);
-
-					auto& rSdfTexture = m_pMeshSdfTextures.emplace_back();
-					ReturnIfFalse(pCache->Require(pDF->strSdfTextureName.c_str())->QueryInterface(
-						IID_ITexture,
-						PPV_ARG(rSdfTexture.GetAddressOf())
-					));
-					return true;
-				}
-			)));
-			ReturnIfFalse(pDevice->CreateBuffer(
-				FBufferDesc::CreateStructured(
-					m_ModelSdfDatas.size() * sizeof(Constant::ModelSdfData),
-					sizeof(Constant::ModelSdfData),
-					true,
-					"ModelSdfDataBuffer"
-				),
-				IID_IBuffer,
-				PPV_ARG(m_pModelSdfDataBuffer.GetAddressOf())
-			));
-			ReturnIfFalse(pCache->Collect(m_pModelSdfDataBuffer.Get()));
-
-			ReturnIfFalse(pCmdList->WriteBuffer(
-				m_pModelSdfDataBuffer.Get(), 
-				m_ModelSdfDatas.data(), 
-				m_ModelSdfDatas.size() * sizeof(Constant::ModelSdfData)
-			));
-
-			FBindingSetItemArray BindingSetItems(1);
-			BindingSetItems[0] = FBindingSetItem::CreateStructuredBuffer_SRV(0, m_pModelSdfDataBuffer.Get());
+			FBindingSetItemArray DynamicBindingSetItems(1);
+			DynamicBindingSetItems[0] = FBindingSetItem::CreateStructuredBuffer_SRV(0, m_pModelSdfDataBuffer.Get());
 			ReturnIfFalse(pDevice->CreateBindingSet(
-				FBindingSetDesc{ .BindingItems = BindingSetItems },
+				FBindingSetDesc{ .BindingItems = DynamicBindingSetItems },
 				m_pDynamicBindingLayout.Get(),
 				IID_IBindingSet,
 				PPV_ARG(m_pDynamicBindingSet.GetAddressOf())
 			));
 
-			m_pBindlessSet->Resize(static_cast<UINT32>(m_pMeshSdfTextures.size()), false);
-			for (UINT32 ix = 0; ix < m_pMeshSdfTextures.size(); ++ix)
-			{
-				m_pBindlessSet->SetSlot(FBindingSetItem::CreateTexture_SRV(0, m_pMeshSdfTextures[ix].Get()), ix + 1);
-			}
+			ReturnIfFalse(pDevice->CreateBindlessSet(m_pBindlessLayout.Get(), IID_IBindlessSet, PPV_ARG(m_pBindlessSet.GetAddressOf())));
 
-			m_ComputeState.pBindingSets.PushBack(m_pDynamicBindingSet.Get());
-			m_ComputeState.pBindingSets.PushBack(m_pBindlessSet.Get());
+
+			FBindingSetItemArray ClearPassBindingSetItems(2);
+			ClearPassBindingSetItems[0] = FBindingSetItem::CreatePushConstants(0, sizeof(Constant::GlobalSdfConstants));
+			ClearPassBindingSetItems[1] = FBindingSetItem::CreateTexture_UAV(0, m_pGlobalSdfTexture.Get());
+			ReturnIfFalse(pDevice->CreateBindingSet(
+				FBindingSetDesc{ .BindingItems = ClearPassBindingSetItems },
+				m_pClearPassBindingLayout.Get(),
+				IID_IBindingSet,
+				PPV_ARG(m_pClearPassBindingSet.GetAddressOf())
+			));
 		}
 
+		// Compute State.
+		{
+			m_ComputeState.pBindingSets.PushBack(m_pBindingSet.Get());
+			m_ComputeState.pBindingSets.PushBack(m_pDynamicBindingSet.Get());
+			m_ComputeState.pBindingSets.PushBack(m_pBindlessSet.Get());
+			m_ComputeState.pPipeline = m_pPipeline.Get();
 
-		ReturnIfFalse(pCmdList->SetComputeState(m_ComputeState));
-		
-		
+			m_ClearPassComputeState.pBindingSets.PushBack(m_pClearPassBindingSet.Get());
+			m_ClearPassComputeState.pPipeline = m_pClearPassPipeline.Get();
+		}
 
-		return true;
-	}
-
-	BOOL FGlobalSdfPass::FinishPass()
-	{
-		m_ModelSdfDatas.clear();
-		m_pMeshSdfTextures.clear();
 		return true;
 	}
 

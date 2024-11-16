@@ -22,6 +22,7 @@ namespace FTS
 	BOOL FGlobalRender::Init()
 	{
 		ReturnIfFalse(glfwInit());
+		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 		m_pWindow = glfwCreateWindow(CLIENT_WIDTH, CLIENT_HEIGHT, "FTS-Render", nullptr, nullptr);
 		if (!m_pWindow)
 		{
@@ -41,14 +42,14 @@ namespace FTS
 
 		ReturnIfFalse(D3D12Init());
 		ReturnIfFalse(CreateSamplers());
-		m_AtmosphereDebugRender.Setup(m_pRenderGraph.Get());
-		//m_SdfDebugRender.Setup(m_pRenderGraph.Get());
+		//m_AtmosphereDebugRender.Setup(m_pRenderGraph.Get());
+		m_SdfDebugRender.Setup(m_pRenderGraph.Get());
 
 		m_GuiPass.Init(m_pWindow, m_pDevice.Get());
 		m_pRenderGraph->AddPass(&m_GuiPass);
 
-		m_AtmosphereDebugRender.GetLastPass()->Precede(&m_GuiPass);
-		//m_SdfDebugRender.GetLastPass()->Precede(&m_GuiPass);
+		//m_AtmosphereDebugRender.GetLastPass()->Precede(&m_GuiPass);
+		m_SdfDebugRender.GetLastPass()->Precede(&m_GuiPass);
 
 
 

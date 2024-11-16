@@ -137,6 +137,14 @@ namespace FTS
         BOOL CreateCommandList(const FCommandListDesc& crDesc, CREFIID criid, void** ppvCmdList) override;
         UINT64 ExecuteCommandLists(ICommandList* const* pcpCommandLists, UINT64 stCommandListsNum = 1, ECommandQueueType ExecutionQueueType = ECommandQueueType::Graphics) override;
         BOOL QueueWaitForCommandList(ECommandQueueType WaitQueueType, ECommandQueueType ExecutionQueueType, UINT64 stInstance) override;
+
+#if USE_RAY_TRACING
+		BOOL CreateRayTracingPipeline(const RayTracing::FPipelineDesc& crDesc, CREFIID criid, void** ppvPipeline) override;
+		BOOL CreateAccelStruct(const RayTracing::FAccelStructDesc& crDesc, CREFIID criid, void** ppvAccelStruct) override;
+
+		FMemoryRequirements GetAccelStructMemoryRequirements(RayTracing::IAccelStruct* pAccelStruct) override;
+		BOOL BindAccelStructMemory(RayTracing::IAccelStruct* pAccelStruct, IHeap* pHeap, UINT64 stOffset = 0) override;
+#endif
         
         void WaitForIdle() override;
         void RunGarbageCollection() override;

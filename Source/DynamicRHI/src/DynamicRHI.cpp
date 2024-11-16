@@ -8,7 +8,7 @@
 
 namespace FTS
 {
-    BOOL CreateDevice(const FDX12DeviceDesc& Desc, CREFIID criid, /*Out*/void** ppvDevice)
+    BOOL CreateDevice(const FDX12DeviceDesc& Desc, CREFIID criid, void** ppvDevice)
     {
         FDX12Device* pDevice = new FDX12Device(Desc);
         if (!pDevice->Initialize() || !pDevice->QueryInterface(criid, ppvDevice))

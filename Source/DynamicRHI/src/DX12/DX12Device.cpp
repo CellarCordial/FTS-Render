@@ -21,9 +21,6 @@
 
 namespace FTS
 {
-
-
-    
     BOOL FDX12EventQuery::Start(ID3D12Fence* pD3D12Fence, UINT64 stFenceCounter)
     {
         if (pD3D12Fence == nullptr) return false;
@@ -548,12 +545,12 @@ namespace FTS
         return true;
     }
     
-    BOOL FDX12Device::CreateBindlessSet(IBindingLayout* pLayout, CREFIID criid, void** ppvDescriptorTable)
+    BOOL FDX12Device::CreateBindlessSet(IBindingLayout* pLayout, CREFIID criid, void** ppvBindlessSet)
     {
         // pLayout is useless on dx12.
 
         FDX12BindlessSet* pBindlessSet = new FDX12BindlessSet(&m_Context, m_pDescriptorHeaps.get());
-        if (!pBindlessSet->Initialize() || !pBindlessSet->QueryInterface(criid, ppvDescriptorTable))
+        if (!pBindlessSet->Initialize() || !pBindlessSet->QueryInterface(criid, ppvBindlessSet))
         {
             LOG_ERROR("Call to IDevice::CreateDescriptorTable failed.");
             return false;
@@ -615,8 +612,33 @@ namespace FTS
         return true;
     }
 
+#if USE_RAY_TRACING
+	BOOL FDX12Device::CreateRayTracingPipeline(const RayTracing::FPipelineDesc& crDesc, CREFIID criid, void** ppvPipeline)
+	{
 
-    void FDX12Device::WaitForIdle()
+        return true;
+	}
+
+	BOOL FDX12Device::CreateAccelStruct(const RayTracing::FAccelStructDesc& crDesc, CREFIID criid, void** ppvAccelStruct)
+	{
+
+		return true;
+	}
+
+	FMemoryRequirements FDX12Device::GetAccelStructMemoryRequirements(RayTracing::IAccelStruct* pAccelStruct)
+	{
+
+        return FMemoryRequirements{};
+	}
+
+	BOOL FDX12Device::BindAccelStructMemory(RayTracing::IAccelStruct* pAccelStruct, IHeap* pHeap, UINT64 stOffset /*= 0*/)
+	{
+
+		return true;
+	}
+#endif
+
+	void FDX12Device::WaitForIdle()
     {
         for (const auto& crpQueue : m_pCmdQueues)
         {

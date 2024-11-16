@@ -41,25 +41,31 @@ namespace FTS
         return m_Futures.size() - 1;
     }
 
-    BOOL FThreadPool::WaitForIdle()
+    void FThreadPool::WaitForIdle(UINT32 dwIndex)
     {
-        m_Futures.remove_if(
-            [](auto& crFuture)
+        while (dwIndex-- > 0)
+        {
+            if (m_Futures.back().get())
             {
-                return crFuture.get();
+                m_Futures.pop_back();
             }
-        );
-        return m_Futures.empty();
+        }
     }
 
     BOOL FThreadPool::ThreadFinished(UINT64 stIndex)
     {
-        return std::next(m_Futures.begin(), stIndex)->wait_for(std::chrono::milliseconds(0)) == std::future_status::ready;
+        return m_Futures[stIndex].wait_for(std::chrono::milliseconds(0)) == std::future_status::ready;
     }
 
     BOOL FThreadPool::ThreadSuccess(UINT64 stIndex)
     {
-        return std::next(m_Futures.begin(), stIndex)->get();
+        auto Iter = std::next(m_Futures.begin(), stIndex);
+        if (Iter->get())
+        {
+            m_Futures.erase(Iter);
+            return true;
+        }
+        return false;
     }
 
     void FThreadPool::ParallelFor(std::function<void(UINT64)> Func, UINT64 stCount, UINT32 dwChunkSize)
@@ -81,7 +87,7 @@ namespace FTS
             m_PoolTaskQueue.Push([Task]() { (*Task)(); });
         }
 
-        WaitForIdle();
+        WaitForIdle(stCount);
     }
     
     void FThreadPool::ParallelFor(std::function<void(UINT64, UINT64)> Func, UINT64 stX, UINT64 stY)
@@ -101,7 +107,7 @@ namespace FTS
             m_Futures.emplace_back(Task->get_future());
             m_PoolTaskQueue.Push([Task]() { (*Task)(); });
         }
-        WaitForIdle();
+        WaitForIdle(stY);
     }
 
     void FThreadPool::WorkerThread(UINT64 stIndex)
