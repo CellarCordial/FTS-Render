@@ -129,18 +129,27 @@ namespace FTS
 
 			if (Gui::HasFileSelected() && pModelEntity == nullptr)
 			{
-				pModelEntity = m_pWorld->CreateEntity();
-				stThreadID = Parallel::BeginThread(
-					[this]()
-					{ 
-						std::string strFilePath = Gui::GetSelectedFilePath();
-						ReplaceBackSlashes(strFilePath);
-						return m_pWorld->Boardcast(Event::OnModelLoad{
-							.pEntity = pModelEntity,
-							.strModelPath = strFilePath.substr(strFilePath.find("Asset"))
-						});
-					}
-				);
+				std::string strFilePath = Gui::GetSelectedFilePath();
+				std::string strModelName = strFilePath.substr(strFilePath.find("Asset"));
+				ReplaceBackSlashes(strModelName);
+
+				if (!m_LoadedModelNames.contains(strModelName))
+				{
+					pModelEntity = m_pWorld->CreateEntity();
+					stThreadID = Parallel::BeginThread(
+						[this, strModelName]()
+						{
+							return m_pWorld->Boardcast(Event::OnModelLoad{
+								.pEntity = pModelEntity,
+								.strModelPath = strModelName
+							});
+						}
+					);
+				}
+				else
+				{
+					Gui::NotifyMessage(Gui::ENotifyType::Info, strModelName + " has already been loaded.");
+				}
 			}
 
 			if (pModelEntity && Parallel::ThreadFinished(stThreadID) && Parallel::ThreadSuccess(stThreadID))
@@ -164,6 +173,7 @@ namespace FTS
 	{
 		ReturnIfFalse(gpGLTFLoader != nullptr && crEvent.pEntity != nullptr);
 
+
 		gpGLTFModel.reset();
 		gpGLTFModel = std::make_unique<tinygltf::Model>();
 
@@ -181,9 +191,9 @@ namespace FTS
 			return false;
 		}
 
-		LOG_INFO("Loaded GLTF: " + strProjDir + crEvent.strModelPath);
-
 		std::string strModelName = RemoveFileExtension(crEvent.strModelPath.c_str());
+
+		Gui::NotifyMessage(Gui::ENotifyType::Info, "Loaded " + crEvent.strModelPath);
 
 		m_strModelDirectory = crEvent.strModelPath.substr(0, crEvent.strModelPath.find_last_of('/') + 1);
 		m_strSdfDataPath = strProjDir + "Asset/SDF/" + strModelName + ".sdf";
@@ -197,6 +207,8 @@ namespace FTS
 		gpGLTFModel.reset();
 		m_strSdfDataPath.clear();
 		m_strModelDirectory.clear();
+
+		m_LoadedModelNames.insert(crEvent.strModelPath);
 
 		return true;
 	}
@@ -353,7 +365,8 @@ namespace FTS
 				UINT64 stDataSize = static_cast<UINT64>(gdwSdfResolution) * gdwSdfResolution * gdwSdfResolution * sizeof(FLOAT);
 				pDistanceField->SdfData.resize(stDataSize);
 				Input.LoadBinaryData(pDistanceField->SdfData.data(), stDataSize);
-				LOG_INFO("Loaded " + m_strSdfDataPath);
+
+				Gui::NotifyMessage(Gui::ENotifyType::Info, "Loaded " + m_strSdfDataPath.substr(m_strSdfDataPath.find("Asset")));
 
 				bLoadFromFile = true;
 			}

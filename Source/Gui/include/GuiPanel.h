@@ -19,6 +19,16 @@ namespace FTS
 		void MenuSetup();
 		BOOL HasFileSelected();
         std::string GetSelectedFilePath();
+
+        enum class ENotifyType : UINT8
+        {
+			None,
+			Success,
+			Warning,
+			Error,
+			Info
+        };
+        void NotifyMessage(ENotifyType Type, std::string str);
 	}
 }
 

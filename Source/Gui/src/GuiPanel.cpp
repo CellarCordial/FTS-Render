@@ -2,6 +2,7 @@
 #include <backends/imgui_impl_dx12.h>
 #include <backends/imgui_impl_glfw.h>
 #include <imgui_file_browser.h>
+#include <imgui_notify.h>
 #include "../../DynamicRHI/include/Device.h"
 
 namespace FTS 
@@ -61,6 +62,7 @@ namespace FTS
             for (const auto& Function : Funcitons) { Function(); }
             ImGui::End();
 
+            ImGui::RenderNotifications();
             gpFileBrowser->Display();
 
             ImGui::Render();
@@ -114,6 +116,14 @@ namespace FTS
             gpFileBrowser->ClearSelected();
             return str;
         }
-    }
+
+		void NotifyMessage(ENotifyType Type, std::string str)
+		{
+			ImGuiToast Toast(static_cast<ImGuiToastType>(Type));
+			Toast.set_content(str.c_str());
+			ImGui::InsertNotification(Toast);
+		}
+
+	}
 
 }

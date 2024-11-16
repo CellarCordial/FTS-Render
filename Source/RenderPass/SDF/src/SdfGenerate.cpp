@@ -282,7 +282,7 @@ namespace FTS
 			m_pBvhVertexBuffer.Reset();
 			m_pDistanceField->Bvh.Clear();
 
-			LOG_INFO(strSdfName + " bake finished.");
+			Gui::NotifyMessage(Gui::ENotifyType::Info, strSdfName + " bake finished.");
 		}
 
 		m_pSdfOutputTexture.Reset();

@@ -107,6 +107,8 @@ namespace FTS
 		FSceneGrid* m_pSceneGrid = nullptr;
 		std::string m_strModelDirectory;
 		std::string m_strSdfDataPath;
+
+		std::unordered_set<std::string> m_LoadedModelNames;
 	};
 }
 
