@@ -34,6 +34,44 @@ namespace FTS
 	{
 		ReturnIfFalse(pCmdList->Open());
 
+		if (!m_bGlobalSdfInited)
+		{
+			ReturnIfFalse(pCmdList->SetComputeState(m_ClearPassComputeState));
+
+			BOOL bResOfGLobalSdfPassExecute = pCache->GetWorld()->Each<FSceneGrid>(
+				[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
+				{
+					for (UINT32 ix = 0; ix < pGrid->Chunks.size(); ++ix)
+					{
+						auto& rPassConstants = m_PassConstants.emplace_back();
+						rPassConstants.fGIMaxDistance = gfSceneGridSize;
+
+						UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
+						rPassConstants.VoxelOffset = {
+							ix % dwChunkNumPerAxis,
+							(ix / dwChunkNumPerAxis) % dwChunkNumPerAxis,
+							ix / (dwChunkNumPerAxis * dwChunkNumPerAxis)
+						};
+						rPassConstants.VoxelOffset *= gdwVoxelNumPerChunk;
+						ReturnIfFalse(pCmdList->SetPushConstants(&rPassConstants, sizeof(Constant::GlobalSdfConstants)));
+
+						FVector3I ThreadGroupNum = {
+							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
+							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
+							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
+						};
+						ReturnIfFalse(pCmdList->Dispatch(ThreadGroupNum.x, ThreadGroupNum.y, ThreadGroupNum.z));
+					}
+					return true;
+				}
+			);
+
+			ReturnIfFalse(bResOfGLobalSdfPassExecute);
+			ReturnIfFalse(pCmdList->Close());
+			m_bGlobalSdfInited = true;
+			return true;
+		}
+
 		BOOL bUpdateModelSdfDataRes = (pCache->GetWorld()->Each<FSceneGrid>(
 			[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
 			{
@@ -86,15 +124,12 @@ namespace FTS
 				}
 			}
 
-			//ReturnIfFalse(!m_ModelSdfDatas.empty());
-			if (!m_ModelSdfDatas.empty())
-			{
-				ReturnIfFalse(pCmdList->WriteBuffer(
-					m_pModelSdfDataBuffer.Get(),
-					m_ModelSdfDatas.data(),
-					m_ModelSdfDatas.size() * sizeof(Constant::ModelSdfData)
-				));
-			}
+			ReturnIfFalse(!m_ModelSdfDatas.empty());
+			ReturnIfFalse(pCmdList->WriteBuffer(
+				m_pModelSdfDataBuffer.Get(),
+				m_ModelSdfDatas.data(),
+				m_ModelSdfDatas.size() * sizeof(Constant::ModelSdfData)
+			));
 		}
 
 

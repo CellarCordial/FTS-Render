@@ -37,7 +37,7 @@ namespace FTS
 	class FGlobalSdfPass : public IRenderPass
 	{
 	public:
-		FGlobalSdfPass() { Type = ERenderPassType::Precompute | ERenderPassType::Exclude; }
+		FGlobalSdfPass() { Type = ERenderPassType::Precompute; }
 
 		BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache) override;
 		BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache) override;
@@ -79,7 +79,6 @@ namespace FTS
 
 		TComPtr<IBindingSet> m_pClearPassBindingSet;
 		FComputeState m_ClearPassComputeState;
-
 	};
 }
 

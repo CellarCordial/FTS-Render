@@ -94,6 +94,93 @@ bool IntersectRayBox(float3 o, float3 d, float3 Lower, float3 Upper, out float f
     return fT0 <= fT1;
 }
 
+float InterectRayPlane(in float3 ro, in float3 rd, in float4 p)
+{
+    return -(dot(ro, p.xyz) + p.w) / dot(rd, p.xyz);
+}
+
+float IntersectRayBoxPlane(float3 o, float3 d, float3 Lower, float3 Upper, out float3 Normal)
+{
+    Normal = float3(0.0f, 0.0f, 0.0f);
+    float t;
+
+    t = (Upper.x - o.x) / d.x;
+    if (t > 0.0f)
+    {
+        float3 p = o + t * d;
+        float3 ClampPos = clamp(p, Lower, Upper);
+        if (length(ClampPos - p) < 0.001f)
+        {
+            Normal = float3(1.0f, 0.0f, 0.0f);
+            return t;
+        }
+    }
+
+    t = (Lower.x - o.x) / d.x;
+    if (t > 0.0f)
+    {
+        float3 p = o + t * d;
+        float3 ClampPos = clamp(p, Lower, Upper);
+        if (length(ClampPos - p) < 0.001f)
+        {
+            Normal = float3(-1.0f, 0.0f, 0.0f);
+            return t;
+        }
+    }
+
+    t = (Upper.y - o.y) / d.y;
+    if (t > 0.0f)
+    {
+        float3 p = o + t * d;
+        float3 ClampPos = clamp(p, Lower, Upper);
+        if (length(ClampPos - p) < 0.001f)
+        {
+            Normal = float3(0.0f, 1.0f, 0.0f);
+            return t;
+        }
+    }
+
+    t = (Lower.y - o.y) / d.y;
+    if (t > 0.0f)
+    {
+        float3 p = o + t * d;
+        float3 ClampPos = clamp(p, Lower, Upper);
+        if (length(ClampPos - p) < 0.001f)
+        {
+            Normal = float3(0.0f, -1.0f, 0.0f);
+            return t;
+        }
+    }
+
+    t = (Upper.z - o.z) / d.z;
+    if (t > 0.0f)
+    {
+        float3 p = o + t * d;
+        float3 ClampPos = clamp(p, Lower, Upper);
+        if (length(ClampPos - p) < 0.001f)
+        {
+            Normal = float3(0.0f, 0.0f, 1.0f);
+            return t;
+        }
+    }
+
+    t = (Lower.z - o.z) / d.z;
+    if (t > 0.0f)
+    {
+        float3 p = o + t * d;
+        float3 ClampPos = clamp(p, Lower, Upper);
+        if (length(ClampPos - p) < 0.001f)
+        {
+            Normal = float3(0.0f, 0.0f, -1.0f);
+            return t;
+        }
+    }
+
+    return 0.0f;
+}
+
+
+
 bool IntersectRayTriangle(float3 o, float3 d, float fMaxLength, float3 a, float3 ab, float3 ac, out float fLength)
 {
     fLength = 0.0f;

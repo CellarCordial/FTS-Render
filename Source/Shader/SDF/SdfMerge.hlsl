@@ -18,8 +18,11 @@ cbuffer gPassConstant : register(b0)
 {
     float4x4 VoxelWorldMatrix;
 
-    uint3 VoxelOffset;  float fGIMaxDistance;
-    uint dwModelSdfBegin; uint dwModelSdfEnd;
+    uint3 VoxelOffset;  
+    float fGIMaxDistance;
+
+    uint dwModelSdfBegin; 
+    uint dwModelSdfEnd;
 };
 
 
@@ -71,7 +74,7 @@ float CalcSdf(float fMinSdf, uint dwSdfIndex, float3 VoxelWorldPos)
 
     float sdf = gModelSdfTextures[dwSdfIndex].SampleLevel(gSampler, uvw, 0);
     // Voxel 在 MeshSdf 内.
-    if (fDistanceToSdf < 0.001f) return min(sdf, fMinSdf);
+    // if (fDistanceToSdf < 0.001f) return min(sdf, fMinSdf);
 
     // 精度非常低.
     return min(fMinSdf, sdf + fDistanceToSdf);

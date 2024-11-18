@@ -115,10 +115,11 @@ namespace FTS
 				}
 			));
 
-
-			m_PassConstants.SdfLower = FVector3F(-gfSceneGridSize * 0.5f);
-			m_PassConstants.SdfUpper = FVector3F(gfSceneGridSize * 0.5f);
-			m_PassConstants.SdfExtent = m_PassConstants.SdfUpper - m_PassConstants.SdfLower;
+			m_PassConstants.fMaxGIDistance = gfSceneGridSize;
+			m_PassConstants.fSceneGridSize = gfSceneGridSize;
+			m_PassConstants.dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
+			m_PassConstants.fChunkSize = gfSceneGridSize / m_PassConstants.dwChunkNumPerAxis;
+			m_PassConstants.SceneGridOrigin = FVector3F(-gfSceneGridSize * 0.5f);
 		}
 		
 		ReturnIfFalse(pCmdList->Open());

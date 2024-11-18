@@ -19,12 +19,10 @@ namespace FTS
 		{
 			FVector3F FrustumA;                     UINT32 dwMaxTraceSteps = 1024;
 			FVector3F FrustumB;                     FLOAT fAbsThreshold = 0.01f;
-			FVector3F FrustumC;                     FLOAT Pad0 = 0.0f;
-			FVector3F FrustumD;                     FLOAT Pad1 = 0.0f;
-			FVector3F CameraPosition;               FLOAT Pad2 = 0.0f;
-			FVector3F SdfLower;                     FLOAT Pad3 = 0.0f;
-			FVector3F SdfUpper;                     FLOAT Pad4 = 0.0f;
-			FVector3F SdfExtent;                    FLOAT Pad5 = 0.0f;
+			FVector3F FrustumC;                     FLOAT fChunkSize = 0.0f;
+            FVector3F FrustumD;                     UINT32 dwChunkNumPerAxis = 0;
+            FVector3F CameraPosition;               FLOAT fSceneGridSize = 0.0f;
+            FVector3F SceneGridOrigin;              FLOAT fMaxGIDistance = 0.0f;
 		};
     }
 

@@ -5,12 +5,10 @@ cbuffer gPassConstants : register(b0)
 {
     float3 FrustumA;        uint dwMaxTraceSteps;
     float3 FrustumB;        float AbsThreshold;
-    float3 FrustumC;        float Pad0;
-    float3 FrustumD;        float Pad1;
-    float3 CameraPosition;  float Pad2;
-    float3 SdfLower;        float Pad3;
-    float3 SdfUpper;        float Pad4;
-    float3 SdfExtent;       float Pad5;
+    float3 FrustumC;        float fChunkSize;
+    float3 FrustumD;        uint dwChunkNumPerAxis;
+    float3 CameraPosition;  float fSceneGridSize;
+    float3 SceneGridOrigin; float fMaxGIDistance;
 };
 
 Texture3D<float> gSdf : register(t0);
@@ -41,21 +39,51 @@ float4 PS(FVertexOutput In) : SV_Target0
         In.UV.y
     );
 
-    float fStep;
-    if (!IntersectRayBox(o, d, SdfLower, SdfUpper, fStep)) return float4(0.0f, 0.0f, 0.0f, 1.0f);
+    float fInvChunkSize = 1.0f / fChunkSize;
+    int3 ChunkIndex = floor((o - SceneGridOrigin) * fInvChunkSize);
+    ChunkIndex = clamp(ChunkIndex, 0, dwChunkNumPerAxis);
+    
+    float3 SdfLower = SceneGridOrigin + ChunkIndex * fChunkSize;
+    float3 SdfUpper = SdfLower + fChunkSize;
 
     uint ix = 0;
+    float3 p = o;
     for (; ix < dwMaxTraceSteps; ++ix)
     {
-        float3 p = o + fStep * d;
-        float3 uvw = (p - SdfLower) / SdfExtent;
+        float3 uvw = (p - SceneGridOrigin) / fSceneGridSize;
         if (any(saturate(uvw) != uvw)) break;
 
         float Sdf = gSdf.Sample(gSampler, uvw);
         float Udf = abs(Sdf);
         if (Udf <= AbsThreshold) break;
 
-        fStep += Udf;
+        float3 fNewPos = p + Udf * d;
+        
+        float3 ClampPos = clamp(fNewPos, SdfLower, SdfUpper);
+        if (length(ClampPos - fNewPos) > 0.0001f)
+        {
+            float3 PlaneNormal;
+            float fStep = IntersectRayBoxPlane(p, d, SdfLower, SdfUpper, PlaneNormal);
+
+            SdfLower += PlaneNormal * fChunkSize;
+            SdfUpper += PlaneNormal * fChunkSize;
+            p += d * fStep;
+
+            // 重新采样.
+            uvw = (p - SceneGridOrigin) / fSceneGridSize;
+            if (any(saturate(uvw) != uvw)) break;
+
+            Sdf = gSdf.Sample(gSampler, uvw);
+            Udf = abs(Sdf);
+            if (Udf <= AbsThreshold) break;
+
+            p += Udf * d;
+        }
+        else
+        {
+            p = fNewPos;
+        }
+
     }
 
     float Color = float(ix) / float(dwMaxTraceSteps - 1);
