@@ -23,6 +23,7 @@ namespace FTS
             FVector3F FrustumD;                     UINT32 dwChunkNumPerAxis = 0;
             FVector3F CameraPosition;               FLOAT fSceneGridSize = 0.0f;
             FVector3F SceneGridOrigin;              FLOAT fMaxGIDistance = 0.0f;
+            FLOAT fChunkDiagonal = 0.0f;            FVector3F PAD;
 		};
     }
 

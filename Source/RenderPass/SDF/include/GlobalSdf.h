@@ -31,6 +31,8 @@ namespace FTS
 
 			FVector3F SdfLower;
 			FVector3F SdfUpper;
+
+			UINT32 dwModelSdfIndex = 0;
 		};
 	}
 

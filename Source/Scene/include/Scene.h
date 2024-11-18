@@ -62,7 +62,7 @@ namespace FTS
 
 	};
 
-	inline const FLOAT gfSceneGridSize = 512.0f;
+	inline const FLOAT gfSceneGridSize = 64.0f;
 	inline const UINT32 gdwGlobalSdfResolution = 256u;
 	inline const UINT32 gdwVoxelNumPerChunk = 32u;
 	inline const UINT32 gdwSdfResolution = 64u;

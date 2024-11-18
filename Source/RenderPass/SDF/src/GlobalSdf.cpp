@@ -79,6 +79,7 @@ namespace FTS
 				{
 					if (crChunk.bModelMoved)
 					{
+						UINT32 dwCounter = 0;
 						for (const auto* cpModel : crChunk.pModelEntities)
 						{
 							FDistanceField* pDF = cpModel->GetComponent<FDistanceField>();
@@ -88,7 +89,8 @@ namespace FTS
 									.WorldMatrix = pDF->WorldMatrix,
 									.CoordMatrix = pDF->CoordMatrix,
 									.SdfLower = pDF->SdfBox.m_Lower,
-									.SdfUpper = pDF->SdfBox.m_Upper
+									.SdfUpper = pDF->SdfBox.m_Upper,
+									.dwModelSdfIndex = dwCounter++
 								}
 							);
 						}

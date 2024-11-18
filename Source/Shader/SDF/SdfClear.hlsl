@@ -4,11 +4,13 @@
 
 
 #if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y) && defined(THREAD_GROUP_SIZE_Z)
-
+    
 cbuffer gPassConstant : register(b0)
 {
-    float fGIMaxDistance;
-    float3 PAD;
+    float4x4 VoxelWorldMatrix;
+
+    uint3 VoxelOffset;  float fGIMaxDistance;
+    uint dwModelSdfBegin; uint dwModelSdfEnd;
 };
 
 RWTexture3D<float> gGlobalSdfTexture : register(u0);
@@ -16,7 +18,9 @@ RWTexture3D<float> gGlobalSdfTexture : register(u0);
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, THREAD_GROUP_SIZE_Z)]
 void CS(uint3 ThreadID : SV_DispatchThreadID)
 {
-    gGlobalSdfTexture[ThreadID] = fGIMaxDistance + 1.0f;
+    uint3 VoxelID = VoxelOffset + ThreadID;
+
+    gGlobalSdfTexture[VoxelID] = 0.0f;
 }
 
 #endif
