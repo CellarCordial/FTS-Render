@@ -35,7 +35,7 @@ namespace FTS
 		FBounds3F NewSdfBox;
 		for (const auto& rVertex : BoxVertices)
 		{
-			NewSdfBox = Union(NewSdfBox, FVector3F(Mul(FVector4F(rVertex, 1.0f), Rotate(cpTransform->Rotation))));
+			NewSdfBox = Union(NewSdfBox, FVector3F(Mul(FVector4F(rVertex + cpTransform->Position, 1.0f), Rotate(cpTransform->Rotation))));
 		}
 		SdfBox = NewSdfBox;
 
@@ -448,15 +448,22 @@ namespace FTS
 				FVector3I UniformLower = FVector3I((crBox.m_Lower + gfSceneGridSize / 2.0f) / fChunkSize);
 				FVector3I UniformUpper = FVector3I((crBox.m_Upper + gfSceneGridSize / 2.0f) / fChunkSize);
 
-				UINT32 dwStartIndex = UniformLower.x + UniformLower.y * dwChunkNumPerAxis + UniformLower.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
-				UINT32 dwEndIndex = UniformUpper.x + UniformUpper.y * dwChunkNumPerAxis + UniformUpper.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
-
-				for (UINT32 ix = dwStartIndex; ix <= dwEndIndex; ++ix)
+				for (UINT32 z = UniformLower.z; z <= UniformUpper.z; ++z)
 				{
-					m_pSceneGrid->Chunks[ix].bModelMoved = true;
-					if (bInsertOrErase) m_pSceneGrid->Chunks[ix].pModelEntities.insert(crEvent.pEntity);
-					else				m_pSceneGrid->Chunks[ix].pModelEntities.erase(crEvent.pEntity);
+					for (UINT32 y = UniformLower.y; y <= UniformUpper.y; ++y)
+					{
+						for (UINT32 x = UniformLower.x; x <= UniformUpper.x; ++x)
+						{
+							UINT32 dwIndex = x + y * dwChunkNumPerAxis + z * dwChunkNumPerAxis * dwChunkNumPerAxis;
+							m_pSceneGrid->Chunks[dwIndex].bModelMoved = true;
+							if (bInsertOrErase) 
+								m_pSceneGrid->Chunks[dwIndex].pModelEntities.insert(crEvent.pEntity);
+							else				
+								m_pSceneGrid->Chunks[dwIndex].pModelEntities.erase(crEvent.pEntity);
+						}
+					}
 				}
+
 			};
 
 		FuncMark(OldSdfBox, false);
