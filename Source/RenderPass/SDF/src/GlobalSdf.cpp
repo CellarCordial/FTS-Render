@@ -83,13 +83,15 @@ namespace FTS
 						for (const auto* cpModel : crChunk.pModelEntities)
 						{
 							FDistanceField* pDF = cpModel->GetComponent<FDistanceField>();
+							FTransform* pTrans = cpModel->GetComponent<FTransform>();
+							FDistanceField::TransformData Data = pDF->GetTransformed(pTrans);
 							m_ModelSdfDatas.emplace_back(
 								Constant::ModelSdfData{
-									.LocalMatrix = pDF->LocalMatrix,
-									.WorldMatrix = pDF->WorldMatrix,
-									.CoordMatrix = pDF->CoordMatrix,
-									.SdfLower = pDF->SdfBox.m_Lower,
-									.SdfUpper = pDF->SdfBox.m_Upper,
+									.LocalMatrix = Data.LocalMatrix,
+									.WorldMatrix = Data.WorldMatrix,
+									.CoordMatrix = Data.CoordMatrix,
+									.SdfLower = Data.SdfBox.m_Lower,
+									.SdfUpper = Data.SdfBox.m_Upper,
 									.dwModelSdfIndex = dwCounter++
 								}
 							);
@@ -335,7 +337,7 @@ namespace FTS
 					gdwGlobalSdfResolution,
 					gdwGlobalSdfResolution,
 					gdwGlobalSdfResolution,
-					EFormat::R32_FLOAT,
+					EFormat::R16_FLOAT,
 					"GlobalSdfTexture"
 				),
 				IID_ITexture,

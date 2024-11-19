@@ -11,23 +11,6 @@ namespace FTS
 {
 	struct FDistanceField;
 
-	namespace Event
-	{
-		struct OnModelLoad
-		{
-			FEntity* pEntity = nullptr;
-			std::string strModelPath;
-		};
-
-		struct OnModelTransform
-		{
-			FEntity* pEntity = nullptr;
-		};
-
-		DeclareDelegateEvent(UpdateSceneGrid);
-		DeclareDelegateEvent(GenerateSdf, FDistanceField*);
-	};
-	
 	struct FTransform
 	{
 		FVector3F Position = { 0.0f, 0.0f, 0.0f };
@@ -40,19 +23,41 @@ namespace FTS
 		}
 	};
 
+	namespace Event
+	{
+		struct OnModelLoad
+		{
+			FEntity* pEntity = nullptr;
+			std::string strModelPath;
+		};
+
+		struct OnModelTransform
+		{
+			FEntity* pEntity = nullptr;
+			FTransform Trans;
+		};
+
+		DeclareDelegateEvent(UpdateSceneGrid);
+		DeclareDelegateEvent(GenerateSdf, FDistanceField*);
+	};
+
 	struct FDistanceField
 	{
+		struct TransformData
+		{
+			FMatrix4x4 LocalMatrix;
+			FMatrix4x4 WorldMatrix;
+			FMatrix4x4 CoordMatrix;
+			FBounds3F SdfBox;
+		};
+
 		std::string strSdfTextureName;
-		
-		FMatrix4x4 LocalMatrix;
-		FMatrix4x4 WorldMatrix;
-		FMatrix4x4 CoordMatrix;
 		FBounds3F SdfBox;
 		
 		std::vector<UINT8> SdfData;
 		FBvh Bvh;
 
-		void TransformUpdate(const FTransform* cpTransform);
+		TransformData GetTransformed(const FTransform* cpTransform);
 		BOOL CheckSdfFileExist() const { return !SdfData.empty(); }
 	};
 

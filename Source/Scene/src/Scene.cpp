@@ -17,10 +17,11 @@
 
 namespace FTS
 {
-	void FDistanceField::TransformUpdate(const FTransform* cpTransform)
+	FDistanceField::TransformData FDistanceField::GetTransformed(const FTransform* cpTransform)
 	{
-		SdfBox.m_Lower = FVector3F(Mul(FVector4F(SdfBox.m_Lower, 1.0f), Scale(cpTransform->Scale)));
-		SdfBox.m_Upper = FVector3F(Mul(FVector4F(SdfBox.m_Upper, 1.0f), Scale(cpTransform->Scale)));
+		TransformData Ret;
+		Ret.SdfBox.m_Lower = FVector3F(Mul(FVector4F(SdfBox.m_Lower, 1.0f), Scale(cpTransform->Scale)));
+		Ret.SdfBox.m_Upper = FVector3F(Mul(FVector4F(SdfBox.m_Upper, 1.0f), Scale(cpTransform->Scale)));
 
 		std::array<FVector3F, 8> BoxVertices;
 		BoxVertices[0] = SdfBox.m_Lower;
@@ -32,18 +33,16 @@ namespace FTS
 		BoxVertices[5] = FVector3F(SdfBox.m_Lower.x, SdfBox.m_Lower.y, SdfBox.m_Upper.z);
 		BoxVertices[6] = FVector3F(SdfBox.m_Lower.x, SdfBox.m_Upper.y, SdfBox.m_Upper.z);
 
-		FBounds3F NewSdfBox;
 		for (const auto& rVertex : BoxVertices)
 		{
-			NewSdfBox = Union(NewSdfBox, FVector3F(Mul(FVector4F(rVertex + cpTransform->Position, 1.0f), Rotate(cpTransform->Rotation))));
+			Ret.SdfBox = Union(Ret.SdfBox, FVector3F(Mul(FVector4F(rVertex + cpTransform->Position, 1.0f), Rotate(cpTransform->Rotation))));
 		}
-		SdfBox = NewSdfBox;
 
-		WorldMatrix = Mul(Translate(cpTransform->Position), Rotate(cpTransform->Rotation));
-		LocalMatrix = Inverse(WorldMatrix);
+		Ret.WorldMatrix = Mul(Translate(cpTransform->Position), Rotate(cpTransform->Rotation));
+		Ret.LocalMatrix = Inverse(Ret.WorldMatrix);
 
 		FVector3F SdfExtent = SdfBox.m_Upper - SdfBox.m_Lower;
-		CoordMatrix = FMatrix4x4(
+		Ret.CoordMatrix = FMatrix4x4(
 			1.0f / SdfExtent.x, 0.0f, 0.0f, 0.0f,
 			0.0f, -1.0f / SdfExtent.y, 0.0f, 0.0f,
 			0.0f, 0.0f, 1.0f / SdfExtent.z, 0.0f,
@@ -52,6 +51,8 @@ namespace FTS
 			-SdfBox.m_Lower.x / SdfExtent.x,
 			1.0f
 		);
+
+		return Ret;
 	}
 
 	FSceneGrid::FSceneGrid()
@@ -160,6 +161,28 @@ namespace FTS
 						return pEvent->Broadcast(pModelEntity->GetComponent<FDistanceField>());
 					}
 				));
+				
+				FEntity* pTmpModelEntity = pModelEntity;
+				Gui::Add(
+					[pTmpModelEntity, this]()
+					{
+						std::string strModelName = *pTmpModelEntity->GetComponent<std::string>();
+						strModelName += " Transform";
+						if (ImGui::TreeNode(strModelName.c_str()))
+						{
+							BOOL bChanged = false;
+
+							FTransform TmpTransform = *pTmpModelEntity->GetComponent<FTransform>();
+							bChanged |= ImGui::SliderFloat3("Model Position", reinterpret_cast<FLOAT*>(&TmpTransform.Position), -32.0f, 32.0f);
+							bChanged |= ImGui::SliderFloat3("Model Rotation", reinterpret_cast<FLOAT*>(&TmpTransform.Rotation), -180.0f, 180.0f);
+							bChanged |= ImGui::SliderFloat3("Model Scale", reinterpret_cast<FLOAT*>(&TmpTransform.Scale), 0.0f, 10.0f);
+							if (bChanged) m_pWorld->Boardcast(Event::OnModelTransform{ .pEntity = pTmpModelEntity, .Trans = TmpTransform });
+
+							ImGui::TreePop();
+						}
+					}
+				);
+
 				stThreadID = INVALID_SIZE_64;
 				pModelEntity = nullptr;
 			}
@@ -404,14 +427,14 @@ namespace FTS
 			pDistanceField->SdfBox.m_Upper = FVector3F(fMaxExtent + 0.5f);
 		}
 
-		pDistanceField->TransformUpdate(crEvent.pEntity->GetComponent<FTransform>());
+		FDistanceField::TransformData Data = pDistanceField->GetTransformed(crEvent.pEntity->GetComponent<FTransform>());
 		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
 		FLOAT fVoxelSize = gfSceneGridSize / gdwGlobalSdfResolution;
 		FLOAT fChunkSize = gdwVoxelNumPerChunk * fVoxelSize;
 		FLOAT fGridSize = fChunkSize * dwChunkNumPerAxis;
 
-		FVector3I UniformLower = FVector3I((pDistanceField->SdfBox.m_Lower + fGridSize / 2.0f) / fChunkSize);
-		FVector3I UniformUpper = FVector3I((pDistanceField->SdfBox.m_Upper + fGridSize / 2.0f) / fChunkSize);
+		FVector3I UniformLower = FVector3I((Data.SdfBox.m_Lower + fGridSize / 2.0f) / fChunkSize);
+		FVector3I UniformUpper = FVector3I((Data.SdfBox.m_Upper + fGridSize / 2.0f) / fChunkSize);
 
 		for (UINT32 z = UniformLower.z; z <= UniformUpper.z; ++z)
 		{
@@ -435,9 +458,10 @@ namespace FTS
 		FTransform* pTransform = crEvent.pEntity->GetComponent<FTransform>();
 		FDistanceField* pDistanceField = crEvent.pEntity->GetComponent<FDistanceField>();
 
-		FBounds3F OldSdfBox = pDistanceField->SdfBox;
-		pDistanceField->TransformUpdate(pTransform);
-		FBounds3F NewSdfBox = pDistanceField->SdfBox;
+		FBounds3F OldSdfBox = pDistanceField->GetTransformed(pTransform).SdfBox;
+		FBounds3F NewSdfBox = pDistanceField->GetTransformed(&crEvent.Trans).SdfBox;
+
+		*pTransform = crEvent.Trans;
 
 		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
 		FLOAT fVoxelSize = gfSceneGridSize / gdwGlobalSdfResolution;

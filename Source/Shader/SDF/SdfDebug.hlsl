@@ -52,7 +52,7 @@ float4 PS(FVertexOutput In) : SV_Target0
     for (; ix < dwMaxTraceSteps; ++ix)
     {
         float3 uvw = (p - SceneGridOrigin) / fSceneGridSize;
-        if (any(saturate(uvw) != uvw)) break;
+        if (any(saturate(uvw) != uvw)) { break; }
 
         float Sdf = gSdf.Sample(gSampler, uvw);
 
@@ -74,7 +74,7 @@ float4 PS(FVertexOutput In) : SV_Target0
 
             // 重新采样.
             uvw = (p - SceneGridOrigin) / fSceneGridSize;
-            if (any(saturate(uvw) != uvw)) break;
+            if (any(saturate(uvw) != uvw)) { break; }
 
             Sdf = gSdf.Sample(gSampler, uvw);
 

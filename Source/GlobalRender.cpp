@@ -42,14 +42,13 @@ namespace FTS
 
 		ReturnIfFalse(D3D12Init());
 		ReturnIfFalse(CreateSamplers());
-		//m_AtmosphereDebugRender.Setup(m_pRenderGraph.Get());
-		m_SdfDebugRender.Setup(m_pRenderGraph.Get());
 
 		m_GuiPass.Init(m_pWindow, m_pDevice.Get());
 		m_pRenderGraph->AddPass(&m_GuiPass);
+		
 
-		//m_AtmosphereDebugRender.GetLastPass()->Precede(&m_GuiPass);
-		m_SdfDebugRender.GetLastPass()->Precede(&m_GuiPass);
+		//m_AtmosphereDebugRender.Setup(m_pRenderGraph.Get()); m_AtmosphereDebugRender.GetLastPass()->Precede(&m_GuiPass);
+		m_SdfDebugRender.Setup(m_pRenderGraph.Get()); m_SdfDebugRender.GetLastPass()->Precede(&m_GuiPass);
 
 		return true;
 	}
