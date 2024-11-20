@@ -262,6 +262,11 @@ namespace FTS
 			return TVector3(x * crVec.x, y * crVec.y, z * crVec.z); 
 		}
 
+		TVector3<T>& operator*=(const TVector3<T>& crVec) const
+		{
+			return (*this) * crVec;
+		}
+
 
 		template <typename U>
 		TVector3<T> operator*(U _u) const { return TVector3(x * _u, y * _u, z * _u); }

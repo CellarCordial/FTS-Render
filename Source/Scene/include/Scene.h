@@ -45,8 +45,6 @@ namespace FTS
 	{
 		struct TransformData
 		{
-			FMatrix4x4 LocalMatrix;
-			FMatrix4x4 WorldMatrix;
 			FMatrix4x4 CoordMatrix;
 			FBounds3F SdfBox;
 		};

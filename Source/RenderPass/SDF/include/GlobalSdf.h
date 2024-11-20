@@ -25,8 +25,6 @@ namespace FTS
 		
 		struct ModelSdfData
 		{
-			FMatrix4x4 LocalMatrix;
-			FMatrix4x4 WorldMatrix;
 			FMatrix4x4 CoordMatrix;
 
 			FVector3F SdfLower;

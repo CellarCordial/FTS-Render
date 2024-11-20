@@ -94,6 +94,24 @@ float2 IntersectRayBox(float3 o, float3 d, float3 Lower, float3 Upper, out float
     return fT0 <= fT1;
 }
 
+float2 IntersectRayBoxEnd(float3 o, float3 d, float3 Lower, float3 Upper, out float fStep)
+{
+    float3 InvD = 1.0f / d;
+
+    float3 fNear = (Lower - o) * InvD;
+    float3 fFar = (Upper - o) * InvD;
+
+    float3 fMaxNF = max(fNear, fFar);
+    float3 fMinNF = min(fNear, fFar);
+
+    float fT0 = max3(fMinNF.x, fMinNF.y, fMinNF.z);
+    float fT1 = min3(fMaxNF.x, fMaxNF.y, fMaxNF.z);
+
+    fStep = max(fT1, 0.0f) + 0.01f;
+
+    return fT0 <= fT1;
+}
+
 bool IntersectRayTriangle(float3 o, float3 d, float fMaxLength, float3 a, float3 ab, float3 ac, out float fLength)
 {
     float3 S = o - a;

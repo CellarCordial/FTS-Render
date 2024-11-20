@@ -76,7 +76,6 @@ namespace FTS
 		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
 		FLOAT fVoxelSize = gfSceneGridSize / gdwGlobalSdfResolution;
 		FLOAT fOffset = -gfSceneGridSize * 0.5f + fVoxelSize * 0.5f;
-		FLOAT fChunkSize = fVoxelSize * gdwVoxelNumPerChunk;
 
 		BOOL bUpdateModelSdfDataRes = (pCache->GetWorld()->Each<FSceneGrid>(
 			[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
@@ -95,31 +94,14 @@ namespace FTS
 							for (const auto& crMeshDF : pDF->MeshDistanceFields)
 							{
 								FDistanceField::TransformData Data = crMeshDF.GetTransformed(pTrans);
-
-								FVector3I Offset = {
-									ix % dwChunkNumPerAxis,
-									(ix / dwChunkNumPerAxis) % dwChunkNumPerAxis,
-									ix / (dwChunkNumPerAxis * dwChunkNumPerAxis)
-								};
-								TVector3<INT32> ChunkOffset = TVector3<INT32>(Offset) - dwChunkNumPerAxis / 2;
-								FBounds3F ChunkBox(
-									FVector3F(ChunkOffset) * fChunkSize,
-									FVector3F(ChunkOffset + 1) * fChunkSize
+								m_ModelSdfDatas.emplace_back(
+									Constant::ModelSdfData{
+										.CoordMatrix = Data.CoordMatrix,
+										.SdfLower = Data.SdfBox.m_Lower,
+										.SdfUpper = Data.SdfBox.m_Upper,
+										.dwMeshSdfIndex = dwCounter++
+									}
 								);
-
-								if (Intersect(ChunkBox, Data.SdfBox))
-								{
-									m_ModelSdfDatas.emplace_back(
-										Constant::ModelSdfData{
-											.LocalMatrix = Data.LocalMatrix,
-											.WorldMatrix = Data.WorldMatrix,
-											.CoordMatrix = Data.CoordMatrix,
-											.SdfLower = Data.SdfBox.m_Lower,
-											.SdfUpper = Data.SdfBox.m_Upper,
-											.dwMeshSdfIndex = dwCounter++
-										}
-									);
-								}
 							}
 						}
 					}
@@ -191,7 +173,6 @@ namespace FTS
 							fOffset,	fOffset,	fOffset,	1.0f
 						};
 
-
 						// Buffer & Texture.
 						{
 							for (const auto* cpModel : rChunk.pModelEntities)
@@ -200,21 +181,12 @@ namespace FTS
 								FTransform* pTrans = cpModel->GetComponent<FTransform>();
 								for (const auto& crMeshDF : pDF->MeshDistanceFields)
 								{
-									FBounds3F ChunkBox(
-										FVector3F(ChunkOffset)* fChunkSize,
-										FVector3F(ChunkOffset + 1)* fChunkSize
-									);
-
-									FDistanceField::TransformData Data = crMeshDF.GetTransformed(pTrans);
-									if (Intersect(ChunkBox, Data.SdfBox))
-									{
-										dwMeshIndex++;
-										auto& rSdfTexture = m_pMeshSdfTextures.emplace_back();
-										ReturnIfFalse(pCache->Require(crMeshDF.strSdfTextureName.c_str())->QueryInterface(
-											IID_ITexture,
-											PPV_ARG(&rSdfTexture)
-										));
-									}
+									dwMeshIndex++;
+									auto& rSdfTexture = m_pMeshSdfTextures.emplace_back();
+									ReturnIfFalse(pCache->Require(crMeshDF.strSdfTextureName.c_str())->QueryInterface(
+										IID_ITexture,
+										PPV_ARG(&rSdfTexture)
+									));
 								}
 							}
 						}

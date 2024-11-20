@@ -19,8 +19,7 @@ RWTexture3D<float> gGlobalSdfTexture : register(u0);
 void CS(uint3 ThreadID : SV_DispatchThreadID)
 {
     uint3 VoxelID = VoxelOffset + ThreadID;
-
-    gGlobalSdfTexture[VoxelID] = 0.0f;
+    gGlobalSdfTexture[uint3(VoxelID.x, VoxelID.y, VoxelID.z)] = 0.0f;
 }
 
 #endif

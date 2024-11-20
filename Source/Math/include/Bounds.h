@@ -193,6 +193,24 @@ namespace FTS
 		}
 
 		template <typename U>
+		requires std::is_arithmetic_v<U>
+		TBounds3<T> operator*(U Value)
+		{
+			m_Lower *= Value;
+			m_Upper *= Value;
+			return TBounds3<T>{ .m_Lower = m_Lower, .m_Upper = m_Upper };
+		}
+
+		template <typename U>
+		requires std::is_arithmetic_v<U>
+		TBounds3<T>& operator*=(U Value)
+		{
+			m_Lower *= Value;
+			m_Upper *= Value;
+			return *this;
+		}
+
+		template <typename U>
 		explicit operator TBounds3<U>() const
 		{
 			return TBounds3<U>(TVector3<U>(m_Lower), TVector3<U>(m_Upper));

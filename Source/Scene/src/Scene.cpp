@@ -20,38 +20,48 @@ namespace FTS
 	FDistanceField::TransformData FDistanceField::MeshDistanceField::GetTransformed(const FTransform* cpTransform) const
 	{
 		TransformData Ret;
-		Ret.SdfBox.m_Lower = FVector3F(Mul(FVector4F(SdfBox.m_Lower, 1.0f), Scale(cpTransform->Scale)));
-		Ret.SdfBox.m_Upper = FVector3F(Mul(FVector4F(SdfBox.m_Upper, 1.0f), Scale(cpTransform->Scale)));
+		Ret.SdfBox = SdfBox;
 
+		FMatrix4x4 S = Scale(cpTransform->Scale);
+		Ret.SdfBox.m_Lower = FVector3F(Mul(FVector4F(Ret.SdfBox.m_Lower, 1.0f), S));
+		Ret.SdfBox.m_Upper = FVector3F(Mul(FVector4F(Ret.SdfBox.m_Upper, 1.0f), S));
+
+		FMatrix4x4 R = Rotate(cpTransform->Rotation);
 		std::array<FVector3F, 8> BoxVertices;
-		BoxVertices[0] = SdfBox.m_Lower;
-		BoxVertices[1] = FVector3F(SdfBox.m_Lower.x, SdfBox.m_Upper.y, SdfBox.m_Lower.z);
-		BoxVertices[2] = FVector3F(SdfBox.m_Upper.x, SdfBox.m_Upper.y, SdfBox.m_Lower.z);
-		BoxVertices[3] = FVector3F(SdfBox.m_Upper.x, SdfBox.m_Lower.y, SdfBox.m_Lower.z);
-		BoxVertices[4] = SdfBox.m_Upper;
-		BoxVertices[7] = FVector3F(SdfBox.m_Upper.x, SdfBox.m_Lower.y, SdfBox.m_Upper.z);
-		BoxVertices[5] = FVector3F(SdfBox.m_Lower.x, SdfBox.m_Lower.y, SdfBox.m_Upper.z);
-		BoxVertices[6] = FVector3F(SdfBox.m_Lower.x, SdfBox.m_Upper.y, SdfBox.m_Upper.z);
+		BoxVertices[0] = Ret.SdfBox.m_Lower;
+		BoxVertices[1] = FVector3F(Ret.SdfBox.m_Lower.x, Ret.SdfBox.m_Upper.y, Ret.SdfBox.m_Lower.z);
+		BoxVertices[2] = FVector3F(Ret.SdfBox.m_Upper.x, Ret.SdfBox.m_Upper.y, Ret.SdfBox.m_Lower.z);
+		BoxVertices[3] = FVector3F(Ret.SdfBox.m_Upper.x, Ret.SdfBox.m_Lower.y, Ret.SdfBox.m_Lower.z);
+		BoxVertices[4] = Ret.SdfBox.m_Upper;
+		BoxVertices[7] = FVector3F(Ret.SdfBox.m_Upper.x, Ret.SdfBox.m_Lower.y, Ret.SdfBox.m_Upper.z);
+		BoxVertices[5] = FVector3F(Ret.SdfBox.m_Lower.x, Ret.SdfBox.m_Lower.y, Ret.SdfBox.m_Upper.z);
+		BoxVertices[6] = FVector3F(Ret.SdfBox.m_Lower.x, Ret.SdfBox.m_Upper.y, Ret.SdfBox.m_Upper.z);
 
-		for (const auto& rVertex : BoxVertices)
+		FBounds3F BlankBox(0.0f, 0.0f);
+		for (const auto& crVertex : BoxVertices)
 		{
-			Ret.SdfBox = Union(Ret.SdfBox, FVector3F(Mul(FVector4F(rVertex + cpTransform->Position, 1.0f), Rotate(cpTransform->Rotation))));
+			BlankBox = Union(BlankBox, FVector3F(Mul(FVector4F(crVertex, 1.0f), R)));
 		}
 
-		Ret.WorldMatrix = Mul(Translate(cpTransform->Position), Rotate(cpTransform->Rotation));
-		Ret.LocalMatrix = Inverse(Ret.WorldMatrix);
+		Ret.SdfBox = BlankBox;
+
+		FMatrix4x4 T = Translate(cpTransform->Position);
+		Ret.SdfBox.m_Lower = FVector3F(Mul(FVector4F(Ret.SdfBox.m_Lower, 1.0f), T));
+		Ret.SdfBox.m_Upper = FVector3F(Mul(FVector4F(Ret.SdfBox.m_Upper, 1.0f), T));
 
 		FVector3F SdfExtent = SdfBox.m_Upper - SdfBox.m_Lower;
-		Ret.CoordMatrix = FMatrix4x4(
-			1.0f / SdfExtent.x, 0.0f, 0.0f, 0.0f,
-			0.0f, -1.0f / SdfExtent.y, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f / SdfExtent.z, 0.0f,
-			-SdfBox.m_Lower.x / SdfExtent.x,
-			SdfBox.m_Upper.y / SdfExtent.y,
-			-SdfBox.m_Lower.x / SdfExtent.x,
-			1.0f
+		Ret.CoordMatrix = Mul(
+			Inverse(Mul(Mul(S, R), T)),		// Local Matrix.
+			FMatrix4x4(
+				1.0f / SdfExtent.x, 0.0f, 0.0f, 0.0f,
+				0.0f, -1.0f / SdfExtent.y, 0.0f, 0.0f,
+				0.0f, 0.0f, 1.0f / SdfExtent.z, 0.0f,
+				-SdfBox.m_Lower.x / SdfExtent.x,
+				SdfBox.m_Upper.y / SdfExtent.y,
+				-SdfBox.m_Lower.z / SdfExtent.z,
+				1.0f
+			)
 		);
-
 		return Ret;
 	}
 
@@ -173,9 +183,9 @@ namespace FTS
 							BOOL bChanged = false;
 
 							FTransform TmpTransform = *pTmpModelEntity->GetComponent<FTransform>();
-							bChanged |= ImGui::SliderFloat3("Model Position", reinterpret_cast<FLOAT*>(&TmpTransform.Position), -32.0f, 32.0f);
-							bChanged |= ImGui::SliderFloat3("Model Rotation", reinterpret_cast<FLOAT*>(&TmpTransform.Rotation), -180.0f, 180.0f);
-							bChanged |= ImGui::SliderFloat3("Model Scale", reinterpret_cast<FLOAT*>(&TmpTransform.Scale), 0.0f, 10.0f);
+							bChanged |= ImGui::SliderFloat3("Position", reinterpret_cast<FLOAT*>(&TmpTransform.Position), -32.0f, 32.0f);		
+							bChanged |= ImGui::SliderFloat3("Rotation", reinterpret_cast<FLOAT*>(&TmpTransform.Rotation), -180.0f, 180.0f);
+							bChanged |= ImGui::SliderFloat3("Scale", reinterpret_cast<FLOAT*>(&TmpTransform.Scale), 0.1f, 8.0f);
 							if (bChanged) m_pWorld->Boardcast(Event::OnModelTransform{ .pEntity = pTmpModelEntity, .Trans = TmpTransform });
 
 							ImGui::TreePop();
@@ -418,11 +428,17 @@ namespace FTS
 				}
 
 				rMeshDF.Bvh.Build(BvhVertices, static_cast<UINT32>(crSubmesh.Indices.size() / 3));
+				rMeshDF.SdfBox = rMeshDF.Bvh.GlobalBox;
 
-				UINT32 dwMaxAxis = rMeshDF.Bvh.GlobalBox.MaxAxis();
-				FLOAT fMaxExtent = rMeshDF.Bvh.GlobalBox.m_Upper[dwMaxAxis] - rMeshDF.Bvh.GlobalBox.m_Lower[dwMaxAxis];
-				rMeshDF.SdfBox.m_Lower = FVector3F(-fMaxExtent - 0.5f);
-				rMeshDF.SdfBox.m_Upper = FVector3F(fMaxExtent + 0.5f);
+				FVector3F Extent = rMeshDF.SdfBox.m_Upper - rMeshDF.SdfBox.m_Lower;
+				for (UINT32 ix = 0; ix < 3; ++ix)
+				{
+					if (Extent[ix] < 0.0001f)
+					{
+						rMeshDF.SdfBox.m_Upper[ix] += 0.001f;
+						rMeshDF.SdfBox.m_Lower[ix] -= 0.001f;
+					}
+				}
 			}
 		}
 
