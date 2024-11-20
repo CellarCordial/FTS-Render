@@ -18,8 +18,8 @@ namespace FTS
 			FVector3I VoxelOffset;  
 			FLOAT fGIMaxDistance = 500;
 			
-			UINT32 dwModelSdfBegin = 0;
-			UINT32 dwModelSdfEnd = 0;
+			UINT32 dwMeshSdfBegin = 0;
+			UINT32 dwMeshSdfEnd = 0;
 			FVector2I PAD;
 		};
 		
@@ -32,7 +32,7 @@ namespace FTS
 			FVector3F SdfLower;
 			FVector3F SdfUpper;
 
-			UINT32 dwModelSdfIndex = 0;
+			UINT32 dwMeshSdfIndex = 0;
 		};
 	}
 

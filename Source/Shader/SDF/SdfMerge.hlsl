@@ -11,7 +11,7 @@ struct FModelSdfData
     float3 SdfLower;
     float3 SdfUpper;
 
-    uint dwModelSdfIndex;
+    uint dwMeshSdfIndex;
 };
 
 #if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y) && defined(THREAD_GROUP_SIZE_Z)
@@ -23,8 +23,8 @@ cbuffer gPassConstant : register(b0)
     uint3 VoxelOffset;  
     float fGIMaxDistance;
 
-    uint dwModelSdfBegin; 
-    uint dwModelSdfEnd;
+    uint dwMeshSdfBegin; 
+    uint dwMeshSdfEnd;
     uint2 PAD;
 };
 
@@ -46,7 +46,7 @@ void CS(uint3 ThreadID : SV_DispatchThreadID)
 
     float fMinSdf = fGIMaxDistance;
 
-    for (uint ix = dwModelSdfBegin; ix < dwModelSdfEnd; ++ix)
+    for (uint ix = dwMeshSdfBegin; ix < dwMeshSdfEnd; ++ix)
     {
         fMinSdf = CalcSdf(fMinSdf, ix, VoxelWorldPos);
     }
@@ -76,7 +76,7 @@ float CalcSdf(float fMinSdf, uint dwSdfIndex, float3 VoxelWorldPos)
     float w = (SdfLocalPosClamped.z - SdfData.SdfLower.z) / SdfExtent.z;
     float3 uvw = float3(u, v, w);
 
-    float sdf = gModelSdfTextures[SdfData.dwModelSdfIndex].SampleLevel(gSampler, uvw, 0);
+    float sdf = gModelSdfTextures[SdfData.dwMeshSdfIndex].SampleLevel(gSampler, uvw, 0);
     // Voxel 在 MeshSdf 内.
     if (fDistanceToSdf < 0.001f) return min(sdf, fMinSdf);
 

@@ -62,6 +62,11 @@ namespace FTS
             }
         }
 
+        void ContinuePrecompute()
+        {
+            Type &= ~ERenderPassType::Exclude;
+        }
+
         std::unordered_set<UINT32> DependentsIndex;
         std::unordered_set<UINT32> SuccessorsIndex;
         ERenderPassType Type = ERenderPassType::Invalid;

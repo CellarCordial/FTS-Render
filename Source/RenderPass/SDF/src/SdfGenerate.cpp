@@ -1,6 +1,5 @@
 #include "../include/SdfGenerate.h"
 #include "../../../Core/include/ComRoot.h"
-#include "../../../Core/include/File.h"
 #include "../../../Shader/ShaderCompiler.h"
 #include "../../../Gui/include/GuiPass.h"
 #include "../../../Scene/include/Scene.h"
@@ -24,9 +23,18 @@ namespace FTS
 				pEvent->AddEvent(
 					[this](FDistanceField* pDistanceField) 
 					{ 
-						Type &= ~ERenderPassType::Exclude; 
+						ContinuePrecompute();
 						m_pDistanceField = pDistanceField;
-						return m_pDistanceField != nullptr; 
+
+						ReturnIfFalse(m_pDistanceField != nullptr);
+
+						if (!m_pDistanceField->CheckSdfFileExist())
+						{
+							const auto& crMeshDF = m_pDistanceField->MeshDistanceFields[0];
+							std::string strSdfName = crMeshDF.strSdfTextureName.substr(0, crMeshDF.strSdfTextureName.find("SdfTexture")) + ".sdf";
+							pBinaryOutput = std::make_unique<Serialization::BinaryOutput>(std::string(PROJ_DIR) + "Asset/SDF/" + strSdfName);
+						}
+						return true;
 					}
 				);
 				return true;
@@ -74,14 +82,14 @@ namespace FTS
 			ReturnIfFalse(pDevice->CreateComputePipeline(PipelineDesc, IID_IComputePipeline, PPV_ARG(m_pPipeline.GetAddressOf())));
 		}
 
-
-
         return true;
     }
 
     BOOL FSdfGeneratePass::Execute(ICommandList* pCmdList, IRenderResourceCache* pCache)
     {
 		ReturnIfFalse(pCmdList->Open());
+
+		const auto& crMeshDF = m_pDistanceField->MeshDistanceFields[m_dwCurrMeshSdfIndex];
 
 		if (!m_bResourceWrited)
         {
@@ -95,7 +103,7 @@ namespace FTS
 						gdwSdfResolution,
 						gdwSdfResolution,
 						EFormat::R32_FLOAT,
-						m_pDistanceField->strSdfTextureName
+						crMeshDF.strSdfTextureName
 					),
 					IID_ITexture,
 					PPV_ARG(m_pSdfOutputTexture.GetAddressOf())
@@ -109,7 +117,7 @@ namespace FTS
 				{
 					ReturnIfFalse(pDevice->CreateBuffer(
 						FBufferDesc::CreateStructured(
-							m_pDistanceField->Bvh.GetNodes().size() * sizeof(FBvh::Node),
+							crMeshDF.Bvh.GetNodes().size() * sizeof(FBvh::Node),
 							sizeof(FBvh::Node),
 							true
 						),
@@ -118,7 +126,7 @@ namespace FTS
 					));
 					ReturnIfFalse(pDevice->CreateBuffer(
 						FBufferDesc::CreateStructured(
-							m_pDistanceField->Bvh.GetVertices().size() * sizeof(FBvh::Vertex),
+							crMeshDF.Bvh.GetVertices().size() * sizeof(FBvh::Vertex),
 							sizeof(FBvh::Vertex),
 							true
 						),
@@ -164,13 +172,13 @@ namespace FTS
 				}
 
 
-				m_PassConstants.dwTriangleNum = m_pDistanceField->Bvh.dwTriangleNum;
-				m_PassConstants.SdfLower = m_pDistanceField->SdfBox.m_Lower;
-				m_PassConstants.SdfUpper = m_pDistanceField->SdfBox.m_Upper;
+				m_PassConstants.dwTriangleNum = crMeshDF.Bvh.dwTriangleNum;
+				m_PassConstants.SdfLower = crMeshDF.SdfBox.m_Lower;
+				m_PassConstants.SdfUpper = crMeshDF.SdfBox.m_Upper;
 				m_PassConstants.SdfExtent = m_PassConstants.SdfUpper - m_PassConstants.SdfLower;
 
-				const auto& crNodes = m_pDistanceField->Bvh.GetNodes();
-				const auto& crVertices = m_pDistanceField->Bvh.GetVertices();
+				const auto& crNodes = crMeshDF.Bvh.GetNodes();
+				const auto& crVertices = crMeshDF.Bvh.GetVertices();
 				ReturnIfFalse(pCmdList->WriteBuffer(m_pBvhNodeBuffer.Get(), crNodes.data(), crNodes.size() * sizeof(FBvh::Node)));
 				ReturnIfFalse(pCmdList->WriteBuffer(m_pBvhVertexBuffer.Get(), crVertices.data(), crVertices.size() * sizeof(FBvh::Vertex)));
 			}
@@ -201,8 +209,8 @@ namespace FTS
 					FTextureSlice{}
 				));
 
-				ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateSceneGrid>(
-					[](FEntity* pEntity, Event::UpdateSceneGrid* pEvent) -> BOOL
+				ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateGlobalSdf>(
+					[](FEntity* pEntity, Event::UpdateGlobalSdf* pEvent) -> BOOL
 					{
 						return pEvent->Broadcast();
 					}
@@ -216,13 +224,13 @@ namespace FTS
 				m_pSdfOutputTexture.Get(),
 				0,
 				0,
-				m_pDistanceField->SdfData.data(),
+				crMeshDF.SdfData.data(),
 				gdwSdfResolution * dwPixelSize,
 				gdwSdfResolution * gdwSdfResolution* dwPixelSize
 			));
 
-			ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateSceneGrid>(
-				[](FEntity* pEntity, Event::UpdateSceneGrid* pEvent) -> BOOL
+			ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateGlobalSdf>(
+				[](FEntity* pEntity, Event::UpdateGlobalSdf* pEvent) -> BOOL
 				{
 					return pEvent->Broadcast();
 				}
@@ -235,13 +243,16 @@ namespace FTS
 
 	BOOL FSdfGeneratePass::FinishPass()
 	{
+		auto& rMeshDF = m_pDistanceField->MeshDistanceFields[m_dwCurrMeshSdfIndex];
+
 		if (!m_pDistanceField->CheckSdfFileExist())
 		{
 			if (m_dwBeginX < gdwSdfResolution)
 			{
-				Type &= ~ERenderPassType::Exclude;
+				ContinuePrecompute();
 				return true;
 			}
+			m_dwBeginX = 0;
 
 			std::vector<FLOAT> SdfData(gdwSdfResolution * gdwSdfResolution * gdwSdfResolution);
 			HANDLE FenceEvent = CreateEvent(nullptr, false, false, nullptr);
@@ -263,32 +274,47 @@ namespace FTS
 				pMappedData += stRowPitch * gdwSdfResolution;
 			}
 
-			std::string strSdfName = m_pDistanceField->strSdfTextureName.substr(0, m_pDistanceField->strSdfTextureName.find("SdfTexture")) + ".sdf";
-			Serialization::BinaryOutput Out(std::string(PROJ_DIR) + "Asset/SDF/" + strSdfName);
+			if (m_dwCurrMeshSdfIndex == 0) (*pBinaryOutput)(gdwSdfResolution);
 
-			Out(
-				gdwSdfResolution,
-				m_pDistanceField->SdfBox.m_Lower.x,
-				m_pDistanceField->SdfBox.m_Lower.y,
-				m_pDistanceField->SdfBox.m_Lower.z,
-				m_pDistanceField->SdfBox.m_Upper.x,
-				m_pDistanceField->SdfBox.m_Upper.y,
-				m_pDistanceField->SdfBox.m_Upper.z
+			(*pBinaryOutput)(
+				rMeshDF.SdfBox.m_Lower.x,
+				rMeshDF.SdfBox.m_Lower.y,
+				rMeshDF.SdfBox.m_Lower.z,
+				rMeshDF.SdfBox.m_Upper.x,
+				rMeshDF.SdfBox.m_Upper.y,
+				rMeshDF.SdfBox.m_Upper.z
 			);
-			Out.SaveBinaryData(SdfData.data(), SdfData.size() * sizeof(FLOAT));
+			pBinaryOutput->SaveBinaryData(SdfData.data(), SdfData.size() * sizeof(FLOAT));
 
 			m_pReadBackTexture.Reset();
 			m_pBvhNodeBuffer.Reset();
 			m_pBvhVertexBuffer.Reset();
-			m_pDistanceField->Bvh.Clear();
+			rMeshDF.Bvh.Clear();
 
-			Gui::NotifyMessage(Gui::ENotifyType::Info, strSdfName + " bake finished.");
+			if (++m_dwCurrMeshSdfIndex == static_cast<UINT32>(m_pDistanceField->MeshDistanceFields.size()))
+			{
+				std::string strSdfName = rMeshDF.strSdfTextureName.substr(0, rMeshDF.strSdfTextureName.find("SdfTexture")) + ".sdf";
+				Gui::NotifyMessage(Gui::ENotifyType::Info, strSdfName + " bake finished.");
+				m_pDistanceField = nullptr;
+				pBinaryOutput.reset();
+			}
+			else
+			{
+				ContinuePrecompute();
+			}
+		}
+		else
+		{
+			rMeshDF.SdfData.clear();
+
+			if (++m_dwCurrMeshSdfIndex < static_cast<UINT32>(m_pDistanceField->MeshDistanceFields.size()))
+				ContinuePrecompute();
+			else
+				m_pDistanceField = nullptr;
 		}
 
 		m_pSdfOutputTexture.Reset();
-		m_pDistanceField = nullptr;
 		m_bResourceWrited = false;
-		
 		return true;
 	}
 

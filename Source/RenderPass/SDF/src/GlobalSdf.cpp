@@ -11,13 +11,13 @@ namespace FTS
 
 	BOOL FGlobalSdfPass::Compile(IDevice* pDevice, IRenderResourceCache* pCache)
 	{
-		ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateSceneGrid>(
-			[this](FEntity* pEntity, Event::UpdateSceneGrid* pEvent) -> BOOL
+		ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateGlobalSdf>(
+			[this](FEntity* pEntity, Event::UpdateGlobalSdf* pEvent) -> BOOL
 			{
 				pEvent->AddEvent(
 					[this]()
 					{
-						Type &= ~ERenderPassType::Exclude;
+						ContinuePrecompute();
 						return true;
 					}
 				);
@@ -72,11 +72,18 @@ namespace FTS
 			return true;
 		}
 
+
+		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
+		FLOAT fVoxelSize = gfSceneGridSize / gdwGlobalSdfResolution;
+		FLOAT fOffset = -gfSceneGridSize * 0.5f + fVoxelSize * 0.5f;
+		FLOAT fChunkSize = fVoxelSize * gdwVoxelNumPerChunk;
+
 		BOOL bUpdateModelSdfDataRes = (pCache->GetWorld()->Each<FSceneGrid>(
 			[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
 			{
-				for (const auto& crChunk : pGrid->Chunks)
+				for (UINT32 ix = 0; ix < pGrid->Chunks.size(); ++ix)
 				{
+					const auto& crChunk = pGrid->Chunks[ix];
 					if (crChunk.bModelMoved)
 					{
 						UINT32 dwCounter = 0;
@@ -84,17 +91,36 @@ namespace FTS
 						{
 							FDistanceField* pDF = cpModel->GetComponent<FDistanceField>();
 							FTransform* pTrans = cpModel->GetComponent<FTransform>();
-							FDistanceField::TransformData Data = pDF->GetTransformed(pTrans);
-							m_ModelSdfDatas.emplace_back(
-								Constant::ModelSdfData{
-									.LocalMatrix = Data.LocalMatrix,
-									.WorldMatrix = Data.WorldMatrix,
-									.CoordMatrix = Data.CoordMatrix,
-									.SdfLower = Data.SdfBox.m_Lower,
-									.SdfUpper = Data.SdfBox.m_Upper,
-									.dwModelSdfIndex = dwCounter++
+
+							for (const auto& crMeshDF : pDF->MeshDistanceFields)
+							{
+								FDistanceField::TransformData Data = crMeshDF.GetTransformed(pTrans);
+
+								FVector3I Offset = {
+									ix % dwChunkNumPerAxis,
+									(ix / dwChunkNumPerAxis) % dwChunkNumPerAxis,
+									ix / (dwChunkNumPerAxis * dwChunkNumPerAxis)
+								};
+								TVector3<INT32> ChunkOffset = TVector3<INT32>(Offset) - dwChunkNumPerAxis / 2;
+								FBounds3F ChunkBox(
+									FVector3F(ChunkOffset) * fChunkSize,
+									FVector3F(ChunkOffset + 1) * fChunkSize
+								);
+
+								if (Intersect(ChunkBox, Data.SdfBox))
+								{
+									m_ModelSdfDatas.emplace_back(
+										Constant::ModelSdfData{
+											.LocalMatrix = Data.LocalMatrix,
+											.WorldMatrix = Data.WorldMatrix,
+											.CoordMatrix = Data.CoordMatrix,
+											.SdfLower = Data.SdfBox.m_Lower,
+											.SdfUpper = Data.SdfBox.m_Upper,
+											.dwMeshSdfIndex = dwCounter++
+										}
+									);
 								}
-							);
+							}
 						}
 					}
 				}
@@ -137,7 +163,7 @@ namespace FTS
 		}
 
 
-		UINT32 dwModelIndex = 0;
+		UINT32 dwMeshIndex = 0;
 		BOOL bResOfGLobalSdfPassExecute = pCache->GetWorld()->Each<FSceneGrid>(
 			[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
 			{
@@ -146,19 +172,54 @@ namespace FTS
 					auto& rChunk = pGrid->Chunks[ix];
 					if (rChunk.bModelMoved)
 					{
+						auto& rPassConstants = m_PassConstants.emplace_back();
+						rPassConstants.fGIMaxDistance = gfSceneGridSize;
+						rPassConstants.dwMeshSdfBegin = dwMeshIndex;
+						rPassConstants.VoxelOffset = {
+							ix % dwChunkNumPerAxis,
+							(ix / dwChunkNumPerAxis) % dwChunkNumPerAxis,
+							ix / (dwChunkNumPerAxis * dwChunkNumPerAxis)
+						};
+
+						TVector3<INT32> ChunkOffset = TVector3<INT32>(rPassConstants.VoxelOffset) - dwChunkNumPerAxis / 2;
+
+						rPassConstants.VoxelOffset *= gdwVoxelNumPerChunk;
+						rPassConstants.VoxelWorldMatrix = {
+							fVoxelSize, 0.0f,		0.0f,		0.0f,
+							0.0f,		fVoxelSize, 0.0f,		0.0f,
+							0.0f,		0.0f,		fVoxelSize, 0.0f,
+							fOffset,	fOffset,	fOffset,	1.0f
+						};
+
+
 						// Buffer & Texture.
 						{
-							for (const auto* cpEntity : rChunk.pModelEntities)
+							for (const auto* cpModel : rChunk.pModelEntities)
 							{
-								FDistanceField* pDF = cpEntity->GetComponent<FDistanceField>();
+								FDistanceField* pDF = cpModel->GetComponent<FDistanceField>();
+								FTransform* pTrans = cpModel->GetComponent<FTransform>();
+								for (const auto& crMeshDF : pDF->MeshDistanceFields)
+								{
+									FBounds3F ChunkBox(
+										FVector3F(ChunkOffset)* fChunkSize,
+										FVector3F(ChunkOffset + 1)* fChunkSize
+									);
 
-								auto& rSdfTexture = m_pMeshSdfTextures.emplace_back();
-								ReturnIfFalse(pCache->Require(pDF->strSdfTextureName.c_str())->QueryInterface(
-									IID_ITexture,
-									PPV_ARG(&rSdfTexture)
-								));
+									FDistanceField::TransformData Data = crMeshDF.GetTransformed(pTrans);
+									if (Intersect(ChunkBox, Data.SdfBox))
+									{
+										dwMeshIndex++;
+										auto& rSdfTexture = m_pMeshSdfTextures.emplace_back();
+										ReturnIfFalse(pCache->Require(crMeshDF.strSdfTextureName.c_str())->QueryInterface(
+											IID_ITexture,
+											PPV_ARG(&rSdfTexture)
+										));
+									}
+								}
 							}
 						}
+
+						rPassConstants.dwMeshSdfEnd = dwMeshIndex;
 
 						if (!m_pMeshSdfTextures.empty())
 						{
@@ -178,27 +239,6 @@ namespace FTS
 							ReturnIfFalse(pCmdList->SetComputeState(m_ClearPassComputeState));
 						}
 
-						auto& rPassConstants = m_PassConstants.emplace_back();
-						rPassConstants.dwModelSdfBegin = dwModelIndex;
-						rPassConstants.dwModelSdfEnd = dwModelIndex + rChunk.pModelEntities.size();
-						rPassConstants.fGIMaxDistance = gfSceneGridSize;
-
-						UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
-						rPassConstants.VoxelOffset = {
-							ix % dwChunkNumPerAxis,
-							(ix / dwChunkNumPerAxis) % dwChunkNumPerAxis,
-							ix / (dwChunkNumPerAxis * dwChunkNumPerAxis)
-						};
-						rPassConstants.VoxelOffset *= gdwVoxelNumPerChunk;
-
-						FLOAT fVoxelSize = gfSceneGridSize / gdwGlobalSdfResolution;
-						FLOAT fOffset = -gfSceneGridSize * 0.5f + fVoxelSize * 0.5f;
-						rPassConstants.VoxelWorldMatrix = {
-							fVoxelSize, 0.0f,		0.0f,		0.0f,
-							0.0f,		fVoxelSize, 0.0f,		0.0f,
-							0.0f,		0.0f,		fVoxelSize, 0.0f,
-							fOffset,	fOffset,	fOffset,	1.0f
-						};
 						ReturnIfFalse(pCmdList->SetPushConstants(&rPassConstants, sizeof(Constant::GlobalSdfConstants)));
 
 						FVector3I ThreadGroupNum = {
@@ -211,7 +251,6 @@ namespace FTS
 
 						m_pMeshSdfTextures.clear();
 						rChunk.bModelMoved = false;
-						dwModelIndex += rChunk.pModelEntities.size();
 					}
 				}
 				return true;
@@ -337,7 +376,7 @@ namespace FTS
 					gdwGlobalSdfResolution,
 					gdwGlobalSdfResolution,
 					gdwGlobalSdfResolution,
-					EFormat::R16_FLOAT,
+					EFormat::R32_FLOAT,
 					"GlobalSdfTexture"
 				),
 				IID_ITexture,

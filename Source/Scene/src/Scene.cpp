@@ -17,7 +17,7 @@
 
 namespace FTS
 {
-	FDistanceField::TransformData FDistanceField::GetTransformed(const FTransform* cpTransform)
+	FDistanceField::TransformData FDistanceField::MeshDistanceField::GetTransformed(const FTransform* cpTransform) const
 	{
 		TransformData Ret;
 		Ret.SdfBox.m_Lower = FVector3F(Mul(FVector4F(SdfBox.m_Lower, 1.0f), Scale(cpTransform->Scale)));
@@ -98,7 +98,7 @@ namespace FTS
 		pWorld->Subscribe<Event::OnComponentAssigned<FMaterial>>(this);
 		pWorld->Subscribe<Event::OnComponentAssigned<FDistanceField>>(this);
 		pWorld->CreateEntity()->Assign<Event::GenerateSdf>();
-		pWorld->CreateEntity()->Assign<Event::UpdateSceneGrid>();
+		pWorld->CreateEntity()->Assign<Event::UpdateGlobalSdf>();
 		
 		m_pSceneGrid = pWorld->CreateEntity()->Assign<FSceneGrid>();
 
@@ -364,91 +364,93 @@ namespace FTS
 	BOOL FSceneSystem::Publish(FWorld* pWorld, const Event::OnComponentAssigned<FDistanceField>& crEvent)
 	{
 		FDistanceField* pDistanceField = crEvent.pComponent;
-		pDistanceField->strSdfTextureName = *crEvent.pEntity->GetComponent<std::string>() + "SdfTexture";
+		FMesh* pMesh = crEvent.pEntity->GetComponent<FMesh>();
+		pDistanceField->MeshDistanceFields.resize(pMesh->SubMeshes.size());
 
 		BOOL bLoadFromFile = false;
 		if (IsFileExist(m_strSdfDataPath.c_str()))
 		{
 			Serialization::BinaryInput Input(m_strSdfDataPath);
-
 			UINT32 dwMeshSdfResolution = 0;
 			Input(dwMeshSdfResolution);
-
+			
 			if (dwMeshSdfResolution == gdwSdfResolution)
 			{
-				Input(
-					pDistanceField->SdfBox.m_Lower.x,
-					pDistanceField->SdfBox.m_Lower.y,
-					pDistanceField->SdfBox.m_Lower.z,
-					pDistanceField->SdfBox.m_Upper.x,
-					pDistanceField->SdfBox.m_Upper.y,
-					pDistanceField->SdfBox.m_Upper.z
-				);
+				for (UINT32 ix = 0; ix < pDistanceField->MeshDistanceFields.size(); ++ix)
+				{
+					auto& rMeshDF = pDistanceField->MeshDistanceFields[ix];
+					rMeshDF.strSdfTextureName = *crEvent.pEntity->GetComponent<std::string>() + "SdfTexture" + std::to_string(ix);
 
-				UINT64 stDataSize = static_cast<UINT64>(gdwSdfResolution) * gdwSdfResolution * gdwSdfResolution * sizeof(FLOAT);
-				pDistanceField->SdfData.resize(stDataSize);
-				Input.LoadBinaryData(pDistanceField->SdfData.data(), stDataSize);
+					Input(
+						rMeshDF.SdfBox.m_Lower.x,
+						rMeshDF.SdfBox.m_Lower.y,
+						rMeshDF.SdfBox.m_Lower.z,
+						rMeshDF.SdfBox.m_Upper.x,
+						rMeshDF.SdfBox.m_Upper.y,
+						rMeshDF.SdfBox.m_Upper.z
+					);
 
+					UINT64 stDataSize = static_cast<UINT64>(gdwSdfResolution) * gdwSdfResolution * gdwSdfResolution * sizeof(FLOAT);
+					rMeshDF.SdfData.resize(stDataSize);
+					Input.LoadBinaryData(rMeshDF.SdfData.data(), stDataSize);
+				}
 				Gui::NotifyMessage(Gui::ENotifyType::Info, "Loaded " + m_strSdfDataPath.substr(m_strSdfDataPath.find("Asset")));
-
 				bLoadFromFile = true;
 			}
 		}
 
 		if (!bLoadFromFile)
 		{
-			const FMesh* pMesh = crEvent.pEntity->GetComponent<FMesh>();
-
-			UINT64 stIndicesNum = 0;
-			for (const auto& crMesh : pMesh->SubMeshes)
+			for (UINT32 ix = 0; ix < pDistanceField->MeshDistanceFields.size(); ++ix)
 			{
-				stIndicesNum += crMesh.Indices.size();
-			}
+				auto& rMeshDF = pDistanceField->MeshDistanceFields[ix];
+				const auto& crSubmesh = pMesh->SubMeshes[ix];
+				rMeshDF.strSdfTextureName = *crEvent.pEntity->GetComponent<std::string>() + "SdfTexture" + std::to_string(ix);
 
-			UINT64 ix = 0;
-			std::vector<FBvh::Vertex> BvhVertices(stIndicesNum);
-			for (const auto& crMesh : pMesh->SubMeshes)
-			{
-				for (auto VertexId : crMesh.Indices)
+				UINT64 jx = 0;
+				std::vector<FBvh::Vertex> BvhVertices(crSubmesh.Indices.size());
+				for (auto VertexIndex : crSubmesh.Indices)
 				{
-					BvhVertices[ix++] = {
-						FVector3F(Mul(FVector4F(crMesh.Vertices[VertexId].Position, 1.0f), crMesh.WorldMatrix)),
-						FVector3F(Mul(FVector4F(crMesh.Vertices[VertexId].Normal, 1.0f), Transpose(Inverse(crMesh.WorldMatrix))))
+					BvhVertices[jx++] = {
+						FVector3F(Mul(FVector4F(crSubmesh.Vertices[VertexIndex].Position, 1.0f), crSubmesh.WorldMatrix)),
+						FVector3F(Mul(FVector4F(crSubmesh.Vertices[VertexIndex].Normal, 1.0f), Transpose(Inverse(crSubmesh.WorldMatrix))))
 					};
 				}
+
+				rMeshDF.Bvh.Build(BvhVertices, static_cast<UINT32>(crSubmesh.Indices.size() / 3));
+
+				UINT32 dwMaxAxis = rMeshDF.Bvh.GlobalBox.MaxAxis();
+				FLOAT fMaxExtent = rMeshDF.Bvh.GlobalBox.m_Upper[dwMaxAxis] - rMeshDF.Bvh.GlobalBox.m_Lower[dwMaxAxis];
+				rMeshDF.SdfBox.m_Lower = FVector3F(-fMaxExtent - 0.5f);
+				rMeshDF.SdfBox.m_Upper = FVector3F(fMaxExtent + 0.5f);
 			}
-			ReturnIfFalse(ix == stIndicesNum);
-
-			pDistanceField->Bvh.Build(BvhVertices, stIndicesNum / 3);
-
-			UINT32 dwMaxAxis = pDistanceField->Bvh.GlobalBox.MaxAxis();
-			FLOAT fMaxExtent = pDistanceField->Bvh.GlobalBox.m_Upper[dwMaxAxis] - pDistanceField->Bvh.GlobalBox.m_Lower[dwMaxAxis];
-			pDistanceField->SdfBox.m_Lower = FVector3F(-fMaxExtent - 0.5f);
-			pDistanceField->SdfBox.m_Upper = FVector3F(fMaxExtent + 0.5f);
 		}
 
-		FDistanceField::TransformData Data = pDistanceField->GetTransformed(crEvent.pEntity->GetComponent<FTransform>());
-		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
-		FLOAT fVoxelSize = gfSceneGridSize / gdwGlobalSdfResolution;
-		FLOAT fChunkSize = gdwVoxelNumPerChunk * fVoxelSize;
-		FLOAT fGridSize = fChunkSize * dwChunkNumPerAxis;
 
-		FVector3I UniformLower = FVector3I((Data.SdfBox.m_Lower + fGridSize / 2.0f) / fChunkSize);
-		FVector3I UniformUpper = FVector3I((Data.SdfBox.m_Upper + fGridSize / 2.0f) / fChunkSize);
-
-		for (UINT32 z = UniformLower.z; z <= UniformUpper.z; ++z)
+		for (const auto& crMeshDF : pDistanceField->MeshDistanceFields)
 		{
-			for (UINT32 y = UniformLower.y; y <= UniformUpper.y; ++y)
+			FDistanceField::TransformData Data = crMeshDF.GetTransformed(crEvent.pEntity->GetComponent<FTransform>());
+			UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
+			FLOAT fVoxelSize = gfSceneGridSize / gdwGlobalSdfResolution;
+			FLOAT fChunkSize = gdwVoxelNumPerChunk * fVoxelSize;
+			FLOAT fGridSize = fChunkSize * dwChunkNumPerAxis;
+
+			FVector3I UniformLower = FVector3I((Data.SdfBox.m_Lower + fGridSize / 2.0f) / fChunkSize);
+			FVector3I UniformUpper = FVector3I((Data.SdfBox.m_Upper + fGridSize / 2.0f) / fChunkSize);
+
+			for (UINT32 z = UniformLower.z; z <= UniformUpper.z; ++z)
 			{
-				for (UINT32 x = UniformLower.x; x <= UniformUpper.x; ++x)
+				for (UINT32 y = UniformLower.y; y <= UniformUpper.y; ++y)
 				{
-					UINT32 dwIndex = x + y * dwChunkNumPerAxis + z * dwChunkNumPerAxis * dwChunkNumPerAxis;
-					m_pSceneGrid->Chunks[dwIndex].bModelMoved = true;
-					m_pSceneGrid->Chunks[dwIndex].pModelEntities.insert(crEvent.pEntity);
+					for (UINT32 x = UniformLower.x; x <= UniformUpper.x; ++x)
+					{
+						UINT32 dwIndex = x + y * dwChunkNumPerAxis + z * dwChunkNumPerAxis * dwChunkNumPerAxis;
+						m_pSceneGrid->Chunks[dwIndex].bModelMoved = true;
+						m_pSceneGrid->Chunks[dwIndex].pModelEntities.insert(crEvent.pEntity);
+					}
 				}
 			}
 		}
-
 		
 		return true;
 	}
@@ -458,43 +460,46 @@ namespace FTS
 		FTransform* pTransform = crEvent.pEntity->GetComponent<FTransform>();
 		FDistanceField* pDistanceField = crEvent.pEntity->GetComponent<FDistanceField>();
 
-		FBounds3F OldSdfBox = pDistanceField->GetTransformed(pTransform).SdfBox;
-		FBounds3F NewSdfBox = pDistanceField->GetTransformed(&crEvent.Trans).SdfBox;
-
-		*pTransform = crEvent.Trans;
-
 		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
 		FLOAT fVoxelSize = gfSceneGridSize / gdwGlobalSdfResolution;
 		FLOAT fChunkSize = 1.0f * gdwVoxelNumPerChunk * fVoxelSize;
 
 		auto FuncMark = [&](const FBounds3F& crBox, BOOL bInsertOrErase)
-			{
-				FVector3I UniformLower = FVector3I((crBox.m_Lower + gfSceneGridSize / 2.0f) / fChunkSize);
-				FVector3I UniformUpper = FVector3I((crBox.m_Upper + gfSceneGridSize / 2.0f) / fChunkSize);
+		{
+			FVector3I UniformLower = FVector3I((crBox.m_Lower + gfSceneGridSize / 2.0f) / fChunkSize);
+			FVector3I UniformUpper = FVector3I((crBox.m_Upper + gfSceneGridSize / 2.0f) / fChunkSize);
 
-				for (UINT32 z = UniformLower.z; z <= UniformUpper.z; ++z)
+			for (UINT32 z = UniformLower.z; z <= UniformUpper.z; ++z)
+			{
+				for (UINT32 y = UniformLower.y; y <= UniformUpper.y; ++y)
 				{
-					for (UINT32 y = UniformLower.y; y <= UniformUpper.y; ++y)
+					for (UINT32 x = UniformLower.x; x <= UniformUpper.x; ++x)
 					{
-						for (UINT32 x = UniformLower.x; x <= UniformUpper.x; ++x)
-						{
-							UINT32 dwIndex = x + y * dwChunkNumPerAxis + z * dwChunkNumPerAxis * dwChunkNumPerAxis;
-							m_pSceneGrid->Chunks[dwIndex].bModelMoved = true;
-							if (bInsertOrErase) 
-								m_pSceneGrid->Chunks[dwIndex].pModelEntities.insert(crEvent.pEntity);
-							else				
-								m_pSceneGrid->Chunks[dwIndex].pModelEntities.erase(crEvent.pEntity);
-						}
+						UINT32 dwIndex = x + y * dwChunkNumPerAxis + z * dwChunkNumPerAxis * dwChunkNumPerAxis;
+						m_pSceneGrid->Chunks[dwIndex].bModelMoved = true;
+						if (bInsertOrErase) 
+							m_pSceneGrid->Chunks[dwIndex].pModelEntities.insert(crEvent.pEntity);
+						else				
+							m_pSceneGrid->Chunks[dwIndex].pModelEntities.erase(crEvent.pEntity);
 					}
 				}
+			}
 
-			};
+		};
 
-		FuncMark(OldSdfBox, false);
-		FuncMark(NewSdfBox, true);
+		for (const auto& crMeshDF : pDistanceField->MeshDistanceFields)
+		{
+			FBounds3F OldSdfBox = crMeshDF.GetTransformed(pTransform).SdfBox;
+			FBounds3F NewSdfBox = crMeshDF.GetTransformed(&crEvent.Trans).SdfBox;
 
-		return pWorld->Each<Event::UpdateSceneGrid>(
-			[](FEntity* pEntity, Event::UpdateSceneGrid* pEvent) -> BOOL
+			FuncMark(OldSdfBox, false);
+			FuncMark(NewSdfBox, true);
+		}
+
+		*pTransform = crEvent.Trans;
+
+		return pWorld->Each<Event::UpdateGlobalSdf>(
+			[](FEntity* pEntity, Event::UpdateGlobalSdf* pEvent) -> BOOL
 			{
 				return pEvent->Broadcast();
 			}

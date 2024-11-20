@@ -3,6 +3,7 @@
 #include "../../../DynamicRHI/include/CommandList.h"
 #include "../../../RenderGraph/include/RenderGraph.h"
 #include "../../../Core/include/ComCli.h"
+#include "../../../Core/include/File.h"
 #include "../../../Math/include/Vector.h"
 #include "../../../Scene/include/Scene.h"
 #include "../../../Math/include/Bvh.h"
@@ -44,7 +45,9 @@ namespace FTS
     private:
         UINT32 m_dwBeginX = 0;
         BOOL m_bResourceWrited = false;
+        UINT32 m_dwCurrMeshSdfIndex = 0;
         FDistanceField* m_pDistanceField = nullptr;
+        std::unique_ptr<Serialization::BinaryOutput> pBinaryOutput;
 		Constant::SdfGeneratePassConstants m_PassConstants;
 
         TComPtr<IBuffer> m_pBvhNodeBuffer;

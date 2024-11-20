@@ -37,7 +37,7 @@ namespace FTS
 			FTransform Trans;
 		};
 
-		DeclareDelegateEvent(UpdateSceneGrid);
+		DeclareDelegateEvent(UpdateGlobalSdf);
 		DeclareDelegateEvent(GenerateSdf, FDistanceField*);
 	};
 
@@ -51,20 +51,40 @@ namespace FTS
 			FBounds3F SdfBox;
 		};
 
-		std::string strSdfTextureName;
-		FBounds3F SdfBox;
-		
-		std::vector<UINT8> SdfData;
-		FBvh Bvh;
+		struct MeshDistanceField
+		{
+			std::string strSdfTextureName;
+			FBounds3F SdfBox;
 
-		TransformData GetTransformed(const FTransform* cpTransform);
-		BOOL CheckSdfFileExist() const { return !SdfData.empty(); }
+			std::vector<UINT8> SdfData;
+			FBvh Bvh;
+
+			TransformData GetTransformed(const FTransform* cpTransform) const;
+		};
+
+		std::vector<MeshDistanceField> MeshDistanceFields;
+
+		BOOL CheckSdfFileExist() const { return !MeshDistanceFields.empty() && !MeshDistanceFields[0].SdfData.empty(); }
 	};
 
 	struct FSurfaceCache
 	{
-		std::array<FImage, 6> Cards;
+		struct Card
+		{
+			FImage Image;
+			std::string strCardTextureName;
+		};
 
+		struct MeshSurfaceCache
+		{
+			std::array<Card, 6> ColorCards;
+			std::array<Card, 6> NormalCards;
+			std::array<Card, 6> PBRCards;
+			std::array<Card, 6> EmissveCards;
+			std::array<std::string, 6> LightCacheCards;
+		};
+
+		std::vector<MeshSurfaceCache> MeshSurfaceCaches;
 	};
 
 	inline const FLOAT gfSceneGridSize = 64.0f;
