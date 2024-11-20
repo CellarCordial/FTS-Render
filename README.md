@@ -3,7 +3,7 @@
 ## Build
 
 ```powershell
-git clone git@github.com:CellarCordial/FTS-Render.git
+git clone https://github.com/CellarCordial/FTS-Render.git
 cd FTS-Render
 mkdir build
 cd build
