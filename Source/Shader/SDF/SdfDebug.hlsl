@@ -66,7 +66,7 @@ float4 PS(FVertexOutput In) : SV_Target0
 
         // 若发现为空 chunk, 则加速前进.
         float Udf = abs(Sdf) < 0.00001f ? fChunkDiagonal : Sdf;
-        if (Udf <= AbsThreshold) break;
+        if (abs(Udf) <= AbsThreshold) break;
 
         p += Udf * d;
 
