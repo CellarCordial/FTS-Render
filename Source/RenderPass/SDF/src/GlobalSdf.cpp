@@ -120,15 +120,16 @@ namespace FTS
 							(ix / dwChunkNumPerAxis) % dwChunkNumPerAxis,
 							ix / (dwChunkNumPerAxis * dwChunkNumPerAxis)
 						};
-						rPassConstants.VoxelOffset *= gdwVoxelNumPerChunk;
+						rPassConstants.VoxelOffset = (rPassConstants.VoxelOffset) * gdwVoxelNumPerChunk - gdwVoxelNumPerChunk / 4;
+						rPassConstants.dwVoxelNumPerAxis = gdwVoxelNumPerChunk + gdwVoxelNumPerChunk / 2;
 
 						ReturnIfFalse(pCmdList->SetComputeState(m_ClearPassComputeState));
 						ReturnIfFalse(pCmdList->SetPushConstants(&rPassConstants, sizeof(Constant::GlobalSdfConstants)));
 
 						FVector3I ThreadGroupNum = {
-							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
-							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
-							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
+							Align(rPassConstants.dwVoxelNumPerAxis, static_cast<UINT32>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
+							Align(rPassConstants.dwVoxelNumPerAxis, static_cast<UINT32>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
+							Align(rPassConstants.dwVoxelNumPerAxis, static_cast<UINT32>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
 						};
 
 						ReturnIfFalse(pCmdList->Dispatch(ThreadGroupNum.x, ThreadGroupNum.y, ThreadGroupNum.z));
@@ -182,8 +183,8 @@ namespace FTS
 								(ix / dwChunkNumPerAxis) % dwChunkNumPerAxis,
 								ix / (dwChunkNumPerAxis * dwChunkNumPerAxis)
 							};
-							rPassConstants.VoxelOffset = (rPassConstants.VoxelOffset - 0.5f) * gdwVoxelNumPerChunk;
-							rPassConstants.dwVoxelNumPerAxis = gdwVoxelNumPerChunk * 1.5f;
+							rPassConstants.VoxelOffset = (rPassConstants.VoxelOffset) * gdwVoxelNumPerChunk - gdwVoxelNumPerChunk / 4;
+							rPassConstants.dwVoxelNumPerAxis = gdwVoxelNumPerChunk + gdwVoxelNumPerChunk / 2;
 
 							rPassConstants.VoxelWorldMatrix = {
 								fVoxelSize, 0.0f,		0.0f,		0.0f,

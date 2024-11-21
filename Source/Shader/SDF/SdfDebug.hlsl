@@ -65,10 +65,11 @@ float4 PS(FVertexOutput In) : SV_Target0
         float Sdf = gSdf.Sample(gSampler, uvw);
 
         // 若发现为空 chunk, 则加速前进.
-        float Udf = abs(Sdf) < 0.00001f ? fChunkDiagonal : abs(Sdf);
+        float Udf = abs(Sdf) < 0.00001f ? fChunkDiagonal : Sdf;
         if (Udf <= AbsThreshold) break;
 
         p += Udf * d;
+
         float3 ClampPos = clamp(p, SdfLower, SdfUpper);
         if (length(ClampPos - p) > 0.0001f)
         {
