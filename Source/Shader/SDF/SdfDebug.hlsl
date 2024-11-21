@@ -68,10 +68,9 @@ float4 PS(FVertexOutput In) : SV_Target0
         float Udf = abs(Sdf) < 0.00001f ? fChunkDiagonal : abs(Sdf);
         if (Udf <= AbsThreshold) break;
 
-        float3 fNewPos = p + Udf * d;
-        
-        float3 ClampPos = clamp(fNewPos, SdfLower, SdfUpper);
-        if (length(ClampPos - fNewPos) > 0.0001f)
+        p += Udf * d;
+        float3 ClampPos = clamp(p, SdfLower, SdfUpper);
+        if (length(ClampPos - p) > 0.0001f)
         {
             float3 PlaneNormal;
             float fStep = IntersectRayBoxPlane(p, d, SdfLower, SdfUpper, PlaneNormal);
@@ -79,22 +78,6 @@ float4 PS(FVertexOutput In) : SV_Target0
             SdfLower += PlaneNormal * fChunkSize;
             SdfUpper += PlaneNormal * fChunkSize;
             p += d * fStep;
-
-            // 重新采样.
-            uvw = (p - SceneGridOrigin) / fSceneGridSize;
-            if (any(saturate(uvw) != uvw)) { break; }
-
-            Sdf = gSdf.Sample(gSampler, uvw);
-
-            // 若发现为空 chunk, 则加速前进.
-            Udf = abs(Sdf) < 0.00001f ? fChunkDiagonal : abs(Sdf);
-            if (Udf <= AbsThreshold) break;
-
-            p += Udf * d;
-        }
-        else
-        {
-            p = fNewPos;
         }
     }
 

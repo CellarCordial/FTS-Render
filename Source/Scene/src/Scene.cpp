@@ -429,16 +429,6 @@ namespace FTS
 
 				rMeshDF.Bvh.Build(BvhVertices, static_cast<UINT32>(crSubmesh.Indices.size() / 3));
 				rMeshDF.SdfBox = rMeshDF.Bvh.GlobalBox;
-
-				FVector3F Extent = rMeshDF.SdfBox.m_Upper - rMeshDF.SdfBox.m_Lower;
-				for (UINT32 ix = 0; ix < 3; ++ix)
-				{
-					if (Extent[ix] < 0.0001f)
-					{
-						rMeshDF.SdfBox.m_Upper[ix] += 0.001f;
-						rMeshDF.SdfBox.m_Lower[ix] -= 0.001f;
-					}
-				}
 			}
 		}
 

@@ -33,46 +33,7 @@ namespace FTS
 	BOOL FGlobalSdfPass::Execute(ICommandList* pCmdList, IRenderResourceCache* pCache)
 	{
 		ReturnIfFalse(pCmdList->Open());
-
-		if (!m_bGlobalSdfInited)
-		{
-			ReturnIfFalse(pCmdList->SetComputeState(m_ClearPassComputeState));
-
-			BOOL bResOfGLobalSdfPassExecute = pCache->GetWorld()->Each<FSceneGrid>(
-				[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
-				{
-					for (UINT32 ix = 0; ix < pGrid->Chunks.size(); ++ix)
-					{
-						auto& rPassConstants = m_PassConstants.emplace_back();
-						rPassConstants.fGIMaxDistance = gfSceneGridSize;
-
-						UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
-						rPassConstants.VoxelOffset = {
-							ix % dwChunkNumPerAxis,
-							(ix / dwChunkNumPerAxis) % dwChunkNumPerAxis,
-							ix / (dwChunkNumPerAxis * dwChunkNumPerAxis)
-						};
-						rPassConstants.VoxelOffset *= gdwVoxelNumPerChunk;
-						ReturnIfFalse(pCmdList->SetPushConstants(&rPassConstants, sizeof(Constant::GlobalSdfConstants)));
-
-						FVector3I ThreadGroupNum = {
-							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
-							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
-							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
-						};
-						ReturnIfFalse(pCmdList->Dispatch(ThreadGroupNum.x, ThreadGroupNum.y, ThreadGroupNum.z));
-					}
-					return true;
-				}
-			);
-
-			ReturnIfFalse(bResOfGLobalSdfPassExecute);
-			ReturnIfFalse(pCmdList->Close());
-			m_bGlobalSdfInited = true;
-			return true;
-		}
-
-
+		
 		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
 		FLOAT fVoxelSize = gfSceneGridSize / gdwGlobalSdfResolution;
 		FLOAT fOffset = -gfSceneGridSize * 0.5f + fVoxelSize * 0.5f;
@@ -136,7 +97,7 @@ namespace FTS
 				}
 			}
 
-			ReturnIfFalse(!m_ModelSdfDatas.empty());
+			ReturnIfFalse(!m_ModelSdfDatas.empty())
 			ReturnIfFalse(pCmdList->WriteBuffer(
 				m_pModelSdfDataBuffer.Get(),
 				m_ModelSdfDatas.data(),
@@ -144,9 +105,43 @@ namespace FTS
 			));
 		}
 
+		// Clear Pass.
+		BOOL bResOfGLobalSdfPassExecute = pCache->GetWorld()->Each<FSceneGrid>(
+			[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
+			{
+				for (UINT32 ix = 0; ix < pGrid->Chunks.size(); ++ix)
+				{
+					auto& rChunk = pGrid->Chunks[ix];
+					if (rChunk.bModelMoved && rChunk.pModelEntities.empty())
+					{
+						auto& rPassConstants = m_PassConstants.emplace_back();
+						rPassConstants.VoxelOffset = {
+							ix % dwChunkNumPerAxis,
+							(ix / dwChunkNumPerAxis) % dwChunkNumPerAxis,
+							ix / (dwChunkNumPerAxis * dwChunkNumPerAxis)
+						};
+						rPassConstants.VoxelOffset *= gdwVoxelNumPerChunk;
+
+						ReturnIfFalse(pCmdList->SetComputeState(m_ClearPassComputeState));
+						ReturnIfFalse(pCmdList->SetPushConstants(&rPassConstants, sizeof(Constant::GlobalSdfConstants)));
+
+						FVector3I ThreadGroupNum = {
+							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
+							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
+							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
+						};
+
+						ReturnIfFalse(pCmdList->Dispatch(ThreadGroupNum.x, ThreadGroupNum.y, ThreadGroupNum.z));
+						rChunk.bModelMoved = false;
+					}
+				}
+						return true;
+			}
+		);
+		ReturnIfFalse(bResOfGLobalSdfPassExecute);
 
 		UINT32 dwMeshIndex = 0;
-		BOOL bResOfGLobalSdfPassExecute = pCache->GetWorld()->Each<FSceneGrid>(
+		bResOfGLobalSdfPassExecute = pCache->GetWorld()->Each<FSceneGrid>(
 			[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
 			{
 				for (UINT32 ix = 0; ix < pGrid->Chunks.size(); ++ix)
@@ -154,26 +149,9 @@ namespace FTS
 					auto& rChunk = pGrid->Chunks[ix];
 					if (rChunk.bModelMoved)
 					{
-						auto& rPassConstants = m_PassConstants.emplace_back();
-						rPassConstants.fGIMaxDistance = gfSceneGridSize;
-						rPassConstants.dwMeshSdfBegin = dwMeshIndex;
-						rPassConstants.VoxelOffset = {
-							ix % dwChunkNumPerAxis,
-							(ix / dwChunkNumPerAxis) % dwChunkNumPerAxis,
-							ix / (dwChunkNumPerAxis * dwChunkNumPerAxis)
-						};
+						UINT32 dwMeshIndexBegin = dwMeshIndex;
 
-						TVector3<INT32> ChunkOffset = TVector3<INT32>(rPassConstants.VoxelOffset) - dwChunkNumPerAxis / 2;
-
-						rPassConstants.VoxelOffset *= gdwVoxelNumPerChunk;
-						rPassConstants.VoxelWorldMatrix = {
-							fVoxelSize, 0.0f,		0.0f,		0.0f,
-							0.0f,		fVoxelSize, 0.0f,		0.0f,
-							0.0f,		0.0f,		fVoxelSize, 0.0f,
-							fOffset,	fOffset,	fOffset,	1.0f
-						};
-
-						// Buffer & Texture.
+						// Texture.
 						{
 							for (const auto* cpModel : rChunk.pModelEntities)
 							{
@@ -191,10 +169,29 @@ namespace FTS
 							}
 						}
 
-						rPassConstants.dwMeshSdfEnd = dwMeshIndex;
-
 						if (!m_pMeshSdfTextures.empty())
 						{
+							auto& rPassConstants = m_PassConstants.emplace_back();
+							rPassConstants.fGIMaxDistance = gfSceneGridSize;
+							rPassConstants.dwMeshSdfBegin = dwMeshIndexBegin;
+							rPassConstants.dwMeshSdfEnd = dwMeshIndex;
+
+							// 扩大一次更新的 Chunk 范围.
+							rPassConstants.VoxelOffset = {
+								ix % dwChunkNumPerAxis,
+								(ix / dwChunkNumPerAxis) % dwChunkNumPerAxis,
+								ix / (dwChunkNumPerAxis * dwChunkNumPerAxis)
+							};
+							rPassConstants.VoxelOffset = (rPassConstants.VoxelOffset - 0.5f) * gdwVoxelNumPerChunk;
+							rPassConstants.dwVoxelNumPerAxis = gdwVoxelNumPerChunk * 1.5f;
+
+							rPassConstants.VoxelWorldMatrix = {
+								fVoxelSize, 0.0f,		0.0f,		0.0f,
+								0.0f,		fVoxelSize, 0.0f,		0.0f,
+								0.0f,		0.0f,		fVoxelSize, 0.0f,
+								fOffset,	fOffset,	fOffset,	1.0f
+							};
+
 							// Binding Set.
 							{
 								m_pBindlessSet->Resize(static_cast<UINT32>(m_pMeshSdfTextures.size()), false);
@@ -205,24 +202,19 @@ namespace FTS
 							}
 
 							ReturnIfFalse(pCmdList->SetComputeState(m_ComputeState));
+							ReturnIfFalse(pCmdList->SetPushConstants(&rPassConstants, sizeof(Constant::GlobalSdfConstants)));
+
+							FVector3I ThreadGroupNum = {
+								Align(rPassConstants.dwVoxelNumPerAxis, static_cast<UINT32>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
+								Align(rPassConstants.dwVoxelNumPerAxis, static_cast<UINT32>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
+								Align(rPassConstants.dwVoxelNumPerAxis, static_cast<UINT32>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
+							};
+
+							ReturnIfFalse(pCmdList->Dispatch(ThreadGroupNum.x, ThreadGroupNum.y, ThreadGroupNum.z));
+
+							m_pMeshSdfTextures.clear();
+							rChunk.bModelMoved = false;
 						}
-						else
-						{
-							ReturnIfFalse(pCmdList->SetComputeState(m_ClearPassComputeState));
-						}
-
-						ReturnIfFalse(pCmdList->SetPushConstants(&rPassConstants, sizeof(Constant::GlobalSdfConstants)));
-
-						FVector3I ThreadGroupNum = {
-							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
-							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
-							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
-						};
-
-						ReturnIfFalse(pCmdList->Dispatch(ThreadGroupNum.x, ThreadGroupNum.y, ThreadGroupNum.z));
-
-						m_pMeshSdfTextures.clear();
-						rChunk.bModelMoved = false;
 					}
 				}
 				return true;

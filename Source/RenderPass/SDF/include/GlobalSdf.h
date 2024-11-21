@@ -20,7 +20,8 @@ namespace FTS
 			
 			UINT32 dwMeshSdfBegin = 0;
 			UINT32 dwMeshSdfEnd = 0;
-			FVector2I PAD;
+			UINT32 dwVoxelNumPerAxis = 0;
+			UINT32 PAD = 0;
 		};
 		
 		struct ModelSdfData
@@ -37,7 +38,7 @@ namespace FTS
 	class FGlobalSdfPass : public IRenderPass
 	{
 	public:
-		FGlobalSdfPass() { Type = ERenderPassType::Precompute; }
+		FGlobalSdfPass() { Type = ERenderPassType::Precompute | ERenderPassType::Exclude; }
 
 		BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache) override;
 		BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache) override;
@@ -51,7 +52,6 @@ namespace FTS
 
 	private:
 		FBounds3F m_GlobalBox;
-		BOOL m_bGlobalSdfInited = false;
 		UINT32 m_dwModelSdfDataDefaultCount = 32;
 		std::vector<Constant::GlobalSdfConstants> m_PassConstants;
 		std::vector<Constant::ModelSdfData> m_ModelSdfDatas;

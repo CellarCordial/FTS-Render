@@ -23,7 +23,8 @@ cbuffer gPassConstant : register(b0)
 
     uint dwMeshSdfBegin; 
     uint dwMeshSdfEnd;
-    uint2 PAD;
+    uint dwVoxelNumPerAxis;
+    uint PAD;
 };
 
 
@@ -39,6 +40,8 @@ float CalcSdf(float fMinSdf, uint dwSdfIndex, float3 VoxelWorldPos);
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, THREAD_GROUP_SIZE_Z)]
 void CS(uint3 ThreadID : SV_DispatchThreadID)
 {
+    if (any(ThreadID >= dwVoxelNumPerAxis)) return;
+
     uint3 VoxelID = VoxelOffset + ThreadID;
     float3 VoxelWorldPos = mul(float4(VoxelID, 1.0f), VoxelWorldMatrix).xyz;
 
@@ -71,7 +74,7 @@ float CalcSdf(float fMinSdf, uint dwSdfIndex, float3 VoxelWorldPos)
     if (fDistanceToSdf < 0.001f) return min(sdf, fMinSdf);
 
     // 精度非常低.
-    return min(fMinSdf, sqrt(fDistanceToSdf * fDistanceToSdf + sdf * sdf));
+    return min(fMinSdf, fDistanceToSdf + sdf);
 }
 
 #endif
