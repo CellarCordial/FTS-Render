@@ -20,8 +20,9 @@ namespace FTS
 			
 			UINT32 dwMeshSdfBegin = 0;
 			UINT32 dwMeshSdfEnd = 0;
+			UINT32 dwVoxelNumExtent = 0;
 			UINT32 dwVoxelNumPerAxis = 0;
-			UINT32 PAD = 0;
+			UINT32 bSurroundChunkUpdated = 0;
 		};
 		
 		struct ModelSdfData

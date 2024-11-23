@@ -825,11 +825,11 @@ namespace FTS
         return true;
     }
 
-	BOOL FDX12BindlessSet::SetSlot(const FBindingSetItem& crItem, UINT32 dwSlot)
+	BOOL FDX12BindlessSet::SetSlot(const FBindingSetItem& crItem)
 	{
 		if (crItem.dwSlot >= m_dwCapacity) return false;
 
-		D3D12_CPU_DESCRIPTOR_HANDLE ViewHandle = m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(m_dwFirstDescriptorIndex);
+		D3D12_CPU_DESCRIPTOR_HANDLE ViewHandle = m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(m_dwFirstDescriptorIndex + crItem.dwSlot);
 
 		switch (crItem.Type)
 		{

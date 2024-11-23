@@ -209,12 +209,15 @@ namespace FTS
 					FTextureSlice{}
 				));
 
-				ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateGlobalSdf>(
-					[](FEntity* pEntity, Event::UpdateGlobalSdf* pEvent) -> BOOL
-					{
-						return pEvent->Broadcast();
-					}
-				));
+				if (m_dwCurrMeshSdfIndex + 1 == static_cast<UINT32>(m_pDistanceField->MeshDistanceFields.size()))
+				{
+					ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateGlobalSdf>(
+						[](FEntity* pEntity, Event::UpdateGlobalSdf* pEvent) -> BOOL
+						{
+							return pEvent->Broadcast();
+						}
+					));
+				}
 			}
 		}
 		else
@@ -229,12 +232,15 @@ namespace FTS
 				gdwSdfResolution * gdwSdfResolution* dwPixelSize
 			));
 
-			ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateGlobalSdf>(
-				[](FEntity* pEntity, Event::UpdateGlobalSdf* pEvent) -> BOOL
-				{
-					return pEvent->Broadcast();
-				}
-			));
+			if (m_dwCurrMeshSdfIndex + 1 == static_cast<UINT32>(m_pDistanceField->MeshDistanceFields.size()))
+			{
+				ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateGlobalSdf>(
+					[](FEntity* pEntity, Event::UpdateGlobalSdf* pEvent) -> BOOL
+					{
+						return pEvent->Broadcast();
+					}
+				));
+			}
 		}
 
 		ReturnIfFalse(pCmdList->Close());
@@ -297,6 +303,7 @@ namespace FTS
 				Gui::NotifyMessage(Gui::ENotifyType::Info, strSdfName + " bake finished.");
 				m_pDistanceField = nullptr;
 				pBinaryOutput.reset();
+				m_dwCurrMeshSdfIndex = 0;
 			}
 			else
 			{
@@ -308,9 +315,14 @@ namespace FTS
 			rMeshDF.SdfData.clear();
 
 			if (++m_dwCurrMeshSdfIndex < static_cast<UINT32>(m_pDistanceField->MeshDistanceFields.size()))
+			{
 				ContinuePrecompute();
+			}
 			else
+			{
 				m_pDistanceField = nullptr;
+				m_dwCurrMeshSdfIndex = 0;
+			}
 		}
 
 		m_pSdfOutputTexture.Reset();

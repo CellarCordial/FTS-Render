@@ -459,7 +459,7 @@ namespace FTS
     {
         virtual UINT32 GetCapacity() const = 0;
 		virtual void Resize(UINT32 dwNewSize, BOOL bKeepContents) = 0;
-		virtual BOOL SetSlot(const FBindingSetItem& crItem, UINT32 dwSlot) = 0;
+		virtual BOOL SetSlot(const FBindingSetItem& crItem) = 0;
 
 		virtual ~IBindlessSet() = default;
     };

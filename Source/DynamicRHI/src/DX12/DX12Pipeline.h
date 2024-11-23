@@ -305,7 +305,7 @@ namespace FTS
         // IBindlessSet
         UINT32 GetCapacity() const override { return m_dwCapacity; }
 		void Resize(UINT32 dwNewSize, BOOL bKeepContents) override;
-		BOOL SetSlot(const FBindingSetItem& crItem, UINT32 dwSlot) override;
+		BOOL SetSlot(const FBindingSetItem& crItem) override;
 
     public:
         UINT32 m_dwFirstDescriptorIndex = 0;
