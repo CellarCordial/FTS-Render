@@ -1,7 +1,6 @@
 #include "../include/GlobalSdf.h"
 #include "../../../Shader/ShaderCompiler.h"
 #include "../../../Gui/include/GuiPanel.h"
-#include "../../../Scene/include/Scene.h"
 
 namespace FTS
 {
@@ -33,49 +32,93 @@ namespace FTS
 	BOOL FGlobalSdfPass::Execute(ICommandList* pCmdList, IRenderResourceCache* pCache)
 	{
 		ReturnIfFalse(pCmdList->Open());
-		
-		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
-		FLOAT fVoxelSize = gfSceneGridSize / gdwGlobalSdfResolution;
-		FLOAT fOffset = -gfSceneGridSize * 0.5f + fVoxelSize * 0.5f;
 
-		BOOL bUpdateModelSdfDataRes = (pCache->GetWorld()->Each<FSceneGrid>(
-			[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
-			{
-				for (UINT32 ix = 0; ix < pGrid->Chunks.size(); ++ix)
+		// Texture.
+		{
+			BOOL bUpdateModelSdfTestureRes = (pCache->GetWorld()->Each<FSceneGrid>(
+				[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
 				{
-					const auto& crChunk = pGrid->Chunks[ix];
-					if (crChunk.bModelMoved)
+					for (const auto& crChunk : pGrid->Chunks)
 					{
-						UINT32 dwCounter = 0;
-						for (const auto* cpModel : crChunk.pModelEntities)
+						if (crChunk.bModelMoved)
 						{
-							FDistanceField* pDF = cpModel->GetComponent<FDistanceField>();
-							FTransform* pTrans = cpModel->GetComponent<FTransform>();
-
-							for (const auto& crMeshDF : pDF->MeshDistanceFields)
+							UINT32 dwCounter = 0;
+							for (const auto* cpModel : crChunk.pModelEntities)
 							{
-								FDistanceField::TransformData Data = crMeshDF.GetTransformed(pTrans);
-								m_ModelSdfDatas.emplace_back(
-									Constant::ModelSdfData{
-										.CoordMatrix = Data.CoordMatrix,
-										.SdfLower = Data.SdfBox.m_Lower,
-										.SdfUpper = Data.SdfBox.m_Upper,
-										.dwMeshSdfIndex = dwCounter++
+								FDistanceField* pDF = cpModel->GetComponent<FDistanceField>();
+								for (const auto& crMeshDF : pDF->MeshDistanceFields)
+								{
+									const FDistanceField::MeshDistanceField* pMeshSdf = &crMeshDF;
+									auto Iter = std::find(m_cpMeshSdfs.begin(), m_cpMeshSdfs.end(), pMeshSdf);
+									if (Iter == m_cpMeshSdfs.end())
+									{
+										m_cpMeshSdfs.emplace_back(&crMeshDF);
 									}
-								);
+								}
 							}
 						}
 					}
+					return true;
 				}
-				return true;
-			}
-		));
-		ReturnIfFalse(bUpdateModelSdfDataRes);
+			));
+			ReturnIfFalse(bUpdateModelSdfTestureRes);
+		}
 
-		IDevice* pDevice = pCmdList->GetDevice();
+		// Binding Set.
+		{
+			m_pBindlessSet->Resize(static_cast<UINT32>(m_cpMeshSdfs.size()), false);
+			for (UINT32 ix = 0; ix < m_cpMeshSdfs.size(); ++ix)
+			{
+				ITexture* pSdfTexture;
+				ReturnIfFalse(pCache->Require(m_cpMeshSdfs[ix]->strSdfTextureName.c_str())->QueryInterface(
+					IID_ITexture,
+					PPV_ARG(&pSdfTexture)
+				));
+				m_pBindlessSet->SetSlot(FBindingSetItem::CreateTexture_SRV(ix, pSdfTexture));
+			}
+		}
 
 		// Buffer
 		{
+			BOOL bUpdateModelSdfDataRes = (pCache->GetWorld()->Each<FSceneGrid>(
+				[&](FEntity* pEntity, FSceneGrid* pGrid) -> BOOL
+				{
+					for (const auto& crChunk : pGrid->Chunks)
+					{
+						if (crChunk.bModelMoved)
+						{
+							UINT32 dwCounter = 0;
+							for (const auto* cpModel : crChunk.pModelEntities)
+							{
+								FDistanceField* pDF = cpModel->GetComponent<FDistanceField>();
+								FTransform* pTrans = cpModel->GetComponent<FTransform>();
+
+								for (const auto& crMeshDF : pDF->MeshDistanceFields)
+								{
+									const FDistanceField::MeshDistanceField* pMeshSdf = &crMeshDF;
+									auto Iter = std::find(m_cpMeshSdfs.begin(), m_cpMeshSdfs.end(), pMeshSdf);
+									ReturnIfFalse(Iter != m_cpMeshSdfs.end());
+
+									FDistanceField::TransformData Data = crMeshDF.GetTransformed(pTrans);
+									m_ModelSdfDatas.emplace_back(
+										Constant::ModelSdfData{
+											.CoordMatrix = Data.CoordMatrix,
+											.SdfLower = Data.SdfBox.m_Lower,
+											.SdfUpper = Data.SdfBox.m_Upper,
+											.dwMeshSdfIndex = static_cast<UINT32>(std::distance(m_cpMeshSdfs.begin(), Iter))
+										}
+									);
+								}
+							}
+						}
+					}
+					return true;
+				}
+			));
+			ReturnIfFalse(bUpdateModelSdfDataRes);
+
+			IDevice* pDevice = pCmdList->GetDevice();
+
 			if (m_ModelSdfDatas.size() > m_dwModelSdfDataDefaultCount)
 			{
 				m_pModelSdfDataBuffer.Reset();
@@ -104,6 +147,11 @@ namespace FTS
 				m_ModelSdfDatas.size() * sizeof(Constant::ModelSdfData)
 			));
 		}
+
+
+		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
+		FLOAT fVoxelSize = gfSceneGridSize / gdwGlobalSdfResolution;
+		FLOAT fOffset = -gfSceneGridSize * 0.5f + fVoxelSize * 0.5f;
 
 		// Clear Pass.
 		BOOL bResOfGLobalSdfPassExecute = pCache->GetWorld()->Each<FSceneGrid>(
@@ -136,7 +184,7 @@ namespace FTS
 						rChunk.bModelMoved = false;
 					}
 				}
-						return true;
+				return true;
 			}
 		);
 		ReturnIfFalse(bResOfGLobalSdfPassExecute);
@@ -151,23 +199,9 @@ namespace FTS
 					if (rChunk.bModelMoved)
 					{
 						UINT32 dwMeshIndexBegin = dwMeshIndex;
-
-						// Texture.
+						for (const auto* cpModel : rChunk.pModelEntities)
 						{
-							for (const auto* cpModel : rChunk.pModelEntities)
-							{
-								FDistanceField* pDF = cpModel->GetComponent<FDistanceField>();
-								FTransform* pTrans = cpModel->GetComponent<FTransform>();
-								for (const auto& crMeshDF : pDF->MeshDistanceFields)
-								{
-									dwMeshIndex++;
-									auto& rSdfTexture = m_pMeshSdfTextures.emplace_back();
-									ReturnIfFalse(pCache->Require(crMeshDF.strSdfTextureName.c_str())->QueryInterface(
-										IID_ITexture,
-										PPV_ARG(&rSdfTexture)
-									));
-								}
-							}
+							dwMeshIndex += static_cast<UINT32>(cpModel->GetComponent<FDistanceField>()->MeshDistanceFields.size());
 						}
 
 						auto& rPassConstants = m_PassConstants.emplace_back();
@@ -195,28 +229,20 @@ namespace FTS
 						// 为了防止后更新的 chunk 在扩展的范围中把已经更新的 chunk 覆盖一部分, 所以作此检测, 使得后更新的 chunk 会比较已经更新的 chunk 的 sdf.
 						auto FuncIfReadChunk = [&](UINT32 dwIndex, INT32 dwOffset)
 						{
-							BOOL bReadChunk = ix + dwOffset >= 0 &&
-											  ix + dwOffset < pGrid->Chunks.size() &&
-											  !pGrid->Chunks[ix + dwOffset].pModelEntities.empty() &&
-											  !pGrid->Chunks[ix + dwOffset].bModelMoved;
+							BOOL bReadChunk = dwOffset >= 0 &&
+											  dwOffset < pGrid->Chunks.size() &&
+											  !pGrid->Chunks[dwOffset].pModelEntities.empty() &&
+											  !pGrid->Chunks[dwOffset].bModelMoved;
 							rPassConstants.bSurroundChunkUpdated |= bReadChunk ? (1 << dwIndex) : 0;
 						};
 
-						FuncIfReadChunk(0, -dwChunkNumPerAxis * dwChunkNumPerAxis);
-						FuncIfReadChunk(1, -dwChunkNumPerAxis);
-						FuncIfReadChunk(2, -1);
-						FuncIfReadChunk(3, 1);
-						FuncIfReadChunk(4, dwChunkNumPerAxis);
-						FuncIfReadChunk(5, dwChunkNumPerAxis * dwChunkNumPerAxis);
-
-						// Binding Set.
-						{
-							m_pBindlessSet->Resize(static_cast<UINT32>(m_pMeshSdfTextures.size()), false);
-							for (UINT32 ix = 0; ix < m_pMeshSdfTextures.size(); ++ix)
-							{
-								m_pBindlessSet->SetSlot(FBindingSetItem::CreateTexture_SRV(ix, m_pMeshSdfTextures[ix]));
-							}
-						}
+						INT32 dwChunkIndex = ix;
+						FuncIfReadChunk(0, dwChunkIndex - dwChunkNumPerAxis * dwChunkNumPerAxis);
+						FuncIfReadChunk(1, dwChunkIndex - dwChunkNumPerAxis);
+						FuncIfReadChunk(2, dwChunkIndex - 1);
+						FuncIfReadChunk(3, dwChunkIndex + 1);
+						FuncIfReadChunk(4, dwChunkIndex + dwChunkNumPerAxis);
+						FuncIfReadChunk(5, dwChunkIndex + dwChunkNumPerAxis * dwChunkNumPerAxis);
 
 						ReturnIfFalse(pCmdList->SetComputeState(m_ComputeState));
 						ReturnIfFalse(pCmdList->SetPushConstants(&rPassConstants, sizeof(Constant::GlobalSdfConstants)));
@@ -229,7 +255,6 @@ namespace FTS
 
 						ReturnIfFalse(pCmdList->Dispatch(ThreadGroupNum.x, ThreadGroupNum.y, ThreadGroupNum.z));
 
-						m_pMeshSdfTextures.clear();
 						rChunk.bModelMoved = false;
 					}
 				}
@@ -245,6 +270,7 @@ namespace FTS
 
 	BOOL FGlobalSdfPass::FinishPass()
 	{
+		m_cpMeshSdfs.clear();
 		m_ModelSdfDatas.clear();
 		m_PassConstants.clear();
 		return true;

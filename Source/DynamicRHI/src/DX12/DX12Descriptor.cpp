@@ -119,9 +119,8 @@ namespace FTS
 
     void FDX12StaticDescriptorHeap::ReleaseDescriptors(UINT32 dwBaseIndex, UINT32 dwNum)
     {
-        std::lock_guard LockGuard(m_Mutex);
-
         if (dwNum == 0) return;
+        std::lock_guard LockGuard(m_Mutex);
 
         for (UINT32 ix = dwBaseIndex; ix < dwBaseIndex + dwNum; ix++)
         {

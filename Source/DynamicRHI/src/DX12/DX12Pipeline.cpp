@@ -893,11 +893,6 @@ namespace FTS
 		{
 			m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptors(dwOldFirstViewIndex + dwNewSize, dwOldCapacity - dwNewSize);
 			m_dwCapacity = dwNewSize;
-
-			if (!bKeepContents && dwNewSize > 0)
-			{
-				m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptors(dwOldFirstViewIndex, dwNewSize);
-			}
 			return;
 		}
         else

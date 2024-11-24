@@ -53,7 +53,7 @@ void CS(uint3 ThreadID : SV_DispatchThreadID)
         fMinSdf = CalcSdf(fMinSdf, ix, VoxelWorldPos);
     }
 
-    gGlobalSdfTexture[VoxelID] = ReadSdf(ThreadID, VoxelID, fMinSdf);
+    gGlobalSdfTexture[VoxelID] = fMinSdf;
 }
 
 float ReadSdf(uint3 ThreadID, uint3 VoxelID, float fMinSdf)

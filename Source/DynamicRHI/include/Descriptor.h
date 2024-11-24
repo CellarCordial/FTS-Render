@@ -207,7 +207,7 @@ namespace FTS
     {
         IResource* pResource = nullptr;
 
-        UINT32 dwSlot = 0u;
+        UINT32 dwSlot = 0u;     // 对 bindless set 来说, 这是 slot offset.
 
         EResourceType Type          : 8 = EResourceType::None;
         ETextureDimension Dimension : 8 = ETextureDimension::Unknown; // 供 Texture_SRV, Texture_UAV 使用

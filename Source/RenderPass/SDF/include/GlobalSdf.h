@@ -5,6 +5,7 @@
 #include "../../../Math/include/Vector.h"
 #include "../../../Math/include/Matrix.h"
 #include "../../../Math/include/Bounds.h"
+#include "../../../Scene/include/Scene.h"
 #include <memory>
 
 namespace FTS
@@ -59,7 +60,7 @@ namespace FTS
 
 		TComPtr<IBuffer> m_pModelSdfDataBuffer;
 		TComPtr<ITexture> m_pGlobalSdfTexture;
-		std::vector<ITexture*> m_pMeshSdfTextures;
+		std::vector<const FDistanceField::MeshDistanceField*> m_cpMeshSdfs;
 
 		TComPtr<IBindingLayout> m_pBindingLayout;
 		TComPtr<IBindingLayout> m_pDynamicBindingLayout;
