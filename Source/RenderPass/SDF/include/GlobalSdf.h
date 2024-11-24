@@ -21,9 +21,6 @@ namespace FTS
 			
 			UINT32 dwMeshSdfBegin = 0;
 			UINT32 dwMeshSdfEnd = 0;
-			UINT32 dwVoxelNumExtent = 0;
-			UINT32 dwVoxelNumPerAxis = 0;
-			UINT32 bSurroundChunkUpdated = 0;
 		};
 		
 		struct ModelSdfData
@@ -54,7 +51,7 @@ namespace FTS
 
 	private:
 		FBounds3F m_GlobalBox;
-		UINT32 m_dwModelSdfDataDefaultCount = 32;
+		UINT32 m_dwModelSdfDataDefaultCount = 64;
 		std::vector<Constant::GlobalSdfConstants> m_PassConstants;
 		std::vector<Constant::ModelSdfData> m_ModelSdfDatas;
 

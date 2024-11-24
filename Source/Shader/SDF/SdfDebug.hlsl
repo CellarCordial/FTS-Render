@@ -9,7 +9,7 @@ cbuffer gPassConstants : register(b0)
     float3 FrustumD;        uint dwChunkNumPerAxis;
     float3 CameraPosition;  float fSceneGridSize;
     float3 SceneGridOrigin; float fMaxGIDistance;
-    float fChunkDiagonal;   float3 PAD;
+    float fDefaultMarch;   float3 PAD;
 };
 
 Texture3D<float> gSdf : register(t0);
@@ -65,21 +65,10 @@ float4 PS(FVertexOutput In) : SV_Target0
         float Sdf = gSdf.Sample(gSampler, uvw);
 
         // 若发现为空 chunk, 则加速前进.
-        float Udf = abs(Sdf) < 0.00001f ? fChunkDiagonal : Sdf;
+        float Udf = abs(Sdf) < 0.00001f ? fDefaultMarch : Sdf;
         if (abs(Udf) <= AbsThreshold) break;
 
         p += Udf * d;
-
-        float3 ClampPos = clamp(p, SdfLower, SdfUpper);
-        if (length(ClampPos - p) > 0.0001f)
-        {
-            float3 PlaneNormal;
-            float fStep = IntersectRayBoxPlane(p, d, SdfLower, SdfUpper, PlaneNormal);
-
-            SdfLower += PlaneNormal * fChunkSize;
-            SdfUpper += PlaneNormal * fChunkSize;
-            p += d * fStep;
-        }
     }
 
     float Color = float(ix) / float(dwMaxTraceSteps - 1);

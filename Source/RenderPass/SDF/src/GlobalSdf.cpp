@@ -134,13 +134,24 @@ namespace FTS
 					PPV_ARG(m_pModelSdfDataBuffer.GetAddressOf())
 				));
 
+				m_pDynamicBindingSet.Reset();
+
+				FBindingSetItemArray DynamicBindingSetItems(1);
+				DynamicBindingSetItems[0] = FBindingSetItem::CreateStructuredBuffer_SRV(0, m_pModelSdfDataBuffer.Get());
+				ReturnIfFalse(pDevice->CreateBindingSet(
+					FBindingSetDesc{ .BindingItems = DynamicBindingSetItems },
+					m_pDynamicBindingLayout.Get(),
+					IID_IBindingSet,
+					PPV_ARG(m_pDynamicBindingSet.GetAddressOf())
+				));
+
 				// Compute State.
 				{
 					m_ComputeState.pBindingSets[1] = m_pDynamicBindingSet.Get();
 				}
 			}
 
-			ReturnIfFalse(!m_ModelSdfDatas.empty())
+			ReturnIfFalse(!m_ModelSdfDatas.empty());
 			ReturnIfFalse(pCmdList->WriteBuffer(
 				m_pModelSdfDataBuffer.Get(),
 				m_ModelSdfDatas.data(),
@@ -168,16 +179,15 @@ namespace FTS
 							(ix / dwChunkNumPerAxis) % dwChunkNumPerAxis,
 							ix / (dwChunkNumPerAxis * dwChunkNumPerAxis)
 						};
-						rPassConstants.VoxelOffset = (rPassConstants.VoxelOffset) * gdwVoxelNumPerChunk - gdwVoxelNumPerChunk / 4;
-						rPassConstants.dwVoxelNumPerAxis = gdwVoxelNumPerChunk + gdwVoxelNumPerChunk / 2;
+						rPassConstants.VoxelOffset = (rPassConstants.VoxelOffset) * gdwVoxelNumPerChunk;
 
 						ReturnIfFalse(pCmdList->SetComputeState(m_ClearPassComputeState));
 						ReturnIfFalse(pCmdList->SetPushConstants(&rPassConstants, sizeof(Constant::GlobalSdfConstants)));
 
 						FVector3I ThreadGroupNum = {
-							Align(rPassConstants.dwVoxelNumPerAxis, static_cast<UINT32>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
-							Align(rPassConstants.dwVoxelNumPerAxis, static_cast<UINT32>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
-							Align(rPassConstants.dwVoxelNumPerAxis, static_cast<UINT32>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
+							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
+							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
+							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
 						};
 
 						ReturnIfFalse(pCmdList->Dispatch(ThreadGroupNum.x, ThreadGroupNum.y, ThreadGroupNum.z));
@@ -209,15 +219,12 @@ namespace FTS
 						rPassConstants.dwMeshSdfBegin = dwMeshIndexBegin;
 						rPassConstants.dwMeshSdfEnd = dwMeshIndex;
 
-						// 扩大一次更新的 Chunk 范围.
-						rPassConstants.dwVoxelNumExtent = gdwVoxelNumPerChunk / 4;
 						rPassConstants.VoxelOffset = {
 							ix % dwChunkNumPerAxis,
 							(ix / dwChunkNumPerAxis) % dwChunkNumPerAxis,
 							ix / (dwChunkNumPerAxis * dwChunkNumPerAxis)
 						};
-						rPassConstants.VoxelOffset = (rPassConstants.VoxelOffset) * gdwVoxelNumPerChunk - rPassConstants.dwVoxelNumExtent;
-						rPassConstants.dwVoxelNumPerAxis = gdwVoxelNumPerChunk + rPassConstants.dwVoxelNumExtent * 2;
+						rPassConstants.VoxelOffset = (rPassConstants.VoxelOffset) * gdwVoxelNumPerChunk;
 
 						rPassConstants.VoxelWorldMatrix = {
 							fVoxelSize, 0.0f,		0.0f,		0.0f,
@@ -226,31 +233,13 @@ namespace FTS
 							fOffset,	fOffset,	fOffset,	1.0f
 						};
 
-						// 为了防止后更新的 chunk 在扩展的范围中把已经更新的 chunk 覆盖一部分, 所以作此检测, 使得后更新的 chunk 会比较已经更新的 chunk 的 sdf.
-						auto FuncIfReadChunk = [&](UINT32 dwIndex, INT32 dwOffset)
-						{
-							BOOL bReadChunk = dwOffset >= 0 &&
-											  dwOffset < pGrid->Chunks.size() &&
-											  !pGrid->Chunks[dwOffset].pModelEntities.empty() &&
-											  !pGrid->Chunks[dwOffset].bModelMoved;
-							rPassConstants.bSurroundChunkUpdated |= bReadChunk ? (1 << dwIndex) : 0;
-						};
-
-						INT32 dwChunkIndex = ix;
-						FuncIfReadChunk(0, dwChunkIndex - dwChunkNumPerAxis * dwChunkNumPerAxis);
-						FuncIfReadChunk(1, dwChunkIndex - dwChunkNumPerAxis);
-						FuncIfReadChunk(2, dwChunkIndex - 1);
-						FuncIfReadChunk(3, dwChunkIndex + 1);
-						FuncIfReadChunk(4, dwChunkIndex + dwChunkNumPerAxis);
-						FuncIfReadChunk(5, dwChunkIndex + dwChunkNumPerAxis * dwChunkNumPerAxis);
-
 						ReturnIfFalse(pCmdList->SetComputeState(m_ComputeState));
 						ReturnIfFalse(pCmdList->SetPushConstants(&rPassConstants, sizeof(Constant::GlobalSdfConstants)));
 
 						FVector3I ThreadGroupNum = {
-							Align(rPassConstants.dwVoxelNumPerAxis, static_cast<UINT32>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
-							Align(rPassConstants.dwVoxelNumPerAxis, static_cast<UINT32>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
-							Align(rPassConstants.dwVoxelNumPerAxis, static_cast<UINT32>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
+							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
+							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
+							Align(gdwVoxelNumPerChunk, static_cast<UINT32>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
 						};
 
 						ReturnIfFalse(pCmdList->Dispatch(ThreadGroupNum.x, ThreadGroupNum.y, ThreadGroupNum.z));

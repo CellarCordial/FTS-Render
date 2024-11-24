@@ -444,6 +444,12 @@ namespace FTS
 			FVector3I UniformLower = FVector3I((Data.SdfBox.m_Lower + fGridSize / 2.0f) / fChunkSize);
 			FVector3I UniformUpper = FVector3I((Data.SdfBox.m_Upper + fGridSize / 2.0f) / fChunkSize);
 
+			for (UINT32 ix = 0; ix < 3; ++ix)
+			{
+				if (UniformLower[ix] != 0) UniformLower[ix] -= 1;
+				if (UniformUpper[ix] != dwChunkNumPerAxis - 1) UniformUpper[ix] += 1;
+			}
+
 			for (UINT32 z = UniformLower.z; z <= UniformUpper.z; ++z)
 			{
 				for (UINT32 y = UniformLower.y; y <= UniformUpper.y; ++y)
@@ -474,6 +480,12 @@ namespace FTS
 		{
 			FVector3I UniformLower = FVector3I((crBox.m_Lower + gfSceneGridSize / 2.0f) / fChunkSize);
 			FVector3I UniformUpper = FVector3I((crBox.m_Upper + gfSceneGridSize / 2.0f) / fChunkSize);
+
+			for (UINT32 ix = 0; ix < 3; ++ix)
+			{
+				if (UniformLower[ix] != 0) UniformLower[ix] -= 1;
+				if (UniformUpper[ix] != dwChunkNumPerAxis - 1) UniformUpper[ix] += 1;
+			}
 
 			for (UINT32 z = UniformLower.z; z <= UniformUpper.z; ++z)
 			{

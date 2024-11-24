@@ -120,7 +120,7 @@ namespace FTS
 			m_PassConstants.dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
 			m_PassConstants.fChunkSize = gfSceneGridSize / m_PassConstants.dwChunkNumPerAxis;
 			m_PassConstants.SceneGridOrigin = FVector3F(-gfSceneGridSize * 0.5f);
-			m_PassConstants.fChunkDiagonal = sqrt(m_PassConstants.fChunkSize * 3);
+			m_PassConstants.fDefaultMarch = m_PassConstants.fChunkSize;
 		}
 		
 		ReturnIfFalse(pCmdList->Open());

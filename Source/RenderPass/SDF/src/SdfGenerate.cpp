@@ -82,13 +82,19 @@ namespace FTS
 			ReturnIfFalse(pDevice->CreateComputePipeline(PipelineDesc, IID_IComputePipeline, PPV_ARG(m_pPipeline.GetAddressOf())));
 		}
 
+		// Compute State.
+		{
+			m_ComputeState.pBindingSets.Resize(1);
+			m_ComputeState.pPipeline = m_pPipeline.Get();
+		}
+
         return true;
     }
 
     BOOL FSdfGeneratePass::Execute(ICommandList* pCmdList, IRenderResourceCache* pCache)
     {
 		ReturnIfFalse(pCmdList->Open());
-
+		
 		const auto& crMeshDF = m_pDistanceField->MeshDistanceFields[m_dwCurrMeshSdfIndex];
 
 		if (!m_bResourceWrited)
@@ -167,8 +173,7 @@ namespace FTS
 
 				// Compute State.
 				{
-					m_ComputeState.pBindingSets.PushBack(m_pBindingSet.Get());
-					m_ComputeState.pPipeline = m_pPipeline.Get();
+					m_ComputeState.pBindingSets[0] = m_pBindingSet.Get();
 				}
 
 
@@ -312,16 +317,18 @@ namespace FTS
 		}
 		else
 		{
-			rMeshDF.SdfData.clear();
-
-			if (++m_dwCurrMeshSdfIndex < static_cast<UINT32>(m_pDistanceField->MeshDistanceFields.size()))
+			if (++m_dwCurrMeshSdfIndex == static_cast<UINT32>(m_pDistanceField->MeshDistanceFields.size()))
 			{
-				ContinuePrecompute();
+				std::string strSdfName = rMeshDF.strSdfTextureName.substr(0, rMeshDF.strSdfTextureName.find("SdfTexture")) + ".sdf";
+				Gui::NotifyMessage(Gui::ENotifyType::Info, strSdfName + " bake finished.");
+
+				for (auto& rDF : m_pDistanceField->MeshDistanceFields) rDF.SdfData.clear();
+				m_pDistanceField = nullptr;
+				m_dwCurrMeshSdfIndex = 0;
 			}
 			else
 			{
-				m_pDistanceField = nullptr;
-				m_dwCurrMeshSdfIndex = 0;
+				ContinuePrecompute();
 			}
 		}
 

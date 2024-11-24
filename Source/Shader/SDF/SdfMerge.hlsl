@@ -23,9 +23,6 @@ cbuffer gPassConstant : register(b0)
 
     uint dwMeshSdfBegin; 
     uint dwMeshSdfEnd;
-    uint dwVoxelNumExtent;
-    uint dwVoxelNumPerAxis;
-	uint bSurroundChunkUpdated;
 };
 
 
@@ -41,8 +38,6 @@ float ReadSdf(uint3 ThreadID, uint3 VoxelID, float fMinSdf);
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, THREAD_GROUP_SIZE_Z)]
 void CS(uint3 ThreadID : SV_DispatchThreadID)
 {
-    if (any(ThreadID >= dwVoxelNumPerAxis)) return;
-
     uint3 VoxelID = VoxelOffset + ThreadID;
     float3 VoxelWorldPos = mul(float4(VoxelID, 1.0f), VoxelWorldMatrix).xyz;
 
@@ -54,19 +49,6 @@ void CS(uint3 ThreadID : SV_DispatchThreadID)
     }
 
     gGlobalSdfTexture[VoxelID] = fMinSdf;
-}
-
-float ReadSdf(uint3 ThreadID, uint3 VoxelID, float fMinSdf)
-{
-    bool bRead = 
-        (ThreadID.x < dwVoxelNumExtent && (bSurroundChunkUpdated & 0x000001)) ||
-        (ThreadID.y < dwVoxelNumExtent && (bSurroundChunkUpdated & 0x000010)) ||
-        (ThreadID.z < dwVoxelNumExtent && (bSurroundChunkUpdated & 0x000100)) ||
-        (ThreadID.x >= dwVoxelNumPerAxis - dwVoxelNumExtent && (bSurroundChunkUpdated & 0x001000)) ||
-        (ThreadID.y >= dwVoxelNumPerAxis - dwVoxelNumExtent && (bSurroundChunkUpdated & 0x010000)) ||
-        (ThreadID.z >= dwVoxelNumPerAxis - dwVoxelNumExtent && (bSurroundChunkUpdated & 0x100000));
-
-    return bRead ? min(fMinSdf, gGlobalSdfTexture[VoxelID]) : fMinSdf;
 }
 
 float CalcSdf(float fMinSdf, uint dwSdfIndex, float3 VoxelWorldPos)
