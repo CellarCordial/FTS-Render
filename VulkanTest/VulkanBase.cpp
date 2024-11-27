@@ -1,5 +1,6 @@
 #include "VulkanBase.h"
 #include "../Source/Core/include/ComRoot.h"
+#include "vulkan/vulkan_core.h"
 
 namespace FTS
 {
@@ -34,6 +35,7 @@ namespace FTS
 		ReturnIfFalse(DestroyDebugUtilsMessenger());
 #endif
 		vkDestroyInstance(m_Instance, nullptr);
+		vkDestroyDevice(m_Device, nullptr);
 		return true;
 	}
 
@@ -71,7 +73,6 @@ namespace FTS
 
 		InstanceInfo.enabledExtensionCount = static_cast<UINT32>(m_Extensions.size());
 		InstanceInfo.ppEnabledExtensionNames = m_Extensions.data();
-		InstanceInfo.enabledLayerCount = 0;
 
 		return vkCreateInstance(&InstanceInfo, nullptr, &m_Instance) == VK_SUCCESS;
 	}
@@ -197,8 +198,39 @@ namespace FTS
 			{
 				return true;
 			}
+			m_dwQueueFamilyIndex++;
 		}
 		return false;
+	}
+
+
+	BOOL FVulkanBase::CreateDevice()
+	{
+		VkDeviceQueueCreateInfo QueueCreateInfo{};
+		QueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		QueueCreateInfo.queueFamilyIndex = m_dwQueueFamilyIndex;
+		QueueCreateInfo.queueCount = 1;
+		
+		float fQueuePriority = 1.0f;
+		QueueCreateInfo.pQueuePriorities = &fQueuePriority;
+
+		VkPhysicalDeviceFeatures DeviceFeatures{};
+
+		VkDeviceCreateInfo DeviceCreateInfo{};
+		DeviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+		DeviceCreateInfo.pQueueCreateInfos = &QueueCreateInfo;
+		DeviceCreateInfo.queueCreateInfoCount = 1;
+		DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures;
+		DeviceCreateInfo.enabledExtensionCount = 0;
+#if DEBUG
+		DeviceCreateInfo.ppEnabledLayerNames = m_ValidationLayers.data();
+		DeviceCreateInfo.enabledLayerCount = static_cast<UINT32>(m_ValidationLayers.size());
+#endif
+
+		ReturnIfFalse(vkCreateDevice(m_PhysicalDevice, &DeviceCreateInfo, nullptr, &m_Device) == VK_SUCCESS);
+		vkGetDeviceQueue(m_Device, m_dwQueueFamilyIndex, 0, &m_GraphicsQueue);
+		
+		return true;  
 	}
 
 }

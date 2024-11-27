@@ -2,6 +2,7 @@
 #define VULKAN_BASE_H
 
 
+#include "vulkan/vulkan_core.h"
 #ifdef _WIN32
 #define VK_USE_PLATFORM_WIN32_KHR
 #endif
@@ -49,6 +50,8 @@ namespace FTS
 		BOOL PickPhysicalDevice();
 		BOOL FindQueueFamily(const auto& crPhysicalDevice);
 
+		BOOL CreateDevice();
+
 	private:
 		VkInstance m_Instance;
 		std::vector<std::string> m_InstanceLayers;
@@ -59,7 +62,12 @@ namespace FTS
 		std::vector<const CHAR*> m_ValidationLayers;
 		std::vector<const CHAR*> m_Extensions;
 		VkDebugUtilsMessengerEXT m_DebugCallback;
+
 		VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
+		UINT32 m_dwQueueFamilyIndex = 0;
+
+		VkDevice m_Device;
+		VkQueue m_GraphicsQueue;
 
 		FGlfwWindow m_GlfwWindow;
 	};

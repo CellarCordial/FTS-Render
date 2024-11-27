@@ -299,7 +299,7 @@ namespace FTS
 
 		ReturnIfFalse(pWorld->Boardcast(Event::OnModelLoad{ 
 			.pEntity = pWorld->CreateEntity(),
-			.strModelPath = "Asset/Mountain/terrain.gltf" 
+			.strModelPath = "Asset/Model/Mountain/terrain.gltf" 
 		}));
 
 
