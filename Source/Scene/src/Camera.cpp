@@ -17,7 +17,7 @@ namespace FTS
         DOUBLE dNewX, dNewY;
         glfwGetCursorPos(m_pWindow, &dNewX, &dNewY);
         FVector2F NewPos(dNewX, dNewY);
-        auto CusorState = glfwGetMouseButton(m_pWindow, GLFW_MOUSE_BUTTON_RIGHT);
+        auto CusorState = glfwGetMouseButton(m_pWindow, GLFW_MOUSE_BUTTON_LEFT);
         if (CusorState == GLFW_PRESS)
         {
              //glfwSetInputMode(m_pWindow, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);

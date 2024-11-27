@@ -2,6 +2,8 @@
 #include "../../../Shader/ShaderCompiler.h"
 #include "../../../Scene/include/Scene.h"
 #include "../../../Gui/include/GuiPanel.h"
+#include "../../../Scene/include/Camera.h"
+#include "../../../Scene/include/Light.h"
 
 namespace FTS
 {
@@ -231,9 +233,9 @@ namespace FTS
 			ReturnIfFalse(pCache->GetWorld()->Each<FMesh>(
 				[this, pCmdList, &stSubmeshIndex](FEntity* pEntity, FMesh* pMesh) -> BOOL
 				{
-					for (UINT64 ix = 0; ix < pMesh->SubMeshes.size(); ++ix)
+					for (UINT64 ix = 0; ix < pMesh->Submeshes.size(); ++ix)
 					{
-						m_PassConstant0.WorldMatrix = pMesh->SubMeshes[ix].WorldMatrix;
+						m_PassConstant0.WorldMatrix = pMesh->Submeshes[ix].WorldMatrix;
 
 						ReturnIfFalse(pCmdList->SetGraphicsState(m_GraphicsState));
 						ReturnIfFalse(pCmdList->SetPushConstants(&m_PassConstant0, sizeof(Constant::AtmosphereDebugPassConstant0)));

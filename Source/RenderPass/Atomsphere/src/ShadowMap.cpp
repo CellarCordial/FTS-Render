@@ -67,8 +67,8 @@ namespace FTS
 				[this](FEntity* pEntity, FMesh* pMesh) -> BOOL
 				{
 					UINT64 stOldSize = m_DrawArguments.size();
-					m_DrawArguments.resize(stOldSize + pMesh->SubMeshes.size());
-					m_DrawArguments[stOldSize].dwIndexOrVertexCount = static_cast<UINT32>(pMesh->SubMeshes[0].Indices.size());
+					m_DrawArguments.resize(stOldSize + pMesh->Submeshes.size());
+					m_DrawArguments[stOldSize].dwIndexOrVertexCount = static_cast<UINT32>(pMesh->Submeshes[0].Indices.size());
 
 					if (stOldSize > 0)
 					{
@@ -76,17 +76,17 @@ namespace FTS
 						m_DrawArguments[stOldSize].dwStartVertexLocation = m_Vertices.size();
 					}
 
-					for (UINT64 ix = 0; ix < pMesh->SubMeshes.size(); ++ix)
+					for (UINT64 ix = 0; ix < pMesh->Submeshes.size(); ++ix)
 					{
-						const auto& crSubmesh = pMesh->SubMeshes[ix];
+						const auto& crSubmesh = pMesh->Submeshes[ix];
 						m_Vertices.insert(m_Vertices.end(), crSubmesh.Vertices.begin(), crSubmesh.Vertices.end());
 						m_Indices.insert(m_Indices.end(), crSubmesh.Indices.begin(), crSubmesh.Indices.end());
 
 						if (ix != 0)
 						{
 							m_DrawArguments[ix].dwIndexOrVertexCount = crSubmesh.Indices.size();
-							m_DrawArguments[ix].dwStartIndexLocation = m_DrawArguments[ix - 1].dwStartIndexLocation + pMesh->SubMeshes[ix - 1].Indices.size();
-							m_DrawArguments[ix].dwStartVertexLocation = m_DrawArguments[ix - 1].dwStartVertexLocation + pMesh->SubMeshes[ix - 1].Vertices.size();
+							m_DrawArguments[ix].dwStartIndexLocation = m_DrawArguments[ix - 1].dwStartIndexLocation + pMesh->Submeshes[ix - 1].Indices.size();
+							m_DrawArguments[ix].dwStartVertexLocation = m_DrawArguments[ix - 1].dwStartVertexLocation + pMesh->Submeshes[ix - 1].Vertices.size();
 						}
 					}
 
@@ -182,9 +182,9 @@ namespace FTS
 		ReturnIfFalse(pCache->GetWorld()->Each<FMesh>(
 			[this, pCmdList, &stSubmeshIndex](FEntity* pEntity, FMesh* pMesh) -> BOOL
 			{
-				for (UINT64 ix = 0; ix < pMesh->SubMeshes.size(); ++ix)
+				for (UINT64 ix = 0; ix < pMesh->Submeshes.size(); ++ix)
 				{
-					m_PassConstant.WorldMatrix = pMesh->SubMeshes[ix].WorldMatrix;
+					m_PassConstant.WorldMatrix = pMesh->Submeshes[ix].WorldMatrix;
 
 					ReturnIfFalse(pCmdList->SetGraphicsState(m_GraphicsState));
 					ReturnIfFalse(pCmdList->SetPushConstants(&m_PassConstant, sizeof(Constant::ShadowMapPassConstant)));

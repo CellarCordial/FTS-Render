@@ -1,9 +1,9 @@
 #include "../include/SdfGenerate.h"
 #include "../../../Core/include/ComRoot.h"
 #include "../../../Shader/ShaderCompiler.h"
-#include "../../../Gui/include/GuiPass.h"
 #include "../../../Scene/include/Scene.h"
-#include <fstream>
+#include "../../../Gui/include/GuiPanel.h"
+#include "../../../Math/include/Bvh.h"
 #include <memory>
 #include <string>
 
@@ -17,29 +17,23 @@ namespace FTS
 
     BOOL FSdfGeneratePass::Compile(IDevice* pDevice, IRenderResourceCache* pCache)
     {
-		ReturnIfFalse(pCache->GetWorld()->Each<Event::GenerateSdf>(
-			[this](FEntity* pEntity, Event::GenerateSdf* pEvent) -> BOOL
-			{
-				pEvent->AddEvent(
-					[this](FDistanceField* pDistanceField) 
-					{ 
-						ContinuePrecompute();
-						m_pDistanceField = pDistanceField;
+		pCache->GetWorld()->GetGlobalEntity()->GetComponent<Event::GenerateSdf>()->AddEvent(
+			[this](FEntity* pEntity) 
+			{ 
+				ContinuePrecompute();
+				m_pDistanceField = pEntity->GetComponent<FDistanceField>();
 
-						ReturnIfFalse(m_pDistanceField != nullptr);
+				ReturnIfFalse(m_pDistanceField != nullptr);
 
-						if (!m_pDistanceField->CheckSdfFileExist())
-						{
-							const auto& crMeshDF = m_pDistanceField->MeshDistanceFields[0];
-							std::string strSdfName = crMeshDF.strSdfTextureName.substr(0, crMeshDF.strSdfTextureName.find("SdfTexture")) + ".sdf";
-							pBinaryOutput = std::make_unique<Serialization::BinaryOutput>(std::string(PROJ_DIR) + "Asset/SDF/" + strSdfName);
-						}
-						return true;
-					}
-				);
+				if (!m_pDistanceField->CheckSdfFileExist())
+				{
+					const auto& crMeshDF = m_pDistanceField->MeshDistanceFields[0];
+					std::string strSdfName = *pEntity->GetComponent<std::string>() + ".sdf";
+					pBinaryOutput = std::make_unique<Serialization::BinaryOutput>(std::string(PROJ_DIR) + "Asset/SDF/" + strSdfName);
+				}
 				return true;
 			}
-		));
+		);
 
 
         // Binding Layout.
@@ -216,12 +210,7 @@ namespace FTS
 
 				if (m_dwCurrMeshSdfIndex + 1 == static_cast<UINT32>(m_pDistanceField->MeshDistanceFields.size()))
 				{
-					ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateGlobalSdf>(
-						[](FEntity* pEntity, Event::UpdateGlobalSdf* pEvent) -> BOOL
-						{
-							return pEvent->Broadcast();
-						}
-					));
+					ReturnIfFalse(pCache->GetWorld()->GetGlobalEntity()->GetComponent<Event::UpdateGlobalSdf>()->Broadcast());
 				}
 			}
 		}
@@ -239,12 +228,7 @@ namespace FTS
 
 			if (m_dwCurrMeshSdfIndex + 1 == static_cast<UINT32>(m_pDistanceField->MeshDistanceFields.size()))
 			{
-				ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateGlobalSdf>(
-					[](FEntity* pEntity, Event::UpdateGlobalSdf* pEvent) -> BOOL
-					{
-						return pEvent->Broadcast();
-					}
-				));
+				ReturnIfFalse(pCache->GetWorld()->GetGlobalEntity()->GetComponent<Event::UpdateGlobalSdf>()->Broadcast());
 			}
 		}
 

@@ -22,8 +22,8 @@
 //	public:
 //		FPass() { Type = ERenderPassType::Graphics; }
 //
-//		BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache);
-//		BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache);
+//		BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache) override;
+//		BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache) override;
 //
 //	private:
 //		BOOL m_bResourceWrited = false;
@@ -198,20 +198,20 @@
 //		// Frame Buffer.
 //		{
 //			FFrameBufferDesc FrameBufferDesc;
-//			FrameBufferDesc.ColorAttachments.PushBack(FFrameBufferAttachment::CreateAttachment(pRenderTargetTexture, EFormat));
-//			FrameBufferDesc.ColorAttachments.PushBack(FFrameBufferAttachment::CreateAttachment(pRenderTargetTexture, EFormat));
-//			FrameBufferDesc.ColorAttachments.PushBack(FFrameBufferAttachment::CreateAttachment(pRenderTargetTexture, EFormat));
-//			FrameBufferDesc.DepthStencilAttachment = FFrameBufferAttachment::CreateAttachment(pDepthStencilTexture, EFormat);
+//			FrameBufferDesc.ColorAttachments.PushBack(FFrameBufferAttachment::CreateAttachment(pRenderTargetTexture));
+//			FrameBufferDesc.ColorAttachments.PushBack(FFrameBufferAttachment::CreateAttachment(pRenderTargetTexture));
+//			FrameBufferDesc.ColorAttachments.PushBack(FFrameBufferAttachment::CreateAttachment(pRenderTargetTexture));
+//			FrameBufferDesc.DepthStencilAttachment = FFrameBufferAttachment::CreateAttachment(pDepthStencilTexture);
 //			ReturnIfFalse(pDevice->CreateFrameBuffer(FrameBufferDesc, IID_IFrameBuffer, PPV_ARG(m_pFrameBuffer.GetAddressOf())));
 //		}
 // 
 //		// Pipeline.
 //		{
 //			FGraphicsPipelineDesc PipelineDesc;
-//			PipelineDesc.VS = pVS.Get();
-//			PipelineDesc.PS = pPS.Get();
-//			PipelineDesc.pInputLayout = pInputLayout.Get();
-//			PipelineDesc.pBindingLayouts.PushBack(pBindingLayout.Get());
+//			PipelineDesc.VS = m_pVS.Get();
+//			PipelineDesc.PS = m_pPS.Get();
+//			PipelineDesc.pInputLayout = m_pInputLayout.Get();
+//			PipelineDesc.pBindingLayouts.PushBack(m_pBindingLayout.Get());
 //			ReturnIfFalse(pDevice->CreateGraphicsPipeline(
 //				PipelineDesc,
 //				m_pFrameBuffer.Get(),
@@ -330,8 +330,6 @@
 //
 //		BOOL Compile(IDevice* pDevice, IRenderResourceCache* pCache) override;
 //		BOOL Execute(ICommandList* pCmdList, IRenderResourceCache* pCache) override;
-//
-//		void Regenerate() { Type &= ~ERenderPassType::OnceFinished; }
 //
 //	private:
 //		BOOL m_bResourceWrited = false;

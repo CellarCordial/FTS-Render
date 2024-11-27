@@ -4,11 +4,11 @@
 #define TINYGLTF_NO_EXTERNAL_IMAGE
 #include <tiny_gltf.h>
 #include <meshoptimizer.h>
-#include <filesystem>
 #include <json.hpp>
 #include "../../Math/include/Quaternion.h"
 #include "../../Parallel/include/Parallel.h"
 #include "../include/Image.h"
+#include "../include/Camera.h"
 #include "../../Core/include/ComRoot.h"
 #include "../../Core/include/ComIntf.h"
 #include "../../Core/include/File.h"
@@ -92,8 +92,8 @@ namespace FTS
 	static std::unique_ptr<tinygltf::Model> gpGLTFModel;
 
 	FMatrix4x4 GetMatrixFromGLTFNode(const tinygltf::Node& crGLTFNode);
-	void LoadIndicesFromGLTFPrimitive(const tinygltf::Primitive* cpGLTFPrimitive, FMesh::SubMesh& rSubMesh);
-	void LoadVerticesBoxFromGLTFPrimitive(const tinygltf::Primitive* cpGLTFPrimitive, FMesh::SubMesh& rSubMesh);
+	void LoadIndicesFromGLTFPrimitive(const tinygltf::Primitive* cpGLTFPrimitive, FMesh::Submesh& rSubmesh);
+	void LoadVerticesBoxFromGLTFPrimitive(const tinygltf::Primitive* cpGLTFPrimitive, FMesh::Submesh& rSubmesh);
 
 
 	BOOL FSceneSystem::Initialize(FWorld* pWorld)
@@ -106,11 +106,15 @@ namespace FTS
 		pWorld->Subscribe<Event::OnModelTransform>(this);
 		pWorld->Subscribe<Event::OnComponentAssigned<FMesh>>(this);
 		pWorld->Subscribe<Event::OnComponentAssigned<FMaterial>>(this);
+		pWorld->Subscribe<Event::OnComponentAssigned<FSurfaceCache>>(this);
 		pWorld->Subscribe<Event::OnComponentAssigned<FDistanceField>>(this);
-		pWorld->CreateEntity()->Assign<Event::GenerateSdf>();
-		pWorld->CreateEntity()->Assign<Event::UpdateGlobalSdf>();
-		
-		m_pSceneGrid = pWorld->CreateEntity()->Assign<FSceneGrid>();
+
+		m_pGlobalEntity = pWorld->GetGlobalEntity();
+
+		m_pGlobalEntity->Assign<FSceneGrid>();
+		m_pGlobalEntity->Assign<Event::GenerateSdf>();
+		m_pGlobalEntity->Assign<Event::UpdateGlobalSdf>();
+		m_pGlobalEntity->Assign<Event::GenerateSurfaceCache>();
 
 		return true;
 	}
@@ -165,33 +169,8 @@ namespace FTS
 
 			if (pModelEntity && Parallel::ThreadFinished(stThreadID) && Parallel::ThreadSuccess(stThreadID))
 			{
-				ReturnIfFalse(m_pWorld->Each<Event::GenerateSdf>(
-					[&](FEntity* pEntity, Event::GenerateSdf* pEvent) -> BOOL
-					{
-						return pEvent->Broadcast(pModelEntity->GetComponent<FDistanceField>());
-					}
-				));
-				
-				FEntity* pTmpModelEntity = pModelEntity;
-				Gui::Add(
-					[pTmpModelEntity, this]()
-					{
-						std::string strModelName = *pTmpModelEntity->GetComponent<std::string>();
-						strModelName += " Transform";
-						if (ImGui::TreeNode(strModelName.c_str()))
-						{
-							BOOL bChanged = false;
-
-							FTransform TmpTransform = *pTmpModelEntity->GetComponent<FTransform>();
-							bChanged |= ImGui::SliderFloat3("Position", reinterpret_cast<FLOAT*>(&TmpTransform.Position), -32.0f, 32.0f);		
-							bChanged |= ImGui::SliderFloat3("Rotation", reinterpret_cast<FLOAT*>(&TmpTransform.Rotation), -180.0f, 180.0f);
-							bChanged |= ImGui::SliderFloat3("Scale", reinterpret_cast<FLOAT*>(&TmpTransform.Scale), 0.1f, 8.0f);
-							if (bChanged) m_pWorld->Boardcast(Event::OnModelTransform{ .pEntity = pTmpModelEntity, .Trans = TmpTransform });
-
-							ImGui::TreePop();
-						}
-					}
-				);
+				ReturnIfFalse(m_pGlobalEntity->GetComponent<Event::GenerateSdf>()->Broadcast(pModelEntity));
+				// ReturnIfFalse(m_pGlobalEntity->GetComponent<Event::GenerateSurfaceCache>()->Broadcast(pModelEntity));
 
 				stThreadID = INVALID_SIZE_64;
 				pModelEntity = nullptr;
@@ -230,11 +209,13 @@ namespace FTS
 
 		m_strModelDirectory = crEvent.strModelPath.substr(0, crEvent.strModelPath.find_last_of('/') + 1);
 		m_strSdfDataPath = strProjDir + "Asset/SDF/" + strModelName + ".sdf";
+		m_strSurfaceCachePath = strProjDir + "Asset/SurfaceCache/" + strModelName + ".sc";
 
 		crEvent.pEntity->Assign<std::string>(strModelName);
 		crEvent.pEntity->Assign<FMesh>();
 		crEvent.pEntity->Assign<FMaterial>();
 		crEvent.pEntity->Assign<FTransform>();
+		crEvent.pEntity->Assign<FSurfaceCache>();
 		crEvent.pEntity->Assign<FDistanceField>();
 
 		gpGLTFModel.reset();
@@ -242,6 +223,28 @@ namespace FTS
 		m_strModelDirectory.clear();
 
 		m_LoadedModelNames.insert(crEvent.strModelPath);
+
+		
+		FEntity* pTmpModelEntity = crEvent.pEntity;
+		Gui::Add(
+			[pTmpModelEntity, this]()
+			{
+				std::string strModelName = *pTmpModelEntity->GetComponent<std::string>();
+				strModelName += " Transform";
+				if (ImGui::TreeNode(strModelName.c_str()))
+				{
+					BOOL bChanged = false;
+
+					FTransform TmpTransform = *pTmpModelEntity->GetComponent<FTransform>();
+					bChanged |= ImGui::SliderFloat3("Position", reinterpret_cast<FLOAT*>(&TmpTransform.Position), -32.0f, 32.0f);		
+					bChanged |= ImGui::SliderFloat3("Rotation", reinterpret_cast<FLOAT*>(&TmpTransform.Rotation), -180.0f, 180.0f);
+					bChanged |= ImGui::SliderFloat3("Scale", reinterpret_cast<FLOAT*>(&TmpTransform.Scale), 0.1f, 8.0f);
+					if (bChanged) m_pWorld->Boardcast(Event::OnModelTransform{ .pEntity = pTmpModelEntity, .Trans = TmpTransform });
+
+					ImGui::TreePop();
+				}
+			}
+		);
 
 		return true;
 	}
@@ -280,18 +283,18 @@ namespace FTS
 		}
 
 		FMesh* pMesh = crEvent.pComponent;
-		auto& rSubMeshes = pMesh->SubMeshes;
-		rSubMeshes.resize(cpPrimitives.size());
+		auto& rSubmeshes = pMesh->Submeshes;
+		rSubmeshes.resize(cpPrimitives.size());
 
 		Parallel::ParallelFor(
 			[&](UINT64 ix)
 			{
-				auto& rSubMesh = rSubMeshes[ix];
-				rSubMesh.WorldMatrix = WorldMatrixs[ix];
-				rSubMesh.dwMaterialIndex = cpPrimitives[ix]->material;
+				auto& rSubmesh = rSubmeshes[ix];
+				rSubmesh.WorldMatrix = WorldMatrixs[ix];
+				rSubmesh.dwMaterialIndex = cpPrimitives[ix]->material;
 
-				LoadIndicesFromGLTFPrimitive(cpPrimitives[ix], rSubMesh);
-				LoadVerticesBoxFromGLTFPrimitive(cpPrimitives[ix], rSubMesh);
+				LoadIndicesFromGLTFPrimitive(cpPrimitives[ix], rSubmesh);
+				LoadVerticesBoxFromGLTFPrimitive(cpPrimitives[ix], rSubmesh);
 			},
 			cpPrimitives.size()
 		);
@@ -301,7 +304,7 @@ namespace FTS
 	BOOL FSceneSystem::Publish(FWorld* pWorld, const Event::OnComponentAssigned<FMaterial>& crEvent)
 	{
 		std::string strFilePath = PROJ_DIR + m_strModelDirectory;
-
+		
 		auto& rpMaterial = crEvent.pComponent;
 
 		if (!gpGLTFModel)
@@ -371,11 +374,64 @@ namespace FTS
 		return true;
 	}
 
+	BOOL FSceneSystem::Publish(FWorld* pWorld, const Event::OnComponentAssigned<FSurfaceCache>& crEvent)
+	{
+		FSurfaceCache* pSurfaceCache = crEvent.pComponent;
+		FMesh* pMesh = crEvent.pEntity->GetComponent<FMesh>();
+		pSurfaceCache->MeshSurfaceCaches.resize(pMesh->Submeshes.size());
+
+		BOOL bLoadFromFile = false;
+		if (IsFileExist(m_strSurfaceCachePath.c_str()))
+		{
+			Serialization::BinaryInput Input(m_strSurfaceCachePath);
+			UINT32 dwCardResolution = 0;
+			UINT32 dwSurfaceResolution = 0;
+			Input(dwCardResolution);
+			Input(dwSurfaceResolution);
+
+			if (dwCardResolution == gdwCardResolution && dwSurfaceResolution == gdwSurfaceResolution)
+			{
+				FFormatInfo FormaInfo = GetFormatInfo(pSurfaceCache->Format);
+				UINT64 stDataSize = static_cast<UINT64>(gdwSurfaceResolution) * gdwSurfaceResolution * FormaInfo.btBytesPerBlock;
+
+				for (UINT32 ix = 0; ix < pSurfaceCache->MeshSurfaceCaches.size(); ++ix)
+				{
+					auto& rMeshSC = pSurfaceCache->MeshSurfaceCaches[ix];
+					for (UINT32 ix = 0; ix < FSurfaceCache::MeshSurfaceCache::SurfaceType::Count; ++ix)
+					{
+						rMeshSC.Surfaces[ix].strSurfaceTextureName = *crEvent.pEntity->GetComponent<std::string>() + "SurfaceTexture" + std::to_string(ix);
+						rMeshSC.Surfaces[ix].Data.resize(stDataSize);
+						Input.LoadBinaryData(rMeshSC.Surfaces[ix].Data.data(), stDataSize);
+					}
+				}
+				Gui::NotifyMessage(Gui::ENotifyType::Info, "Loaded " + m_strSdfDataPath.substr(m_strSdfDataPath.find("Asset")));
+				bLoadFromFile = true;
+			}
+		}
+
+		if (!bLoadFromFile)
+		{
+			std::string strModelName = *crEvent.pEntity->GetComponent<std::string>();
+			for (UINT32 ix = 0; ix < pSurfaceCache->MeshSurfaceCaches.size(); ++ix)
+			{
+				std::string strMeshIndex = std::to_string(ix);
+				auto& rMeshSC = pSurfaceCache->MeshSurfaceCaches[ix];
+				rMeshSC.Surfaces[0].strSurfaceTextureName = strModelName + "SurfaceColorTexture" + strMeshIndex;
+				rMeshSC.Surfaces[1].strSurfaceTextureName = strModelName + "SurfaceNormalTexture" + strMeshIndex;
+				rMeshSC.Surfaces[2].strSurfaceTextureName = strModelName + "SurfacePBRTexture" + strMeshIndex;
+				rMeshSC.Surfaces[3].strSurfaceTextureName = strModelName + "SurfaceEmissveTexture" + strMeshIndex;
+				rMeshSC.LightCache = strModelName + "SurfaceLightTexture" + strMeshIndex;
+			}
+		}
+
+		return true;
+	}
+
 	BOOL FSceneSystem::Publish(FWorld* pWorld, const Event::OnComponentAssigned<FDistanceField>& crEvent)
 	{
 		FDistanceField* pDistanceField = crEvent.pComponent;
 		FMesh* pMesh = crEvent.pEntity->GetComponent<FMesh>();
-		pDistanceField->MeshDistanceFields.resize(pMesh->SubMeshes.size());
+		pDistanceField->MeshDistanceFields.resize(pMesh->Submeshes.size());
 
 		BOOL bLoadFromFile = false;
 		if (IsFileExist(m_strSdfDataPath.c_str()))
@@ -411,11 +467,12 @@ namespace FTS
 
 		if (!bLoadFromFile)
 		{
+			std::string strModelName = *crEvent.pEntity->GetComponent<std::string>();
 			for (UINT32 ix = 0; ix < pDistanceField->MeshDistanceFields.size(); ++ix)
 			{
 				auto& rMeshDF = pDistanceField->MeshDistanceFields[ix];
-				const auto& crSubmesh = pMesh->SubMeshes[ix];
-				rMeshDF.strSdfTextureName = *crEvent.pEntity->GetComponent<std::string>() + "SdfTexture" + std::to_string(ix);
+				const auto& crSubmesh = pMesh->Submeshes[ix];
+				rMeshDF.strSdfTextureName = strModelName + "SdfTexture" + std::to_string(ix);
 
 				UINT64 jx = 0;
 				std::vector<FBvh::Vertex> BvhVertices(crSubmesh.Indices.size());
@@ -432,6 +489,7 @@ namespace FTS
 			}
 		}
 
+		FSceneGrid* pGrid = m_pGlobalEntity->GetComponent<FSceneGrid>();
 
 		for (const auto& crMeshDF : pDistanceField->MeshDistanceFields)
 		{
@@ -457,8 +515,8 @@ namespace FTS
 					for (UINT32 x = UniformLower.x; x <= UniformUpper.x; ++x)
 					{
 						UINT32 dwIndex = x + y * dwChunkNumPerAxis + z * dwChunkNumPerAxis * dwChunkNumPerAxis;
-						m_pSceneGrid->Chunks[dwIndex].bModelMoved = true;
-						m_pSceneGrid->Chunks[dwIndex].pModelEntities.insert(crEvent.pEntity);
+						pGrid->Chunks[dwIndex].bModelMoved = true;
+						pGrid->Chunks[dwIndex].pModelEntities.insert(crEvent.pEntity);
 					}
 				}
 			}
@@ -475,6 +533,8 @@ namespace FTS
 		UINT32 dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
 		FLOAT fVoxelSize = gfSceneGridSize / gdwGlobalSdfResolution;
 		FLOAT fChunkSize = 1.0f * gdwVoxelNumPerChunk * fVoxelSize;
+
+		FSceneGrid* pGrid = m_pGlobalEntity->GetComponent<FSceneGrid>();
 
 		auto FuncMark = [&](const FBounds3F& crBox, BOOL bInsertOrErase)
 		{
@@ -494,11 +554,11 @@ namespace FTS
 					for (UINT32 x = UniformLower.x; x <= UniformUpper.x; ++x)
 					{
 						UINT32 dwIndex = x + y * dwChunkNumPerAxis + z * dwChunkNumPerAxis * dwChunkNumPerAxis;
-						m_pSceneGrid->Chunks[dwIndex].bModelMoved = true;
+						pGrid->Chunks[dwIndex].bModelMoved = true;
 						if (bInsertOrErase) 
-							m_pSceneGrid->Chunks[dwIndex].pModelEntities.insert(crEvent.pEntity);
+							pGrid->Chunks[dwIndex].pModelEntities.insert(crEvent.pEntity);
 						else				
-							m_pSceneGrid->Chunks[dwIndex].pModelEntities.erase(crEvent.pEntity);
+							pGrid->Chunks[dwIndex].pModelEntities.erase(crEvent.pEntity);
 					}
 				}
 			}
@@ -574,23 +634,23 @@ namespace FTS
 		return Transform.WorldMatirx;
 	}
 
-	void LoadIndicesFromGLTFPrimitive(const tinygltf::Primitive* cpGLTFPrimitive, FMesh::SubMesh& rSubMesh)
+	void LoadIndicesFromGLTFPrimitive(const tinygltf::Primitive* cpGLTFPrimitive, FMesh::Submesh& rSubmesh)
 	{
 		const auto& GLTFIndicesAccessor = gpGLTFModel->accessors[cpGLTFPrimitive->indices];
 		const auto& GLTFIndicesBufferView = gpGLTFModel->bufferViews[GLTFIndicesAccessor.bufferView];
 		const auto& GLTFIndicesBuffer = gpGLTFModel->buffers[GLTFIndicesBufferView.buffer];
 
-		rSubMesh.Indices.reserve(GLTFIndicesAccessor.count);
+		rSubmesh.Indices.reserve(GLTFIndicesAccessor.count);
 
 		auto AddIndices = [&]<typename T>()
 		{
 			const T* IndexData = reinterpret_cast<const T*>(GLTFIndicesBuffer.data.data() + GLTFIndicesBufferView.byteOffset + GLTFIndicesAccessor.byteOffset);
 			for (UINT64 ix = 0; ix < GLTFIndicesAccessor.count; ix += 3)
 			{
-				// Ä¬ÈÏÎªË³Ê±ÕëÐý×ª
-				rSubMesh.Indices.push_back(IndexData[ix + 0]);
-				rSubMesh.Indices.push_back(IndexData[ix + 1]);
-				rSubMesh.Indices.push_back(IndexData[ix + 2]);
+				// Ä¬ï¿½ï¿½ÎªË³Ê±ï¿½ï¿½ï¿½ï¿½×ª
+				rSubmesh.Indices.push_back(IndexData[ix + 0]);
+				rSubmesh.Indices.push_back(IndexData[ix + 1]);
+				rSubmesh.Indices.push_back(IndexData[ix + 2]);
 			}
 		};
 
@@ -605,7 +665,7 @@ namespace FTS
 		}
 	}
 
-	void LoadVerticesBoxFromGLTFPrimitive(const tinygltf::Primitive* cpGLTFPrimitive, FMesh::SubMesh& rSubMesh)
+	void LoadVerticesBoxFromGLTFPrimitive(const tinygltf::Primitive* cpGLTFPrimitive, FMesh::Submesh& rSubmesh)
 	{
 		UINT32 TempCounter = 0;
 		UINT64 stVertexCount = 0;
@@ -655,19 +715,19 @@ namespace FTS
 			PositionStream.resize(stVertexCount);
 			for (UINT32 ix = 0; ix < stVertexCount; ++ix) PositionStream[ix] = *reinterpret_cast<FVector3F*>(PositionData + ix * AttributeStride[0]);
 
-			meshopt_optimizeVertexCache(rSubMesh.Indices.data(), rSubMesh.Indices.data(), rSubMesh.Indices.size(), stVertexCount);
+			meshopt_optimizeVertexCache(rSubmesh.Indices.data(), rSubmesh.Indices.data(), rSubmesh.Indices.size(), stVertexCount);
 			meshopt_optimizeOverdraw(
-				rSubMesh.Indices.data(),
-				rSubMesh.Indices.data(),
-				rSubMesh.Indices.size(),
+				rSubmesh.Indices.data(),
+				rSubmesh.Indices.data(),
+				rSubmesh.Indices.size(),
 				&PositionStream[0].x,
 				stVertexCount,
 				sizeof(FVector3F),
 				1.05f
 			);
 
-			meshopt_optimizeVertexFetchRemap(&remap[0], rSubMesh.Indices.data(), rSubMesh.Indices.size(), stVertexCount);
-			meshopt_remapIndexBuffer(rSubMesh.Indices.data(), rSubMesh.Indices.data(), rSubMesh.Indices.size(), &remap[0]);
+			meshopt_optimizeVertexFetchRemap(&remap[0], rSubmesh.Indices.data(), rSubmesh.Indices.size(), stVertexCount);
+			meshopt_remapIndexBuffer(rSubmesh.Indices.data(), rSubmesh.Indices.data(), rSubmesh.Indices.size(), &remap[0]);
 			meshopt_remapVertexBuffer(PositionStream.data(), PositionStream.data(), stVertexCount, sizeof(FVector3F), &remap[0]);
 		}
 		if (bNor)
@@ -690,13 +750,13 @@ namespace FTS
 		}
 
 
-		rSubMesh.Vertices.resize(stVertexCount);
+		rSubmesh.Vertices.resize(stVertexCount);
 		for (UINT32 ix = 0; ix < stVertexCount; ++ix)
 		{
-			if (bPos) rSubMesh.Vertices[ix].Position = PositionStream[ix];
-			if (bNor) rSubMesh.Vertices[ix].Normal = NormalStream[ix];
-			if (bTan) rSubMesh.Vertices[ix].Tangent = TangentStream[ix];
-			if (bUV) rSubMesh.Vertices[ix].UV = UVStream[ix];
+			if (bPos) rSubmesh.Vertices[ix].Position = PositionStream[ix];
+			if (bNor) rSubmesh.Vertices[ix].Normal = NormalStream[ix];
+			if (bTan) rSubmesh.Vertices[ix].Tangent = TangentStream[ix];
+			if (bUV) rSubmesh.Vertices[ix].UV = UVStream[ix];
 		}
 	}
 

@@ -222,11 +222,13 @@ namespace FTS
 	class FWorld
 	{
 	public:
-		FWorld() = default;
+		FWorld() { CreateEntity(); }
 		~FWorld();
 
 		FEntity* CreateEntity();
 		BOOL DestroyEntity(FEntity* pEntity, BOOL bImmediately = false);
+
+		FEntity* GetGlobalEntity() { return m_pEntities[0].get(); }
 
 		BOOL Tick(FLOAT fDelta);
 		

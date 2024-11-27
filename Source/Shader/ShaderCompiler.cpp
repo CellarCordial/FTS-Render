@@ -3,6 +3,7 @@
 #include "../Core/include/File.h"
 #include <vector>
 #include <winerror.h>
+#include <winnt.h>
 #include "../Core/include/ComCli.h"
 
 

@@ -1,6 +1,5 @@
 #include "../include/GlobalSdf.h"
 #include "../../../Shader/ShaderCompiler.h"
-#include "../../../Gui/include/GuiPanel.h"
 
 namespace FTS
 {
@@ -10,19 +9,13 @@ namespace FTS
 
 	BOOL FGlobalSdfPass::Compile(IDevice* pDevice, IRenderResourceCache* pCache)
 	{
-		ReturnIfFalse(pCache->GetWorld()->Each<Event::UpdateGlobalSdf>(
-			[this](FEntity* pEntity, Event::UpdateGlobalSdf* pEvent) -> BOOL
-			{
-				pEvent->AddEvent(
-					[this]()
-					{
-						ContinuePrecompute();
-						return true;
-					}
-				);
+		pCache->GetWorld()->GetGlobalEntity()->GetComponent<Event::UpdateGlobalSdf>()->AddEvent(
+			[this]() 
+			{ 
+				ContinuePrecompute();
 				return true;
 			}
-		));
+		);
 
 		ReturnIfFalse(PipelineSetup(pDevice));
 		ReturnIfFalse(ComputeStateSetup(pDevice, pCache));

@@ -6,7 +6,6 @@
 #include "../../../Core/include/File.h"
 #include "../../../Math/include/Vector.h"
 #include "../../../Scene/include/Scene.h"
-#include "../../../Math/include/Bvh.h"
 #include <memory>
 
 namespace FTS 

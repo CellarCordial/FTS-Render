@@ -1,8 +1,5 @@
 #include "../include/Geometry.h"
-#include "../include/Scene.h"
 
-#include <memory>
-#include <string>
 namespace FTS
 {
 	namespace Geometry
@@ -10,7 +7,7 @@ namespace FTS
 		FMesh CreateBox(FLOAT width, FLOAT height, FLOAT depth, UINT32 numSubdivisions)
 		{
 			FMesh Mesh;
-			auto& rSubMesh = Mesh.SubMeshes.emplace_back();
+			auto& rSubmesh = Mesh.Submeshes.emplace_back();
 
 			FVertex v[24];
 
@@ -43,7 +40,7 @@ namespace FTS
 			v[22] = FVertex({ +w2, +h2, +d2 }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 0.0f });
 			v[23] = FVertex({ +w2, -h2, +d2 }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 1.0f });
 
-			rSubMesh.Vertices.assign(&v[0], &v[24]);
+			rSubmesh.Vertices.assign(&v[0], &v[24]);
 
 			UINT16 i[36];
 
@@ -71,19 +68,19 @@ namespace FTS
 			i[30] = 20; i[31] = 21; i[32] = 22;
 			i[33] = 20; i[34] = 22; i[35] = 23;
 
-			rSubMesh.Indices.assign(&i[0], &i[36]);
+			rSubmesh.Indices.assign(&i[0], &i[36]);
 
 			// Put a cap on the number of subdivisions.
 			numSubdivisions = std::min<UINT32>(numSubdivisions, 6u);
 
-			for (UINT32 i = 0; i < numSubdivisions; ++i) Subdivide(rSubMesh);
+			for (UINT32 i = 0; i < numSubdivisions; ++i) Subdivide(rSubmesh);
 
 			return Mesh;
 		}
 
-		void Subdivide(FMesh::SubMesh& meshData)
+		void Subdivide(FMesh::Submesh& meshData)
 		{
-			FMesh::SubMesh inputCopy = meshData;
+			FMesh::Submesh inputCopy = meshData;
 
 
 			meshData.Vertices.resize(0);
@@ -163,7 +160,7 @@ namespace FTS
 		FMesh CreateSphere(FLOAT radius, UINT32 sliceCount, UINT32 stackCount)
 		{
 			FMesh Mesh;
-			auto& rSubMesh = Mesh.SubMeshes.emplace_back();
+			auto& rSubmesh = Mesh.Submeshes.emplace_back();
 			//
 			// Compute the vertices stating at the top pole and moving down the stacks.
 			//
@@ -174,7 +171,7 @@ namespace FTS
 			FVertex topVertex({ 0.0f, +radius, 0.0f }, { 0.0f, +1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f });
 			FVertex bottomVertex({ 0.0f, -radius, 0.0f }, { 0.0f, -1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f });
 
-			rSubMesh.Vertices.push_back(topVertex);
+			rSubmesh.Vertices.push_back(topVertex);
 
 			FLOAT phiStep = PI / stackCount;
 			FLOAT thetaStep = 2.0f * PI / sliceCount;
@@ -207,11 +204,11 @@ namespace FTS
 					v.UV.x = theta / 2.0f * PI;
 					v.UV.y = phi / PI;
 
-					rSubMesh.Vertices.push_back(v);
+					rSubmesh.Vertices.push_back(v);
 				}
 			}
 
-			rSubMesh.Vertices.push_back(bottomVertex);
+			rSubmesh.Vertices.push_back(bottomVertex);
 
 			//
 			// Compute indices for top stack.  The top stack was written first to the FVertex buffer
@@ -220,9 +217,9 @@ namespace FTS
 
 			for (UINT32 i = 1; i <= sliceCount; ++i)
 			{
-				rSubMesh.Indices.push_back(0);
-				rSubMesh.Indices.push_back(i + 1);
-				rSubMesh.Indices.push_back(i);
+				rSubmesh.Indices.push_back(0);
+				rSubmesh.Indices.push_back(i + 1);
+				rSubmesh.Indices.push_back(i);
 			}
 
 			//
@@ -237,13 +234,13 @@ namespace FTS
 			{
 				for (UINT32 j = 0; j < sliceCount; ++j)
 				{
-					rSubMesh.Indices.push_back(baseIndex + i * ringFVerUVount + j);
-					rSubMesh.Indices.push_back(baseIndex + i * ringFVerUVount + j + 1);
-					rSubMesh.Indices.push_back(baseIndex + (i + 1) * ringFVerUVount + j);
+					rSubmesh.Indices.push_back(baseIndex + i * ringFVerUVount + j);
+					rSubmesh.Indices.push_back(baseIndex + i * ringFVerUVount + j + 1);
+					rSubmesh.Indices.push_back(baseIndex + (i + 1) * ringFVerUVount + j);
 
-					rSubMesh.Indices.push_back(baseIndex + (i + 1) * ringFVerUVount + j);
-					rSubMesh.Indices.push_back(baseIndex + i * ringFVerUVount + j + 1);
-					rSubMesh.Indices.push_back(baseIndex + (i + 1) * ringFVerUVount + j + 1);
+					rSubmesh.Indices.push_back(baseIndex + (i + 1) * ringFVerUVount + j);
+					rSubmesh.Indices.push_back(baseIndex + i * ringFVerUVount + j + 1);
+					rSubmesh.Indices.push_back(baseIndex + (i + 1) * ringFVerUVount + j + 1);
 				}
 			}
 
@@ -253,16 +250,16 @@ namespace FTS
 			//
 
 			// South pole FVertex was added last.
-			UINT32 southPoleIndex = (UINT32)rSubMesh.Vertices.size() - 1;
+			UINT32 southPoleIndex = (UINT32)rSubmesh.Vertices.size() - 1;
 
 			// Offset the indices to the index of the first FVertex in the last ring.
 			baseIndex = southPoleIndex - ringFVerUVount;
 
 			for (UINT32 i = 0; i < sliceCount; ++i)
 			{
-				rSubMesh.Indices.push_back(southPoleIndex);
-				rSubMesh.Indices.push_back(baseIndex + i);
-				rSubMesh.Indices.push_back(baseIndex + i + 1);
+				rSubmesh.Indices.push_back(southPoleIndex);
+				rSubmesh.Indices.push_back(baseIndex + i);
+				rSubmesh.Indices.push_back(baseIndex + i + 1);
 			}
 
 			return Mesh;
@@ -272,7 +269,7 @@ namespace FTS
 		FMesh CreateGeosphere(FLOAT radius, UINT32 numSubdivisions)
 		{
 			FMesh Mesh;
-			auto& rSubMesh = Mesh.SubMeshes.emplace_back();
+			auto& rSubmesh = Mesh.Submeshes.emplace_back();
 
 			// Put a cap on the number of subdivisions.
 			numSubdivisions = std::min<UINT32>(numSubdivisions, 6u);
@@ -300,43 +297,43 @@ namespace FTS
 				10,1,6, 11,0,9, 2,11,9, 5,2,9,  11,2,7
 			};
 
-			rSubMesh.Vertices.resize(12);
-			rSubMesh.Indices.assign(&k[0], &k[60]);
+			rSubmesh.Vertices.resize(12);
+			rSubmesh.Indices.assign(&k[0], &k[60]);
 
 			for (UINT32 i = 0; i < 12; ++i)
-				rSubMesh.Vertices[i].Position = pos[i];
+				rSubmesh.Vertices[i].Position = pos[i];
 
 			for (UINT32 i = 0; i < numSubdivisions; ++i)
-				Subdivide(rSubMesh);
+				Subdivide(rSubmesh);
 
 			// Project vertices onto sphere and scale.
-			for (UINT32 i = 0; i < rSubMesh.Vertices.size(); ++i)
+			for (UINT32 i = 0; i < rSubmesh.Vertices.size(); ++i)
 			{
 				// Project onto unit sphere.
-				rSubMesh.Vertices[i].Position = Normalize(rSubMesh.Vertices[i].Position);
+				rSubmesh.Vertices[i].Position = Normalize(rSubmesh.Vertices[i].Position);
 
 				// Project onto sphere.
-				rSubMesh.Vertices[i].Normal = radius * rSubMesh.Vertices[i].Position;
+				rSubmesh.Vertices[i].Normal = radius * rSubmesh.Vertices[i].Position;
 
 
 				// Derive texture coordinates from spherical coordinates.
-				FLOAT theta = atan2f(rSubMesh.Vertices[i].Position.z, rSubMesh.Vertices[i].Position.x);
+				FLOAT theta = atan2f(rSubmesh.Vertices[i].Position.z, rSubmesh.Vertices[i].Position.x);
 
 				// Put in [0, 2pi].
 				if (theta < 0.0f)
 					theta += 2.0f * PI;
 
-				FLOAT phi = acosf(rSubMesh.Vertices[i].Position.y / radius);
+				FLOAT phi = acosf(rSubmesh.Vertices[i].Position.y / radius);
 
-				rSubMesh.Vertices[i].UV.x = theta / 2.0f * PI;
-				rSubMesh.Vertices[i].UV.y = phi / PI;
+				rSubmesh.Vertices[i].UV.x = theta / 2.0f * PI;
+				rSubmesh.Vertices[i].UV.y = phi / PI;
 
 				// Partial derivative of P with respect to theta
-				rSubMesh.Vertices[i].Tangent.x = -radius * sinf(phi) * sinf(theta);
-				rSubMesh.Vertices[i].Tangent.y = 0.0f;
-				rSubMesh.Vertices[i].Tangent.z = +radius * sinf(phi) * cosf(theta);
+				rSubmesh.Vertices[i].Tangent.x = -radius * sinf(phi) * sinf(theta);
+				rSubmesh.Vertices[i].Tangent.y = 0.0f;
+				rSubmesh.Vertices[i].Tangent.z = +radius * sinf(phi) * cosf(theta);
 
-				rSubMesh.Vertices[i].Tangent = Normalize(rSubMesh.Vertices[i].Tangent);
+				rSubmesh.Vertices[i].Tangent = Normalize(rSubmesh.Vertices[i].Tangent);
 			}
 
 			return Mesh;
@@ -345,7 +342,7 @@ namespace FTS
 		FMesh CreateCylinder(FLOAT bottomRadius, FLOAT topRadius, FLOAT height, UINT32 sliceCount, UINT32 stackCount)
 		{
 			FMesh Mesh;
-			auto& rSubMesh = Mesh.SubMeshes.emplace_back();
+			auto& rSubmesh = Mesh.Submeshes.emplace_back();
 
 			//
 			// Build Stacks.
@@ -404,7 +401,7 @@ namespace FTS
 					FVector4F bitangent(dr * c, -height, dr * s, 1.0f);
 
 					vertex.Normal = Normalize(Cross(FVector3F(vertex.Tangent), FVector3F(bitangent)));
-					rSubMesh.Vertices.push_back(vertex);
+					rSubmesh.Vertices.push_back(vertex);
 				}
 			}
 
@@ -417,23 +414,23 @@ namespace FTS
 			{
 				for (UINT32 j = 0; j < sliceCount; ++j)
 				{
-					rSubMesh.Indices.push_back(i * ringVerUVount + j);
-					rSubMesh.Indices.push_back((i + 1) * ringVerUVount + j);
-					rSubMesh.Indices.push_back((i + 1) * ringVerUVount + j + 1);
+					rSubmesh.Indices.push_back(i * ringVerUVount + j);
+					rSubmesh.Indices.push_back((i + 1) * ringVerUVount + j);
+					rSubmesh.Indices.push_back((i + 1) * ringVerUVount + j + 1);
 
-					rSubMesh.Indices.push_back(i * ringVerUVount + j);
-					rSubMesh.Indices.push_back((i + 1) * ringVerUVount + j + 1);
-					rSubMesh.Indices.push_back(i * ringVerUVount + j + 1);
+					rSubmesh.Indices.push_back(i * ringVerUVount + j);
+					rSubmesh.Indices.push_back((i + 1) * ringVerUVount + j + 1);
+					rSubmesh.Indices.push_back(i * ringVerUVount + j + 1);
 				}
 			}
 
-			BuildCylinderTopCap(bottomRadius, topRadius, height, sliceCount, stackCount, rSubMesh);
-			BuildCylinderBottomCap(bottomRadius, topRadius, height, sliceCount, stackCount, rSubMesh);
+			BuildCylinderTopCap(bottomRadius, topRadius, height, sliceCount, stackCount, rSubmesh);
+			BuildCylinderBottomCap(bottomRadius, topRadius, height, sliceCount, stackCount, rSubmesh);
 
 			return Mesh;
 		}
 
-		void BuildCylinderTopCap(FLOAT bottomRadius, FLOAT topRadius, FLOAT height, UINT32 sliceCount, UINT32 stackCount, FMesh::SubMesh& meshData)
+		void BuildCylinderTopCap(FLOAT bottomRadius, FLOAT topRadius, FLOAT height, UINT32 sliceCount, UINT32 stackCount, FMesh::Submesh& meshData)
 		{
 			UINT32 baseIndex = (UINT32)meshData.Vertices.size();
 
@@ -468,7 +465,7 @@ namespace FTS
 			}
 		}
 
-		void BuildCylinderBottomCap(FLOAT bottomRadius, FLOAT topRadius, FLOAT height, UINT32 sliceCount, UINT32 stackCount, FMesh::SubMesh& meshData)
+		void BuildCylinderBottomCap(FLOAT bottomRadius, FLOAT topRadius, FLOAT height, UINT32 sliceCount, UINT32 stackCount, FMesh::Submesh& meshData)
 		{
 			// 
 			// Build bottom cap.
@@ -509,7 +506,7 @@ namespace FTS
 		FMesh CreateGrid(FLOAT width, FLOAT depth, UINT32 m, UINT32 n)
 		{
 			FMesh Mesh;
-			auto& rSubMesh = Mesh.SubMeshes.emplace_back();
+			auto& rSubmesh = Mesh.Submeshes.emplace_back();
 
 			UINT32 verUVount = m * n;
 			UINT32 faceCount = (m - 1) * (n - 1) * 2;
@@ -527,7 +524,7 @@ namespace FTS
 			FLOAT du = 1.0f / (n - 1);
 			FLOAT dv = 1.0f / (m - 1);
 
-			rSubMesh.Vertices.resize(verUVount);
+			rSubmesh.Vertices.resize(verUVount);
 			for (UINT32 i = 0; i < m; ++i)
 			{
 				FLOAT z = halfDepth - i * dz;
@@ -535,13 +532,13 @@ namespace FTS
 				{
 					FLOAT x = -halfWidth + j * dx;
 
-					rSubMesh.Vertices[i * n + j].Position = FVector3F(x, 0.0f, z);
-					rSubMesh.Vertices[i * n + j].Normal = FVector3F(0.0f, 1.0f, 0.0f);
-					rSubMesh.Vertices[i * n + j].Tangent = FVector4F(1.0f, 0.0f, 0.0f, 1.0f);
+					rSubmesh.Vertices[i * n + j].Position = FVector3F(x, 0.0f, z);
+					rSubmesh.Vertices[i * n + j].Normal = FVector3F(0.0f, 1.0f, 0.0f);
+					rSubmesh.Vertices[i * n + j].Tangent = FVector4F(1.0f, 0.0f, 0.0f, 1.0f);
 
 					// Stretch texture over grid.
-					rSubMesh.Vertices[i * n + j].UV.x = j * du;
-					rSubMesh.Vertices[i * n + j].UV.y = i * dv;
+					rSubmesh.Vertices[i * n + j].UV.x = j * du;
+					rSubmesh.Vertices[i * n + j].UV.y = i * dv;
 				}
 			}
 
@@ -549,7 +546,7 @@ namespace FTS
 			// Create the indices.
 			//
 
-			rSubMesh.Indices.resize(faceCount * 3); // 3 indices per face
+			rSubmesh.Indices.resize(faceCount * 3); // 3 indices per face
 
 			// Iterate over each quad and compute indices.
 			UINT32 k = 0;
@@ -557,13 +554,13 @@ namespace FTS
 			{
 				for (UINT32 j = 0; j < n - 1; ++j)
 				{
-					rSubMesh.Indices[k] = i * n + j;
-					rSubMesh.Indices[k + 1] = i * n + j + 1;
-					rSubMesh.Indices[k + 2] = (i + 1) * n + j;
+					rSubmesh.Indices[k] = i * n + j;
+					rSubmesh.Indices[k + 1] = i * n + j + 1;
+					rSubmesh.Indices[k + 2] = (i + 1) * n + j;
 
-					rSubMesh.Indices[k + 3] = (i + 1) * n + j;
-					rSubMesh.Indices[k + 4] = i * n + j + 1;
-					rSubMesh.Indices[k + 5] = (i + 1) * n + j + 1;
+					rSubmesh.Indices[k + 3] = (i + 1) * n + j;
+					rSubmesh.Indices[k + 4] = i * n + j + 1;
+					rSubmesh.Indices[k + 5] = (i + 1) * n + j + 1;
 
 					k += 6; // next quad
 				}
@@ -575,48 +572,48 @@ namespace FTS
 		FMesh CreateQuad(FLOAT x, FLOAT y, FLOAT w, FLOAT h, FLOAT depth)
 		{
 			FMesh Mesh;
-			auto& rSubMesh = Mesh.SubMeshes.emplace_back();
+			auto& rSubmesh = Mesh.Submeshes.emplace_back();
 
 
-			rSubMesh.Vertices.resize(4);
-			rSubMesh.Indices.resize(6);
+			rSubmesh.Vertices.resize(4);
+			rSubmesh.Indices.resize(6);
 
 			// Position coordinates specified in NDC space.
-			rSubMesh.Vertices[0] = FVertex(
+			rSubmesh.Vertices[0] = FVertex(
 				{ x, y - h, depth },
 				{ 0.0f, 0.0f, -1.0f },
 				{ 1.0f, 0.0f, 0.0f, 1.0f },
 				{ 0.0f, 1.0f }
 			);
 
-			rSubMesh.Vertices[1] = FVertex(
+			rSubmesh.Vertices[1] = FVertex(
 				{ x, y, depth },
 				{ 0.0f, 0.0f, -1.0f },
 				{ 1.0f, 0.0f, 0.0f, 1.0f },
 				{ 0.0f, 0.0f }
 			);
 
-			rSubMesh.Vertices[2] = FVertex(
+			rSubmesh.Vertices[2] = FVertex(
 				{ x + w, y, depth },
 				{ 0.0f, 0.0f, -1.0f },
 				{ 1.0f, 0.0f, 0.0f, 1.0f },
 				{ 1.0f, 0.0f }
 			);
 
-			rSubMesh.Vertices[3] = FVertex(
+			rSubmesh.Vertices[3] = FVertex(
 				{ x + w, y - h, depth },
 				{ 0.0f, 0.0f, -1.0f },
 				{ 1.0f, 0.0f, 0.0f, 1.0f },
 				{ 1.0f, 1.0f }
 			);
 
-			rSubMesh.Indices[0] = 0;
-			rSubMesh.Indices[1] = 1;
-			rSubMesh.Indices[2] = 2;
+			rSubmesh.Indices[0] = 0;
+			rSubmesh.Indices[1] = 1;
+			rSubmesh.Indices[2] = 2;
 
-			rSubMesh.Indices[3] = 0;
-			rSubMesh.Indices[4] = 2;
-			rSubMesh.Indices[5] = 3;
+			rSubmesh.Indices[3] = 0;
+			rSubmesh.Indices[4] = 2;
+			rSubmesh.Indices[5] = 3;
 
 			return Mesh;
 		}

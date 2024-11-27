@@ -4,12 +4,9 @@
 
 #include "../../Math/include/Vector.h"
 #include "../../Math/include/Matrix.h"
-#include "../../Math/include/Bounds.h"
-#include "../../Math/include/Bvh.h"
-#include "../../Core/include/Entity.h"
+#include "../../Core/include/ComRoot.h"
 #include "Image.h"
 #include <basetsd.h>
-#include <vector>
 
 
 namespace FTS 
@@ -46,7 +43,7 @@ namespace FTS
 
             BOOL operator==(const SubMaterial& crOther) const
             {
-                ReturnIfFalse(  
+                ReturnIfFalse(
                     fDiffuseFactor[0] == crOther.fDiffuseFactor[0] &&
                     fDiffuseFactor[1] == crOther.fDiffuseFactor[1] &&
                     fDiffuseFactor[2] == crOther.fDiffuseFactor[2] &&
@@ -87,7 +84,7 @@ namespace FTS
 
     struct FMesh
     {
-        struct SubMesh
+        struct Submesh
         {
             std::vector<FVertex> Vertices;
             std::vector<UINT32> Indices;
@@ -96,7 +93,7 @@ namespace FTS
             UINT32 dwMaterialIndex;
         };
 
-        std::vector<SubMesh> SubMeshes;
+        std::vector<Submesh> Submeshes;
         FMatrix4x4 WorldMatrix;
         BOOL bCulling = false;
     };
@@ -111,10 +108,10 @@ namespace FTS
         FMesh CreateCylinder(FLOAT bottomRadius, FLOAT topRadius, FLOAT height, UINT32 sliceCount, UINT32 stackCount);
         FMesh CreateGrid(FLOAT width, FLOAT depth, UINT32 m, UINT32 n);
         FMesh CreateQuad(FLOAT x, FLOAT y, FLOAT w, FLOAT h, FLOAT depth);
-        void Subdivide(FMesh::SubMesh& rMeshData);
+        void Subdivide(FMesh::Submesh& rMeshData);
         FVertex MidPoint(const FVertex& v0, const FVertex& v1);
-        void BuildCylinderTopCap(FLOAT bottomRadius, FLOAT topRadius, FLOAT height, UINT32 sliceCount, UINT32 stackCount, FMesh::SubMesh& meshData);
-        void BuildCylinderBottomCap(FLOAT bottomRadius, FLOAT topRadius, FLOAT height, UINT32 sliceCount, UINT32 stackCount, FMesh::SubMesh& meshData);
+        void BuildCylinderTopCap(FLOAT bottomRadius, FLOAT topRadius, FLOAT height, UINT32 sliceCount, UINT32 stackCount, FMesh::Submesh& meshData);
+        void BuildCylinderBottomCap(FLOAT bottomRadius, FLOAT topRadius, FLOAT height, UINT32 sliceCount, UINT32 stackCount, FMesh::Submesh& meshData);
     };
     
 }

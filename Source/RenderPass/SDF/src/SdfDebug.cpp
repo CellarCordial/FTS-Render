@@ -1,9 +1,9 @@
 #include "../include/SdfDebug.h"
-#include "../../../Gui/include/GuiPass.h"
 #include "../../../Core/include/ComRoot.h"
 #include "../../../Shader/ShaderCompiler.h"
 #include "../../../Scene/include/Scene.h"
-#include <fstream>
+#include "../../../Scene/include/Camera.h"
+#include "../../../Scene/include/Scene.h"
 
 namespace FTS
 {
