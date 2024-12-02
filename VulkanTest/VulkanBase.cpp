@@ -1,5 +1,8 @@
 #include "VulkanBase.h"
 #include "../Source/Core/include/ComRoot.h"
+#include "glfw3.h"
+#include <minwindef.h>
+#include <set>
 #include "vulkan/vulkan_core.h"
 
 namespace FTS
@@ -18,13 +21,14 @@ namespace FTS
 	BOOL FVulkanBase::Initilize()
 	{
 		ReturnIfFalse(CreateInstance());
-		EnumerateSupportExtension();
+		ReturnIfFalse(EnumerateSupportExtension());
 
 #ifdef DEBUG
 		ReturnIfFalse(CreateDebugUtilsMessenger());
 #endif
-
+		ReturnIfFalse(glfwCreateWindowSurface(m_Instance, m_GlfwWindow.GetWindow(), nullptr, &m_Surface) == VK_SUCCESS);
 		PickPhysicalDevice();
+		CreateDevice();
 		return true;
 	}
 
@@ -34,8 +38,9 @@ namespace FTS
 #ifdef DEBUG
 		ReturnIfFalse(DestroyDebugUtilsMessenger());
 #endif
-		vkDestroyInstance(m_Instance, nullptr);
+		vkDestroySurfaceKHR(m_Instance, m_Surface, nullptr);
 		vkDestroyDevice(m_Device, nullptr);
+		vkDestroyInstance(m_Instance, nullptr);
 		return true;
 	}
 
@@ -62,6 +67,7 @@ namespace FTS
 		UINT32 dwGlfwExtensionCount = 0;
 		const CHAR** cppcGlfwExtensions = glfwGetRequiredInstanceExtensions(&dwGlfwExtensionCount);
 		m_Extensions.insert(m_Extensions.end(), cppcGlfwExtensions, cppcGlfwExtensions + dwGlfwExtensionCount);
+		m_Extensions.push_back("VK KHR SWAPCHAIN EXTENSION NAME");
 
 #ifdef DEBUG
 		m_Extensions.push_back("VK_EXT_debug_utils");
@@ -80,9 +86,9 @@ namespace FTS
 	BOOL FVulkanBase::CheckValidationLayerSupport()
 	{
 		UINT32 dwLayerCount = 0;
-		vkEnumerateInstanceLayerProperties(&dwLayerCount, nullptr);
+		ReturnIfFalse(vkEnumerateInstanceLayerProperties(&dwLayerCount, nullptr) == VK_SUCCESS);
 		std::vector<VkLayerProperties> Properties(dwLayerCount);
-		vkEnumerateInstanceLayerProperties(&dwLayerCount, Properties.data());
+		ReturnIfFalse(vkEnumerateInstanceLayerProperties(&dwLayerCount, Properties.data()) == VK_SUCCESS);
 
 		for (const auto& crLayer : m_ValidationLayers)
 		{
@@ -104,16 +110,17 @@ namespace FTS
 		return true;
 	}
 
-	void FVulkanBase::EnumerateSupportExtension()
+	BOOL FVulkanBase::EnumerateSupportExtension()
 	{
 		UINT32 dwExtensionCount = 0;
-		vkEnumerateInstanceExtensionProperties(nullptr, &dwExtensionCount, nullptr);
+		ReturnIfFalse(vkEnumerateInstanceExtensionProperties(nullptr, &dwExtensionCount, nullptr) == VK_SUCCESS);
 		std::vector<VkExtensionProperties> ExtensionProperties(dwExtensionCount);
-		vkEnumerateInstanceExtensionProperties(nullptr, &dwExtensionCount, ExtensionProperties.data());
+		ReturnIfFalse(vkEnumerateInstanceExtensionProperties(nullptr, &dwExtensionCount, ExtensionProperties.data()) == VK_SUCCESS);
 		for (UINT32 ix = 0; ix < dwExtensionCount; ++ix)
 		{
 			LOG_INFO(ExtensionProperties[ix].extensionName);
 		}
+		return true;
 	}
 
 	BOOL FVulkanBase::CreateDebugUtilsMessenger()
@@ -159,10 +166,10 @@ namespace FTS
 	BOOL FVulkanBase::PickPhysicalDevice()
 	{
 		UINT32 dwPhysicalDeviceCount = 0;
-		vkEnumeratePhysicalDevices(m_Instance, &dwPhysicalDeviceCount, nullptr);
+		ReturnIfFalse(vkEnumeratePhysicalDevices(m_Instance, &dwPhysicalDeviceCount, nullptr) == VK_SUCCESS);
 		ReturnIfFalse(dwPhysicalDeviceCount != 0);
-		std::vector<VkPhysicalDevice> PhysicalDevices;
-		vkEnumeratePhysicalDevices(m_Instance, &dwPhysicalDeviceCount, PhysicalDevices.data());
+		std::vector<VkPhysicalDevice> PhysicalDevices(dwPhysicalDeviceCount);
+		ReturnIfFalse(vkEnumeratePhysicalDevices(m_Instance, &dwPhysicalDeviceCount, PhysicalDevices.data()) == VK_SUCCESS);
 
 		for (const auto& crDevice : PhysicalDevices)
 		{
@@ -185,40 +192,52 @@ namespace FTS
 		return true;
 	}
 
-	BOOL FVulkanBase::FindQueueFamily(const auto& crPhysicalDevice)
+	BOOL FVulkanBase::FindQueueFamily(auto& crPhysicalDevice)
 	{
 		UINT32 dwQueueFamilyCount = 0;
 		vkGetPhysicalDeviceQueueFamilyProperties(crPhysicalDevice, &dwQueueFamilyCount, nullptr);
-		std::vector<VkQueueFamilyProperties> Properties;
+		std::vector<VkQueueFamilyProperties> Properties(dwQueueFamilyCount);
 		vkGetPhysicalDeviceQueueFamilyProperties(crPhysicalDevice, &dwQueueFamilyCount, Properties.data());
 
-		for (const auto& crProperty : Properties)
+		for (UINT32 ix = 0; ix < Properties.size(); ++ix)
 		{
-			if (crProperty.queueCount > 0 && crProperty.queueFlags & VK_QUEUE_GRAPHICS_BIT)
+			VkBool32 bPresentSupport = false;
+			if (vkGetPhysicalDeviceSurfaceSupportKHR(crPhysicalDevice , ix, m_Surface, &bPresentSupport) == VK_SUCCESS && bPresentSupport) 
 			{
-				return true;
+				m_QueueFamilyIndex.dwPresentIndex = ix;
 			}
-			m_dwQueueFamilyIndex++;
+			if (Properties[ix].queueCount > 0 && Properties[ix].queueFlags & VK_QUEUE_GRAPHICS_BIT)
+			{
+				m_QueueFamilyIndex.dwGraphicsIndex = ix;
+			}
+
+			if (m_QueueFamilyIndex.dwGraphicsIndex != INVALID_SIZE_32 && m_QueueFamilyIndex.dwGraphicsIndex != INVALID_SIZE_32) break;
 		}
-		return false;
+		return true;
 	}
 
 
 	BOOL FVulkanBase::CreateDevice()
 	{
-		VkDeviceQueueCreateInfo QueueCreateInfo{};
-		QueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		QueueCreateInfo.queueFamilyIndex = m_dwQueueFamilyIndex;
-		QueueCreateInfo.queueCount = 1;
-		
-		float fQueuePriority = 1.0f;
-		QueueCreateInfo.pQueuePriorities = &fQueuePriority;
+		std::set<UINT32> QueueFamilyIndices = { m_QueueFamilyIndex.dwGraphicsIndex, m_QueueFamilyIndex.dwPresentIndex };
+		std::vector<VkDeviceQueueCreateInfo> QueueCreateInfos;
+
+		FLOAT fQueuePriority = 1.0f;
+		for (UINT32 ix : QueueFamilyIndices)
+		{
+			auto& rQueueCreateInfo = QueueCreateInfos.emplace_back();
+			rQueueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			rQueueCreateInfo.queueFamilyIndex = ix;
+			rQueueCreateInfo.queueCount = 1;
+			rQueueCreateInfo.pQueuePriorities = &fQueuePriority;
+		}
+
 
 		VkPhysicalDeviceFeatures DeviceFeatures{};
 
 		VkDeviceCreateInfo DeviceCreateInfo{};
 		DeviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-		DeviceCreateInfo.pQueueCreateInfos = &QueueCreateInfo;
+		DeviceCreateInfo.pQueueCreateInfos = QueueCreateInfos.data();
 		DeviceCreateInfo.queueCreateInfoCount = 1;
 		DeviceCreateInfo.pEnabledFeatures = &DeviceFeatures;
 		DeviceCreateInfo.enabledExtensionCount = 0;
@@ -228,7 +247,8 @@ namespace FTS
 #endif
 
 		ReturnIfFalse(vkCreateDevice(m_PhysicalDevice, &DeviceCreateInfo, nullptr, &m_Device) == VK_SUCCESS);
-		vkGetDeviceQueue(m_Device, m_dwQueueFamilyIndex, 0, &m_GraphicsQueue);
+		vkGetDeviceQueue(m_Device, m_QueueFamilyIndex.dwGraphicsIndex, 0, &m_GraphicsQueue);
+		vkGetDeviceQueue(m_Device, m_QueueFamilyIndex.dwPresentIndex, 0, &m_PresentQueue);
 		
 		return true;  
 	}

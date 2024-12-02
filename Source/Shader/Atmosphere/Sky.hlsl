@@ -1,5 +1,5 @@
 #include "../Constants.hlsli"
-
+#include "../SkyCommon.hlsli"
 #include "../PostProcess.hlsli"
 
 cbuffer gPassConstant : register(b0)
@@ -38,13 +38,7 @@ float4 PS(FVertexOutput In) : SV_Target0
         In.UV.y
     ));
 
-    float fPhi = atan2(Dir.z, Dir.x);   // [-π, π]
-    float fTheta = asin(Dir.y);         // [-π/2, π/2]
-    float u = fPhi / (2.0f * PI);
-    float v = 0.5f + 0.5f * sign(fTheta) * sqrt(abs(fTheta) / (PI / 2.0f));
-    // 对归一化结果取平方根，能够调整输出值的曲线，使得小角度（接近 0）的变化更加平滑，而大角度（接近 π/2）的变化较快.
-
-    float3 SkyColor = gSkyLUT.Sample(gSampler, float2(u, v));
+    float3 SkyColor = gSkyLUT.Sample(gSampler, GetSkyUV(Dir));
     SkyColor = PostProcess(In.UV, SkyColor);
 
     return float4(SkyColor, 1.0f);

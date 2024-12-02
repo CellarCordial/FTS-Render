@@ -89,6 +89,7 @@ namespace FTS
 			{
 				Color,
 				Normal,
+				Depth,
 				PBR,
 				Emissve,
 				Count

@@ -20,6 +20,8 @@ namespace FTS
 			return glfwWindowShouldClose(m_pWindow);
 		}
 
+		GLFWwindow* GetWindow() const { return m_pWindow; }
+
 	private:
 		GLFWwindow* m_pWindow = nullptr;
 		GLFWmonitor* m_pMonitor = nullptr;

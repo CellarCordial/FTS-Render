@@ -95,6 +95,12 @@ namespace FTS
 			m_GraphicsState.ViewportState = FViewportState::CreateSingleViewport(CLIENT_WIDTH, CLIENT_HEIGHT);
 		}
 
+		FLOAT fChunkSize = (gfSceneGridSize / gdwGlobalSdfResolution) * gdwVoxelNumPerChunk;
+		m_GlobalSdfData.fDefaultMarch = fChunkSize;
+		m_GlobalSdfData.fSceneGridSize = gfSceneGridSize;
+		m_GlobalSdfData.SceneGridOrigin = FVector3F(-gfSceneGridSize * 0.5f);
+
+		ReturnIfFalse(pCache->CollectConstants("GlobalSdfData", &m_GlobalSdfData));
 
 		return true;
 	}
@@ -115,12 +121,7 @@ namespace FTS
 				}
 			));
 
-			m_PassConstants.fMaxGIDistance = gfSceneGridSize;
-			m_PassConstants.fSceneGridSize = gfSceneGridSize;
-			m_PassConstants.dwChunkNumPerAxis = gdwGlobalSdfResolution / gdwVoxelNumPerChunk;
-			m_PassConstants.fChunkSize = gfSceneGridSize / m_PassConstants.dwChunkNumPerAxis;
-			m_PassConstants.SceneGridOrigin = FVector3F(-gfSceneGridSize * 0.5f);
-			m_PassConstants.fDefaultMarch = m_PassConstants.fChunkSize;
+			m_PassConstants.SdfData = m_GlobalSdfData;
 		}
 		
 		ReturnIfFalse(pCmdList->Open());

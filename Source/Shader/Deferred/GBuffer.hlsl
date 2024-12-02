@@ -1,4 +1,5 @@
 #include "../Material.hlsli"
+#include "../Octohedral.hlsli"
 
 cbuffer FPassConstants : register(b0)
 {
@@ -20,7 +21,9 @@ SamplerState gSampler : register(s0);
 
 Texture2D gDiffuse           : register(t0);
 Texture2D gNormal            : register(t1);
-Texture2D gMetallicRoughness : register(t2);
+Texture2D gEmissive          : register(t2);
+Texture2D gOcclusion         : register(t3);
+Texture2D gMetallicRoughness : register(t4);
 
 StructuredBuffer<FMaterial> gMaterials : register(t5);
 
@@ -65,11 +68,11 @@ FVertexOutput VS(FVertexInput In)
 
 struct FPixelOutput
 {
-    float4 Position : SV_Target0;
-    float4 Normal   : SV_Target1;
-    float4 Diffuse  : SV_Target2;
-    float4 Specular : SV_Target3;
-    float4 Motion   : SV_Target4;
+    float4 Position     : SV_Target0;
+    float2 Normal       : SV_Target1;
+    float4 BaseColor    : SV_Target2;
+    float4 PBR          : SV_Target3;
+    float4 Emmisive     : SV_Target4;
 };
 
 float3 CalcNormal(float3 TextureNormal, float3 VertexNormal, float4 VertexTangent)
@@ -86,16 +89,18 @@ FPixelOutput PS(FVertexOutput In)
 {
     FPixelOutput Out;
     Out.Position = float4(In.PositionW, 1.0f);
+    
+    float3 Normal = CalcNormal(gNormal.Sample(gSampler, In.UV).xyz, In.NormalW, In.TangentW);
+    Out.Normal = UnitVectorToOctahedron(Normal);
 
-    Out.Diffuse = gDiffuse.Sample(gSampler, In.UV) * gMaterials[dwMaterialIndex].fDiffuse;
-    Out.Normal = float4(CalcNormal(gNormal.Sample(gSampler, In.UV).xyz, In.NormalW, In.TangentW), 1.0f);
+    Out.BaseColor = gDiffuse.Sample(gSampler, In.UV) * gMaterials[dwMaterialIndex].fDiffuse;
+    
+    float fOcclusion = gOcclusion.Sample(gSampler, In.UV).r;
     float4 MetallicRoughness = gMetallicRoughness.Sample(gSampler, In.UV);
     MetallicRoughness.r *= gMaterials[dwMaterialIndex].fMetallic;
     MetallicRoughness.g *= gMaterials[dwMaterialIndex].fRoughness;
+    Out.PBR = float4(MetallicRoughness.rg, fOcclusion, 1.0f);
 
-	Out.Motion.xy = In.ClipPos.xy / In.ClipPos.w - In.PrevClipPos.xy / In.PrevClipPos.w;
-	Out.Motion.y = -Out.Motion.y;
-	Out.Motion.z = In.ClipPos.w - In.PrevClipPos.w;
-	Out.Motion.w = MetallicRoughness.g;
+    Out.Emmisive = gEmissive.Sample(gSampler, In.UV);
     return Out;
 }

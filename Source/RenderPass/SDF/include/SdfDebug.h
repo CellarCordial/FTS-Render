@@ -13,15 +13,26 @@ namespace FTS
 {
     namespace Constant
     {
+        struct GlobalSdfData
+        {
+            FLOAT fSceneGridSize = 0.0f;
+            FVector3F SceneGridOrigin; 
+
+            UINT32 dwMaxTraceSteps = 1024;
+            FLOAT AbsThreshold = 0.01f;
+            FLOAT fDefaultMarch = 0.0f;
+        };
+
 		struct SdfDebugPassConstants
 		{
-			FVector3F FrustumA;                     UINT32 dwMaxTraceSteps = 1024;
-			FVector3F FrustumB;                     FLOAT fAbsThreshold = 0.01f;
-			FVector3F FrustumC;                     FLOAT fChunkSize = 0.0f;
-            FVector3F FrustumD;                     UINT32 dwChunkNumPerAxis = 0;
-            FVector3F CameraPosition;               FLOAT fSceneGridSize = 0.0f;
-            FVector3F SceneGridOrigin;              FLOAT fMaxGIDistance = 0.0f;
-            FLOAT fDefaultMarch = 0.0f;            FVector3F PAD;
+			FVector3F FrustumA;     FLOAT PAD0 = 0.0f;      
+			FVector3F FrustumB;     FLOAT PAD1 = 0.0f;      
+			FVector3F FrustumC;     FLOAT PAD2 = 0.0f;      
+            FVector3F FrustumD;     FLOAT PAD3 = 0.0f;
+            FVector3F CameraPosition; FLOAT PAD4 = 0.0f;
+
+            GlobalSdfData SdfData;         
+            FLOAT PAD5;
 		};
     }
 
@@ -37,6 +48,7 @@ namespace FTS
     private:
         std::vector<FLOAT> m_SdfData;
         BOOL m_bResourcesWrited = false;
+        Constant::GlobalSdfData m_GlobalSdfData;         
         Constant::SdfDebugPassConstants m_PassConstants;
         
         ITexture* m_pSdfTexture = nullptr;

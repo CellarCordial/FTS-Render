@@ -6,7 +6,6 @@
 #include "../../../Math/include/Matrix.h"
 #include "../../../Math/include/Bounds.h"
 #include "../../../Scene/include/Scene.h"
-#include <memory>
 
 namespace FTS
 { 

@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "GlfwWindow.h"
+#include "../Source/Math/include/Common.h"
 
 namespace FTS
 {
@@ -42,13 +43,13 @@ namespace FTS
 
 		BOOL CreateInstance();
 		BOOL CheckValidationLayerSupport();
-		void EnumerateSupportExtension();
+		BOOL EnumerateSupportExtension();
 
 		BOOL CreateDebugUtilsMessenger();
 		BOOL DestroyDebugUtilsMessenger();
 
 		BOOL PickPhysicalDevice();
-		BOOL FindQueueFamily(const auto& crPhysicalDevice);
+		BOOL FindQueueFamily(auto& crPhysicalDevice);
 
 		BOOL CreateDevice();
 
@@ -58,16 +59,22 @@ namespace FTS
 		std::vector<std::string> m_InstanceExtensions;
 
 		VkDebugUtilsMessengerEXT m_DebugMessenger;
-		VkSurfaceKHR m_Surface;
 		std::vector<const CHAR*> m_ValidationLayers;
 		std::vector<const CHAR*> m_Extensions;
 		VkDebugUtilsMessengerEXT m_DebugCallback;
 
 		VkPhysicalDevice m_PhysicalDevice = VK_NULL_HANDLE;
-		UINT32 m_dwQueueFamilyIndex = 0;
+		VkSurfaceKHR m_Surface;
+
+		struct 
+		{
+			UINT32 dwGraphicsIndex = INVALID_SIZE_32;
+			UINT32 dwPresentIndex = INVALID_SIZE_32;
+		} m_QueueFamilyIndex;
 
 		VkDevice m_Device;
 		VkQueue m_GraphicsQueue;
+		VkQueue m_PresentQueue;
 
 		FGlfwWindow m_GlfwWindow;
 	};
