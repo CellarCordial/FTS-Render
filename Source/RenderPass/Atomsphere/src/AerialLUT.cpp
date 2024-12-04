@@ -1,6 +1,5 @@
 #include "../include/AerialLUT.h"
 #include "../../../Shader/ShaderCompiler.h"
-#include "../../../Gui/include/GuiPanel.h"
 #include "../../../Scene/include/Light.h"
 #include "../../../Scene/include/Camera.h"
 #include <string>

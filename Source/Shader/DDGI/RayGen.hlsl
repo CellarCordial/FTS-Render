@@ -51,8 +51,8 @@ SamplerState gSDFSampler : register(s0);
 Texture2D<float3> gSkyLUT : register(t1);
 SamplerState gSkySampler : register(s1);
 
-Texture2D<float3> gRadianceTexture : register(t2);
-Texture2D<float4> gDirectionDistanceTexture : register(t3);
+Texture2D<float3> gOutputRadianceTexture : register(t2);
+Texture2D<float4> gOutputDirectionDistanceTexture : register(t3);
 
 StructuredBuffer<FSdfChunkData> gSdfChunkDatas : register(t4);
 StructuredBuffer<FModelSurfaceData> gModelSurfaceDatas : register(t4);
@@ -185,8 +185,8 @@ void CS(uint3 ThreadID : SV_DispatchThreadID)
         }
     }
 
-    gRadianceTexture[ThreadID.xy] = Radiance;
-    gDirectionDistanceTexture[ThreadID.xy] = float4(RayDir, fDistance);
+    gOutputRadianceTexture[ThreadID.xy] = Radiance;
+    gOutputDirectionDistanceTexture[ThreadID.xy] = float4(RayDir, fDistance);
 }
 
 
