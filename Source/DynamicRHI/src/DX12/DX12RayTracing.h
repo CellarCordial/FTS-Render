@@ -1,11 +1,11 @@
 #ifndef RHI_DX12_RAY_TRACING_H
 #define RHI_DX12_RAY_TRACING_H
 
-#if USE_RAY_TRACING
+#if RAY_TRACING
 #include "../../../Core/include/ComRoot.h"
 #include "../../../Core/include/ComCli.h"
 #include "../../include/RayTracing.h"
-#include <d3d12.h>
+#include "DX12Forward.h"
 
 namespace FTS
 {

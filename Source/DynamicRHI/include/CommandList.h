@@ -2,7 +2,7 @@
 #define RHI_COMMAND_LIST_H
 
 #include "Draw.h"
-#if USE_RAY_TRACING
+#if RAY_TRACING
 #include "RayTracing.h"
 #endif
 namespace FTS
@@ -130,7 +130,7 @@ namespace FTS
             EResourceStates* pResourceStates
         ) = 0;
 
-#if USE_RAY_TRACING
+#if RAY_TRACING
 		virtual void SetRayTracingState(const RayTracing::FPipelineState& crState) = 0;
 		virtual void DispatchRays(const RayTracing::FDispatchRaysArguments& crArguments) = 0;
 

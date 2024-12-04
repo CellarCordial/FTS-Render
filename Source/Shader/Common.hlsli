@@ -29,9 +29,15 @@ float3 SphericalFibonacci(uint ix, uint dwTotalNum)
 }
 
 
-
-
-
+float3 CalcNormal(float3 TextureNormal, float3 VertexNormal, float4 VertexTangent)
+{
+    float3 UnpackedNormal = TextureNormal * 2.0f - 1.0f;
+    float3 N = VertexNormal;
+    float3 T = normalize(VertexTangent.xyz - N * dot(VertexTangent.xyz, N));
+    float3 B = cross(N, T) * VertexTangent.w;
+    float3x3 TBN = float3x3(T, B, N);
+    return normalize(mul(UnpackedNormal, TBN));
+}
 
 
 

@@ -40,7 +40,7 @@ float4 PS(FVertexOutput In) : SV_Target0
         In.UV.y
     );
 
-    FSdfHitData HitData = TraceGlobalSdf(o, d, GlobalSdfData, false, gSdf, gSampler);
+    FSdfHitData HitData = TraceGlobalSdf(o, d, GlobalSdfData, gSdf, gSampler);
 
     float Color = float(HitData.dwStepCount) / float(GlobalSdfData.dwMaxTraceSteps - 1);
     Color = pow(Color, 1 / 2.2f);

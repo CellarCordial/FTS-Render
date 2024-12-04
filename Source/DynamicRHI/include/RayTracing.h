@@ -1,9 +1,10 @@
 #ifndef RHI_RAY_TRACING
 #define RHI_RAY_TRACING
 
-#if USE_RAY_TRACING
+#if RAY_TRACING
 #include "../../Math/include/Matrix.h"
 #include "Pipeline.h"
+#include "Draw.h"
 #include <vector>
 
 namespace FTS
@@ -150,6 +151,12 @@ namespace FTS
 			INT32 dwHlslExtensionsUAV = -1;
 		};
 
+		extern const IID IID_IPipeline;
+		struct IPipeline : public IResource
+		{
+			virtual const FPipelineDesc& GetDesc() const = 0;
+			virtual BOOL CreateShaderTabel(CREFIID criid, void** ppvShaderTable) = 0;
+		};
 
 		extern const IID IID_IShaderTable;
 		struct IShaderTable : public IResource
@@ -167,12 +174,6 @@ namespace FTS
 			virtual IPipeline* GetPipeline() const = 0;
 		};
 
-		extern const IID IID_IPipeline;
-		struct IPipeline : public IResource
-		{
-			virtual const FPipelineDesc& GetDesc() const = 0;
-			virtual BOOL CreateShaderTabel(CREFIID criid, void** ppvShaderTable) = 0;
-		};
 
 		struct FPipelineState
 		{

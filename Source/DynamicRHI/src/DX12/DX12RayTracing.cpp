@@ -1,6 +1,5 @@
+#if RAY_TRACING
 #include "DX12RayTracing.h"
-
-#if USE_RAY_TRACING
 #include "DX12Resource.h"
 
 namespace FTS
@@ -85,16 +84,6 @@ namespace FTS
 		}
 
 		IPipeline* FDX12ShaderTable::GetPipeline() const
-		{
-
-		}
-
-		const FAccelStructDesc& FDX12AccelStruct::GetDesc() const
-		{
-
-		}
-
-		BOOL FDX12AccelStruct::IsCompacted() const
 		{
 
 		}

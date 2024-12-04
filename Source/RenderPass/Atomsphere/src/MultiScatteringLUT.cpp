@@ -1,6 +1,5 @@
 #include "../include/MultiScatteringLUT.h"
 #include "../../../Shader/ShaderCompiler.h"
-#include "../../../Gui/include/GuiPanel.h"
 #include "../../../Scene/include/Light.h"
 #include <cySampleElim.h>
 #include <cyPoint.h>

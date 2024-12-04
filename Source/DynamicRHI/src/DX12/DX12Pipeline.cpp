@@ -9,7 +9,6 @@
 #include <d3dcommon.h>
 #include <sstream>
 #include <utility>
-#include "../StateTrack.h"
 
 namespace FTS 
 {
@@ -895,36 +894,33 @@ namespace FTS
 			m_dwCapacity = dwNewSize;
 			return;
 		}
-        else
+        if (!bKeepContents && dwOldCapacity > 0)
         {
-			if (!bKeepContents && dwOldCapacity > 0)
-			{
-				m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptors(dwOldFirstViewIndex, dwOldCapacity);
-			}
-
-			UINT32 dwNewFirstViewIndex = m_pDescriptorHeaps->ShaderResourceHeap.AllocateDescriptors(dwNewSize);
-			m_dwFirstDescriptorIndex = dwNewFirstViewIndex;
-
-			if (bKeepContents && dwOldCapacity > 0)
-			{
-				m_cpContext->pDevice->CopyDescriptorsSimple(
-					dwOldCapacity,
-					m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(dwNewFirstViewIndex),
-					m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(dwOldFirstViewIndex),
-					D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
-				);
-				m_cpContext->pDevice->CopyDescriptorsSimple(
-					dwOldCapacity,
-					m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandleShaderVisible(dwNewFirstViewIndex),
-					m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(dwOldFirstViewIndex),
-					D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
-				);
-
-				m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptors(dwOldFirstViewIndex, dwOldCapacity);
-			}
-
-			m_dwCapacity = dwNewSize;
+            m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptors(dwOldFirstViewIndex, dwOldCapacity);
         }
+
+        UINT32 dwNewFirstViewIndex = m_pDescriptorHeaps->ShaderResourceHeap.AllocateDescriptors(dwNewSize);
+        m_dwFirstDescriptorIndex = dwNewFirstViewIndex;
+
+        if (bKeepContents && dwOldCapacity > 0)
+        {
+            m_cpContext->pDevice->CopyDescriptorsSimple(
+                dwOldCapacity,
+                m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(dwNewFirstViewIndex),
+                m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(dwOldFirstViewIndex),
+                D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+            );
+            m_cpContext->pDevice->CopyDescriptorsSimple(
+                dwOldCapacity,
+                m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandleShaderVisible(dwNewFirstViewIndex),
+                m_pDescriptorHeaps->ShaderResourceHeap.GetCpuHandle(dwOldFirstViewIndex),
+                D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV
+            );
+
+            m_pDescriptorHeaps->ShaderResourceHeap.ReleaseDescriptors(dwOldFirstViewIndex, dwOldCapacity);
+        }
+
+        m_dwCapacity = dwNewSize;
 	}
 
 	FDX12BindlessSet::~FDX12BindlessSet() noexcept

@@ -138,7 +138,7 @@ namespace FTS
         UINT64 ExecuteCommandLists(ICommandList* const* pcpCommandLists, UINT64 stCommandListsNum = 1, ECommandQueueType ExecutionQueueType = ECommandQueueType::Graphics) override;
         BOOL QueueWaitForCommandList(ECommandQueueType WaitQueueType, ECommandQueueType ExecutionQueueType, UINT64 stInstance) override;
 
-#if USE_RAY_TRACING
+#if RAY_TRACING
 		BOOL CreateRayTracingPipeline(const RayTracing::FPipelineDesc& crDesc, CREFIID criid, void** ppvPipeline) override;
 		BOOL CreateAccelStruct(const RayTracing::FAccelStructDesc& crDesc, CREFIID criid, void** ppvAccelStruct) override;
 

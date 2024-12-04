@@ -612,7 +612,7 @@ namespace FTS
         return true;
     }
 
-#if USE_RAY_TRACING
+#if RAY_TRACING
 	BOOL FDX12Device::CreateRayTracingPipeline(const RayTracing::FPipelineDesc& crDesc, CREFIID criid, void** ppvPipeline)
 	{
 

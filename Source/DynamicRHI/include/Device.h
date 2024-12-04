@@ -110,7 +110,7 @@ namespace FTS
             ECommandQueueType ExecutionQueueType = ECommandQueueType::Graphics
         ) = 0;
 
-#if USE_RAY_TRACING
+#if RAY_TRACING
 		virtual BOOL CreateRayTracingPipeline(const RayTracing::FPipelineDesc& crDesc, CREFIID criid, void** ppvPipeline) = 0;
 		virtual BOOL CreateAccelStruct(const RayTracing::FAccelStructDesc& crDesc, CREFIID criid, void** ppvAccelStruct) = 0;
 
