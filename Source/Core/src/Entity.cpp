@@ -47,7 +47,7 @@ namespace FTS
                 rpEntity->m_bPendingDestroy = true;
             }
         }
-        m_pEntities.clear();
+        m_pEntities.resize(0);
 
         for (auto& rpSystem : m_pSystems) rpSystem.reset();
     }
@@ -126,7 +126,7 @@ namespace FTS
                 rpEntity->m_bPendingDestroy = true;
             }
         }
-        m_pEntities.clear();
+        m_pEntities.resize(0);
         return true;
     }
 

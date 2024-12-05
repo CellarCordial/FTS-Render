@@ -2,7 +2,6 @@
 #include "bvh/bvh.hpp"
 #include "bvh/leaf_collapser.hpp"
 #include "bvh/locally_ordered_clustering_builder.hpp"
-#include "../../Core/include/ComRoot.h"
 #include "../../Parallel/include/Parallel.h"
 
 namespace FTS 
@@ -52,7 +51,7 @@ namespace FTS
 
 
         
-        m_Vertices.clear();
+        m_Vertices.resize(0);
         m_Nodes.resize(Bvh.node_count);
 
         for (SIZE_T ix = 0; ix< Bvh.node_count; ++ix)

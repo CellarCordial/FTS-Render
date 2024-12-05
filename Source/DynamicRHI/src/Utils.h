@@ -3,31 +3,10 @@
 
 #include "../../Core/include/SysCall.h"
 #include "../include/Descriptor.h"
-#include <mutex>
-#include <vector>
-#include "../../Core/include/SysCall.h"
 #include <cassert>
-#include <mutex>
 
 namespace FTS
 {
-    class FBitSetAllocator
-    {
-    public:
-        FBitSetAllocator(UINT64 stSize, BOOL bMultiThreads);
-
-        UINT32 Allocate();
-        void Release(UINT32 dwIndex);
-
-        UINT64 GetCapacity() const;
-
-    private:
-        std::mutex m_Mutex;
-        BOOL m_bMultiThreaded;
-        
-        UINT32 m_dwNextAvailable = 0;   // 记录下一个可能未被分配的位
-        std::vector<UINT8> m_bAllocateds;
-    };
 
     template <class T>
     inline void HashCombine(UINT64& rstSeed, const T& crValue)

@@ -7,7 +7,6 @@
 #include <dxgiformat.h>
 #include <backends/imgui_impl_dx12.h>
 #include <backends/imgui_impl_glfw.h>
-#include <memory>
 #include <minwindef.h>
 #include <queue>
 #include <span>
@@ -54,8 +53,8 @@ namespace FTS
         m_stGraphicsWaitValue = 0;
         m_stComputeWaitValue = 0;
 
-        m_PassAsyncTypes.clear();
-        m_pCmdLists.clear();
+        m_PassAsyncTypes.resize(0);
+        m_pCmdLists.resize(0);
     }
 
     void FRenderGraph::AddPass(IRenderPass* pPass)

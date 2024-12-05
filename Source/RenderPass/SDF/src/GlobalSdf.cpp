@@ -252,9 +252,9 @@ namespace FTS
 
 	BOOL FGlobalSdfPass::FinishPass()
 	{
-		m_cpMeshSdfs.clear();
-		m_ModelSdfDatas.clear();
-		m_PassConstants.clear();
+		m_cpMeshSdfs.resize(0);
+		m_ModelSdfDatas.resize(0);
+		m_PassConstants.resize(0);
 		return true;
 	}
 

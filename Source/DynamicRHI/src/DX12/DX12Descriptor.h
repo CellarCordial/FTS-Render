@@ -8,7 +8,7 @@
 #include "../../include/DynamicRHI.h"
 
 #include "DX12Forward.h"
-#include "../Utils.h"
+#include "../../../Tools/include/BitAllocator.h"
 
 namespace FTS
 {

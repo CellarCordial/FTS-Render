@@ -1358,7 +1358,7 @@ namespace FTS
         if (cstBarriersNum == 0) return;
 
 
-        m_D3D12Barriers.clear();
+        m_D3D12Barriers.resize(0);
         m_D3D12Barriers.reserve(cstBarriersNum);
 
         for (const auto& crBarrier : crTextureBarriers)

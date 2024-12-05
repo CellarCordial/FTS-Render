@@ -3,7 +3,6 @@
 #include <memory>
 #include <utility>
 #include <vector>
-#include <sstream>
 
 
 namespace FTS 
@@ -173,8 +172,8 @@ namespace FTS
 
     void FResourceStateTracker::ClearBarriers()
     {
-        m_TextureBarriers.clear();
-        m_BufferBarriers.clear();
+        m_TextureBarriers.resize(0);
+        m_BufferBarriers.resize(0);
     }
 
 	FTextureState* FResourceStateTracker::GetTextureStateTrack(ITextureStateTrack* pTexture)

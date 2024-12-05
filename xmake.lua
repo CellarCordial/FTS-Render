@@ -27,6 +27,7 @@ target("FTS-Render")
 		"$(projectdir)/Source/Core/**.cpp",
 		"$(projectdir)/Source/Math/**.cpp",
 		"$(projectdir)/Source/Scene/**.cpp",
+		"$(projectdir)/Source/Tools/**.cpp",
 		"$(projectdir)/Source/Parallel/**.cpp",
 		"$(projectdir)/Source/DynamicRHI/**.cpp",
 		"$(projectdir)/Source/RenderGraph/**.cpp",

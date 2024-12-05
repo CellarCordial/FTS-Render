@@ -81,7 +81,7 @@ namespace FTS
         void Reset()
         {
             std::lock_guard LockGuard(Mutex);
-            Funcitons.clear();
+            Funcitons.resize(0);
         }
 
 

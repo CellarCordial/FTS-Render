@@ -17,7 +17,7 @@
 #include "DX12Pipeline.h"
 #include "DX12Resource.h"
 #include "DX12Shader.h"
-
+#include "../Utils.h"
 
 namespace FTS
 {

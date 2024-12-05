@@ -80,18 +80,32 @@ inline bool operator!=(T a, UINT32 b) { return UINT32(a) != b; }
         return (1.0f - f) * fValue1 + f * fValue2;
     }
 
-    // 返回比 v 大的且最接近 v 的 2 的幂次方
+    inline BOOL CheckIfPowerOf2(UINT32 v)
+    {
+        return v & (v - 1);
+    }
+
     inline UINT32 NextPowerOf2(UINT32 v)
     {
-        v--;
-        v |= v >> 1;
-        v |= v >> 2;
-        v |= v >> 4;
-        v |= v >> 8;
-        v |= v >> 16;
-        v++;
+        if(v & (v - 1))
+        {
+            while (v & (v - 1)) 
+            {
+                // 清除最低位的 1.
+                v ^= (v & -v);
+            }
+        }
+        return v == 0 ? 1 : (v << 1);
+    }
 
-        return v;
+    inline UINT32 PreviousPowerOf2(UINT32 v)
+    {
+        while (v & (v - 1))
+        {
+            // 清除最低位的 1.
+            v ^= (v & -v);
+        }
+        return v;   
     }
 
     inline constexpr FLOAT Gamma(INT32 dwValue)

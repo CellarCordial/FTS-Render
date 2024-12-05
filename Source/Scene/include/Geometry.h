@@ -4,7 +4,10 @@
 
 #include "../../Math/include/Vector.h"
 #include "../../Math/include/Matrix.h"
+#include "../../Math/include/Surface.h"
 #include "../../Core/include/ComRoot.h"
+#include "../../Tools/include/HashTable.h"
+#include "../../Tools/include/BitAllocator.h"
 #include "Image.h"
 #include <basetsd.h>
 
@@ -98,6 +101,48 @@ namespace FTS
         BOOL bCulling = false;
     };
 
+    class FMeshOptimizer
+    {
+    public:
+        void Optimize(UINT32 dwTargetTriangleNum);
+        void LockPosition(FVector3F Pos);
+
+
+        FLOAT fMaxError;
+        UINT32 dwRemainVertexNum;
+        UINT32 dwRemainTriangleNum;
+
+    private:
+
+
+    private:
+        enum
+        {
+            AdjacencyMask   = 1,
+            LockMask        = 2
+        };
+        std::vector<UINT8> m_Masks;
+
+        std::vector<FVector3F> m_Vertices;
+        std::vector<UINT32> m_Indices;
+        std::vector<FQuadricSurface> m_TriangleSurfaces;
+
+        FBitSetAllocator m_bTrangleRemovedArray;
+
+        FHashTable m_VertexTable;
+        FHashTable m_CornerTable;
+
+
+        std::vector<std::pair<FVector3F, FVector3F>> m_Edges;
+        FHashTable m_EdgeBeginTable;
+        FHashTable m_EdgeEndTable;
+
+
+        std::vector<UINT32> m_MovedVertexIndices;
+        std::vector<UINT32> m_MovedIndexIndices;
+        std::vector<UINT32> m_MovedEdgeIndices;
+        std::vector<UINT32> m_EdgeNeedReevaluateIndices;
+    };
 
 
     namespace Geometry
