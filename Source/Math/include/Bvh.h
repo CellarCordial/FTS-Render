@@ -42,8 +42,8 @@ namespace FTS
 
         void Clear() 
         { 
-            m_Nodes.resize(0);
-            m_Vertices.resize(0);
+            m_Nodes.clear(); m_Nodes.shrink_to_fit();
+            m_Vertices.clear(); m_Vertices.shrink_to_fit();
             dwTriangleNum = 0;
         }
 

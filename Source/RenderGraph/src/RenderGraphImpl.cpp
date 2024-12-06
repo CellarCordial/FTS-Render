@@ -53,8 +53,8 @@ namespace FTS
         m_stGraphicsWaitValue = 0;
         m_stComputeWaitValue = 0;
 
-        m_PassAsyncTypes.resize(0);
-        m_pCmdLists.resize(0);
+        m_PassAsyncTypes.clear();
+        m_pCmdLists.clear();
     }
 
     void FRenderGraph::AddPass(IRenderPass* pPass)

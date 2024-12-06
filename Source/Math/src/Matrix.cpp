@@ -244,6 +244,88 @@ namespace FTS
         return Ret;
     }
 
+    BOOL Inverse(const FMatrix4x4& crMatrix, FMatrix4x4& rInvMatrix)
+    {
+        UINT32 dwIndexCol[4], dwIndexRaw[4];
+		UINT32 dwIPIV[4] = { 0, 0, 0, 0 };
+		FLOAT fInvMatrix[4][4];
+		memcpy(fInvMatrix, crMatrix.m_pf, 16 * sizeof(FLOAT));
+
+		for (UINT32 i = 0; i < 4; ++i)
+		{
+			UINT32 dwColIndex = 0, dwRawIndex = 0;
+			FLOAT fBig = 0.0f;
+			for (UINT32 j = 0; j < 4; ++j)
+			{
+				if (dwIPIV[j] != 1)
+				{
+					for (UINT32 k = 0; k < 4; ++k)
+					{
+						if (dwIPIV[k] == 0)
+						{
+							if (std::abs(fInvMatrix[j][k]) >= fBig)
+							{
+								fBig = std::abs(fInvMatrix[j][k]);
+								dwRawIndex = j;
+								dwColIndex = k;
+							}
+						}
+						else if (dwIPIV[k] > 1)
+						{
+							return false;
+						}
+					}
+				}
+			}
+			dwIPIV[dwColIndex]++;
+
+			if (dwColIndex != dwRawIndex)
+			{
+				for (UINT32 k = 0; k < 4; ++k)
+				{
+					std::swap(fInvMatrix[dwRawIndex][k], fInvMatrix[dwColIndex][k]);
+				}
+			}
+			dwIndexCol[i] = dwColIndex;
+			dwIndexRaw[i] = dwRawIndex;
+
+			if (fInvMatrix[dwColIndex][dwColIndex] == 0.0f) return false;
+            
+			const FLOAT fInvPIV = 1.0f / fInvMatrix[dwColIndex][dwColIndex];
+			fInvMatrix[dwColIndex][dwColIndex] = 1.0f;
+
+			for (UINT32 j = 0; j < 4; j++)
+			{
+				fInvMatrix[dwColIndex][j] *= fInvPIV;
+			}
+
+			for (UINT32 j = 0; j < 4; j++)
+			{
+				if (j != dwColIndex)
+				{
+					const FLOAT fSave = fInvMatrix[j][dwColIndex];
+					fInvMatrix[j][dwColIndex] = 0;
+					for (int k = 0; k < 4; k++)
+					{
+						fInvMatrix[j][k] -= fInvMatrix[dwColIndex][k] * fSave;
+					}
+				}
+			}
+		}
+
+		for (int j = 3; j >= 0; j--)
+		{
+			if (dwIndexRaw[j] != dwIndexCol[j])
+			{
+				for (int k = 0; k < 4; k++)
+					std::swap(fInvMatrix[k][dwIndexRaw[j]], fInvMatrix[k][dwIndexCol[j]]);
+			}
+		}
+
+        rInvMatrix = FMatrix4x4(fInvMatrix);
+        return true;
+    }
+
     FMatrix4x4 Inverse(const FMatrix4x4& crMatrix)
     {
 		UINT32 dwIndexCol[4], dwIndexRaw[4];

@@ -15,7 +15,7 @@ namespace FTS
         FQuadricSurface() = default;
         FQuadricSurface(FVector3F p0, FVector3F p1, FVector3F p2);
 
-        FVector3F GetVertexPos();
+        BOOL GetVertexPos(FVector3F& rVertex);
         FLOAT DistanceToSurface(FVector3F p);
 
 	};

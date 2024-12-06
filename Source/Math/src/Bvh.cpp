@@ -51,7 +51,7 @@ namespace FTS
 
 
         
-        m_Vertices.resize(0);
+        m_Vertices.clear();
         m_Nodes.resize(Bvh.node_count);
 
         for (SIZE_T ix = 0; ix< Bvh.node_count; ++ix)
@@ -238,7 +238,7 @@ namespace FTS
         }
 
         pPrimitives.swap(pOrderedPrimitives);
-        PrimitiveInfos.resize(0);
+        PrimitiveInfos.clear();
 
         m_Nodes.resize(dwTotalNodes);
         UINT32 dwOffset = 0;

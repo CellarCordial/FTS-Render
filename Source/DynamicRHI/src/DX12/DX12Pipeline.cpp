@@ -254,7 +254,7 @@ namespace FTS
         // The root parameter indices stored here are relative to the beginning of that segment, not to the RS item 0.
 
         D3D12_SHADER_VISIBILITY ShaderVisibility = ConvertShaderStage(m_Desc.ShaderVisibility);
-        m_RootParameters.resize(0);
+        m_RootParameters.clear();
 
         if (RootConstants.Num32BitValues > 0)
         {

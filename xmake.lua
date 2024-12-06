@@ -1,6 +1,6 @@
 add_rules("mode.debug", "mode.release")
 
--- If set to ".vscode", the Clangd will not indexing all files.
+-- If set to ".vscode", the Clangd will not indexing all files even if you have set "compile-commands-dir".
 add_rules("plugin.compile_commands.autoupdate", {outputdir = "$(projectdir)"})
 
 set_runtimes("MD")

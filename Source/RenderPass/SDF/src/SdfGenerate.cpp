@@ -306,7 +306,7 @@ namespace FTS
 				std::string strSdfName = rMeshDF.strSdfTextureName.substr(0, rMeshDF.strSdfTextureName.find("SdfTexture")) + ".sdf";
 				Gui::NotifyMessage(Gui::ENotifyType::Info, strSdfName + " bake finished.");
 
-				for (auto& rDF : m_pDistanceField->MeshDistanceFields) rDF.SdfData.resize(0);
+				for (auto& rDF : m_pDistanceField->MeshDistanceFields) rDF.SdfData.clear();
 				m_pDistanceField = nullptr;
 				m_dwCurrMeshSdfIndex = 0;
 			}

@@ -119,6 +119,18 @@ inline bool operator!=(T a, UINT32 b) { return UINT32(a) != b; }
     {
         return (size + alignment - 1) & ~(alignment - 1);
     }
+
+    inline UINT32 TriangleIndexCycle3(UINT32 dw)
+    {
+        UINT32 dwMod3 = dw %3;
+        return dw - dwMod3 + ((1 << dwMod3) & 3);
+    }
+
+    inline UINT32 TriangleIndexCycle3(UINT32 dw, UINT32 dwOfs)
+    {
+        return dw - dw % 3 + (dw + dwOfs) % 3;
+    }
+
 }
 
 

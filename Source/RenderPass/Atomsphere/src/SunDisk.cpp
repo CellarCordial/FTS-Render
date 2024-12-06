@@ -212,7 +212,11 @@ namespace FTS
 
 	BOOL FSunDiskPass::FinishPass()
 	{
-		if (!m_SunDiskVertices.empty()) m_SunDiskVertices.resize(0);
+		if (!m_SunDiskVertices.empty())
+		{
+			 m_SunDiskVertices.clear();
+			 m_SunDiskVertices.shrink_to_fit();
+		}
 		return true;
 	}
 

@@ -1,7 +1,579 @@
 #include "../include/Geometry.h"
+#include <cstring>
+#include <utility>
 
 namespace FTS
 {
+	void FMeshOptimizer::BinaryHeap::Resize(UINT32 dwIndexNum)
+	{
+		m_dwCurrSize = 0;
+		m_dwIndexNum = dwIndexNum;
+		m_Heap.clear(); m_Heap.resize(dwIndexNum);
+		m_Keys.clear(); m_Keys.resize(dwIndexNum);
+		m_HeapIndices.clear(); m_HeapIndices.resize(dwIndexNum);
+
+		memset(m_HeapIndices.data(), 0xff, dwIndexNum * sizeof(UINT32));
+	}
+	
+	FLOAT FMeshOptimizer::BinaryHeap::GetKey(UINT32 dwIndex)
+	{
+		return m_Keys[dwIndex];
+	}
+	
+	BOOL FMeshOptimizer::BinaryHeap::Empty()
+	{
+		return m_dwCurrSize == 0;
+	}
+	
+	BOOL FMeshOptimizer::BinaryHeap::IsValid(UINT32 dwIndex)
+	{
+		return m_HeapIndices[dwIndex] != INVALID_SIZE_32;
+	}
+	
+	UINT32 FMeshOptimizer::BinaryHeap::Top()
+	{
+		assert(m_dwCurrSize > 0);
+		return m_Heap[0];
+	}
+	
+	void FMeshOptimizer::BinaryHeap::Pop()
+	{
+		assert(m_dwCurrSize > 0);
+		UINT32 dwIndex = m_Heap[0];
+		m_Heap[0] = m_Heap[--m_dwCurrSize];
+		m_HeapIndices[m_Heap[0]] = 0;
+		m_HeapIndices[dwIndex] = INVALID_SIZE_32;
+		PushDown(0);
+	}
+	
+	void FMeshOptimizer::BinaryHeap::Remove(UINT32 dwIndex)
+	{
+		assert(IsInvalid(dwIndex));
+
+		FLOAT fKey = m_Keys[dwIndex];
+		UINT32& rdwIndex = m_HeapIndices[dwIndex];
+		if (rdwIndex == m_dwCurrSize - 1)
+		{
+			m_dwCurrSize--;
+			rdwIndex = INVALID_SIZE_32;
+			return;
+		}
+
+		m_Heap[rdwIndex] = m_Heap[--m_dwCurrSize];
+		m_HeapIndices[m_Heap[rdwIndex]] = rdwIndex;
+		m_HeapIndices[dwIndex] = INVALID_SIZE_32;
+
+		if (fKey < m_Keys[m_Heap[rdwIndex]]) PushDown(rdwIndex);
+		else PushUp(rdwIndex);
+	}
+	
+	void FMeshOptimizer::BinaryHeap::Insert(FLOAT fKey,UINT32 dwIndex)
+	{
+		assert(IsInvalid(dwIndex));
+
+		m_dwCurrSize++;
+		m_Heap[m_dwCurrSize] = dwIndex;
+		m_Keys[dwIndex] = fKey;
+		m_HeapIndices[dwIndex] = m_dwCurrSize;
+		PushUp(m_dwCurrSize);
+	}
+
+	void FMeshOptimizer::BinaryHeap::PushDown(UINT32 dwIndex)
+	{
+		UINT32 ix=m_Heap[dwIndex];
+		UINT32 dwFatherIndex=(dwIndex-1)>>1;
+		while (dwIndex > 0 && m_Keys[ix] < m_Keys[m_Heap[dwFatherIndex]])
+		{
+			m_Heap[dwIndex] = m_Heap[dwFatherIndex];
+			m_HeapIndices[m_Heap[dwIndex]] = dwIndex;
+			dwIndex = dwFatherIndex;
+			dwFatherIndex = (dwIndex-1) >> 1;
+		}
+		m_Heap[dwIndex] = ix;
+		m_HeapIndices[m_Heap[dwIndex]] = dwIndex;
+	}
+
+	void FMeshOptimizer::BinaryHeap::PushUp(UINT32 dwIndex)
+	{
+		UINT32 ix = m_Heap[dwIndex];
+		UINT32 dwLeftIndex = (dwIndex << 1) + 1;
+		UINT32 dwRightIndex = dwLeftIndex + 1;
+		while(dwLeftIndex < m_dwCurrSize)
+		{
+			UINT32 dwTmp = dwLeftIndex;
+			if(dwRightIndex < m_dwCurrSize && m_Keys[m_Heap[dwRightIndex]] < m_Keys[m_Heap[dwLeftIndex]]) dwTmp=dwRightIndex;
+			if(m_Keys[m_Heap[dwTmp]] < m_Keys[ix])
+			{
+				m_Heap[dwIndex] = m_Heap[dwTmp];
+				m_HeapIndices[m_Heap[dwIndex]] = dwIndex;
+				dwIndex = dwTmp;
+				dwLeftIndex = (dwIndex << 1) + 1;
+				dwRightIndex = dwLeftIndex + 1;
+			}
+			else 
+			{
+				break;
+			}
+		}
+		m_Heap[dwIndex] = ix;
+		m_HeapIndices[m_Heap[dwIndex]] = dwIndex;
+	}	
+
+	FMeshOptimizer::FMeshOptimizer(const std::span<FVector3F>& crVertices, const std::span<UINT32>& crIndices) :
+		m_Vertices(crVertices), 
+		m_Indices(crIndices),
+		m_VertexReferenceCount(crVertices.size()),
+		m_VertexTable(crVertices.size()),
+		m_IndexTable(crIndices.size()),
+		m_Flags(crIndices.size()),
+		m_TriangleSurfaces(crIndices.size() / 3.0f),
+		m_bTrangleRemovedArray(crIndices.size() / 3.0f, false)
+	{
+		dwRemainVertexNum = static_cast<UINT32>(m_Vertices.size());
+		dwRemainTriangleNum = static_cast<UINT32>(m_TriangleSurfaces.size());
+
+		for (UINT32 ix = 0; ix < m_Vertices.size(); ++ix)
+		{
+			m_VertexTable.Insert(Hash(m_Vertices[ix]), ix);
+		}
+
+		UINT64 stEdgeNum = std::min(std::min(m_Indices.size(), 3 * m_Vertices.size() - 6), m_TriangleSurfaces.size() + m_Vertices.size());
+		m_Edges.resize(stEdgeNum);
+		m_EdgeBeginTable.Resize(stEdgeNum);
+		m_EdgeEndTable.Resize(stEdgeNum);
+
+		for (UINT32 dwCorner = 0; dwCorner < m_Indices.size(); ++dwCorner)
+		{
+			m_VertexReferenceCount[m_Indices[dwCorner]]++;
+			const auto& crVertex = m_Vertices[m_Indices[dwCorner]];
+
+			m_IndexTable.Insert(Hash(crVertex), dwCorner);
+			
+			FVector3F p0 = crVertex;
+			FVector3F p1 = m_Vertices[m_Indices[TriangleIndexCycle3(dwCorner)]];
+
+			UINT32 h0 = Hash(p0);
+			UINT32 h1 = Hash(p1);
+			if (h0 > h1)
+			{
+				std::swap(h0, h1);
+				std::swap(p0, p1);
+			}
+
+			BOOL bAlreadyExist = false;
+			for (UINT32 ix : m_EdgeBeginTable[h0])
+			{
+				const auto& crEdge = m_Edges[ix];
+				if (crEdge.first == p0 && crEdge.second == p1) 
+				{
+					bAlreadyExist = true;
+					break;
+				}
+			}
+			if (!bAlreadyExist)
+			{
+				m_EdgeBeginTable.Insert(h0, static_cast<UINT32>(m_Edges.size()));
+				m_EdgeEndTable.Insert(h1, static_cast<UINT32>(m_Edges.size()));
+				m_Edges.emplace_back(std::make_pair(p0, p1));
+			}
+		}
+	}
+
+
+	BOOL FMeshOptimizer::Optimize(UINT32 dwTargetTriangleNum)
+	{
+		for (UINT32 ix = 0; ix < m_TriangleSurfaces.size(); ++ix) FixTriangle(ix);
+
+		if (dwRemainTriangleNum <= dwTargetTriangleNum) return Compact();
+
+		m_Heap.Resize(m_Edges.size());
+
+		UINT32 ix = 0;
+		for (const auto& crEdge : m_Edges)
+		{
+			FLOAT fError = Evaluate(crEdge.first, crEdge.second, false);
+			m_Heap.Insert(fError, ix++);
+		}
+
+		fMaxError = 0.0f;
+		while (!m_Heap.Empty())
+		{
+			UINT32 dwEdgeIndex = m_Heap.Top();
+			if (m_Heap.GetKey(dwEdgeIndex) >= 1e6) break;
+
+			m_Heap.Pop();
+			
+			const auto& crEdge = m_Edges[dwEdgeIndex];
+			m_EdgeBeginTable.Remove(Hash(crEdge.first), dwEdgeIndex);
+			m_EdgeEndTable.Remove(Hash(crEdge.second), dwEdgeIndex);
+
+			fMaxError = std::max(Evaluate(crEdge.first, crEdge.second, true), fMaxError);
+
+			if (dwRemainTriangleNum <= dwTargetTriangleNum) break;
+
+			for (UINT32 ix : m_EdgeNeedReevaluateIndices)
+			{
+				const auto& crReevaluateEdge = m_Edges[ix];
+				FLOAT fError = Evaluate(crReevaluateEdge.first, crReevaluateEdge.second, false);
+				m_Heap.Insert(fError, ix++);
+			}
+
+			m_EdgeNeedReevaluateIndices.clear();
+		}
+		return Compact();
+	}
+
+	void FMeshOptimizer::LockPosition(FVector3F Pos)
+	{
+		for (UINT32 ix : m_IndexTable[Hash(Pos)])
+		{
+			if (m_Vertices[m_Indices[ix]] == Pos)
+			{
+				m_Flags[ix] |= LockFlag;
+			}
+		}
+	}
+
+
+	UINT32 FMeshOptimizer::Hash(const FVector3F& Vec)
+	{
+		union 
+		{
+			FLOAT f;
+			UINT32 u;
+		} x, y, z;
+
+		x.f = (Vec.x == 0.0f ? 0 : Vec.x);
+		y.f = (Vec.y == 0.0f ? 0 : Vec.y);
+		z.f = (Vec.z == 0.0f ? 0 : Vec.z);
+		return MurmurMix(MurmurAdd(MurmurAdd(x.u, y.u), z.u));
+	}
+
+	void FMeshOptimizer::FixTriangle(UINT32 dwTriangleIndex)
+	{
+		if (m_bTrangleRemovedArray[dwTriangleIndex]) return;
+
+		UINT32 dwVertexIndex0 = m_Indices[dwTriangleIndex * 3 + 0];
+		UINT32 dwVertexIndex1 = m_Indices[dwTriangleIndex * 3 + 1];
+		UINT32 dwVertexIndex2 = m_Indices[dwTriangleIndex * 3 + 2];
+
+		const FVector3F& p0 = m_Vertices[dwVertexIndex0];	
+		const FVector3F& p1 = m_Vertices[dwVertexIndex1];	
+		const FVector3F& p2 = m_Vertices[dwVertexIndex2];
+
+		BOOL bNeedRemoved = p0 == p1 || p1 == p2 || p2 == p0;
+		if (!bNeedRemoved)
+		{
+			for (UINT32 ix = 0; ix < 3; ++ix)
+			{
+				// 去除重复的 Vertex
+				UINT32& rdwVertexIndex = m_Indices[dwTriangleIndex * 3 + ix];
+				const auto& crVertex = m_Vertices[rdwVertexIndex];
+				UINT32 dwHash = Hash(crVertex);
+				for (UINT32 jx : m_VertexTable[dwHash])
+				{
+					if (jx == rdwVertexIndex)
+					{
+						break;
+					}
+					else if (crVertex == m_Vertices[jx]) 
+					{
+						assert(m_VertexReferenceCount[rdwVertexIndex] > 0);
+						if (--m_VertexReferenceCount[rdwVertexIndex] == 0)
+						{
+							m_VertexTable.Remove(dwHash, rdwVertexIndex);
+							dwRemainVertexNum--;
+						}
+						rdwVertexIndex = jx;
+						if (rdwVertexIndex != INVALID_SIZE_32) m_VertexReferenceCount[rdwVertexIndex]++;
+						break;
+					}
+				}
+			}
+			
+			// 判断 Triangle 是否重复
+			for (UINT32 ix : m_IndexTable[Hash(p0)])
+			{
+				if (
+					ix != dwTriangleIndex * 3 &&
+					dwVertexIndex0 == m_Indices[ix] && 
+					dwVertexIndex1 == m_Indices[TriangleIndexCycle3(ix)] && 
+					dwVertexIndex2 == m_Indices[TriangleIndexCycle3(ix, 2)] 
+				)
+				{
+					bNeedRemoved = true;
+				}
+			}
+		}
+
+		if (bNeedRemoved)
+		{
+			m_bTrangleRemovedArray.SetTrue(dwTriangleIndex);
+			dwRemainTriangleNum--;
+
+			for (UINT32 ix = 0; ix < 3; ++ix)
+			{
+				UINT32& rdwVertexIndex = m_Indices[dwTriangleIndex * 3 + ix];
+				const auto& crVertex = m_Vertices[rdwVertexIndex];
+
+				UINT32 dwHash = Hash(crVertex);
+				m_IndexTable.Remove(dwHash, rdwVertexIndex);
+
+				assert(m_VertexReferenceCount[rdwVertexIndex] > 0);
+				if (--m_VertexReferenceCount[rdwVertexIndex] == 0)
+				{
+					m_VertexTable.Remove(dwHash, rdwVertexIndex);
+					dwRemainVertexNum--;
+				}
+				rdwVertexIndex = INVALID_SIZE_32;
+			}
+		}
+		else 
+		{
+			m_TriangleSurfaces[dwTriangleIndex] = FQuadricSurface(p0, p1, p2);
+		}
+	}
+
+	BOOL FMeshOptimizer::Compact()
+	{
+		UINT32 dwCount = 0;
+		std::vector<UINT32> IndicesMap(m_Vertices.size());
+		for (UINT32 ix = 0; ix < m_Vertices.size(); ++ix)
+		{
+			if (m_VertexReferenceCount[ix] > 0)
+			{
+				if (ix != dwCount) m_Vertices[dwCount] = m_Vertices[ix];
+				IndicesMap[ix] = dwCount++;
+			}
+		}
+		ReturnIfFalse(dwCount == dwRemainVertexNum);
+
+		dwCount = 0;
+		for (UINT32 ix = 0; ix < m_TriangleSurfaces.size(); ++ix)
+		{
+			if (!m_bTrangleRemovedArray[ix])
+			{
+				for (UINT32 jx = 0; jx < 3; ++jx)
+				{
+					m_Indices[dwCount * 3 + jx] = IndicesMap[m_Indices[ix * 3 + jx]];
+				}
+				dwCount++;
+			}
+		}
+		return dwCount == dwRemainTriangleNum;
+	}
+
+	FLOAT FMeshOptimizer::Evaluate(const FVector3F& p0, const FVector3F& p1, BOOL bMerge)
+	{
+		if (p0 == p1) return 0.0f;
+
+		FLOAT fError;
+
+		std::vector<UINT32> AdjacencyTriangleIndices;
+		auto FuncBuildAdjacencyTrianlges = [this, &AdjacencyTriangleIndices](const FVector3F& crVertex, BOOL& rbLock)
+		{
+			for (UINT32 ix : m_IndexTable[Hash(crVertex)])
+			{
+				if (m_Vertices[m_Indices[ix]] == crVertex)
+				{
+					UINT32 dwTriangleIndex = ix / 3;
+					if ((m_Flags[dwTriangleIndex * 3] & AdjacencyFlag) == 0)
+					{
+						m_Flags[dwTriangleIndex * 3] |= AdjacencyFlag;
+						AdjacencyTriangleIndices.push_back(dwTriangleIndex);
+					}
+
+					if (m_Flags[ix] & LockFlag) rbLock = true;
+				}
+			}
+		};
+
+		BOOL bLock0 = false, bLock1 = false;
+		FuncBuildAdjacencyTrianlges(p0, bLock0);
+		FuncBuildAdjacencyTrianlges(p1, bLock1);
+
+		if (AdjacencyTriangleIndices.empty()) return 0.0f;
+		if (AdjacencyTriangleIndices.size() > 24) fError += 0.5f * (AdjacencyTriangleIndices.size() - 24);
+
+		FQuadricSurface Surface;
+		for (UINT32 ix : AdjacencyTriangleIndices) Surface = Union(Surface, m_TriangleSurfaces[ix]);
+
+		FVector3F p = (p0 + p1) * 0.5f;
+		if (bLock0 && bLock1) fError += 1e8;
+		else if (bLock0 && !bLock1) p = p0;
+		else if (!bLock0 && bLock1) p = p1;
+		else if (
+			!Surface.GetVertexPos(p) || 
+			Distance(p, p0) + Distance(p, p1) > 2.0f * Distance(p0, p1)	// Invalid
+		)
+		{
+			p = (p0 + p1) * 0.5f;
+		}
+
+		fError += Surface.DistanceToSurface(p);
+
+		if (bMerge)
+		{
+			MergeBegin(p0);
+			MergeBegin(p1);
+
+			for (UINT32 ix : AdjacencyTriangleIndices)
+			{
+				for (UINT32 jx = 0; jx < 3; ++jx)
+				{
+					UINT32 dwVertexIndex = ix * 3 + jx;
+					FVector3F& rPos = m_Vertices[m_Indices[dwVertexIndex]];
+					if (rPos == p0 || rPos == p1)
+					{
+						rPos = p;
+						if (bLock0 || bLock1)
+						{
+							m_Flags[dwVertexIndex] |= LockFlag;
+						}
+					}
+				}
+			}
+			for (UINT32 ix : m_MovedEdgeIndices)
+			{
+				auto& rEdge = m_Edges[ix];
+				if (rEdge.first == p0 || rEdge.first == p1) rEdge.first = p;
+				if (rEdge.second == p0 || rEdge.second == p1) rEdge.second = p;
+			}
+
+			MergeEnd();
+
+			std::vector<UINT32> AdjacencyVertexIndices;
+			AdjacencyVertexIndices.reserve((AdjacencyTriangleIndices.size() * 3));
+			for (UINT32 ix : AdjacencyTriangleIndices)
+			{
+				for (UINT32 jx = 0; jx < 3; ++jx)
+				{
+					AdjacencyVertexIndices.push_back(m_Indices[ix * 3 + jx]);
+				}
+			}
+			std::sort(AdjacencyVertexIndices.begin(), AdjacencyVertexIndices.end());
+			AdjacencyVertexIndices.erase(
+				std::unique(AdjacencyVertexIndices.begin(), AdjacencyVertexIndices.end()), 
+				AdjacencyVertexIndices.end()
+			);
+
+			for (UINT32 dwVertexIndex : AdjacencyVertexIndices)
+			{
+				const auto& crVertex = m_Vertices[dwVertexIndex];
+				UINT32 dwHash = Hash(crVertex);
+				for (UINT32 ix : m_EdgeBeginTable[dwHash])
+				{
+					if (m_Edges[ix].first == crVertex && m_Heap.IsValid(ix))
+					{
+						m_Heap.Remove(ix);
+						m_EdgeNeedReevaluateIndices.push_back(ix);
+					}
+				}
+				for (UINT32 ix : m_EdgeEndTable[dwHash])
+				{
+					if (m_Edges[ix].second == crVertex && m_Heap.IsValid(ix))
+					{
+						m_Heap.Remove(ix);
+						m_EdgeNeedReevaluateIndices.push_back(ix);
+					}
+				}
+			}
+			
+			for (UINT32 dwTriangleIndex : AdjacencyTriangleIndices) FixTriangle(dwTriangleIndex);
+		}	
+
+		for (UINT32 dwTriangleIndex : AdjacencyTriangleIndices) m_Flags[dwTriangleIndex * 3] &= ~AdjacencyFlag;
+
+		return fError;
+	}
+
+	void FMeshOptimizer::MergeBegin(const FVector3F& p)
+	{
+		UINT32 dwHash = Hash(p);
+		for (UINT32 ix : m_VertexTable[dwHash])
+		{
+			if (m_Vertices[ix] == p)
+			{
+				m_VertexTable.Remove(dwHash, ix);
+				m_MovedVertexIndices.push_back(ix);
+			}
+		}
+		for (UINT32 ix : m_IndexTable[dwHash])
+		{
+			if (m_Vertices[m_Indices[ix]] == p)
+			{
+				m_IndexTable.Remove(dwHash, ix);
+				m_MovedIndexIndices.push_back(ix);
+			}
+		}
+		for (UINT32 ix : m_EdgeBeginTable[dwHash])
+		{
+			if (m_Edges[ix].first == p)
+			{
+				m_EdgeBeginTable.Remove(dwHash, ix);
+				m_MovedEdgeIndices.push_back(ix);
+			}
+		}
+		for (UINT32 ix : m_EdgeEndTable[dwHash])
+		{
+			if (m_Edges[ix].second == p)
+			{
+				m_EdgeEndTable.Remove(dwHash, ix);
+				m_MovedEdgeIndices.push_back(ix);
+			}
+		}
+	}
+
+	void FMeshOptimizer::MergeEnd()
+	{
+		for (UINT32 ix : m_MovedVertexIndices)
+		{
+			m_VertexTable.Insert(Hash(m_Vertices[ix]), ix);
+		}
+		for (UINT32 ix : m_MovedIndexIndices)
+		{
+			m_IndexTable.Insert(Hash(m_Vertices[m_Indices[ix]]), ix);
+		}
+		for (UINT32 ix : m_MovedEdgeIndices)
+		{
+			auto& rEdge = m_Edges[ix];
+			
+			UINT32 h0 = Hash(rEdge.first);
+			UINT32 h1 = Hash(rEdge.second);
+			if (h0 > h1)
+			{
+				std::swap(h0, h1);
+				std::swap(rEdge.first, rEdge.second);
+			}
+
+			BOOL bAlreadyExist = false;
+			for (UINT32 ix : m_EdgeBeginTable[h0])
+			{
+				const auto& crEdge = m_Edges[ix];
+				if (crEdge.first == crEdge.first && crEdge.second == crEdge.second) 
+				{
+					bAlreadyExist = true;
+					break;
+				}
+			}
+			if (!bAlreadyExist)
+			{
+				m_EdgeBeginTable.Insert(h0, static_cast<UINT32>(m_Edges.size()));
+				m_EdgeEndTable.Insert(h1, static_cast<UINT32>(m_Edges.size()));
+			}
+
+			if (rEdge.first == rEdge.second && bAlreadyExist)
+			{
+				m_Heap.Remove(ix);
+			}
+		}
+		
+		m_MovedEdgeIndices.clear();
+		m_MovedVertexIndices.clear();
+		m_MovedIndexIndices.clear();
+	}
+
+
 	namespace Geometry
 	{
 		FMesh CreateBox(FLOAT width, FLOAT height, FLOAT depth, UINT32 numSubdivisions)
@@ -83,8 +655,8 @@ namespace FTS
 			FMesh::Submesh inputCopy = meshData;
 
 
-			meshData.Vertices.resize(0);
-			meshData.Indices.resize(0);
+			meshData.Vertices.clear();
+			meshData.Indices.clear();
 
 			//       v1
 			//       *

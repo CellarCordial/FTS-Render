@@ -205,8 +205,8 @@ namespace FTS
 
 	BOOL FShadowMapPass::FinishPass()
 	{
-		m_Vertices.resize(0);
-		m_Indices.resize(0);
+		m_Vertices.clear();
+		m_Indices.clear();
 		return true;
 	}
 

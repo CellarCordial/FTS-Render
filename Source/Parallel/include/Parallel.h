@@ -87,14 +87,14 @@ namespace FTS
 
         void Reset()
         {
-            SrcNodes.resize(0);
-            Nodes.resize(0);
+            SrcNodes.clear();
+            Nodes.clear();
             TotalTaskNum = 0;
         }
 
         const std::vector<FTaskNode*>& GetSrcNodes()
         {
-            SrcNodes.resize(0);
+            SrcNodes.clear();
             for (const auto& Node : Nodes)
             {
                 if (Node->Dependents.empty())

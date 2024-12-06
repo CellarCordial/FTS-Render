@@ -3,6 +3,16 @@
 
 namespace FTS 
 {
+    FHashTable::FHashTable(UINT32 dwIndexSize)
+    {
+        Resize(dwIndexSize);
+    }
+
+    FHashTable::FHashTable(UINT32 dwHashSize, UINT32 dwIndexSize)
+    {
+        Resize(dwHashSize, dwIndexSize);
+    }
+
     void FHashTable::Insert(UINT32 dwKey, UINT32 dwIndex)
     {
         if (dwIndex > m_NextIndex.size())
@@ -44,8 +54,8 @@ namespace FTS
     void FHashTable::Reset()
     {
         m_dwHashMask = 0;
-        m_Hash.resize(0);
-        m_NextIndex.resize(0);
+        m_Hash.clear();
+        m_NextIndex.clear();
     }
 
     void FHashTable::Resize(UINT32 dwIndexSize)

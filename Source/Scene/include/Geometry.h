@@ -101,10 +101,14 @@ namespace FTS
         BOOL bCulling = false;
     };
 
+
+
     class FMeshOptimizer
     {
     public:
-        void Optimize(UINT32 dwTargetTriangleNum);
+        FMeshOptimizer(const std::span<FVector3F>& crVertices, const std::span<UINT32>& crIndices);
+
+        BOOL Optimize(UINT32 dwTargetTriangleNum);
         void LockPosition(FVector3F Pos);
 
 
@@ -113,29 +117,62 @@ namespace FTS
         UINT32 dwRemainTriangleNum;
 
     private:
+        BOOL Compact();
+        static UINT32 Hash(const FVector3F& v);
+        void FixTriangle(UINT32 dwTriangleIndex);
 
+        // 评估 p0 和 p1 合并后的误差
+        FLOAT Evaluate(const FVector3F& p0, const FVector3F& p1, BOOL bMerge);
+        void MergeBegin(const FVector3F& p);
+        void MergeEnd();
+
+        class BinaryHeap
+        {
+        public:
+            void Resize(UINT32 _num_index);
+            FLOAT GetKey(UINT32 idx);
+            BOOL Empty();
+            BOOL IsValid(UINT32 idx);
+            UINT32 Top();
+            void Pop();
+            void Insert(FLOAT key,UINT32 idx);
+            void Remove(UINT32 idx);
+
+        private:
+            void PushDown(UINT32 dwIndex);
+            void PushUp(UINT32 dwIndex);
+        
+        private:
+            UINT32 m_dwCurrSize;
+            UINT32 m_dwIndexNum;
+            std::vector<UINT32> m_Heap;
+            std::vector<UINT32> m_Keys;
+            std::vector<UINT32> m_HeapIndices;
+        };
 
     private:
         enum
         {
-            AdjacencyMask   = 1,
-            LockMask        = 2
+            AdjacencyFlag   = 1,
+            LockFlag        = 2
         };
-        std::vector<UINT8> m_Masks;
+        std::vector<UINT8> m_Flags;
 
-        std::vector<FVector3F> m_Vertices;
-        std::vector<UINT32> m_Indices;
+        const std::span<FVector3F> m_Vertices;
+        const std::span<UINT32> m_Indices;
+        std::vector<UINT32> m_VertexReferenceCount;
         std::vector<FQuadricSurface> m_TriangleSurfaces;
 
         FBitSetAllocator m_bTrangleRemovedArray;
 
         FHashTable m_VertexTable;
-        FHashTable m_CornerTable;
+        FHashTable m_IndexTable;
 
 
         std::vector<std::pair<FVector3F, FVector3F>> m_Edges;
         FHashTable m_EdgeBeginTable;
         FHashTable m_EdgeEndTable;
+        BinaryHeap m_Heap;
 
 
         std::vector<UINT32> m_MovedVertexIndices;

@@ -118,6 +118,7 @@ namespace FTS
     }
 
     FMatrix4x4 Inverse(const FMatrix4x4& crMatrix);
+    BOOL Inverse(const FMatrix4x4& crMatrix, FMatrix4x4& rInvMatrix);
 
 
 

@@ -1,5 +1,6 @@
 #include "../include/Surface.h"
 #include "../include/Matrix.h"
+#include "../../Core/include/ComRoot.h"
 
 namespace FTS 
 {
@@ -17,7 +18,7 @@ namespace FTS
         cd = c * fDistance;
     }
 
-    FVector3F FQuadricSurface::GetVertexPos()
+    BOOL FQuadricSurface::GetVertexPos(FVector3F& rVertex)
     {
         FMatrix4x4 m(
             a2,   ab,   ac,   0.0f,
@@ -26,8 +27,10 @@ namespace FTS
             ad,   bd,   cd,   1.0f
         );
 
-        FMatrix4x4 Inv(Inverse(m));
-        return FVector3F(Inv[3][0], Inv[3][1], Inv[3][2]);
+        FMatrix4x4 Inv;
+        ReturnIfFalse(Inverse(m, Inv));
+        rVertex = { Inv[3][0], Inv[3][1], Inv[3][2] };
+        return true;
     }
 
     FLOAT FQuadricSurface::DistanceToSurface(FVector3F p)

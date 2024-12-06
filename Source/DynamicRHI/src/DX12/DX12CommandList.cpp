@@ -1358,7 +1358,7 @@ namespace FTS
         if (cstBarriersNum == 0) return;
 
 
-        m_D3D12Barriers.resize(0);
+        m_D3D12Barriers.clear();
         m_D3D12Barriers.reserve(cstBarriersNum);
 
         for (const auto& crBarrier : crTextureBarriers)
@@ -1906,8 +1906,8 @@ namespace FTS
         m_bCurrComputeStateValid = false;
         m_pCurrSRVetcHeap = nullptr;
         m_pCurrSamplerHeap = nullptr;
-        m_CurrGraphicsVolatileCBs.resize(0);
-        m_CurrComputeVolatileCBs.resize(0);
+        m_CurrGraphicsVolatileCBs.clear();
+        m_CurrComputeVolatileCBs.clear();
     }
 
     BOOL FDX12CommandList::BindGraphicsPipeline(IGraphicsPipeline* pGraphicsPipeline, BOOL bUpdateRootSignature) const
