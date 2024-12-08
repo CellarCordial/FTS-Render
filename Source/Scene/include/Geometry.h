@@ -8,6 +8,8 @@
 #include "../../Core/include/ComRoot.h"
 #include "../../Tools/include/HashTable.h"
 #include "../../Tools/include/BitAllocator.h"
+#include "../../Math/include/Bounds.h"
+#include "../../Math/include/Sphere.h"
 #include "Image.h"
 #include <basetsd.h>
 
@@ -181,6 +183,57 @@ namespace FTS
         std::vector<UINT32> m_EdgeNeedReevaluateIndices;
     };
 
+
+    struct FCluster
+    {
+        static const UINT32 cluster_size=128;
+
+        std::vector<FVector3F> verts;
+        std::vector<UINT32> indexes;
+        std::vector<UINT32> external_edges;
+
+        FBounds3F box_bounds;
+        FSphere3F sphere_bounds;
+        FSphere3F lod_bounds;
+        FLOAT lod_error;
+        UINT32 mip_level;
+        UINT32 group_id;
+    };
+
+    struct FClusterGroup
+    {
+        static const UINT32 group_size=32;
+
+        FSphere3F bounds;
+        FSphere3F lod_bounds;
+        FLOAT min_lod_error;
+        FLOAT max_parent_lod_error;
+        UINT32 mip_level;
+        std::vector<UINT32> clusters;
+        std::vector<std::pair<UINT32,UINT32>> external_edges;
+    };
+
+    namespace Cluster
+    {
+        void CreateTriangleCluster(
+            const std::vector<FVector3F>& verts,
+            const std::vector<UINT32>& indexes,
+            std::vector<FCluster>& clusters
+        );
+
+        void BuildClusterGroups(
+            std::vector<FCluster>& clusters,
+            UINT32 offset,
+            UINT32 num_cluster,
+            std::vector<FClusterGroup>& cluster_groups,
+            UINT32 mip_level
+        );
+
+        void BuildClusterGroupParentClusters(
+            FClusterGroup& cluster_group,
+            std::vector<FCluster>& clusters
+        );
+    };
 
     namespace Geometry
     {

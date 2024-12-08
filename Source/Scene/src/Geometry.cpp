@@ -574,6 +574,80 @@ namespace FTS
 	}
 
 
+	namespace Cluster
+    {
+		struct Graph
+		{
+			std::vector<std::map<UINT32,INT32>> g;
+
+			void init(UINT32 n)
+			{
+				g.resize(n);
+			}
+			void add_node()
+			{
+				g.push_back({});
+			}
+			void add_edge(UINT32 from,UINT32 to,INT32 cost)
+			{
+				g[from][to]=cost;
+			}
+			void increase_edge_cost(UINT32 from,UINT32 to,INT32 i_cost)
+			{
+				g[from][to]+=i_cost;
+			}
+		};
+
+		struct MetisGraph;
+
+		class Partitioner
+		{
+		private:
+			UINT32 bisect_graph(MetisGraph* graph_data,MetisGraph* child_graphs[2],UINT32 start,UINT32 end);
+			void recursive_bisect_graph(MetisGraph* graph_data,UINT32 start,UINT32 end);
+		public:
+			void init(UINT32 num_node);
+			void partition(const Graph& graph,UINT32 min_part_size,UINT32 max_part_size);
+
+			std::vector<UINT32> node_id;
+			std::vector<std::pair<UINT32,UINT32>> ranges;
+			std::vector<UINT32> sort_to;
+			UINT32 min_part_size;
+			UINT32 max_part_size;
+		};
+
+
+        void CreateTriangleCluster(
+            const std::vector<FVector3F>& verts,
+            const std::vector<UINT32>& indexes,
+            std::vector<FCluster>& clusters
+        )
+		{
+
+		}
+
+        void BuildClusterGroups(
+            std::vector<FCluster>& clusters,
+            UINT32 offset,
+            UINT32 num_cluster,
+            std::vector<FClusterGroup>& cluster_groups,
+            UINT32 mip_level
+        )
+		{
+
+		}
+
+        void BuildClusterGroupParentClusters(
+            FClusterGroup& cluster_group,
+            std::vector<FCluster>& clusters
+        )
+		{
+
+		}
+
+    };
+
+
 	namespace Geometry
 	{
 		FMesh CreateBox(FLOAT width, FLOAT height, FLOAT depth, UINT32 numSubdivisions)

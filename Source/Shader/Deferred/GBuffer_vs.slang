@@ -32,8 +32,8 @@ struct FVertexOutput
 
     float3 PositionW : WORLD_POSITION;
 
-    float4 PositionV : VIEW_POSITION;
-    float4 PrevPositionV : PREV_VIEW_POSITION;
+    float3 PositionV : VIEW_POSITION;
+    float3 PrevPositionV : PREV_VIEW_POSITION;
     
     float3 NormalW   : NORMAL;
     float4 TangentW  : TANGENT;
@@ -50,8 +50,8 @@ FVertexOutput VS(FVertexInput In)
 
     Out.PositionW = WorldPos.xyz;
 
-    Out.PositionV = mul(WorldPos, View);
-    Out.PrevPositionV = mul(WorldPos, PrevView);
+    Out.PositionV = mul(WorldPos, View).xyz;
+    Out.PrevPositionV = mul(WorldPos, PrevView).xyz;
 
     Out.NormalW = normalize(mul(float4(In.NormalL, 1.0f), InvTransWorld)).xyz;
     Out.TangentW = normalize(mul(In.TangentL, InvTransWorld));

@@ -1,5 +1,7 @@
-#ifndef SHADER_BRDF_COMMON_HLSLI
-#define SHADER_BRDF_COMMON_HLSLI
+#ifndef SHADER_MATH_HELPER_SLANG
+#define SHADER_MATH_HELPER_SLANG
+
+#define PI 3.14159265
 
 float RadicalInverse_VdC(uint bits) 
 {

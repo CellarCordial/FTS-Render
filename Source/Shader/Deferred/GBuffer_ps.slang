@@ -1,6 +1,14 @@
 #include "../Material.slang"
 #include "../Octohedral.slang"
 
+cbuffer gPassConstants : register(b0)
+{
+    float4x4 ViewProj;
+
+    float4x4 ViewMatrix;
+    float4x4 PrevViewMatrix;
+};
+
 cbuffer FGeometryConstants : register(b1)
 {
     float4x4 WorldMatrix;
@@ -27,10 +35,8 @@ struct FVertexOutput
 
     float3 PositionW : WORLD_POSITION;
 
-    float4 PositionV : VIEW_POSITION;
-    float4 PositionP : PROJ_POSITION;
-    float4 PrevPositionV : PREV_VIEW_POSITION;
-    float4 PrevPositionP : PREV_PROJ_POSITION;
+    float3 PositionV : VIEW_POSITION;
+    float3 PrevPositionV : PREV_VIEW_POSITION;
 
     float3 NormalW : NORMAL;
     float4 TangentW : TANGENT;
@@ -39,12 +45,12 @@ struct FVertexOutput
 
 struct FPixelOutput
 {
-    float4 PosDepth : SV_Target0;
-    float2 Normal : SV_Target1;
+    float3 PositionV : SV_Target0;
+    float3 NormalV : SV_Target1;
     float4 BaseColor : SV_Target2;
     float4 PBR : SV_Target3;
     float4 Emmisive : SV_Target4;
-    float3 VelocityView : SV_Target5;
+    float3 VelocityV : SV_Target5;
 };
 
 float3 CalcNormal(float3 TextureNormal, float3 VertexNormal, float4 VertexTangent)
@@ -61,10 +67,10 @@ float3 CalcNormal(float3 TextureNormal, float3 VertexNormal, float4 VertexTangen
 FPixelOutput PS(FVertexOutput In)
 {
     FPixelOutput Out;
-    Out.PosDepth = float4(In.PositionW, In.PositionV.z);
-    
+    Out.PositionV = In.PositionV;
+
     float3 Normal = CalcNormal(gNormal.Sample(gSampler, In.UV).xyz, In.NormalW, In.TangentW);
-    Out.Normal = UnitVectorToOctahedron(Normal);
+    Out.NormalV = normalize(mul(float4(Normal, 1.0f), ViewMatrix).xyz);
 
     Out.BaseColor = gDiffuse.Sample(gSampler, In.UV) * gMaterials[dwMaterialIndex].fDiffuse;
     if (Out.BaseColor.a < 0.001f) discard;
@@ -77,9 +83,7 @@ FPixelOutput PS(FVertexOutput In)
 
     Out.Emmisive = gEmissive.Sample(gSampler, In.UV);
 
-    float2 PositionS = In.PositionP.xy / In.PositionP.w;
-    float2 PrevPositionS = In.PrevPositionP.xy / In.PrevPositionP.w;
-    Out.VelocityView = float3(In.PrevPositionV.xyz - In.PositionV.xyz);
+    Out.VelocityV = In.PrevPositionV - In.PositionV;
 
     return Out;
 }

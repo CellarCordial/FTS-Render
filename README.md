@@ -24,6 +24,7 @@ xmake build FTS-Render
 - Surface Cache
 - Virtual Shadow Map
 - DDGI
+- SSAO
 - Restir GI
 - Screen Space Probe
 - Vulkan RHI
