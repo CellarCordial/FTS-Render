@@ -17,6 +17,12 @@ float RadicalInverse_VdC(uint bits)
 float2 Hammersley(uint i, uint N)
 {
     return float2(float(i) / float(N), RadicalInverse_VdC(i));
-}  
+}
+
+__generic<typename T>
+T max4(T x, T y, T z, T w) where T : __BuiltinFloatingPointType
+{
+    return max(max(x, y), max(z, w));
+}
 
 #endif
