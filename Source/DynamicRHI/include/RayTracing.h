@@ -56,7 +56,7 @@ namespace FTS
 			union 
 			{
 				FGeometryTriangles Triangles;
-				FGeometryBoundingBoxes BoundingBoxes;
+				FGeometryBoundingBoxes AABBs;
 			};
 
 			BOOL bUseTransform = false;
@@ -107,12 +107,12 @@ namespace FTS
 		{
 			std::string strName;
 
+			BOOL bIsVirtual = false;
 			BOOL bIsTopLevel = false;
-			UINT64 stTopLevelMaxInstantNum = 0;	// For bIsTopLevel == true.
-			std::vector<FGeometryDesc> GeometryDescs;	// For bIsTopLevel == false.
+			UINT64 stTopLevelMaxInstantNum = 0;
+			std::vector<FGeometryDesc> BottomLevelGeometryDescs;
 
 			EAccelStructBuildFlags Flags = EAccelStructBuildFlags::None;
-			BOOL bIsVirtual = false;
 		};
 
 		extern const IID IID_IAccelStruct;

@@ -160,6 +160,10 @@ namespace FTS
         if ((States & EResourceStates::ResolveDest) != 0) Ret |= D3D12_RESOURCE_STATE_RESOLVE_DEST;
         if ((States & EResourceStates::ResolveSource) != 0) Ret |= D3D12_RESOURCE_STATE_RESOLVE_SOURCE;
         if ((States & EResourceStates::Present) != 0) Ret |= D3D12_RESOURCE_STATE_PRESENT;
+        if ((States & EResourceStates::AccelStructRead) != 0) Ret |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
+        if ((States & EResourceStates::AccelStructWrite) != 0) Ret |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
+        if ((States & EResourceStates::AccelStructBuildBlas) != 0) Ret |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
+        if ((States & EResourceStates::AccelStructBuildInput) != 0) Ret |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
 
         return Ret;
     }

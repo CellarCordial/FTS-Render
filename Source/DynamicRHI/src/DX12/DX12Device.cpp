@@ -140,6 +140,10 @@ namespace FTS
     {
         m_Context.pDevice = m_Desc.pD3D12Device;
 
+        BOOL bOption5 = false;
+        ReturnIfFalse(m_Context.pDevice->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &bOption5, sizeof(BOOL)));
+        if (bOption5) m_Desc.pD3D12Device->QueryInterface(m_Context.pDevice5.GetAddressOf());
+
         if (m_Desc.pD3D12GraphicsCommandQueue) m_pCmdQueues[static_cast<UINT8>(ECommandQueueType::Graphics)] = std::make_unique<FDX12CommandQueue>(m_Context, m_Desc.pD3D12GraphicsCommandQueue);
         if (m_Desc.pD3D12ComputeCommandQueue) m_pCmdQueues[static_cast<UINT8>(ECommandQueueType::Compute)] = std::make_unique<FDX12CommandQueue>(m_Context, m_Desc.pD3D12ComputeCommandQueue);
         if (m_Desc.pD3D12CopyCommandQueue) m_pCmdQueues[static_cast<UINT8>(ECommandQueueType::Copy)] = std::make_unique<FDX12CommandQueue>(m_Context, m_Desc.pD3D12CopyCommandQueue);

@@ -15,7 +15,7 @@ target("FTS-Render")
     	"DEBUG",
         "NOMINMAX",
         "D3D12_API",
-        "RAY_TRACING=0",
+        "RAY_TRACING=1",
         "NUM_FRAMES_IN_FLIGHT=3",
         "CLIENT_WIDTH=1024",
         "CLIENT_HEIGHT=768",

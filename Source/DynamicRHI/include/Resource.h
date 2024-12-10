@@ -55,7 +55,11 @@ namespace FTS
         CopySource              = 0x00001000,
         ResolveDest             = 0x00002000,
         ResolveSource           = 0x00004000,
-        Present                 = 0x00008000
+        Present                 = 0x00008000,
+        AccelStructRead             = 0x00010000,
+        AccelStructWrite            = 0x00020000,
+        AccelStructBuildInput       = 0x00040000,
+        AccelStructBuildBlas        = 0x00080000
     };
     FTS_ENUM_CLASS_FLAG_OPERATORS(EResourceStates)
 
@@ -294,6 +298,10 @@ namespace FTS
 
         UINT32 dwMaxVersions = 0; // 仅在 Vulkan 的 volatile 缓冲区中有效，表示最大版本数，必须为非零值
 
+#ifdef RAY_TRACING
+        BOOL bIsAccelStructStorage = false;
+#endif
+
 
         static FBufferDesc CreateConstant(UINT64 stByteSize, BOOL bIsVolatial = true, std::string strDebugName = "")
         {
@@ -356,6 +364,18 @@ namespace FTS
             Ret.strName = strDebugName;
             return Ret;
         }
+#ifdef RAY_TRACING
+        static FBufferDesc CreateAccelStruct(UINT64 stByteSize, BOOL bIsTopLevel, std::string strDebugName = "")
+        {
+            FBufferDesc Ret;
+            Ret.bCanHaveUAVs = true;
+            Ret.stByteSize = stByteSize;
+            Ret.InitialState = bIsTopLevel ? EResourceStates::AccelStructRead : EResourceStates::AccelStructBuildBlas;
+            Ret.bIsAccelStructStorage = true;
+            Ret.strName = strDebugName;
+            return Ret;
+        }
+#endif
     };
 
     struct FBufferRange

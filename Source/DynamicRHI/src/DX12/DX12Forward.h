@@ -47,7 +47,8 @@ namespace FTS
     struct FDX12Context
     {
         Microsoft::WRL::ComPtr<ID3D12Device> pDevice;
-    
+        Microsoft::WRL::ComPtr<ID3D12Device5> pDevice5;
+
         Microsoft::WRL::ComPtr<ID3D12QueryHeap> pTimerQueryHeap;
         TComPtr<IBuffer> pTimerQueryResolveBuffer;  // FD3D12Buffer;
     };

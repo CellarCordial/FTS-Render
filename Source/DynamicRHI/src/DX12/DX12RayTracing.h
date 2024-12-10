@@ -5,7 +5,7 @@
 #include "../../../Core/include/ComRoot.h"
 #include "../../../Core/include/ComCli.h"
 #include "../../include/RayTracing.h"
-#include "DX12Forward.h"
+#include "DX12Descriptor.h"
 
 namespace FTS
 {
@@ -20,7 +20,7 @@ namespace FTS
 				INTERFACE_ENTRY(IID_IAccelStruct, IAccelStruct)
 			END_INTERFACE_MAP
 
-			FDX12AccelStruct(const FDX12Context* cpContext, const FAccelStructDesc& crDesc);
+			FDX12AccelStruct(const FDX12Context* cpContext, FDX12DescriptorHeaps* pDescriptorHeaps, const FAccelStructDesc& crDesc);
 
 			BOOL Initialize();
 
@@ -34,6 +34,7 @@ namespace FTS
 
 		private:
 			const FDX12Context* m_cpContext;
+        	FDX12DescriptorHeaps* m_pDescriptorHeaps;
 
 			FAccelStructDesc m_Desc;
 			std::vector<D3D12_RAYTRACING_INSTANCE_DESC> m_DxrInstanceDescs;
