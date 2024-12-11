@@ -1,6 +1,11 @@
 #ifndef RHI_DX12_RAY_TRACING_H
 #define RHI_DX12_RAY_TRACING_H
 
+#include "DX12Forward.h"
+#include <d3d12.h>
+#include <string>
+#include <unordered_map>
+#include <wrl/client.h>
 #if RAY_TRACING
 #include "../../../Core/include/ComRoot.h"
 #include "../../../Core/include/ComCli.h"
@@ -11,6 +16,20 @@ namespace FTS
 {
 	namespace RayTracing
 	{
+		struct FDX12ShaderTableState
+		{
+			UINT32 dwCommittedVersion = 0;
+			ID3D12DescriptorHeap* pDescriptorHeapSRV = nullptr;
+			ID3D12DescriptorHeap* pDescriptorHeapSamplers = nullptr;
+			D3D12_DISPATCH_RAYS_DESC DispatchRaysDesc = {};
+		};
+
+		struct FDX12ExportTableEntry
+		{
+			TComPtr<IBindingLayout> pBindingLayout;
+			const void* cpvShaderIdentifier = nullptr;
+		};
+
 		class FDX12AccelStruct :
 			public TComObjectRoot<FComMultiThreadModel>,
 			public IAccelStruct
@@ -25,9 +44,12 @@ namespace FTS
 			BOOL Initialize();
 
 			// IAccelStruct.
-			UINT64 GetDeviceAddress() const override;
 			BOOL IsCompacted() const override { return m_bCompacted; }
 			const FAccelStructDesc& GetDesc() const override { return m_Desc; }
+
+
+		public:
+			TComPtr<IBuffer> m_pDataBuffer;
 
 		private:
 			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO GetAccelStructPrebuildInfo();
@@ -39,12 +61,10 @@ namespace FTS
 			FAccelStructDesc m_Desc;
 			std::vector<D3D12_RAYTRACING_INSTANCE_DESC> m_DxrInstanceDescs;
 			std::vector<TComPtr<IAccelStruct>> m_pBottomLevelAccelStructs;
-			TComPtr<IBuffer> m_pDataBuffer;
 
 			BOOL m_bAllowUpdate = false;
 			BOOL m_bCompacted = false;
 		};
-
 
 		class FDX12ShaderTable :
 			public TComObjectRoot<FComMultiThreadModel>,
@@ -55,18 +75,37 @@ namespace FTS
 				INTERFACE_ENTRY(IID_IShaderTable, IShaderTable)
 			END_INTERFACE_MAP
 
+			FDX12ShaderTable(const FDX12Context* cpContext, IPipeline* pPipeline);
+
 			// IShaderTable.
-			void SetRayGenerationShader(const CHAR* strName, IBindingSet* pBindingSet = nullptr) override;
+			void SetRayGenShader(const CHAR* strName, IBindingSet* pBindingSet = nullptr) override;
 			INT32 AddMissShader(const CHAR* strName, IBindingSet* pBindingSet = nullptr) override;
 			INT32 AddHitGroup(const CHAR* strName, IBindingSet* pBindingSet = nullptr) override;
 			INT32 AddCallableShader(const CHAR* strName, IBindingSet* pBindingSet = nullptr) override;
 			void ClearMissShaders() override;
 			void ClearHitShaders() override;
 			void ClearCallableShaders() override;
-			IPipeline* GetPipeline() const override;
+			IPipeline* GetPipeline() const override { return m_pPipeline.Get(); }
 
 		private:
+			BOOL VerifyExport(const FDX12ExportTableEntry* pExport, IBindingSet* pBindingSet) const;
 
+		private:
+			const FDX12Context* m_cpContext;
+			
+			struct ShaderEntry
+			{
+				TComPtr<IBindingSet> pBindingSet;
+				const void* cpvShaderIdentifier = nullptr;
+			};
+
+			UINT32 m_dwVersion = 0;
+
+			TComPtr<IPipeline> m_pPipeline;
+			ShaderEntry m_RayGenShader;
+			std::vector<ShaderEntry> m_HitGroups;
+			std::vector<ShaderEntry> m_MissShaders;
+			std::vector<ShaderEntry> m_CallableShaders;
 		};
 
 
@@ -79,10 +118,31 @@ namespace FTS
 				INTERFACE_ENTRY(IID_IPipeline, IPipeline)
 			END_INTERFACE_MAP
 
-			// IPipeline.
-			const FPipelineDesc& GetDesc() const override;
-			BOOL CreateShaderTabel(CREFIID criid, void** ppvShaderTable) override;
+			FDX12Pipeline(const FDX12Context* cpContext) : m_cpContext(cpContext) {}
 
+			BOOL Initialize(
+				const std::vector<IDX12RootSignature*>& crpDX12ShaderRootSigs,
+				const std::vector<IDX12RootSignature*>& crpDX12HitGroupRootSigs,
+				IDX12RootSignature* pDX12GlobalRootSig = nullptr
+			);
+
+			// IPipeline.
+			const FPipelineDesc& GetDesc() const override { return m_Desc; }
+			BOOL CreateShaderTable(CREFIID criid, void** ppvShaderTable) override;
+
+			const FDX12ExportTableEntry* GetExport(const CHAR* strName);
+			UINT32 GetShaderTableEntrySize() const;
+		
+		private:
+			const FDX12Context* m_cpContext;
+
+			FPipelineDesc m_Desc;
+			UINT32 m_dwMaxLocalRootParameter = 0;
+			std::unordered_map<IBindingLayout*, IDX12RootSignature*> m_LocalBindingRootMap;
+			std::unordered_map<std::string, FDX12ExportTableEntry> m_Exports;
+			TComPtr<IDX12RootSignature> m_pGlobalRootSignature;
+			Microsoft::WRL::ComPtr<ID3D12StateObject> m_pD3D12StateObject;
+			Microsoft::WRL::ComPtr<ID3D12StateObjectProperties> m_pD3D12StateObjectProperties;
 		};
 	}
 

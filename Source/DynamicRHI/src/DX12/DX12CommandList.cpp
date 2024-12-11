@@ -13,6 +13,7 @@
 #include "DX12Device.h"
 #include "DX12FrameBuffer.h"
 #include "DX12Pipeline.h"
+#include "DX12RayTracing.h"
 #include "DX12Resource.h"
 
 namespace FTS 
@@ -259,6 +260,7 @@ namespace FTS
 
         m_pCurrentUploadBuffer = nullptr;
         m_VolatileCBAddressMap.clear();
+        m_ShaderTableStatesMap.clear();
 
         return true;
     }
@@ -1492,6 +1494,84 @@ namespace FTS
     }
 
 
+#ifdef RAY_TRACING
+
+    BOOL FDX12CommandList::SetRayTracingState(const RayTracing::FPipelineState& crState)
+    {
+        return false;
+    }
+
+    BOOL FDX12CommandList::DispatchRays(const RayTracing::FDispatchRaysArguments& crArguments)
+    {
+        ReturnIfFalse(m_bCurrRayTracingStateValid && UpdateComputeVolatileBuffers());
+
+        D3D12_DISPATCH_RAYS_DESC Desc = GetShaderTableState(m_CurrRayTracingState.pShaderTable)->DispatchRaysDesc;
+        Desc.Width = crArguments.dwWidth;
+        Desc.Height = crArguments.dwHeight;
+        Desc.Depth = crArguments.dwDepth;
+
+        m_pActiveCmdList->pD3D12CommandList4->DispatchRays(&Desc);
+        return true;
+    }
+
+    BOOL FDX12CommandList::CompactBottomLevelAccelStructs()
+    {
+        return false;
+    }
+
+    BOOL FDX12CommandList::BuildBottomLevelAccelStruct(
+        RayTracing::IAccelStruct* pAccelStruct, 
+        const RayTracing::FGeometryDesc& crGeometryDesc, 
+        UINT64 stNumGeometries,
+        RayTracing::EAccelStructBuildFlags Flags
+    )
+    {
+        return false;
+    }
+
+    BOOL FDX12CommandList::BuildTopLevelAccelStruct(
+        RayTracing::IAccelStruct* pAccelStruct, 
+        const RayTracing::FInstanceDesc& crInstanceDesc, 
+        UINT64 stNumInstances,
+        RayTracing::EAccelStructBuildFlags Flags
+    )
+    {
+        return false;
+    }
+
+    BOOL FDX12CommandList::SetAccelStructState(RayTracing::IAccelStruct* pAccelStruct, EResourceStates State)
+    {
+        IBufferStateTrack* pBufferStateTrack = nullptr;
+        ReturnIfFalse(CheckedCast<RayTracing::FDX12AccelStruct*>(pAccelStruct)->m_pDataBuffer->QueryInterface(
+            IID_IBufferStateTrack, 
+            PPV_ARG(&pBufferStateTrack)
+        ));
+
+        ReturnIfFalse(m_ResourceStateTracker.RequireBufferState(pBufferStateTrack, State));
+
+        if (m_pInstance != nullptr)
+        {
+            m_pInstance->pReferencedResources.emplace_back(pAccelStruct);
+        }
+        return true;
+    }
+
+    RayTracing::FDX12ShaderTableState* FDX12CommandList::GetShaderTableState(RayTracing::IShaderTable* pShaderTable)
+    {
+        auto Iter = m_ShaderTableStatesMap.find(pShaderTable);
+        if (Iter != m_ShaderTableStatesMap.end()) return Iter->second.get();
+
+        std::unique_ptr<RayTracing::FDX12ShaderTableState> pShaderTableState = std::make_unique<RayTracing::FDX12ShaderTableState>();
+        auto* pRet = pShaderTableState.get();
+
+        m_ShaderTableStatesMap[pShaderTable] = std::move(pShaderTableState);
+
+        return pRet;
+    }
+
+#endif
+
+
     BOOL FDX12CommandList::AllocateUploadBuffer(UINT64 stSize, UINT8** ppCpuAddress, D3D12_GPU_VIRTUAL_ADDRESS* pGpuAddress)
     {
         m_UploadManager.SuballocateBuffer(stSize, nullptr, nullptr, ppCpuAddress, pGpuAddress, m_stRecordingVersion, D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT);
@@ -1978,6 +2058,9 @@ namespace FTS
         m_cpContext->pDevice->CreateCommandAllocator(CmdListType, IID_PPV_ARGS(Ret->pCmdAllocator.GetAddressOf()));
         m_cpContext->pDevice->CreateCommandList(0, CmdListType, Ret->pCmdAllocator.Get(), nullptr, IID_PPV_ARGS(Ret->pD3D12CommandList.GetAddressOf()));
 
+#ifdef RAY_TRACING
+        Ret->pD3D12CommandList->QueryInterface(IID_PPV_ARGS(Ret->pD3D12CommandList4.GetAddressOf()));
+#endif
         Ret->pD3D12CommandList->QueryInterface(IID_PPV_ARGS(Ret->pD3D12CommandList6.GetAddressOf()));
 
         return Ret;

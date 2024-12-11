@@ -18,6 +18,7 @@
 #include "../../../Core/include/ComRoot.h"
 #include "../../../Core/include/ComCli.h"
 #include "../StateTrack.h"
+#include "DX12RayTracing.h"
 #include <atomic>
 #include <combaseapi.h>
 #include <d3d12.h>
@@ -32,6 +33,7 @@ namespace FTS
     {
         Microsoft::WRL::ComPtr<ID3D12CommandAllocator> pCmdAllocator;
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> pD3D12CommandList;
+        Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList4> pD3D12CommandList4;
         Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList6> pD3D12CommandList6;
         UINT64 stLastSubmittedValue = 0;
     };
@@ -210,6 +212,30 @@ namespace FTS
 		FCommandListDesc GetDesc() override;
         void* GetNativeObject() override;
 
+#ifdef RAY_TRACING
+        BOOL SetRayTracingState(const RayTracing::FPipelineState& crState) override;
+		BOOL DispatchRays(const RayTracing::FDispatchRaysArguments& crArguments) override;
+
+		BOOL CompactBottomLevelAccelStructs() override;
+		BOOL BuildBottomLevelAccelStruct(
+            RayTracing::IAccelStruct* pAccelStruct, 
+            const RayTracing::FGeometryDesc& crGeometryDesc, 
+            UINT64 stNumGeometries,
+			RayTracing::EAccelStructBuildFlags Flags = RayTracing::EAccelStructBuildFlags::None
+        ) override;
+		BOOL BuildTopLevelAccelStruct(
+            RayTracing::IAccelStruct* pAccelStruct, 
+            const RayTracing::FInstanceDesc& crInstanceDesc, 
+            UINT64 stNumInstances,
+			RayTracing::EAccelStructBuildFlags Flags = RayTracing::EAccelStructBuildFlags::None
+        ) override;
+
+		BOOL SetAccelStructState(RayTracing::IAccelStruct* pAccelStruct, EResourceStates State) override;
+
+
+        RayTracing::FDX12ShaderTableState* GetShaderTableState(RayTracing::IShaderTable* pShaderTable);
+#endif
+
 
         BOOL AllocateUploadBuffer(UINT64 stSize, UINT8** ppCpuAddress, D3D12_GPU_VIRTUAL_ADDRESS* pGpuAddress);
 
@@ -277,6 +303,13 @@ namespace FTS
         FComputeState m_CurrComputeState;
         BOOL m_bCurrGraphicsStateValid = false;
         BOOL m_bCurrComputeStateValid = false;
+
+#ifdef RAY_TRACING
+        RayTracing::FPipelineState m_CurrRayTracingState;
+        BOOL m_bCurrRayTracingStateValid = false;
+
+        std::unordered_map<RayTracing::IShaderTable*, std::unique_ptr<RayTracing::FDX12ShaderTableState>> m_ShaderTableStatesMap;
+#endif
 
         ID3D12DescriptorHeap* m_pCurrSRVetcHeap = nullptr;
         ID3D12DescriptorHeap* m_pCurrSamplerHeap = nullptr;

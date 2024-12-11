@@ -120,7 +120,6 @@ namespace FTS
 		{
 			virtual const FAccelStructDesc& GetDesc() const = 0;
 			virtual BOOL IsCompacted() const = 0;
-			virtual UINT64 GetDeviceAddress() const = 0;
 		};
 
 		struct FShaderDesc
@@ -131,6 +130,7 @@ namespace FTS
 
 		struct FHitGroupDesc
 		{
+			std::string strExportName;
 			IShader* pClosestHitShader = nullptr;
 			IShader* pAnyHitShader = nullptr;
 			IShader* pIntersectShader = nullptr;
@@ -144,7 +144,7 @@ namespace FTS
 			std::vector<FShaderDesc> Shaders;
 			std::vector<FHitGroupDesc> HitGroups;
 
-			FPipelineBindingLayoutArray pBindingLayouts;
+			FPipelineBindingLayoutArray pGlobalBindingLayouts;
 			UINT32 dwMaxPayloadSize = 0;
 			UINT32 dwMaxAttributeSize = sizeof(FLOAT) * 2;
 			UINT32 dwMaxRecursionDepth = 1;
@@ -155,13 +155,13 @@ namespace FTS
 		struct IPipeline : public IResource
 		{
 			virtual const FPipelineDesc& GetDesc() const = 0;
-			virtual BOOL CreateShaderTabel(CREFIID criid, void** ppvShaderTable) = 0;
+			virtual BOOL CreateShaderTable(CREFIID criid, void** ppvShaderTable) = 0;
 		};
 
 		extern const IID IID_IShaderTable;
 		struct IShaderTable : public IResource
 		{
-			virtual void SetRayGenerationShader(const CHAR* strName, IBindingSet* pBindingSet = nullptr) = 0;
+			virtual void SetRayGenShader(const CHAR* strName, IBindingSet* pBindingSet = nullptr) = 0;
 
 			virtual INT32 AddMissShader(const CHAR* strName, IBindingSet* pBindingSet = nullptr) = 0;
 			virtual INT32 AddHitGroup(const CHAR* strName, IBindingSet* pBindingSet = nullptr) = 0;

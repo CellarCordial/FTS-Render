@@ -131,24 +131,24 @@ namespace FTS
         ) = 0;
 
 #if RAY_TRACING
-		virtual void SetRayTracingState(const RayTracing::FPipelineState& crState) = 0;
-		virtual void DispatchRays(const RayTracing::FDispatchRaysArguments& crArguments) = 0;
+		virtual BOOL SetRayTracingState(const RayTracing::FPipelineState& crState) = 0;
+		virtual BOOL DispatchRays(const RayTracing::FDispatchRaysArguments& crArguments) = 0;
 
-		virtual void CompactBottomLevelAccelStructs() = 0;
-		virtual void BuildBottomLevelAccelStruct(
+		virtual BOOL CompactBottomLevelAccelStructs() = 0;
+		virtual BOOL BuildBottomLevelAccelStruct(
             RayTracing::IAccelStruct* pAccelStruct, 
             const RayTracing::FGeometryDesc& crGeometryDesc, 
             UINT64 stNumGeometries,
 			RayTracing::EAccelStructBuildFlags Flags = RayTracing::EAccelStructBuildFlags::None
         ) = 0;
-		virtual void BuildTopLevelAccelStruct(
+		virtual BOOL BuildTopLevelAccelStruct(
             RayTracing::IAccelStruct* pAccelStruct, 
             const RayTracing::FInstanceDesc& crInstanceDesc, 
             UINT64 stNumInstances,
 			RayTracing::EAccelStructBuildFlags Flags = RayTracing::EAccelStructBuildFlags::None
         ) = 0;
 
-		virtual void SetAccelStructState(RayTracing::IAccelStruct* as, EResourceStates State) = 0;
+		virtual BOOL SetAccelStructState(RayTracing::IAccelStruct* pAccelStruct, EResourceStates State) = 0;
 #endif        
 
         virtual BOOL GetBufferState(IBuffer* pBuffer, /*Out*/EResourceStates* pResourceStates) = 0;

@@ -101,7 +101,9 @@ namespace FTS
 	if (FAILED(hRes))	return hRes 
 #endif
 
-
+#ifndef new_on_stack
+#define new_on_stack(T) (T*)alloca(sizeof(T))
+#endif
 
 namespace FTS
 {

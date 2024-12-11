@@ -15,6 +15,7 @@
 #include "DX12Forward.h"
 #include "DX12FrameBuffer.h"
 #include "DX12Pipeline.h"
+#include "DX12RayTracing.h"
 #include "DX12Resource.h"
 #include "DX12Shader.h"
 #include "../Utils.h"
@@ -619,26 +620,68 @@ namespace FTS
 #if RAY_TRACING
 	BOOL FDX12Device::CreateRayTracingPipeline(const RayTracing::FPipelineDesc& crDesc, CREFIID criid, void** ppvPipeline)
 	{
+        RayTracing::FDX12Pipeline* pDX12Pipeilne = new RayTracing::FDX12Pipeline(&m_Context);
+        
+        std::vector<IDX12RootSignature*> pDX12ShaderRootSignatures;
+        std::vector<IDX12RootSignature*> pDX12HitGroupRootSignatures;
 
+        IDX12RootSignature* pDX12GlobalRootSignature = nullptr;
+        ReturnIfFalse(BuildRootSignature(crDesc.pGlobalBindingLayouts, false, IID_IDX12RootSignature, PPV_ARG(&pDX12GlobalRootSignature)));
+        
+        for (const auto& crShader : crDesc.Shaders)
+        {
+            FPipelineBindingLayoutArray Tmp;
+            Tmp.PushBack(crShader.pBindingLayout);
+            IDX12RootSignature* pDX12RootSignature = pDX12ShaderRootSignatures.emplace_back();
+            ReturnIfFalse(BuildRootSignature(Tmp, false, IID_IDX12RootSignature, PPV_ARG(&pDX12RootSignature)));
+        }
+
+        for (const auto& crHitGroup : crDesc.HitGroups)
+        {
+            FPipelineBindingLayoutArray Tmp;
+            Tmp.PushBack(crHitGroup.pBindingLayout);
+            IDX12RootSignature* pDX12RootSignature = pDX12HitGroupRootSignatures.emplace_back();
+            ReturnIfFalse(BuildRootSignature(Tmp, false, IID_IDX12RootSignature, PPV_ARG(&pDX12RootSignature)));
+        }
+
+        if (
+            !pDX12Pipeilne->Initialize(
+                pDX12ShaderRootSignatures,
+                pDX12HitGroupRootSignatures,
+                pDX12GlobalRootSignature
+            ) || 
+            !pDX12Pipeilne->QueryInterface(criid, ppvPipeline)
+        )
+        {
+            LOG_ERROR("Create Ray Tracing Pipeilne Failed.");
+            return false;
+        }
         return true;
 	}
 
 	BOOL FDX12Device::CreateAccelStruct(const RayTracing::FAccelStructDesc& crDesc, CREFIID criid, void** ppvAccelStruct)
 	{
-
+        RayTracing::FDX12AccelStruct* pDX12AccelStruct = new RayTracing::FDX12AccelStruct(&m_Context, m_pDescriptorHeaps.get(), crDesc);
+        if (!pDX12AccelStruct->Initialize() || !pDX12AccelStruct->QueryInterface(criid, ppvAccelStruct))
+        {
+            LOG_ERROR("Create Accel Structure Failed.");
+            return false;
+        }
 		return true;
 	}
 
 	FMemoryRequirements FDX12Device::GetAccelStructMemoryRequirements(RayTracing::IAccelStruct* pAccelStruct)
 	{
+        RayTracing::FDX12AccelStruct* pDX12AccelStruct = CheckedCast<RayTracing::FDX12AccelStruct*>(pAccelStruct);
 
-        return FMemoryRequirements{};
+        return pDX12AccelStruct->m_pDataBuffer->GetMemoryRequirements();
 	}
 
 	BOOL FDX12Device::BindAccelStructMemory(RayTracing::IAccelStruct* pAccelStruct, IHeap* pHeap, UINT64 stOffset /*= 0*/)
 	{
+        RayTracing::FDX12AccelStruct* pDX12AccelStruct = CheckedCast<RayTracing::FDX12AccelStruct*>(pAccelStruct);
 
-		return true;
+        return pDX12AccelStruct->m_pDataBuffer->BindMemory(pHeap, stOffset);
 	}
 #endif
 
