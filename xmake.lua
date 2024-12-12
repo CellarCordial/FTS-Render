@@ -47,26 +47,28 @@ target("FTS-Render")
         "$(projectdir)/External/bvh",
         "$(projectdir)/External/imgui",
         "$(projectdir)/External/tinygltf",
-        "$(projectdir)/External/cyCodeBase",
-        "$(projectdir)/External/slang/include"
+        "$(projectdir)/External/cyCodeBase"
     )
     add_includedirs(
         "$(projectdir)/External/glfw-3.4.bin.WIN64/include/GLFW",
         "$(projectdir)/External/spdlog/include",
         "$(projectdir)/External/DirectXShaderCompiler/inc",
-        "$(projectdir)/External/meshoptimizer/src"
+        "$(projectdir)/External/meshoptimizer/src",
+        "$(projectdir)/External/slang/include"
     )
     add_linkdirs(
         "$(projectdir)/External/glfw-3.4.bin.WIN64/lib-static-ucrt",
         "$(projectdir)/External/spdlog/build/Release",
         "$(projectdir)/External/DirectXShaderCompiler/lib/x64",
-        "$(projectdir)/External/meshoptimizer/build/Debug"
+        "$(projectdir)/External/meshoptimizer/build/Debug",
+        "$(projectdir)/External/slang/lib"
     )
     add_links(
         "glfw3dll.lib",
         "spdlog.lib",
         "dxcompiler.lib",
-        "meshoptimizer.lib"
+        "meshoptimizer.lib",
+        "slang.lib"
     )
     after_build(
         function (target)

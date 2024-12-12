@@ -49,7 +49,7 @@ namespace FTS
             }
         }
 
-        BOOL Invalid() const { return pData.empty() || strIncludeShaderFiles.empty(); }
+        BOOL Invalid() const { return pData.empty(); }
     };
 
     namespace ShaderCompile

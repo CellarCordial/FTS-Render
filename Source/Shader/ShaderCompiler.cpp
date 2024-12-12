@@ -4,6 +4,7 @@
 #include <vector>
 #include <winerror.h>
 #include <winnt.h>
+#include <winscard.h>
 
 #ifdef SLANG_SHADER
 #include "../Core/include/ComIntf.h"
@@ -35,7 +36,6 @@ namespace FTS
         }
 
         Serialization::BinaryOutput Output(InCachePath);
-        Output(InData.strIncludeShaderFiles);
         Output(InData.pData.size());
         Output.SaveBinaryData(InData.pData.data(), InData.pData.size());
     }
@@ -45,7 +45,6 @@ namespace FTS
         FShaderData ShaderData;
         
         Serialization::BinaryInput Input(InCachePath);
-        Input(ShaderData.strIncludeShaderFiles);
 
         UINT64 ByteCodeSize = 0;
         Input(ByteCodeSize);
@@ -57,7 +56,8 @@ namespace FTS
 
 
 #if defined(SLANG_SHADER)
-
+namespace ShaderCompile
+{
     namespace
     {
         Slang::ComPtr<slang::IGlobalSession> gpGlobalSession;
@@ -65,7 +65,8 @@ namespace FTS
 
     void Initialize()
     {
-        createGlobalSession(gpGlobalSession.writeRef());
+        SlangResult Res = createGlobalSession(gpGlobalSession.writeRef());
+        assert(Res == SLANG_OK);
     }
 
     void Destroy()
@@ -75,6 +76,30 @@ namespace FTS
 
     FShaderData CompileShader(const FShaderCompileDesc& crDesc)
     {
+        if (gpGlobalSession == nullptr)
+        {
+            LOG_ERROR("Please call FTS::StaticShaderCompiler::Initialize() first.");
+            return FShaderData{};
+        }
+
+        const std::string ProjPath = PROJ_DIR;
+        const std::string CachePath = ProjPath + "Asset/ShaderCache/" + RemoveFileExtension(crDesc.strShaderName.c_str()) + "_" + crDesc.strEntryPoint + "_DEBUG.bin";
+        const std::string ShaderPath = ProjPath + "Source/Shader/" + crDesc.strShaderName;
+
+        if (CheckCache(CachePath.c_str(), ShaderPath.c_str()))
+        {
+            return LoadFromCache(CachePath.c_str());
+        }
+
+		SIZE_T pos = ShaderPath.find_last_of('/');
+		if (pos == std::string::npos)
+		{
+			LOG_ERROR("Find hlsl file's Directory failed.");
+			return FShaderData{};
+		}
+		const std::string strFileDirectory = ShaderPath.substr(0, pos);
+
+
         slang::SessionDesc SessionDesc{};
 
         slang::TargetDesc TargetDesc = {};
@@ -99,7 +124,7 @@ namespace FTS
 
         std::array<slang::CompilerOptionEntry, 1> options = 
         {
-            {
+            { 
                 // slang::CompilerOptionName::DebugInformation,
                 // { slang::CompilerOptionValueKind::Int, 1, 0, nullptr, nullptr }
             }
@@ -107,12 +132,57 @@ namespace FTS
         SessionDesc.compilerOptionEntries = options.data();
         SessionDesc.compilerOptionEntryCount = options.size();
 
+        const char* searchPaths[] = { strFileDirectory.c_str() };
+        SessionDesc.searchPaths = searchPaths;
+        SessionDesc.searchPathCount = 1;
 
         Slang::ComPtr<slang::ISession> pSession;
         gpGlobalSession->createSession(SessionDesc, pSession.writeRef());
 
+        Slang::ComPtr<slang::IBlob> pDiagnostics;
+        Slang::ComPtr<slang::IModule> pModule(pSession->loadModule("MyShaders", pDiagnostics.writeRef()));
+        if (pDiagnostics)
+        {
+            LOG_ERROR((const char*) pDiagnostics->getBufferPointer());
+            return FShaderData{};
+        }
+        pDiagnostics.setNull();
+
+        Slang::ComPtr<slang::IEntryPoint> pEntryPoint;
+        pModule->getDefinedEntryPoint(0, pEntryPoint.writeRef());
+
+        slang::IComponentType* components[] = { pModule, pEntryPoint };
+        Slang::ComPtr<slang::IComponentType> pProgram;
+        pSession->createCompositeComponentType(components, 2, pProgram.writeRef());
+
+        Slang::ComPtr<slang::IComponentType> pLinkedProgram;
+        pProgram->link(pLinkedProgram.writeRef(), pDiagnostics.writeRef());
+        if (pDiagnostics)
+        {
+            LOG_ERROR((const char*) pDiagnostics->getBufferPointer());
+            return FShaderData{};
+        }
+        pDiagnostics.setNull();
+
+        int entryPointIndex = 0;
+        int targetIndex = 0;
+        Slang::ComPtr<slang::IBlob> pKernelBlob;
+        pLinkedProgram->getEntryPointCode(0, 0, pKernelBlob.writeRef(), pDiagnostics.writeRef());
+        if (pDiagnostics)
+        {
+            LOG_ERROR((const char*) pDiagnostics->getBufferPointer());
+            return FShaderData{};
+        }
+        pDiagnostics.setNull();
+
+        FShaderData ShaderData;
+        ShaderData.SetByteCode(pKernelBlob->getBufferPointer(), pKernelBlob->getBufferSize());
+
+        SaveToCache(CachePath.c_str(), ShaderData);
+
         return FShaderData{};
     }
+}
 
 #elif defined(HLSL_SHADER)
     inline LPCWSTR GetTargetProfile(EShaderTarget Target)

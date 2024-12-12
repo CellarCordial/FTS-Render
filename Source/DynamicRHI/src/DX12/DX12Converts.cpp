@@ -387,6 +387,7 @@ namespace FTS
             case EAccelStructBuildFlags::MinimizeMemory: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_MINIMIZE_MEMORY;
             case EAccelStructBuildFlags::PerformUpdate: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
             }
+            return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
         }
 
         D3D12_RAYTRACING_GEOMETRY_FLAGS ConvertGeometryFlags(EGeometryFlags Flags)
@@ -397,6 +398,7 @@ namespace FTS
                 case EGeometryFlags::Opaque: return D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
                 case EGeometryFlags::NoDuplicateAnyHitInvocation: return D3D12_RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANYHIT_INVOCATION;
             }
+            return D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
         }
 
         D3D12_RAYTRACING_INSTANCE_FLAGS ConvertInstanceFlags(EInstanceFlags Flags)
@@ -409,6 +411,7 @@ namespace FTS
                 case EInstanceFlags::ForceOpaque: return D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE;
                 case EInstanceFlags::ForceNonOpaque: return D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_NON_OPAQUE;
             }
+            return D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
         }
 
 
