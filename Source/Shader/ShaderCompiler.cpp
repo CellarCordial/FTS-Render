@@ -125,8 +125,8 @@ namespace ShaderCompile
         std::array<slang::CompilerOptionEntry, 1> options = 
         {
             { 
-                // slang::CompilerOptionName::DebugInformation,
-                // { slang::CompilerOptionValueKind::Int, 1, 0, nullptr, nullptr }
+                slang::CompilerOptionName::DebugInformation,
+                { slang::CompilerOptionValueKind::Int, 1, 0, nullptr, nullptr }
             }
         };
         SessionDesc.compilerOptionEntries = options.data();
