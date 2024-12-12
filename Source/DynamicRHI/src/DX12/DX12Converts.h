@@ -59,29 +59,10 @@ namespace FTS
 #ifdef RAY_TRACING
     namespace RayTracing 
     {
-        inline D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS ConvertAccelStructureBuildFlags(EAccelStructBuildFlags Flags)
-        {
-            switch (Flags)
-            {
-            case EAccelStructBuildFlags::None: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
-            case EAccelStructBuildFlags::AllowUpdate: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
-            case EAccelStructBuildFlags::AllowCompaction: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION;
-            case EAccelStructBuildFlags::PreferFastTrace: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
-            case EAccelStructBuildFlags::PreferFastBuild: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD;
-            case EAccelStructBuildFlags::MinimizeMemory: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_MINIMIZE_MEMORY;
-            case EAccelStructBuildFlags::PerformUpdate: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
-            }
-        }
-
-        inline D3D12_RAYTRACING_GEOMETRY_FLAGS ConvertGeometryFlags(EGeometryFlags Flags)
-        {
-            switch (Flags)
-            {
-               case EGeometryFlags::None: return D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
-			   case EGeometryFlags::Opaque: return D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
-			   case EGeometryFlags::NoDuplicateAnyHitInvocation: return D3D12_RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANYHIT_INVOCATION;
-            }
-        }
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS ConvertAccelStructureBuildFlags(EAccelStructBuildFlags Flags);
+        D3D12_RAYTRACING_GEOMETRY_FLAGS ConvertGeometryFlags(EGeometryFlags Flags);
+        D3D12_RAYTRACING_INSTANCE_FLAGS ConvertInstanceFlags(EInstanceFlags Flags);
+        D3D12_RAYTRACING_INSTANCE_DESC ConvertInstanceDesc(const FInstanceDesc& crInstanceDesc);
     }
 
 #endif

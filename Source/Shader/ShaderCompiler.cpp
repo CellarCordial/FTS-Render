@@ -4,13 +4,117 @@
 #include <vector>
 #include <winerror.h>
 #include <winnt.h>
-#include "../Core/include/ComCli.h"
 
+#ifdef SLANG_SHADER
+#include "../Core/include/ComIntf.h"
+#include <slang.h>
+#include <slang-com-ptr.h>
+#include <slang-com-helper.h>
+#endif
+
+#ifdef HLSL_SHADER
+#include "../Core/include/ComCli.h"
+#include <dxcapi.h>
+#endif
 
 namespace FTS 
 {
-    
+    bool CheckCache(const char* InCachePath, const char* InShaderPath)
+    {
+        if (!IsFileExist(InCachePath)) return false;
+        if (CompareFileWriteTime(InShaderPath, InCachePath)) return false;
+        return true;
+    }
 
+    void SaveToCache(const char* InCachePath, const FShaderData& InData)
+    {
+        if (InData.Invalid())
+        {
+            LOG_ERROR("Call to FShaderCompiler::SaveToCache() failed for invalid Shader Data.");
+            return;
+        }
+
+        Serialization::BinaryOutput Output(InCachePath);
+        Output(InData.strIncludeShaderFiles);
+        Output(InData.pData.size());
+        Output.SaveBinaryData(InData.pData.data(), InData.pData.size());
+    }
+
+    FShaderData LoadFromCache(const char* InCachePath)
+    {
+        FShaderData ShaderData;
+        
+        Serialization::BinaryInput Input(InCachePath);
+        Input(ShaderData.strIncludeShaderFiles);
+
+        UINT64 ByteCodeSize = 0;
+        Input(ByteCodeSize);
+        ShaderData.pData.resize(ByteCodeSize);
+        Input.LoadBinaryData(ShaderData.pData.data(), ByteCodeSize);
+
+        return ShaderData;
+    }
+
+
+#if defined(SLANG_SHADER)
+
+    namespace
+    {
+        Slang::ComPtr<slang::IGlobalSession> gpGlobalSession;
+    }
+
+    void Initialize()
+    {
+        createGlobalSession(gpGlobalSession.writeRef());
+    }
+
+    void Destroy()
+    {
+        gpGlobalSession->Release();
+    }
+
+    FShaderData CompileShader(const FShaderCompileDesc& crDesc)
+    {
+        slang::SessionDesc SessionDesc{};
+
+        slang::TargetDesc TargetDesc = {};
+        TargetDesc.format = SLANG_DXIL;
+        TargetDesc.profile = gpGlobalSession->findProfile("sm_6_5");
+
+        SessionDesc.targets = &TargetDesc;
+        SessionDesc.targetCount = 1;
+
+        std::vector<slang::PreprocessorMacroDesc> PreprocessorMacroDesc;
+        for (const auto& crDefine : crDesc.strDefines)
+        {
+            auto EqualPos = crDefine.find_first_of('=');
+            PreprocessorMacroDesc.push_back(slang::PreprocessorMacroDesc{
+                .name = crDefine.substr(0, EqualPos).c_str(),
+                .value = crDefine.substr(EqualPos + 1).c_str()
+            });
+        }
+
+        SessionDesc.preprocessorMacros = PreprocessorMacroDesc.data();
+        SessionDesc.preprocessorMacroCount = PreprocessorMacroDesc.size();
+
+        std::array<slang::CompilerOptionEntry, 1> options = 
+        {
+            {
+                // slang::CompilerOptionName::DebugInformation,
+                // { slang::CompilerOptionValueKind::Int, 1, 0, nullptr, nullptr }
+            }
+        };
+        SessionDesc.compilerOptionEntries = options.data();
+        SessionDesc.compilerOptionEntryCount = options.size();
+
+
+        Slang::ComPtr<slang::ISession> pSession;
+        gpGlobalSession->createSession(SessionDesc, pSession.writeRef());
+
+        return FShaderData{};
+    }
+
+#elif defined(HLSL_SHADER)
     inline LPCWSTR GetTargetProfile(EShaderTarget Target)
     {
         switch (Target)
@@ -91,11 +195,6 @@ namespace FTS
         std::vector<std::string> IncludedFileNames;
         IDxcUtils* Utils;
     };
-
-    
-    BOOL CheckCache(const char* InCachePath, const char* InShaderPath); 
-    void SaveToCache(const char* InCachePath, const FShaderData& InData);
-    FShaderData LoadFromCache(const char* InCachePath);
 
     namespace
     {
@@ -230,42 +329,7 @@ namespace FTS
 
         return ShaderData;
     }
-
-    bool CheckCache(const char* InCachePath, const char* InShaderPath)
-    {
-        if (!IsFileExist(InCachePath)) return false;
-        if (CompareFileWriteTime(InShaderPath, InCachePath)) return false;
-        return true;
-    }
-
-    void SaveToCache(const char* InCachePath, const FShaderData& InData)
-    {
-        if (InData.Invalid())
-        {
-            LOG_ERROR("Call to FShaderCompiler::SaveToCache() failed for invalid Shader Data.");
-            return;
-        }
-
-        Serialization::BinaryOutput Output(InCachePath);
-        Output(InData.strIncludeShaderFiles);
-        Output(InData.pData.size());
-        Output.SaveBinaryData(InData.pData.data(), InData.pData.size());
-    }
-
-    FShaderData LoadFromCache(const char* InCachePath)
-    {
-        FShaderData ShaderData;
-        
-        Serialization::BinaryInput Input(InCachePath);
-        Input(ShaderData.strIncludeShaderFiles);
-
-        UINT64 ByteCodeSize = 0;
-        Input(ByteCodeSize);
-        ShaderData.pData.resize(ByteCodeSize);
-        Input.LoadBinaryData(ShaderData.pData.data(), ByteCodeSize);
-
-        return ShaderData;
-    }
+#endif
 
 }
 

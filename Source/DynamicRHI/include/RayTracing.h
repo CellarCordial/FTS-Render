@@ -2,7 +2,6 @@
 #define RHI_RAY_TRACING
 
 #if RAY_TRACING
-#include "../../Math/include/Matrix.h"
 #include "Pipeline.h"
 #include "Draw.h"
 #include <vector>
@@ -48,6 +47,9 @@ namespace FTS
 			UINT32 dwStride = 0;
 		};
 
+		typedef FLOAT FAffineMatrix[12];
+
+
 		struct FGeometryDesc
 		{
 			EGeometryFlags Flags = EGeometryFlags::None;
@@ -60,7 +62,7 @@ namespace FTS
 			};
 
 			BOOL bUseTransform = false;
-			FMatrix4x4 AffineTransform;
+			FAffineMatrix AffineTransform;
 		};
 
 		enum class EInstanceFlags : UINT8
@@ -77,7 +79,7 @@ namespace FTS
 
 		struct FInstanceDesc
 		{
-			FMatrix4x4 AffineTransform;
+			FAffineMatrix AffineTransform;
 
 			UINT32 dwInstanceID : 24 = 0;
 			UINT32 dwInstanceMask : 8 = 0;
@@ -119,7 +121,6 @@ namespace FTS
 		struct IAccelStruct : IResource
 		{
 			virtual const FAccelStructDesc& GetDesc() const = 0;
-			virtual BOOL IsCompacted() const = 0;
 		};
 
 		struct FShaderDesc

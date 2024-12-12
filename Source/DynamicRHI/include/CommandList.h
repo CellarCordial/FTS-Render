@@ -19,8 +19,10 @@ namespace FTS
     struct FCommandListDesc
     {
         UINT64 stUploadChunkSize = 64 * 1024;
-
         ECommandQueueType QueueType = ECommandQueueType::Graphics;
+
+        UINT64 stScratchChunkSize = 64 * 1024;
+        UINT64 stScratchMaxMemory = 1024 * 1024 * 1024;
     };
 
     extern const IID IID_ICommandList;
@@ -134,18 +136,15 @@ namespace FTS
 		virtual BOOL SetRayTracingState(const RayTracing::FPipelineState& crState) = 0;
 		virtual BOOL DispatchRays(const RayTracing::FDispatchRaysArguments& crArguments) = 0;
 
-		virtual BOOL CompactBottomLevelAccelStructs() = 0;
 		virtual BOOL BuildBottomLevelAccelStruct(
-            RayTracing::IAccelStruct* pAccelStruct, 
-            const RayTracing::FGeometryDesc& crGeometryDesc, 
-            UINT64 stNumGeometries,
-			RayTracing::EAccelStructBuildFlags Flags = RayTracing::EAccelStructBuildFlags::None
+            RayTracing::IAccelStruct* pAccelStruct,
+            const RayTracing::FGeometryDesc* pGeometryDescs,
+            UINT32 dwGeometryDescNum
         ) = 0;
 		virtual BOOL BuildTopLevelAccelStruct(
             RayTracing::IAccelStruct* pAccelStruct, 
-            const RayTracing::FInstanceDesc& crInstanceDesc, 
-            UINT64 stNumInstances,
-			RayTracing::EAccelStructBuildFlags Flags = RayTracing::EAccelStructBuildFlags::None
+            const RayTracing::FInstanceDesc* cpInstanceDescs, 
+            UINT32 dwInstanceNum
         ) = 0;
 
 		virtual BOOL SetAccelStructState(RayTracing::IAccelStruct* pAccelStruct, EResourceStates State) = 0;

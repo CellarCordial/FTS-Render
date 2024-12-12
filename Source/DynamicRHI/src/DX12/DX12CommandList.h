@@ -114,7 +114,8 @@ namespace FTS
             const FDX12Context* cpContext, 
             FDX12CommandQueue* pCmdQueue, 
             UINT64 stDefaultChunkSize, 
-            UINT64 stMemoryLimit
+            UINT64 stMemoryLimit,
+            BOOL bDxrScratch = false
         );
 
         BOOL SuballocateBuffer(
@@ -124,7 +125,8 @@ namespace FTS
             UINT8** ppCpuAddress, 
             D3D12_GPU_VIRTUAL_ADDRESS* pGpuAddress, 
             UINT64 stCurrentVersion, 
-            UINT32 dwAligment = 256
+            UINT32 dwAligment = 256,
+            ID3D12GraphicsCommandList* pD3D12CmdList = nullptr
         );
 
         void SubmitChunks(UINT64 stCurrentVersion, UINT64 stSubmittedVersion);
@@ -142,6 +144,8 @@ namespace FTS
 
         std::list<std::shared_ptr<FDX12BufferChunk>> m_pChunkPool;
         std::shared_ptr<FDX12BufferChunk> m_pCurrentChunk;
+
+        BOOL m_bDxrScratch;
     };
 
 
@@ -216,18 +220,15 @@ namespace FTS
         BOOL SetRayTracingState(const RayTracing::FPipelineState& crState) override;
 		BOOL DispatchRays(const RayTracing::FDispatchRaysArguments& crArguments) override;
 
-		BOOL CompactBottomLevelAccelStructs() override;
 		BOOL BuildBottomLevelAccelStruct(
-            RayTracing::IAccelStruct* pAccelStruct, 
-            const RayTracing::FGeometryDesc& crGeometryDesc, 
-            UINT64 stNumGeometries,
-			RayTracing::EAccelStructBuildFlags Flags = RayTracing::EAccelStructBuildFlags::None
+            RayTracing::IAccelStruct* pAccelStruct,
+            const RayTracing::FGeometryDesc* pGeometryDescs,
+            UINT32 dwGeometryDescNum
         ) override;
 		BOOL BuildTopLevelAccelStruct(
             RayTracing::IAccelStruct* pAccelStruct, 
-            const RayTracing::FInstanceDesc& crInstanceDesc, 
-            UINT64 stNumInstances,
-			RayTracing::EAccelStructBuildFlags Flags = RayTracing::EAccelStructBuildFlags::None
+            const RayTracing::FInstanceDesc* cpInstanceDescs, 
+            UINT32 dwInstanceNum
         ) override;
 
 		BOOL SetAccelStructState(RayTracing::IAccelStruct* pAccelStruct, EResourceStates State) override;
@@ -305,6 +306,8 @@ namespace FTS
         BOOL m_bCurrComputeStateValid = false;
 
 #ifdef RAY_TRACING
+        FDX12UploadManager m_DxrScratchManager;
+
         RayTracing::FPipelineState m_CurrRayTracingState;
         BOOL m_bCurrRayTracingStateValid = false;
 

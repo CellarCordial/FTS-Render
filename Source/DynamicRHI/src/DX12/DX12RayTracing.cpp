@@ -13,44 +13,66 @@ namespace FTS
 {
 	namespace RayTracing
 	{
-		struct FDX12GeometryDesc
+		void FDX12AccelStruct::FillGeometryDesc(
+			FDX12GeometryDesc& rDstGeometryDesc, 
+			const FGeometryDesc& crSrcGeometryDesc, 
+			D3D12_GPU_VIRTUAL_ADDRESS GpuAddress
+		)
 		{
-            D3D12_RAYTRACING_GEOMETRY_TYPE Type;
-            D3D12_RAYTRACING_GEOMETRY_FLAGS Flags;
-            union
-            {
-                D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC Triangles;
-                D3D12_RAYTRACING_GEOMETRY_AABBS_DESC AABBs;
-			};
-		};
-
-		struct FDX12AccelStructBuildInputs
-		{
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE Type;
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS Flags;
-			UINT32 dwNumDescs;
-			D3D12_ELEMENTS_LAYOUT DescsLayout;
-
-			union 
+			rDstGeometryDesc.Flags = ConvertGeometryFlags(crSrcGeometryDesc.Flags);
+			if (crSrcGeometryDesc.Type == EGeometryType::Triangle)
 			{
-				D3D12_GPU_VIRTUAL_ADDRESS InstanceAddress;
-				const FDX12GeometryDesc* const* cpcpGeometryDesc;
-			};
+				rDstGeometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
 
-			std::vector<FDX12GeometryDesc> GeometryDescs;
-			std::vector<FDX12GeometryDesc*> pGeometryDescs;
+				auto& rDstTriangles = rDstGeometryDesc.Triangles;
+				const auto& crSrcTriangles = crSrcGeometryDesc.Triangles;
 
-			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Convert() const
-			{
-				return D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS{
-					.Type = Type,
-					.Flags = Flags,
-					.NumDescs = dwNumDescs,
-					.DescsLayout = DescsLayout,
-					.InstanceDescs = InstanceAddress
-				};
+				if (crSrcGeometryDesc.Triangles.pIndexBuffer)
+				{
+					FDX12Buffer* pDX12Buffer = CheckedCast<FDX12Buffer*>(crSrcTriangles.pIndexBuffer);
+					rDstTriangles.IndexBuffer = pDX12Buffer->m_GpuAddress + crSrcTriangles.stIndexOffset;
+				}
+				else
+				{
+					rDstTriangles.IndexBuffer = GpuAddress;
+				}
+				
+				if (crSrcTriangles.pVertexBuffer)
+				{
+					FDX12Buffer* pDX12Buffer = CheckedCast<FDX12Buffer*>(crSrcTriangles.pVertexBuffer);
+					rDstTriangles.VertexBuffer.StartAddress = pDX12Buffer->m_GpuAddress + crSrcTriangles.stVertexOffset;
+				}
+				else
+				{
+					rDstTriangles.VertexBuffer.StartAddress = GpuAddress;
+				}
+
+				rDstTriangles.VertexBuffer.StrideInBytes = crSrcTriangles.dwVertexStride;
+				rDstTriangles.IndexFormat = GetDxgiFormatMapping(crSrcTriangles.IndexFormat).SRVFormat;
+				rDstTriangles.VertexFormat = GetDxgiFormatMapping(crSrcTriangles.VertexFormat).SRVFormat;
+				rDstTriangles.IndexCount = crSrcTriangles.dwIndexCount;
+				rDstTriangles.VertexCount = crSrcTriangles.dwVertexCount;
+
+				rDstTriangles.Transform3x4 = GpuAddress;
 			}
-		};
+			else
+			{
+				rDstGeometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
+
+				if (crSrcGeometryDesc.AABBs.pBuffer)
+				{
+					FDX12Buffer* pDX12Buffer = CheckedCast<FDX12Buffer*>(crSrcGeometryDesc.AABBs.pBuffer);
+					rDstGeometryDesc.AABBs.AABBs.StartAddress = pDX12Buffer->m_GpuAddress + crSrcGeometryDesc.AABBs.stOffset;
+				}
+				else
+				{
+					rDstGeometryDesc.AABBs.AABBs.StartAddress = GpuAddress;
+				}
+
+				rDstGeometryDesc.AABBs.AABBs.StrideInBytes = crSrcGeometryDesc.AABBs.dwStride;
+				rDstGeometryDesc.AABBs.AABBCount = crSrcGeometryDesc.AABBs.dwCount;
+			}
+		}
 
 		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO FDX12AccelStruct::GetAccelStructPrebuildInfo()
 		{
@@ -60,13 +82,13 @@ namespace FTS
 			{
 				BuildInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
 				BuildInputs.InstanceAddress = D3D12_GPU_VIRTUAL_ADDRESS{0};
-				BuildInputs.dwNumDescs = m_Desc.stTopLevelMaxInstantNum;
+				BuildInputs.dwDescNum = m_Desc.stTopLevelMaxInstantNum;
 				BuildInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
 			}
 			else
 			{
-				BuildInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-				BuildInputs.dwNumDescs = static_cast<UINT32>(m_Desc.BottomLevelGeometryDescs.size());
+				BuildInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+				BuildInputs.dwDescNum = static_cast<UINT32>(m_Desc.BottomLevelGeometryDescs.size());
 				BuildInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS;
 				BuildInputs.GeometryDescs.resize(m_Desc.BottomLevelGeometryDescs.size());
 				BuildInputs.pGeometryDescs.resize(m_Desc.BottomLevelGeometryDescs.size());
@@ -81,59 +103,11 @@ namespace FTS
 					auto& rDstGeometryDesc = BuildInputs.GeometryDescs[ix];
 					const auto& crSrcGeometryDesc = m_Desc.BottomLevelGeometryDescs[ix];
 
-					rDstGeometryDesc.Flags = ConvertGeometryFlags(crSrcGeometryDesc.Flags);
-					if (crSrcGeometryDesc.Type == EGeometryType::Triangle)
-					{
-						rDstGeometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
-
-						auto& rDstTriangles = rDstGeometryDesc.Triangles;
-						const auto& crSrcTriangles = crSrcGeometryDesc.Triangles;
-
-						if (crSrcGeometryDesc.Triangles.pIndexBuffer)
-						{
-							FDX12Buffer* pDX12Buffer = CheckedCast<FDX12Buffer*>(crSrcTriangles.pIndexBuffer);
-							rDstTriangles.IndexBuffer = pDX12Buffer->m_GpuAddress + crSrcTriangles.stIndexOffset;
-						}
-						else
-						{
-							rDstTriangles.IndexBuffer = D3D12_GPU_VIRTUAL_ADDRESS{0};
-						}
-						
-						if (crSrcTriangles.pVertexBuffer)
-						{
-							FDX12Buffer* pDX12Buffer = CheckedCast<FDX12Buffer*>(crSrcTriangles.pVertexBuffer);
-							rDstTriangles.VertexBuffer.StartAddress = pDX12Buffer->m_GpuAddress + crSrcTriangles.stVertexOffset;
-						}
-						else
-						{
-							rDstTriangles.VertexBuffer.StartAddress = D3D12_GPU_VIRTUAL_ADDRESS{0};
-						}
-
-						rDstTriangles.VertexBuffer.StrideInBytes = crSrcTriangles.dwVertexStride;
-						rDstTriangles.IndexFormat = GetDxgiFormatMapping(crSrcTriangles.IndexFormat).SRVFormat;
-						rDstTriangles.VertexFormat = GetDxgiFormatMapping(crSrcTriangles.VertexFormat).SRVFormat;
-						rDstTriangles.IndexCount = crSrcTriangles.dwIndexCount;
-						rDstTriangles.VertexCount = crSrcTriangles.dwVertexCount;
-
-						rDstTriangles.Transform3x4 = crSrcGeometryDesc.bUseTransform ? D3D12_GPU_VIRTUAL_ADDRESS{16} : D3D12_GPU_VIRTUAL_ADDRESS{0};
-					}
-					else
-					{
-						rDstGeometryDesc.Type = D3D12_RAYTRACING_GEOMETRY_TYPE_PROCEDURAL_PRIMITIVE_AABBS;
-
-						if (crSrcGeometryDesc.AABBs.pBuffer)
-						{
-							FDX12Buffer* pDX12Buffer = CheckedCast<FDX12Buffer*>(crSrcGeometryDesc.AABBs.pBuffer);
-							rDstGeometryDesc.AABBs.AABBs.StartAddress = pDX12Buffer->m_GpuAddress + crSrcGeometryDesc.AABBs.stOffset;
-						}
-						else
-						{
-							rDstGeometryDesc.AABBs.AABBs.StartAddress = D3D12_GPU_VIRTUAL_ADDRESS{0};
-						}
-
-						rDstGeometryDesc.AABBs.AABBs.StrideInBytes = crSrcGeometryDesc.AABBs.dwStride;
-						rDstGeometryDesc.AABBs.AABBCount = crSrcGeometryDesc.AABBs.dwCount;
-					}
+					FillGeometryDesc(
+						rDstGeometryDesc, 
+						crSrcGeometryDesc, 
+						crSrcGeometryDesc.bUseTransform ? D3D12_GPU_VIRTUAL_ADDRESS{16} : D3D12_GPU_VIRTUAL_ADDRESS{0}
+					);
 				}
 			}
 
@@ -268,7 +242,9 @@ namespace FTS
 		}
 
 		FDX12AccelStruct::FDX12AccelStruct(const FDX12Context* cpContext, FDX12DescriptorHeaps* pDescriptorHeaps, const FAccelStructDesc& crDesc) :
-			m_cpContext(cpContext), m_pDescriptorHeaps(pDescriptorHeaps), m_Desc(crDesc)
+			m_cpContext(cpContext), 
+			m_pDescriptorHeaps(pDescriptorHeaps), 
+			m_Desc(crDesc)
 		{
 		}
 

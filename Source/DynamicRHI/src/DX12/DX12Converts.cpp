@@ -1,5 +1,6 @@
 #include "DX12Converts.h"
 #include <algorithm>
+#include <cstring>
 #include <d3d12.h>
 #include <minwindef.h>
 
@@ -368,6 +369,64 @@ namespace FTS
 
         return Ret;
     }
+
+
+#ifdef RAY_TRACING
+    namespace RayTracing 
+    {
+
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS ConvertAccelStructureBuildFlags(EAccelStructBuildFlags Flags)
+        {
+            switch (Flags)
+            {
+            case EAccelStructBuildFlags::None: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_NONE;
+            case EAccelStructBuildFlags::AllowUpdate: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
+            case EAccelStructBuildFlags::AllowCompaction: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_COMPACTION;
+            case EAccelStructBuildFlags::PreferFastTrace: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_TRACE;
+            case EAccelStructBuildFlags::PreferFastBuild: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PREFER_FAST_BUILD;
+            case EAccelStructBuildFlags::MinimizeMemory: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_MINIMIZE_MEMORY;
+            case EAccelStructBuildFlags::PerformUpdate: return D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_PERFORM_UPDATE;
+            }
+        }
+
+        D3D12_RAYTRACING_GEOMETRY_FLAGS ConvertGeometryFlags(EGeometryFlags Flags)
+        {
+            switch (Flags)
+            {
+                case EGeometryFlags::None: return D3D12_RAYTRACING_GEOMETRY_FLAG_NONE;
+                case EGeometryFlags::Opaque: return D3D12_RAYTRACING_GEOMETRY_FLAG_OPAQUE;
+                case EGeometryFlags::NoDuplicateAnyHitInvocation: return D3D12_RAYTRACING_GEOMETRY_FLAG_NO_DUPLICATE_ANYHIT_INVOCATION;
+            }
+        }
+
+        D3D12_RAYTRACING_INSTANCE_FLAGS ConvertInstanceFlags(EInstanceFlags Flags)
+        {
+            switch (Flags) 
+            {
+                case EInstanceFlags::None: return D3D12_RAYTRACING_INSTANCE_FLAG_NONE;
+                case EInstanceFlags::TriangleCullDisable: return D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_CULL_DISABLE;
+                case EInstanceFlags::TriangleFrontCounterclockwise: return D3D12_RAYTRACING_INSTANCE_FLAG_TRIANGLE_FRONT_COUNTERCLOCKWISE;
+                case EInstanceFlags::ForceOpaque: return D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_OPAQUE;
+                case EInstanceFlags::ForceNonOpaque: return D3D12_RAYTRACING_INSTANCE_FLAG_FORCE_NON_OPAQUE;
+            }
+        }
+
+
+        D3D12_RAYTRACING_INSTANCE_DESC ConvertInstanceDesc(const FInstanceDesc& crInstanceDesc)
+        {
+            D3D12_RAYTRACING_INSTANCE_DESC Ret;
+            memcpy(Ret.Transform, crInstanceDesc.AffineTransform, sizeof(FLOAT) * 4 * 3);
+            Ret.InstanceID = crInstanceDesc.dwInstanceID;
+            Ret.InstanceMask = crInstanceDesc.dwInstanceMask;
+            Ret.InstanceContributionToHitGroupIndex = crInstanceDesc.dwInstanceContributionToHitGroupIndex;
+            Ret.AccelerationStructure = crInstanceDesc.stBiasDeviceAddress;
+            Ret.Flags = ConvertInstanceFlags(crInstanceDesc.Flags);
+            return Ret;
+        }
+    }
+
+#endif
+
 
 
     static const FDxgiFormatMapping gcDxgiFormatMappings[] = {

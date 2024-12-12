@@ -30,6 +30,45 @@ namespace FTS
 			const void* cpvShaderIdentifier = nullptr;
 		};
 
+		struct FDX12GeometryDesc
+		{
+            D3D12_RAYTRACING_GEOMETRY_TYPE Type;
+            D3D12_RAYTRACING_GEOMETRY_FLAGS Flags;
+            union
+            {
+                D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC Triangles;
+                D3D12_RAYTRACING_GEOMETRY_AABBS_DESC AABBs;
+			};
+		};
+
+		struct FDX12AccelStructBuildInputs
+		{
+			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE Type;
+			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS Flags;
+			UINT32 dwDescNum;
+			D3D12_ELEMENTS_LAYOUT DescsLayout;
+
+			union 
+			{
+				D3D12_GPU_VIRTUAL_ADDRESS InstanceAddress;
+				const FDX12GeometryDesc* const* cpcpGeometryDesc;
+			};
+
+			std::vector<FDX12GeometryDesc> GeometryDescs;
+			std::vector<FDX12GeometryDesc*> pGeometryDescs;
+
+			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Convert() const
+			{
+				return D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS{
+					.Type = Type,
+					.Flags = Flags,
+					.NumDescs = dwDescNum,
+					.DescsLayout = DescsLayout,
+					.InstanceDescs = InstanceAddress
+				};
+			}
+		};
+
 		class FDX12AccelStruct :
 			public TComObjectRoot<FComMultiThreadModel>,
 			public IAccelStruct
@@ -44,26 +83,28 @@ namespace FTS
 			BOOL Initialize();
 
 			// IAccelStruct.
-			BOOL IsCompacted() const override { return m_bCompacted; }
 			const FAccelStructDesc& GetDesc() const override { return m_Desc; }
+
+			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO GetAccelStructPrebuildInfo();
+
+			static void FillGeometryDesc(
+				FDX12GeometryDesc& rDstGeometryDesc, 
+				const FGeometryDesc& crSrcGeometryDesc, 
+				D3D12_GPU_VIRTUAL_ADDRESS GpuAddress
+			);
 
 
 		public:
+			FAccelStructDesc m_Desc;
 			TComPtr<IBuffer> m_pDataBuffer;
 
-		private:
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO GetAccelStructPrebuildInfo();
+			std::vector<D3D12_RAYTRACING_INSTANCE_DESC> m_DxrInstanceDescs;
+			std::vector<TComPtr<IAccelStruct>> m_pBottomLevelAccelStructs;
 
 		private:
 			const FDX12Context* m_cpContext;
         	FDX12DescriptorHeaps* m_pDescriptorHeaps;
 
-			FAccelStructDesc m_Desc;
-			std::vector<D3D12_RAYTRACING_INSTANCE_DESC> m_DxrInstanceDescs;
-			std::vector<TComPtr<IAccelStruct>> m_pBottomLevelAccelStructs;
-
-			BOOL m_bAllowUpdate = false;
-			BOOL m_bCompacted = false;
 		};
 
 		class FDX12ShaderTable :

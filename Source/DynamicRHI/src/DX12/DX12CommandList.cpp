@@ -27,19 +27,30 @@ namespace FTS
         if (bSubmitted) stResult |= gstVersionSubmittedFlag;
         return stResult;
     }
+    constexpr UINT64 VersionGetInstance(UINT64 stVersion)
+    {
+        return stVersion & gstVersionIDMask;
+    }
+
+    constexpr BOOL VersionGetSubmitted(UINT64 stVersion)
+    {
+        return (stVersion & gstVersionSubmittedFlag) != 0;
+    }
     
 
     FDX12UploadManager::FDX12UploadManager(
         const FDX12Context* cpContext, 
         FDX12CommandQueue* pCmdQueue, 
         UINT64 stDefaultChunkSize, 
-        UINT64 stMemoryLimit
+        UINT64 stMemoryLimit,
+        BOOL bDxrScratch
     ) :
         m_cpContext(cpContext), 
         m_pCmdQueue(pCmdQueue), 
         m_stDefaultChunkSize(stDefaultChunkSize), 
         m_stMaxMemorySize(stMemoryLimit),
-        m_stAllocatedMemorySize(0)
+        m_stAllocatedMemorySize(0),
+        m_bDxrScratch(bDxrScratch)
     {
         if (!m_pCmdQueue)
         {
@@ -56,9 +67,13 @@ namespace FTS
         UINT8** ppCpuAddress, 
         D3D12_GPU_VIRTUAL_ADDRESS* pGpuAddress, 
         UINT64 stCurrentVersion, 
-        UINT32 dwAligment
+        UINT32 dwAligment,
+        ID3D12GraphicsCommandList* pD3D12CmdList
     )
     {
+        // DxrScratch upload manager need d3d12 cmdlist to set uav barrier.
+        ReturnIfFalse(!m_bDxrScratch || pD3D12CmdList);
+
         std::shared_ptr<FDX12BufferChunk> pBufferChunkToRetire;
 
         // Try to allocate from the current chunk first.
@@ -115,14 +130,58 @@ namespace FTS
         if (!m_pCurrentChunk)
         {
             UINT64 stSizeToAllocate = Align(std::max(stSize, m_stDefaultChunkSize), FDX12BufferChunk::cstSizeAlignment);
-            if (!(m_stMaxMemorySize > 0 && m_stAllocatedMemorySize + stSizeToAllocate <= m_stMaxMemorySize))    // For dx raytracing.
+            if (m_stMaxMemorySize > 0 && m_stAllocatedMemorySize + stSizeToAllocate <= m_stMaxMemorySize)
             {
-                m_pCurrentChunk = CreateBufferChunk(stSizeToAllocate);
+                if (m_bDxrScratch)
+                {
+                    std::shared_ptr<FDX12BufferChunk> pBestChunk;
+                    for (const auto& crChunk : m_pChunkPool)
+                    {
+                        if (crChunk->stBufferSize >= stSizeToAllocate)
+                        {
+                            if (!pBestChunk)
+                            {
+                                pBestChunk = crChunk;
+                                continue;
+                            }
+
+                            BOOL bChunkSubmitted = VersionGetSubmitted(crChunk->stVersion);
+                            BOOL bBestChunkSubmitted = VersionGetSubmitted(pBestChunk->stVersion);
+                            UINT64 stChunkInstance = VersionGetInstance(crChunk->stVersion);
+                            UINT64 stBestChunkInstance = VersionGetInstance(pBestChunk->stVersion);
+
+                            if (
+                                bChunkSubmitted && !bBestChunkSubmitted ||
+                                bChunkSubmitted == bBestChunkSubmitted && 
+                                stChunkInstance < stBestChunkInstance ||
+                                bChunkSubmitted == bBestChunkSubmitted && 
+                                stChunkInstance == stBestChunkInstance && 
+                                crChunk->stBufferSize > pBestChunk->stBufferSize
+                            )
+                            {
+                                pBestChunk = crChunk;
+                            }
+                        }
+                    }
+                    ReturnIfFalse(pBestChunk != nullptr);
+
+                    m_pChunkPool.erase(std::find(m_pChunkPool.begin(), m_pChunkPool.end(), pBestChunk));
+                    m_pCurrentChunk = pBestChunk;
+
+                    D3D12_RESOURCE_BARRIER UAVBarrier = {};
+                    UAVBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+                    UAVBarrier.UAV.pResource = pBestChunk->pD3D12Buffer.Get();
+                    pD3D12CmdList->ResourceBarrier(1, &UAVBarrier);
+                }
+                else 
+                {
+                    LOG_ERROR("No memory limit to upload resource.");
+                    return false;
+                }
             }
             else 
             {
-                LOG_ERROR("No memory limit to upload resource.");
-                return false;
+                m_pCurrentChunk = CreateBufferChunk(stSizeToAllocate);
             }
         }
 
@@ -205,7 +264,8 @@ namespace FTS
         m_pDevice(pDevice),
         m_pCmdQueue(pDX12CmdQueue),
         m_Desc(crDesc),
-        m_UploadManager(m_cpContext, m_pCmdQueue, crDesc.stUploadChunkSize, 0)
+        m_UploadManager(m_cpContext, m_pCmdQueue, crDesc.stUploadChunkSize, 0),
+        m_DxrScratchManager(m_cpContext, m_pCmdQueue, crDesc.stScratchChunkSize, crDesc.stScratchMaxMemory, true)
     {
     }
 
@@ -1513,30 +1573,214 @@ namespace FTS
         m_pActiveCmdList->pD3D12CommandList4->DispatchRays(&Desc);
         return true;
     }
-
-    BOOL FDX12CommandList::CompactBottomLevelAccelStructs()
-    {
-        return false;
-    }
-
+    
     BOOL FDX12CommandList::BuildBottomLevelAccelStruct(
-        RayTracing::IAccelStruct* pAccelStruct, 
-        const RayTracing::FGeometryDesc& crGeometryDesc, 
-        UINT64 stNumGeometries,
-        RayTracing::EAccelStructBuildFlags Flags
+        RayTracing::IAccelStruct* pAccelStruct,
+        const RayTracing::FGeometryDesc* pGeometryDescs,
+        UINT32 dwGeometryDescNum
     )
     {
-        return false;
+        RayTracing::FDX12AccelStruct* pDX12AccelStruct = CheckedCast<RayTracing::FDX12AccelStruct*>(pAccelStruct);
+        auto& rDesc = pDX12AccelStruct->m_Desc;
+        ReturnIfFalse(!rDesc.bIsTopLevel);
+
+        BOOL bPerformUpdate = (rDesc.Flags & RayTracing::EAccelStructBuildFlags::PerformUpdate) != 0;
+
+        rDesc.BottomLevelGeometryDescs.clear();
+        rDesc.BottomLevelGeometryDescs.reserve(dwGeometryDescNum);
+        for (UINT32 ix = 0; ix < dwGeometryDescNum; ++ix)
+        {
+            const auto& crGeometryDesc = pGeometryDescs[ix];
+            rDesc.BottomLevelGeometryDescs[ix] = crGeometryDesc;
+
+            if (crGeometryDesc.Type == RayTracing::EGeometryType::Triangle)
+            {
+                ReturnIfFalse(RequireBufferState(crGeometryDesc.Triangles.pVertexBuffer, EResourceStates::AccelStructBuildInput));
+                ReturnIfFalse(RequireBufferState(crGeometryDesc.Triangles.pIndexBuffer, EResourceStates::AccelStructBuildInput));
+
+                m_pInstance->pReferencedResources.push_back(crGeometryDesc.Triangles.pVertexBuffer);
+                m_pInstance->pReferencedResources.push_back(crGeometryDesc.Triangles.pIndexBuffer);
+            }
+            else 
+            {
+                ReturnIfFalse(RequireBufferState(crGeometryDesc.AABBs.pBuffer, EResourceStates::AccelStructBuildInput));
+                m_pInstance->pReferencedResources.push_back(crGeometryDesc.AABBs.pBuffer);
+            }
+
+        }
+
+        CommitBarriers();
+
+
+        RayTracing::FDX12AccelStructBuildInputs BuildInputs;
+        BuildInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+        BuildInputs.dwDescNum = static_cast<UINT32>(rDesc.BottomLevelGeometryDescs.size());
+        BuildInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS;
+        BuildInputs.GeometryDescs.resize(rDesc.BottomLevelGeometryDescs.size());
+        BuildInputs.pGeometryDescs.resize(rDesc.BottomLevelGeometryDescs.size());
+        for (UINT32 ix = 0; ix < static_cast<UINT32>(BuildInputs.GeometryDescs.size()); ++ix)
+        {
+            BuildInputs.pGeometryDescs[ix] = BuildInputs.GeometryDescs.data() + ix;
+        }
+        BuildInputs.cpcpGeometryDesc = BuildInputs.pGeometryDescs.data();
+
+
+        BuildInputs.GeometryDescs.resize(dwGeometryDescNum);
+        for (UINT32 ix = 0; ix < static_cast<UINT32>(rDesc.BottomLevelGeometryDescs.size()); ++ix)
+        {
+            const auto& crGeometryDesc = rDesc.BottomLevelGeometryDescs[ix];
+            D3D12_GPU_VIRTUAL_ADDRESS GpuAddress = 0;
+            if (crGeometryDesc.bUseTransform)
+            {
+                UINT8* CpuVA = nullptr;
+                ReturnIfFalse(!m_UploadManager.SuballocateBuffer(
+                    sizeof(RayTracing::FAffineMatrix), 
+                    nullptr, 
+                    nullptr, 
+                    &CpuVA, 
+                    &GpuAddress, 
+                    m_stRecordingVersion, 
+                    D3D12_RAYTRACING_TRANSFORM3X4_BYTE_ALIGNMENT
+                ));
+
+                memcpy(CpuVA, &crGeometryDesc.bUseTransform, sizeof(RayTracing::FAffineMatrix));
+            }
+
+            RayTracing::FDX12GeometryDesc& rOutGeometryDesc = BuildInputs.GeometryDescs[ix];
+            RayTracing::FDX12AccelStruct::FillGeometryDesc(rOutGeometryDesc, crGeometryDesc, GpuAddress);
+        }
+
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO ASPreBuildInfo = pDX12AccelStruct->GetAccelStructPrebuildInfo();
+
+        ReturnIfFalse(ASPreBuildInfo.ResultDataMaxSizeInBytes <= pDX12AccelStruct->m_pDataBuffer->GetDesc().stByteSize);
+
+        UINT64 stScratchSize = bPerformUpdate ? 
+            ASPreBuildInfo.UpdateScratchDataSizeInBytes :
+            ASPreBuildInfo.ScratchDataSizeInBytes;
+
+        D3D12_GPU_VIRTUAL_ADDRESS ScratchGPUAddress{};
+        ReturnIfFalse(m_DxrScratchManager.SuballocateBuffer(
+            stScratchSize, 
+            nullptr, 
+            nullptr, 
+            nullptr, 
+            &ScratchGPUAddress, 
+            m_stRecordingVersion, 
+            D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT
+        ));
+
+        RequireBufferState(pDX12AccelStruct->m_pDataBuffer.Get(), EResourceStates::AccelStructWrite);
+        CommitBarriers();
+
+        D3D12_GPU_VIRTUAL_ADDRESS ASDataAddress = CheckedCast<FDX12Buffer*>(pDX12AccelStruct->m_pDataBuffer.Get())->m_GpuAddress;
+
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC ASBuildDesc = {};
+        ASBuildDesc.Inputs = BuildInputs.Convert();
+        ASBuildDesc.ScratchAccelerationStructureData = ScratchGPUAddress;
+        ASBuildDesc.DestAccelerationStructureData = ASDataAddress;
+        ASBuildDesc.SourceAccelerationStructureData = bPerformUpdate ? ASDataAddress : 0;
+        m_pActiveCmdList->pD3D12CommandList4->BuildRaytracingAccelerationStructure(&ASBuildDesc, 0, nullptr);
+
+        m_pInstance->pReferencedResources.push_back(pAccelStruct);
+
+        return true;
     }
 
     BOOL FDX12CommandList::BuildTopLevelAccelStruct(
         RayTracing::IAccelStruct* pAccelStruct, 
-        const RayTracing::FInstanceDesc& crInstanceDesc, 
-        UINT64 stNumInstances,
-        RayTracing::EAccelStructBuildFlags Flags
+        const RayTracing::FInstanceDesc* cpInstanceDescs, 
+        UINT32 dwInstanceNum
     )
     {
-        return false;
+        RayTracing::FDX12AccelStruct* pDX12AccelStruct = CheckedCast<RayTracing::FDX12AccelStruct*>(pAccelStruct);
+        const auto& crDesc = pDX12AccelStruct->GetDesc();
+        ReturnIfFalse(crDesc.bIsTopLevel);
+
+        pDX12AccelStruct->m_DxrInstanceDescs.resize(dwInstanceNum);
+        pDX12AccelStruct->m_pBottomLevelAccelStructs.clear();
+        
+        for (UINT32 ix = 0; ix < dwInstanceNum; ++ix)
+        {
+            const auto& crInstanceDesc = cpInstanceDescs[ix];
+            auto& rD3D12InstanceDesc = pDX12AccelStruct->m_DxrInstanceDescs[ix];
+
+            if (crInstanceDesc.pBottomLevelAS)
+            {
+                pDX12AccelStruct->m_pBottomLevelAccelStructs.emplace_back(crInstanceDesc.pBottomLevelAS);
+                RayTracing::FDX12AccelStruct* pDX12Blas = CheckedCast<RayTracing::FDX12AccelStruct*>(crInstanceDesc.pBottomLevelAS);
+                
+                rD3D12InstanceDesc = RayTracing::ConvertInstanceDesc(crInstanceDesc);
+                rD3D12InstanceDesc.AccelerationStructure = CheckedCast<FDX12Buffer*>(pDX12Blas->m_pDataBuffer.Get())->m_GpuAddress;
+                ReturnIfFalse(RequireBufferState(pDX12Blas->m_pDataBuffer.Get(), EResourceStates::AccelStructBuildBlas));
+            }
+            else 
+            {
+                rD3D12InstanceDesc.AccelerationStructure = D3D12_GPU_VIRTUAL_ADDRESS{0};
+            }
+        }
+
+        UINT64 stUploadSize = sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * pDX12AccelStruct->m_DxrInstanceDescs.size();
+        D3D12_GPU_VIRTUAL_ADDRESS GPUAddress{};
+        UINT8* CPUAddress = nullptr;
+        ReturnIfFalse(m_UploadManager.SuballocateBuffer(
+            stUploadSize, 
+            nullptr, 
+            nullptr, 
+            &CPUAddress, 
+            &GPUAddress, 
+            m_stRecordingVersion, 
+            D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT
+        ));
+
+        memcpy(CPUAddress, pDX12AccelStruct->m_DxrInstanceDescs.data(), stUploadSize);
+
+        ReturnIfFalse(RequireBufferState(pDX12AccelStruct->m_pDataBuffer.Get(), EResourceStates::AccelStructWrite));
+        CommitBarriers();
+
+        BOOL bPerformUpdate = (crDesc.Flags & RayTracing::EAccelStructBuildFlags::AllowUpdate) != 0;
+
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS ASInputs;
+        ASInputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+        ASInputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+        ASInputs.InstanceDescs = GPUAddress;
+        ASInputs.NumDescs = dwInstanceNum;
+        ASInputs.Flags = RayTracing::ConvertAccelStructureBuildFlags(crDesc.Flags);
+        if (bPerformUpdate) ASInputs.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
+
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO ASPreBuildInfo = {};
+        m_cpContext->pDevice5->GetRaytracingAccelerationStructurePrebuildInfo(&ASInputs, &ASPreBuildInfo);
+
+        ReturnIfFalse(ASPreBuildInfo.ResultDataMaxSizeInBytes <= pDX12AccelStruct->m_pDataBuffer->GetDesc().stByteSize);
+
+        UINT64 stScratchSize = bPerformUpdate ? 
+            ASPreBuildInfo.UpdateScratchDataSizeInBytes :
+            ASPreBuildInfo.ScratchDataSizeInBytes;
+
+        D3D12_GPU_VIRTUAL_ADDRESS ScratchGPUAddress{};
+        ReturnIfFalse(m_DxrScratchManager.SuballocateBuffer(
+            stScratchSize, 
+            nullptr, 
+            nullptr, 
+            nullptr, 
+            &ScratchGPUAddress, 
+            m_stRecordingVersion, 
+            D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT
+        ));
+
+
+        D3D12_GPU_VIRTUAL_ADDRESS ASDataAddress = CheckedCast<FDX12Buffer*>(pDX12AccelStruct->m_pDataBuffer.Get())->m_GpuAddress;
+
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC Desc = {};
+        Desc.Inputs = ASInputs;
+        Desc.ScratchAccelerationStructureData = ScratchGPUAddress;
+        Desc.DestAccelerationStructureData = ASDataAddress;
+        Desc.SourceAccelerationStructureData = bPerformUpdate ? ASDataAddress : 0;
+
+        m_pActiveCmdList->pD3D12CommandList4->BuildRaytracingAccelerationStructure(&Desc, 0, nullptr);
+
+        m_pInstance->pReferencedResources.push_back(pAccelStruct);
+
+        return true;
     }
 
     BOOL FDX12CommandList::SetAccelStructState(RayTracing::IAccelStruct* pAccelStruct, EResourceStates State)

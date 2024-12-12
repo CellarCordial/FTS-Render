@@ -117,7 +117,7 @@ namespace FTS
 		}
 		m_Heap[dwIndex] = ix;
 		m_HeapIndices[m_Heap[dwIndex]] = dwIndex;
-	}	
+	}
 
 	FMeshOptimizer::FMeshOptimizer(const std::span<FVector3F>& crVertices, const std::span<UINT32>& crIndices) :
 		m_Vertices(crVertices), 

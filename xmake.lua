@@ -15,6 +15,7 @@ target("FTS-Render")
     	"DEBUG",
         "NOMINMAX",
         "D3D12_API",
+        "SLANG_SHADER",
         "RAY_TRACING=1",
         "NUM_FRAMES_IN_FLIGHT=3",
         "CLIENT_WIDTH=1024",
@@ -43,10 +44,11 @@ target("FTS-Render")
     ) 
     add_includedirs(
         "$(projectdir)/External/stb",
+        "$(projectdir)/External/bvh",
         "$(projectdir)/External/imgui",
         "$(projectdir)/External/tinygltf",
         "$(projectdir)/External/cyCodeBase",
-        "$(projectdir)/External/bvh"
+        "$(projectdir)/External/slang/include"
     )
     add_includedirs(
         "$(projectdir)/External/glfw-3.4.bin.WIN64/include/GLFW",

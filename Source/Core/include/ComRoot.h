@@ -17,7 +17,7 @@ template <typename T, typename U>
 T CheckedCast(U u)
 {
 	static_assert(!std::is_same<T, U>::value, "Redundant checked_cast");
-#ifdef _DEBUG
+#ifdef DEBUG
 	if (!u) return nullptr;
 	T t = dynamic_cast<T>(u);
 	if (!t) assert(!"Invalid type cast");

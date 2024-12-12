@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 #include <windows.h>
-#include <dxcapi.h>
 
 namespace FTS 
 {
@@ -57,7 +56,7 @@ namespace FTS
     {
         void Initialize();
         void Destroy();
-        FShaderData CompileShader(const FShaderCompileDesc& InDesc);
+        FShaderData CompileShader(const FShaderCompileDesc& crDesc);
     };
 
 }
