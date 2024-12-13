@@ -12,7 +12,7 @@ float c_x2 = 1.0;
 float c_x3 = 2.0;
 
 //=======================================================================================
-float4 CubicLagrange(float4 A, float4 B, float4 C, float4 D, float t)
+float4 cubic_lagrange(float4 A, float4 B, float4 C, float4 D, float t)
 {
     return
         A *
@@ -66,12 +66,12 @@ float4 BicubicLagrangeTextureSample(float2 P, Texture2D Texture, uint2 TextureRe
     float4 C23 = Texture[PixelID + int2(c_onePixel, c_twoPixels)];
     float4 C33 = Texture[PixelID + int2(c_twoPixels, c_twoPixels)];
 
-    float4 CP0X = CubicLagrange(C00, C10, C20, C30, frac.x);
-    float4 CP1X = CubicLagrange(C01, C11, C21, C31, frac.x);
-    float4 CP2X = CubicLagrange(C02, C12, C22, C32, frac.x);
-    float4 CP3X = CubicLagrange(C03, C13, C23, C33, frac.x);
+    float4 CP0X = cubic_lagrange(C00, C10, C20, C30, frac.x);
+    float4 CP1X = cubic_lagrange(C01, C11, C21, C31, frac.x);
+    float4 CP2X = cubic_lagrange(C02, C12, C22, C32, frac.x);
+    float4 CP3X = cubic_lagrange(C03, C13, C23, C33, frac.x);
 
-    return CubicLagrange(CP0X, CP1X, CP2X, CP3X, frac.y);
+    return cubic_lagrange(CP0X, CP1X, CP2X, CP3X, frac.y);
 }
 
 //=======================================================================================

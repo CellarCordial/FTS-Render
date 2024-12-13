@@ -1,6 +1,6 @@
 #define THREAD_GROUP_NUM_X 1
 
-#include "../voxel_ircache_helper.slang"
+#include "../voxel_irradiance_helper.slang"
 using namespace voxel_irradiance;
 
 StructuredBuffer<uint> ircache_entry_voxel_buffer : register(t0);
@@ -60,7 +60,7 @@ void update_ircache_entry(uint entry_index)
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_NUM_X, 1, 1)]
-void CS(uint3 thread_id: SV_DispatchThreadID)
+void compute_shader(uint3 thread_id: SV_DispatchThreadID)
 {
     uint entry_index = thread_id.x;
     uint total_entry_num = ircache_meta_buffer.Load(IRCACHE_META_ALLOC_COUNT);
@@ -81,7 +81,7 @@ void CS(uint3 thread_id: SV_DispatchThreadID)
     }
     else
     {
-        ircache_spatial_buffer[entry_index] = Vertex::get_invalid();
+        ircache_spatial_buffer[entry_index] = CompressedVertex::invalid();
     }
 
     uint valid = (entry_index < total_entry_num && is_ircache_entry_life_valid(age)) ? 1 : 0;

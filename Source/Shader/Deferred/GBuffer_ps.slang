@@ -1,5 +1,5 @@
 #include "../Material.slang"
-#include "../Octohedral.slang"
+#include "../octahedral.slang"
 
 cbuffer gPassConstants : register(b0)
 {

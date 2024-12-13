@@ -1,7 +1,7 @@
 #define THREAD_GROUP_SIZE_X 0
 #define THREAD_GROUP_SIZE_Y 0
 
-#include "../Octohedral.hlsli"
+#include "../octahedral.hlsli"
 
 cbuffer gPassConstants : register(b0)
 {

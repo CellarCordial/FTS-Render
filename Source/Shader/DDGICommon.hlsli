@@ -2,7 +2,7 @@
 #define SHADER_DDGI_COMMON_HLSLI
 
 #include "Constants.hlsli"
-#include "Octohedral.hlsli"
+#include "octahedral.hlsli"
 
 struct FDDGIVolumeData
 {
