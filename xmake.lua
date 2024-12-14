@@ -15,7 +15,7 @@ target("FTS-Render")
     	"DEBUG",
         "NOMINMAX",
         "D3D12_API",
-        "SLANG_SHADER",
+        "HLSL_SHADER",
         "RAY_TRACING=1",
         "NUM_FRAMES_IN_FLIGHT=3",
         "CLIENT_WIDTH=1024",
@@ -53,21 +53,18 @@ target("FTS-Render")
         "$(projectdir)/External/glfw-3.4.bin.WIN64/include/GLFW",
         "$(projectdir)/External/spdlog/include",
         "$(projectdir)/External/DirectXShaderCompiler/inc",
-        "$(projectdir)/External/meshoptimizer/src",
         "$(projectdir)/External/slang/include"
     )
     add_linkdirs(
         "$(projectdir)/External/glfw-3.4.bin.WIN64/lib-static-ucrt",
         "$(projectdir)/External/spdlog/build/Release",
         "$(projectdir)/External/DirectXShaderCompiler/lib/x64",
-        "$(projectdir)/External/meshoptimizer/build/Debug",
         "$(projectdir)/External/slang/lib"
     )
     add_links(
         "glfw3dll.lib",
         "spdlog.lib",
         "dxcompiler.lib",
-        "meshoptimizer.lib",
         "slang.lib"
     )
     after_build(

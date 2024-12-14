@@ -1,16 +1,16 @@
 #define THREAD_GROUP_NUM_X 1
 
-#include "../voxel_irradiance_helper.slang"
+#include "../vxgi_helper.slang"
 using namespace voxel_irradiance;
 
 StructuredBuffer<uint> ircache_entry_voxel_buffer : register(t0);
-RWStructuredBuffer<Vertex> ircache_reprojection_proposal_buffer : register(t1);
+RWStructuredBuffer<CompressedVertex> ircache_reprojection_proposal_buffer : register(t1);
 
 RWStructuredBuffer<uint> ircache_life_buffer : register(u0);
 RWByteAddressBuffer ircache_meta_buffer : register(u1);
 RWStructuredBuffer<float4> ircache_irradiance_buffer : register(u2);
 RWStructuredBuffer<uint> ircache_entry_pool_buffer : register(u3);
-RWStructuredBuffer<Vertex> ircache_spatial_buffer : register(u4);
+RWStructuredBuffer<CompressedVertex> ircache_spatial_buffer : register(u4);
 RWStructuredBuffer<uint> ircache_reprojection_proposal_count_buffer : register(u5);
 RWStructuredBuffer<uint> ircache_entry_occupy_buffer : register(u6);
 

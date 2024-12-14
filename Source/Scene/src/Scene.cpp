@@ -3,7 +3,6 @@
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_EXTERNAL_IMAGE
 #include <tiny_gltf.h>
-#include <meshoptimizer.h>
 #include <json.hpp>
 #include "../../Math/include/Quaternion.h"
 #include "../../Parallel/include/Parallel.h"
@@ -703,60 +702,13 @@ namespace FTS
 		SIZE_T TangentData = FunctionLoadAttribute("TANGENT", bTan);
 		SIZE_T UVData = FunctionLoadAttribute("TEXCOORD_0", bUV);
 
-		std::vector<FVector3F> PositionStream;
-		std::vector<FVector3F> NormalStream;
-		std::vector<FVector4F> TangentStream;
-		std::vector<FVector2F> UVStream;
-
-		std::vector<UINT32> remap(stVertexCount);
-
-		if (bPos)
-		{
-			PositionStream.resize(stVertexCount);
-			for (UINT32 ix = 0; ix < stVertexCount; ++ix) PositionStream[ix] = *reinterpret_cast<FVector3F*>(PositionData + ix * AttributeStride[0]);
-
-			meshopt_optimizeVertexCache(rSubmesh.Indices.data(), rSubmesh.Indices.data(), rSubmesh.Indices.size(), stVertexCount);
-			meshopt_optimizeOverdraw(
-				rSubmesh.Indices.data(),
-				rSubmesh.Indices.data(),
-				rSubmesh.Indices.size(),
-				&PositionStream[0].x,
-				stVertexCount,
-				sizeof(FVector3F),
-				1.05f
-			);
-
-			meshopt_optimizeVertexFetchRemap(&remap[0], rSubmesh.Indices.data(), rSubmesh.Indices.size(), stVertexCount);
-			meshopt_remapIndexBuffer(rSubmesh.Indices.data(), rSubmesh.Indices.data(), rSubmesh.Indices.size(), &remap[0]);
-			meshopt_remapVertexBuffer(PositionStream.data(), PositionStream.data(), stVertexCount, sizeof(FVector3F), &remap[0]);
-		}
-		if (bNor)
-		{
-			NormalStream.resize(stVertexCount);
-			for (UINT32 ix = 0; ix < stVertexCount; ++ix) NormalStream[ix] = *reinterpret_cast<FVector3F*>(NormalData + ix * AttributeStride[1]);
-			meshopt_remapVertexBuffer(NormalStream.data(), NormalStream.data(), NormalStream.size(), sizeof(FVector3F), &remap[0]);
-		}
-		if (bTan)
-		{
-			TangentStream.resize(stVertexCount);
-			for (UINT32 ix = 0; ix < stVertexCount; ++ix) TangentStream[ix] = *reinterpret_cast<FVector4F*>(TangentData + ix * AttributeStride[2]);
-			meshopt_remapVertexBuffer(TangentStream.data(), TangentStream.data(), TangentStream.size(), sizeof(FVector4F), &remap[0]);
-		}
-		if (bUV)
-		{
-			UVStream.resize(stVertexCount);
-			for (UINT32 ix = 0; ix < stVertexCount; ++ix) UVStream[ix] = *reinterpret_cast<FVector2F*>(UVData + ix * AttributeStride[3]);
-			meshopt_remapVertexBuffer(UVStream.data(), UVStream.data(), UVStream.size(), sizeof(FVector2F), &remap[0]);
-		}
-
-
 		rSubmesh.Vertices.resize(stVertexCount);
 		for (UINT32 ix = 0; ix < stVertexCount; ++ix)
 		{
-			if (bPos) rSubmesh.Vertices[ix].Position = PositionStream[ix];
-			if (bNor) rSubmesh.Vertices[ix].Normal = NormalStream[ix];
-			if (bTan) rSubmesh.Vertices[ix].Tangent = TangentStream[ix];
-			if (bUV) rSubmesh.Vertices[ix].UV = UVStream[ix];
+			if (bPos) rSubmesh.Vertices[ix].Position = *reinterpret_cast<FVector3F*>(PositionData + ix * AttributeStride[0]);
+			if (bNor) rSubmesh.Vertices[ix].Normal = *reinterpret_cast<FVector3F*>(NormalData + ix * AttributeStride[1]);
+			if (bTan) rSubmesh.Vertices[ix].Tangent = *reinterpret_cast<FVector4F*>(TangentData + ix * AttributeStride[2]);
+			if (bUV) rSubmesh.Vertices[ix].UV = *reinterpret_cast<FVector2F*>(UVData + ix * AttributeStride[3]);
 		}
 	}
 

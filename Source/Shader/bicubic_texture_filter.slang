@@ -42,7 +42,7 @@ float4 cubic_lagrange(float4 A, float4 B, float4 C, float4 D, float t)
 }
 
 //=======================================================================================
-float4 BicubicLagrangeTextureSample(float2 P, Texture2D Texture, uint2 TextureRes)
+float4 bicubic_lagrange_texture_sample(float2 P, Texture2D Texture, uint2 TextureRes)
 {
     float2 pixel = P * TextureRes + 0.5;
 
@@ -75,7 +75,7 @@ float4 BicubicLagrangeTextureSample(float2 P, Texture2D Texture, uint2 TextureRe
 }
 
 //=======================================================================================
-float4 CubicHermite(float4 A, float4 B, float4 C, float4 D, float t)
+float4 cubic_hermite(float4 A, float4 B, float4 C, float4 D, float t)
 {
     float t2 = t * t;
     float t3 = t * t * t;
@@ -88,7 +88,7 @@ float4 CubicHermite(float4 A, float4 B, float4 C, float4 D, float t)
 }
 
 //=======================================================================================
-float4 BicubicHermiteTextureSample(float2 P, Texture2D Texture, uint2 TextureRes)
+float4 bicubic_hermite_texture_sample(float2 P, Texture2D Texture, uint2 TextureRes)
 {
     float2 pixel = P * TextureRes + 0.5;
 
@@ -112,12 +112,12 @@ float4 BicubicHermiteTextureSample(float2 P, Texture2D Texture, uint2 TextureRes
     float4 C23 = Texture[PixelID + int2(c_onePixel, c_twoPixels)];
     float4 C33 = Texture[PixelID + int2(c_twoPixels, c_twoPixels)];
 
-    float4 CP0X = CubicHermite(C00, C10, C20, C30, frac.x);
-    float4 CP1X = CubicHermite(C01, C11, C21, C31, frac.x);
-    float4 CP2X = CubicHermite(C02, C12, C22, C32, frac.x);
-    float4 CP3X = CubicHermite(C03, C13, C23, C33, frac.x);
+    float4 CP0X = cubic_hermite(C00, C10, C20, C30, frac.x);
+    float4 CP1X = cubic_hermite(C01, C11, C21, C31, frac.x);
+    float4 CP2X = cubic_hermite(C02, C12, C22, C32, frac.x);
+    float4 CP3X = cubic_hermite(C03, C13, C23, C33, frac.x);
 
-    return CubicHermite(CP0X, CP1X, CP2X, CP3X, frac.y);
+    return cubic_hermite(CP0X, CP1X, CP2X, CP3X, frac.y);
 }
 
 #endif

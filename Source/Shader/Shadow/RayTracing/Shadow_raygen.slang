@@ -1,7 +1,7 @@
 #include "../../math_helper.slang"
 #include "../../ray_tracing_helper/shadow_helper.slang"
 
-cbuffer gPassConstants : register(b0)
+cbuffer pass_constants : register(b0)
 {
     float4x4 inv_view_matrix;
 
@@ -21,7 +21,7 @@ RWTexture2D<float4> shadow_mask_texture : register(u0);
 
 
 [shader("raygeneration")]
-void RayGeneration()
+void ray_generation()
 {
     uint2 ray_id = DispatchRaysIndex().xy;
     float2 uv = (ray_id + 0.5f) / DispatchRaysDimensions().xy;

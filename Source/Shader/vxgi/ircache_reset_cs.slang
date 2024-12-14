@@ -1,6 +1,6 @@
 #define THREAD_GROUP_NUM_X 1
 
-#include "../voxel_irradiance_helper.slang"
+#include "../vxgi_helper.slang"
 using namespace voxel_irradiance;
 
 StructuredBuffer<uint> ircache_entry_indirection_buffer : register(t0);
@@ -13,7 +13,7 @@ RWStructuredBuffer<float4> ircache_auxiliary_buffer : register(u0);
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_NUM_X, 1, 1)]
-void CS(uint3 thread_id: SV_DispatchThreadID)
+void compute_shader(uint3 thread_id: SV_DispatchThreadID)
 {
     uint entry_index = ircache_entry_indirection_buffer[thread_id.x];
     uint total_allocate_num = ircache_meta_buffer.Load(IRCACHE_META_TRACING_ALLOC_COUNT);

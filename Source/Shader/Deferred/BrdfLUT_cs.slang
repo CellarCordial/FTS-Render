@@ -1,7 +1,7 @@
 #define THREAD_GROUP_NUM_X 1
 #define THREAD_GROUP_NUM_Y 1
 
-#include "../BRDF.slang"
+#include "../brdf_helper.slang"
 #include "../math_helper.slang"
 
 
@@ -37,8 +37,8 @@ float2 IntegrateBrdf(float n_dot_v, float roughness)
     float red_channel = 0.0f;
     float green_channel = 0.0f;
 
-    SpecularReflection specular_a = { float3(1.0f, 1.0f, 1.0f), roughness };
-    SpecularReflection specular_b = { float3(0.0f, 0.0f, 0.0f), roughness };
+    brdf::SpecularReflection specular_a = { float3(1.0f, 1.0f, 1.0f), roughness };
+    brdf::SpecularReflection specular_b = { float3(0.0f, 0.0f, 0.0f), roughness };
 
     const uint SAMPLE_COUNT = 1024u;
     for(uint ix = 0; ix < SAMPLE_COUNT; ++ix)

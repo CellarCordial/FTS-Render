@@ -1,6 +1,6 @@
 #define THREAD_GROUP_NUM_X 1
 
-#include "../voxel_ircache_helper.slang"
+#include "../vxgi_helper.slang"
 using namespace voxel_irradiance;
 
 ByteAddressBuffer ircache_grid_meta_buffer_ping : register(t0);
@@ -10,7 +10,7 @@ RWByteAddressBuffer ircache_grid_meta_buffer_pong : register(u0);
 RWStructuredBuffer<uint> ircache_life_buffer : register(u1);
 RWStructuredBuffer<float4> ircache_irradiance_buffer : register(u2);
 RWByteAddressBuffer ircache_meta_buffer : register(u3);
-RWStructuredBuffer<uint> ircache_pool_buffer : register(u4);
+RWStructuredBuffer<uint> ircache_entry_pool_buffer : register(u4);
 RWStructuredBuffer<uint> ircache_entry_voxel_buffer : register(u5);
 
 void release_grid_voxel(uint voxel_index)
@@ -34,7 +34,7 @@ void release_grid_voxel(uint voxel_index)
         // //当前分配 entry 数量 -1.
         uint allocate_count = 0;
         ircache_meta_buffer.InterlockedAdd(IRCACHE_META_ALLOC_COUNT, -1, allocate_count);
-        ircache_pool_buffer[allocate_count - 1] = meta.x;
+        ircache_entry_pool_buffer[allocate_count - 1] = meta.x;
     }
 }
 
@@ -42,7 +42,7 @@ void release_grid_voxel(uint voxel_index)
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_NUM_X, 1, 1)]
-void CS(uint3 thread_id: SV_DispatchThreadID)
+void compute_shader(uint3 thread_id: SV_DispatchThreadID)
 {
     uint3 voxel_id = uint3(thread_id.xy, thread_id.z % IRCACHE_CASCADE_SIZE);
     uint cascade_index = thread_id.z / IRCACHE_CASCADE_SIZE;

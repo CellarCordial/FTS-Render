@@ -134,122 +134,111 @@ namespace brdf
 
     interface IBrdf
     {
-        float3 Eval(float3 wo, float3 wi);
-        bool Sample(float3 wo, float2 Random, out float3 wi, out float fPdf, out float3 weight);
-        float EvalPdf(float3 wo, float3 wi);
+        float3 eval(float3 wo, float3 wi);
+        bool sample(float3 wo, float2 Random, out float3 wi, out float fPdf, out float3 weight);
+        float eval_pdf(float3 wo, float3 wi);
     };
 
     struct DiffuseReflection : IBrdf
     {
-        float3 Eval(float3 wo, float3 wi)
+        float3 eval(float3 wo, float3 wi)
         {
             return float3(0.0f, 0.0f, 0.0f);
         }
 
-        bool Sample(float3 wo, float2 Random, out float3 wi, out float fPdf, out float3 weight)
+        bool sample(float3 wo, float2 Random, out float3 wi, out float fPdf, out float3 weight)
         {
             return false;
         }
 
-        float EvalPdf(float3 wo, float3 wi)
+        float eval_pdf(float3 wo, float3 wi)
         {
             return 0.0f;
         }
+
+        float3 _albedo = float3(0, 0, 0); // Diffuse albedo.
     };
 
     struct SpecularReflection : IBrdf
     {
-        float3 Albedo = float3(0.0f, 0.0f, 0.0f); ///< Specular albedo.
-        float fAlpha = 0.0f;                      ///< GGX width parameter.
-
-        float3 Eval(float3 wo, float3 wi)
+        float3 eval(float3 wo, float3 wi)
         {
             if (min(wo.z, wi.z) < gfMinCosTheta) return float3(0.0f, 0.0f, 0.0f);
-
+            
             float3 h = normalize(wo + wi);
             float woDotH = dot(wo, h);
-
+            
             float D = EvalNdfGGX(fAlpha, h.z);
-#if SPECULAR_MASKING_FUNCTION
+            #if SPECULAR_MASKING_FUNCTION
             float G = EvalMaskingSmithGGXSeparable(fAlpha, wo.z, wi.z);
-#else
+            #else
             float G = EvalMaskingSmithGGXCorrelated(fAlpha, wo.z, wi.z);
-#endif
+            #endif
             float3 F = EvalFresnelSchlick(Albedo, 1, woDotH);
             return F * D * G * 0.25 / wo.z;
         }
 
-        bool Sample(float3 wo, float2 Random, out float3 wi, out float fPdf, out float3 Weight)
+        bool sample(float3 wo, float2 Random, out float3 wi, out float fPdf, out float3 Weight)
         {
             if (wo.z < gfMinCosTheta) return false;
-
+            
             // Sample the GGX distribution to find a microfacet normal (half vector).
-#ifdef GGX_VNDF_SAMPLE
+            #ifdef GGX_VNDF_SAMPLE
             float3 h = SampleGGX_VNDF(fAlpha, wo, Random, fPdf); // pdf = G1(wo) * D(h) * max(0,dot(wo,h)) / wo.z
-#else
+            #else
             float3 h = SampleGGX_NDF(fAlpha, Random, fPdf); // pdf = D(h) * h.z
-#endif
-
+            #endif
+            
             // Reflect the outgoing direction to find the incident direction.
             float woDotH = dot(wo, h);
             wi = 2 * woDotH * h - wo;
             if (wi.z < gfMinCosTheta) return false;
-
-#ifdef SPECULAR_MASKING_FUNCTION
+            
+            #ifdef SPECULAR_MASKING_FUNCTION
             float G = EvalMaskingSmithGGXSeparable(fAlpha, wo.z, wi.z);
             float GOverG1wo = EvalG1GGX(fAlpha * fAlpha, wi.z);
-#else
+            #else
             float G = evalMaskingSmithGGXCorrelated(fAlpha, wo.z, wi.z);
             float GOverG1wo = G * (1.f + evalLambdaGGX(fAlpha * fAlpha, wo.z));
-#endif
+            #endif
             float3 F = EvalFresnelSchlick(Albedo, 1.0f, woDotH);
-
+            
             fPdf /= (4 * woDotH); // Jacobian of the reflection operator.
-
-#ifdef GGX_VNDF_SAMPLE
+            
+            #ifdef GGX_VNDF_SAMPLE
             Weight = F * GOverG1wo;
-#else
+            #else
             Weight = F * G * woDotH / (wo.z * h.z);
-#endif
+            #endif
             return true;
         }
 
-        float EvalPdf(float3 wo, float3 wi)
+        float eval_pdf(float3 wo, float3 wi)
         {
             return 0.0f;
         }
-    };
 
+        float3 Albedo = float3(0.0f, 0.0f, 0.0f); ///< Specular albedo.
+        float fAlpha = 0.0f;                      ///< GGX width parameter.
+    };
+    
     struct FBrdf : IBrdf
     {
-        float3 Eval(float3 wo, float3 wi)
+        float3 eval(float3 wo, float3 wi)
         {
             return float3(0.0f, 0.0f, 0.0f);
         }
 
-        bool Sample(float3 wo, float2 Random, out float3 wi, out float fPdf, out float3 weight)
+        bool sample(float3 wo, float2 Random, out float3 wi, out float fPdf, out float3 weight)
         {
             return false;
         }
 
-        float EvalPdf(float3 wo, float3 wi)
+        float eval_pdf(float3 wo, float3 wi)
         {
             return 0.0f;
         }
     };
-
-    bool ImportanceSampleGGX(float fRoughness, float3 ViewDir, float2 Random, out float pdf)
-    {
-#ifdef GGX_VNDF_SAMPLE
-        float fPdf;
-        float3 h = SampleGGX_VNDF(fRoughness, ViewDir, Random, fPdf);
-#else
-        float fPdf;
-        float3 h = SampleGGX_NDF(fRoughness, Random, fPdf);
-#endif
-
-        return false;
-    }
 }
 
 

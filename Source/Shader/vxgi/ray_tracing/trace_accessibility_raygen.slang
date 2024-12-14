@@ -1,4 +1,4 @@
-#include "../../voxel_irradiance_helper.slang"
+#include "../../vxgi_helper.slang"
 #include "../../ray_tracing_helper/restir_helper.slang"
 #include "../../ray_tracing_helper/shadow_helper.slang"
 
@@ -15,15 +15,15 @@ RWStructuredBuffer<float4> ircache_auxiliary_buffer : register(u0);
 [shader("raygeneration")]
 void ray_generation_shader()
 {
-    uint index = DispatchRaysIndex().x;
+    uint ray_index = DispatchRaysIndex().x;
     uint total_allocate_num = ircache_meta_buffer.Load(IRCACHE_META_TRACING_ALLOC_COUNT);
-    if (index >= total_allocate_num * IRCACHE_OCTAHEDRAL_DIMS2) return;
+    if (ray_index >= total_allocate_num * IRCACHE_OCTAHEDRAL_DIMS2) return;
 
-    uint entry_index = ircache_entry_indirection_buffer[index / IRCACHE_OCTAHEDRAL_DIMS2];
+    uint entry_index = ircache_entry_indirection_buffer[ray_index / IRCACHE_OCTAHEDRAL_DIMS2];
     uint age = ircache_life_buffer[entry_index];
     if (!is_ircache_entry_life_valid(age)) return;
 
-    uint octahedral_index = index % IRCACHE_OCTAHEDRAL_DIMS2;
+    uint octahedral_index = ray_index % IRCACHE_OCTAHEDRAL_DIMS2;
     uint output_index = entry_index * IRCACHE_AUXILIARY_STRIDE + octahedral_index;
 
     uint2 auxiliary = asuint(ircache_auxiliary_buffer[output_index].xy);

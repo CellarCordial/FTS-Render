@@ -1,6 +1,6 @@
 #define THREAD_GROUP_NUM_X 1
 
-#include "../voxel_irradiance_helper.slang"
+#include "../vxgi_helper.slang"
 
 RWStructuredBuffer<uint> ircache_pool_buffer : register(u0);
 RWStructuredBuffer<uint> ircache_life_buffer : register(u1);

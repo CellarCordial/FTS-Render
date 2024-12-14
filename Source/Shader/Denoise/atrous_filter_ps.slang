@@ -10,8 +10,8 @@ cbuffer gPassConstants : register(b0)
 };
 
 Texture2D<float4> color_texture : register(t0);
-Texture2D<float3> view_space_normal_texture : register(t2);
-Texture2D<float3> view_space_position_texture : register(t3);
+Texture2D<float3> view_space_normal_texture : register(t1);
+Texture2D<float3> view_space_position_texture : register(t2);
 
 SamplerState sampler : register(s0);
 
