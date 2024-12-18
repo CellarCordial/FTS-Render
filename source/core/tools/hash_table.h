@@ -1,0 +1,75 @@
+#ifndef TOOLS_HASH_TABLE_H
+#define TOOLS_HASH_TABLE_H
+
+
+#include <span>
+#include <vector>
+
+namespace fantasy
+{
+    class HashTable
+    {
+    public:
+        HashTable() = default;
+        explicit HashTable(uint32_t index_count);
+        HashTable(uint32_t hash_count, uint32_t index_count);
+
+        void insert(uint32_t key, uint32_t index);
+        void remove(uint32_t key, uint32_t index);
+
+        void reset();
+        void clear();
+        void resize(uint32_t index_count);
+        void resize(uint32_t hash_count, uint32_t index_count);
+
+        struct Iterator
+        {
+            uint32_t index;
+            std::span<uint32_t> next_index;
+
+            void operator++() { index = next_index[index]; }
+            bool operator!=(const Iterator& crIter) const { return index != crIter.index; }
+            uint32_t operator*() { return index; }
+
+            Iterator begin() const { return *this; }
+            Iterator end() const { return Iterator{ .index = ~0u }; }
+        };
+
+        Iterator operator[](uint32_t index);
+
+    private:
+
+        uint32_t _hash_mask;
+        std::vector<uint32_t> _hash;
+        std::vector<uint32_t> _next_index;
+    };
+
+    
+    inline uint32_t murmur_add(uint32_t hash, uint32_t elememt)
+    {
+        elememt *= 0xcc9e2d51;
+        elememt = (elememt << 15) | (elememt >> (32 - 15));
+        elememt *= 0x1b873593;
+
+        hash^=elememt;
+        hash = (hash << 13) | (hash >> (32 - 13));
+        hash = hash * 5 + 0xe6546b64;
+        return hash;
+    }
+
+    inline uint32_t murmur_mix(uint32_t hash)
+    {
+        hash ^= hash >> 16;
+        hash *= 0x85ebca6b;
+        hash ^= hash >> 13;
+        hash *= 0xc2b2ae35;
+        hash ^= hash >> 16;
+        return hash;
+    }
+}
+
+
+
+
+
+#endif
