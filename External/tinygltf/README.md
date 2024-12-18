@@ -120,7 +120,7 @@ WASI build example is located in [wasm](wasm) .
 * [x] Support `extensions` and `extras` property
 * [ ] HDR image?
   * [ ] OpenEXR extension through TinyEXR.
-* [ ] 16bit PNG support in Serialization
+* [ ] 16bit PNG support in serialization
 * [ ] Write example and tests for `animation` and `skin`
 
 ### Optional

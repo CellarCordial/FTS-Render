@@ -1,21 +1,21 @@
 #include "../Material.slang"
 #include "../octahedral.slang"
 
-cbuffer gPassConstants : register(b0)
+cbuffer pass_constants : register(b0)
 {
-    float4x4 ViewProj;
+    float4x4 view_proj;
 
-    float4x4 ViewMatrix;
+    float4x4 view_matrix;
     float4x4 PrevViewMatrix;
 };
 
 cbuffer FGeometryConstants : register(b1)
 {
-    float4x4 WorldMatrix;
-    float4x4 InvTransWorld;
+    float4x4 world_matrix;
+    float4x4 inv_trans_world;
 
-    uint dwMaterialIndex;
-    uint3 Pad;
+    uint material_index;
+    uint3 pad;
 };
 
 
@@ -27,30 +27,30 @@ Texture2D gEmissive          : register(t2);
 Texture2D gOcclusion         : register(t3);
 Texture2D gMetallicRoughness : register(t4);
 
-StructuredBuffer<FMaterial> gMaterials : register(t5);
+StructuredBuffer<Material> gMaterials : register(t5);
 
-struct FVertexOutput
+struct VertexOutput
 {
-    float4 PositionH : SV_Position;
+    float4 sv_position : SV_Position;
 
-    float3 PositionW : WORLD_POSITION;
+    float3 world_space_position : WORLD_POSITION;
 
-    float3 PositionV : VIEW_POSITION;
-    float3 PrevPositionV : PREV_VIEW_POSITION;
+    float3 view_space_position : VIEW_POSITION;
+    float3 prev_view_space_position : PREV_VIEW_POSITION;
 
-    float3 NormalW : NORMAL;
-    float4 TangentW : TANGENT;
-    float2 UV : TEXCOORD;
+    float3 world_space_normal : NORMAL;
+    float4 world_space_tangent : TANGENT;
+    float2 uv : TEXCOORD;
 };
 
 struct FPixelOutput
 {
-    float3 PositionV : SV_Target0;
-    float3 NormalV : SV_Target1;
-    float4 BaseColor : SV_Target2;
-    float4 PBR : SV_Target3;
-    float4 Emmisive : SV_Target4;
-    float3 VelocityV : SV_Target5;
+    float3 view_space_position : SV_Target0;
+    float3 view_space_normal : SV_Target1;
+    float4 base_color : SV_Target2;
+    float4 pbr : SV_Target3;
+    float4 emmisive : SV_Target4;
+    float3 view_space_velocity : SV_Target5;
 };
 
 float3 CalcNormal(float3 TextureNormal, float3 VertexNormal, float4 VertexTangent)
@@ -64,26 +64,26 @@ float3 CalcNormal(float3 TextureNormal, float3 VertexNormal, float4 VertexTangen
 }
 
 [shader("pixel")]
-FPixelOutput PS(FVertexOutput In)
+FPixelOutput pixel_shader(VertexOutput In)
 {
     FPixelOutput Out;
-    Out.PositionV = In.PositionV;
+    Out.view_space_position = In.view_space_position;
 
-    float3 Normal = CalcNormal(gNormal.Sample(gSampler, In.UV).xyz, In.NormalW, In.TangentW);
-    Out.NormalV = normalize(mul(float4(Normal, 1.0f), ViewMatrix).xyz);
+    float3 normal = CalcNormal(gNormal.Sample(gSampler, In.uv).xyz, In.world_space_normal, In.world_space_tangent);
+    Out.view_space_normal = normalize(mul(float4(normal, 1.0f), view_matrix).xyz);
 
-    Out.BaseColor = gDiffuse.Sample(gSampler, In.UV) * gMaterials[dwMaterialIndex].fDiffuse;
-    if (Out.BaseColor.a < 0.001f) discard;
+    Out.base_color = gDiffuse.Sample(gSampler, In.uv) * gMaterials[material_index].fDiffuse;
+    if (Out.base_color.a < 0.001f) discard;
     
-    float4 MetallicRoughness = gMetallicRoughness.Sample(gSampler, In.UV);
-    MetallicRoughness.r *= gMaterials[dwMaterialIndex].fMetallic;
-    MetallicRoughness.g *= gMaterials[dwMaterialIndex].fRoughness;
-    float fOcclusion = gOcclusion.Sample(gSampler, In.UV).r;
-    Out.PBR = float4(MetallicRoughness.rg, fOcclusion, 1.0f);
+    float4 MetallicRoughness = gMetallicRoughness.Sample(gSampler, In.uv);
+    MetallicRoughness.r *= gMaterials[material_index].fMetallic;
+    MetallicRoughness.g *= gMaterials[material_index].fRoughness;
+    float fOcclusion = gOcclusion.Sample(gSampler, In.uv).r;
+    Out.pbr = float4(MetallicRoughness.rg, fOcclusion, 1.0f);
 
-    Out.Emmisive = gEmissive.Sample(gSampler, In.UV);
+    Out.emmisive = gEmissive.Sample(gSampler, In.uv);
 
-    Out.VelocityV = In.PrevPositionV - In.PositionV;
+    Out.view_space_velocity = In.prev_view_space_position - In.view_space_position;
 
     return Out;
 }

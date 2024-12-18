@@ -7,20 +7,20 @@
 #include "../SkyCommon.hlsli"
 
 
-cbuffer gPassConstants : register(b0)
+cbuffer pass_constants : register(b0)
 {
     float4x4 RandomOrientation;
     
     float fSdfVoxelSize;
     float fSdfChunkSize;
-    float fSceneGridSize;
+    float scene_grid_size;
     float fMaxGIDistance;
 
     uint dwSurfaceTextureRes;
     uint dwSurfaceAtlasRes;
     
     FDDGIVolumeData VolumeData;
-    FGlobalSdfData SdfData;    
+    FGlobalSdfData sdf_data;    
 };
 
 struct FSdfChunkData
@@ -33,7 +33,7 @@ struct FCardData
 {
     float4x4 LocalMatrix;
     uint2 AtlasOffset;
-    float3 Extent;
+    float3 extent;
 };
 
 struct FModelSurfaceData
@@ -66,7 +66,7 @@ SamplerState gSurfaceSampler : register(s2);
 #if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y)
 
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
-void CS(uint3 ThreadID : SV_DispatchThreadID)
+void compute_shader(uint3 ThreadID : SV_DispatchThreadID)
 {
     uint dwRayIndex = ThreadID.x;
     uint dwProbeIndex = ThreadID.y;
@@ -82,7 +82,7 @@ void CS(uint3 ThreadID : SV_DispatchThreadID)
     float3 RayOri = VolumeData.OriginPos + ProbeID * VolumeData.fProbeIntervalSize;
     float3 RayDir = mul(float4(SphericalFibonacci(dwRayIndex, VolumeData.dwRaysNum), 1.0f), RandomOrientation).xyz;
 
-    FSdfHitData HitData = TraceGlobalSdf(RayOri, RayDir, SdfData, gGlobalSDF, gSDFSampler);
+    FSdfHitData HitData = TraceGlobalSdf(RayOri, RayDir, sdf_data, gGlobalSDF, gSDFSampler);
 
     float3 Radiance = float3(0.0f, 0.0f, 0.0f);
     float fDistance = 0.0f;
@@ -102,9 +102,9 @@ void CS(uint3 ThreadID : SV_DispatchThreadID)
         {
             float3 HitPos = RayOri + RayDir * HitData.fStepSize;
 
-            uint dwChunkNumPerAxis = fSceneGridSize / fSdfChunkSize;
-            float3 SceneGridOrigin = -fSceneGridSize * 0.5f;
-            uint3 ChunkID = (HitPos - SceneGridOrigin) / fSdfChunkSize;
+            uint dwChunkNumPerAxis = scene_grid_size / fSdfChunkSize;
+            float3 scene_grid_origin = -scene_grid_size * 0.5f;
+            uint3 ChunkID = (HitPos - scene_grid_origin) / fSdfChunkSize;
             uint dwChunkIndex = ChunkID.x + ChunkID.y * dwChunkNumPerAxis + ChunkID.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
             FSdfChunkData ChunkData = gSdfChunkDatas[dwChunkIndex];
             
@@ -128,21 +128,21 @@ void CS(uint3 ThreadID : SV_DispatchThreadID)
                         FCardData Card = SurfaceData.Cards[jx];
                         float3 LocalHitPos = mul(float4(HitPos, 1.0f), Card.LocalMatrix).xyz;
                         
-                        float2 UV = saturate(LocalHitPos.xy / Card.Extent.xy + 0.5f);
-                        UV.y = 1.0f - UV.y;
+                        float2 uv = saturate(LocalHitPos.xy / Card.extent.xy + 0.5f);
+                        uv.y = 1.0f - uv.y;
 
                         // 双线性插值权重.
                         float4 BilinearWeight = float4(
-                            (1.0f - UV.x) * (1.0f - UV.y),
-                            (UV.x)        * (1.0f - UV.y),
-                            (1.0f - UV.x) * (UV.y),
-                            (UV.x)        * (UV.y)
+                            (1.0f - uv.x) * (1.0f - uv.y),
+                            (uv.x)        * (1.0f - uv.y),
+                            (1.0f - uv.x) * (uv.y),
+                            (uv.x)        * (uv.y)
                         );
 
-                        UV = (UV * dwSurfaceTextureRes + Card.AtlasOffset) / dwSurfaceAtlasRes;
+                        uv = (uv * dwSurfaceTextureRes + Card.AtlasOffset) / dwSurfaceAtlasRes;
 
                         // 击中点的深度与实际 surface 上的深度比值权重.
-                        float4 SurfaceDepth = gSurfaceDepthTexture.Gather(gSurfaceSampler, UV) * Card.Extent.z;
+                        float4 SurfaceDepth = gSurfaceDepthTexture.Gather(gSurfaceSampler, uv) * Card.extent.z;
                         float4 DepthWeight;
                         [unroll]
                         for (uint kx = 0; kx < 4; ++kx)
@@ -161,7 +161,7 @@ void CS(uint3 ThreadID : SV_DispatchThreadID)
                         }
 
                         // 光线与击中点的夹角权重.
-                        float3 HitNormal = gSurfaceNormalTexture.SampleLevel(gSurfaceSampler, UV, 0.0f);
+                        float3 HitNormal = gSurfaceNormalTexture.SampleLevel(gSurfaceSampler, uv, 0.0f);
                         float fNormalWeight = saturate(dot(HitNormal, RayDir));
                         
                         // 总权重.
@@ -170,9 +170,9 @@ void CS(uint3 ThreadID : SV_DispatchThreadID)
                         else
                         {
                             Radiance += float3(
-                                dot(gSurfaceLightTexture.GatherRed(gSurfaceSampler, UV), fSampleWeight), 
-                                dot(gSurfaceLightTexture.GatherGreen(gSurfaceSampler, UV), fSampleWeight), 
-                                dot(gSurfaceLightTexture.GatherBlue(gSurfaceSampler, UV), fSampleWeight)
+                                dot(gSurfaceLightTexture.GatherRed(gSurfaceSampler, uv), fSampleWeight), 
+                                dot(gSurfaceLightTexture.GatherGreen(gSurfaceSampler, uv), fSampleWeight), 
+                                dot(gSurfaceLightTexture.GatherBlue(gSurfaceSampler, uv), fSampleWeight)
                             );
                             fWeightSum += fSampleWeight;
                         }

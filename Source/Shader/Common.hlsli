@@ -4,9 +4,9 @@
 #include "Constants.hlsli"
 
 
-float3 GetWorldPostionFromDepthNDC(float2 UV, float fDepthNDC, float4x4 InvViewProj)
+float3 GetWorldPostionFromDepthNDC(float2 uv, float fDepthNDC, float4x4 InvViewProj)
 {
-    float2 ScreenPos = UV * 2.0f - 1.0f;
+    float2 ScreenPos = uv * 2.0f - 1.0f;
     float3 PositionNDC = float3(ScreenPos, fDepthNDC);
     float4 WorldPos = mul(float4(PositionNDC, 1.0f), InvViewProj);
     WorldPos = WorldPos / WorldPos.w; 

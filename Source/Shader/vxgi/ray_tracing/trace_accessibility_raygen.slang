@@ -1,6 +1,6 @@
 #include "../../vxgi_helper.slang"
-#include "../../ray_tracing_helper/restir_helper.slang"
-#include "../../ray_tracing_helper/shadow_helper.slang"
+#include "../../restir_helper.slang"
+#include "../../shadow_helper.slang"
 
 using namespace voxel_irradiance;
 
@@ -34,7 +34,7 @@ void ray_generation_shader()
 
     RayDesc ray;
     ray.Origin = vertex.position;
-    ray.Direction = prev_vertex.position - vertex.position;
+    ray.direction = prev_vertex.position - vertex.position;
     ray.TMin = 0.001;
     ray.TMax = 0.999;
 

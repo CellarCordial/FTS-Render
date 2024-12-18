@@ -1,5 +1,5 @@
-#include "../../ray_tracing_helper/restir_helper.slang"
-#include "../../ray_tracing_helper/shadow_helper.slang"
+#include "../../restir_helper.slang"
+#include "../../shadow_helper.slang"
 #include "../../vxgi_helper.slang"
 #include "../../brdf_helper.slang"
 

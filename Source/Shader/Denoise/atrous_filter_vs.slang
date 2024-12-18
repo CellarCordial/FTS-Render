@@ -6,7 +6,7 @@ struct VertexOutput
     float2 uv : TEXCOORD;
 };
 
-VertexOutput VS(uint vertex_id: SV_VertexID)
+VertexOutput vertex_shader(uint vertex_id: SV_VertexID)
 {
     // Full screen quad.
     VertexOutput out;

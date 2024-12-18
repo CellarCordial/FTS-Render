@@ -1,5 +1,5 @@
 
-cbuffer gPassConstants : register(b0)
+cbuffer pass_constants : register(b0)
 {
     float step_size;
     float color_phi;
@@ -41,7 +41,7 @@ static const float2 offset[KERNEL_SIZE] =
     { -2, 2 }, { -1, 2 }, { 0, 2 }, { 1, 2 }, { 2, 2 }
 };
 
-float4 PS(VertexOutput input) : SV_Target0
+float4 pixel_shader(VertexOutput input) : SV_Target0
 {
     float2 uv = input.uv;
     uint2 ori_pixel_id = uint2(window_resolution * uv);

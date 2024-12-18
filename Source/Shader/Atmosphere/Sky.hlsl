@@ -20,7 +20,7 @@ struct FVertexOutput
     float2 UV        : TEXCOORD;
 };
 
-FVertexOutput VS(uint dwVertexID : SV_VertexID)
+FVertexOutput vertex_shader(uint dwVertexID : SV_VertexID)
 {
     // Full screen quad.
     FVertexOutput Out;
@@ -30,7 +30,7 @@ FVertexOutput VS(uint dwVertexID : SV_VertexID)
 }
 
 
-float4 PS(FVertexOutput In) : SV_Target0
+float4 pixel_shader(FVertexOutput In) : SV_Target0
 {
     float3 Dir = normalize(lerp(
         lerp(FrustumA, FrustumB, In.UV.x),

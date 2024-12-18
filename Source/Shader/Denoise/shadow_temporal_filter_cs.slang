@@ -3,7 +3,7 @@
 
 #include "../bicubic_texture_filter.slang"
 
-cbuffer gPassConstants : register(b0)
+cbuffer pass_constants : register(b0)
 {
     uint2 shadow_map_resolution;
     float2 inv_shadow_map_resolution;
@@ -97,7 +97,7 @@ float FFX_DNSR_Shadows_ReadHistory(float2 uv)
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_NUM_X, THREAD_GROUP_NUM_Y, 1)]
-void CS(uint group_index: SV_GroupIndex, uint2 group_id : SV_GroupID)
+void compute_shader(uint group_index: SV_GroupIndex, uint2 group_id : SV_GroupID)
 {
     FFX_DNSR_Shadows_TileClassification(group_index, group_id);
 }

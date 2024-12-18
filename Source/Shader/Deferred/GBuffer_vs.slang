@@ -1,62 +1,62 @@
-#include "../Material.slang"
+#include "../material.slang"
 #include "../octahedral.slang"
 
-cbuffer gPassConstants : register(b0)
+cbuffer pass_constants : register(b0)
 {
-    float4x4 ViewProj;
+    float4x4 view_proj;
 
-    float4x4 View;
-    float4x4 PrevView;
+    float4x4 view_matrix;
+    float4x4 prev_view_matrix;
 };
 
-cbuffer FGeometryConstants : register(b1)
+cbuffer GeometryConstants : register(b1)
 {
-    float4x4 WorldMatrix;
-    float4x4 InvTransWorld;
+    float4x4 world_matrix;
+    float4x4 inv_trans_world;
 
-    uint dwMaterialIndex;
-    uint3 Pad;
+    uint material_index;
+    uint3 pad;
 };
 
-struct FVertexInput
+struct VertexInput
 {
-    float3 PositionL : POSITION;
-    float3 NormalL   : NORMAL;
-    float4 TangentL  : TANGENT;
-    float2 UV        : TEXCOORD;
+    float3 local_space_position : POSITION;
+    float3 local_space_normal   : NORMAL;
+    float4 local_space_tangent  : TANGENT;
+    float2 uv        : TEXCOORD;
 };
 
-struct FVertexOutput
+struct VertexOutput
 {
-    float4 PositionH : SV_Position;
+    float4 sv_position : SV_Position;
 
-    float3 PositionW : WORLD_POSITION;
+    float3 world_space_position : WORLD_POSITION;
 
-    float3 PositionV : VIEW_POSITION;
-    float3 PrevPositionV : PREV_VIEW_POSITION;
+    float3 view_space_position : VIEW_POSITION;
+    float3 prev_view_space_position : PREV_VIEW_POSITION;
     
-    float3 NormalW   : NORMAL;
-    float4 TangentW  : TANGENT;
-    float2 UV        : TEXCOORD;
+    float3 world_space_normal : NORMAL;
+    float4 world_space_tangent  : TANGENT;
+    float2 uv        : TEXCOORD;
 };
 
 [shader("vertex")]
-FVertexOutput VS(FVertexInput In)
+VertexOutput vertex_shader(VertexInput input)
 {
-    FVertexOutput Out;
-    float4 WorldPos = mul(float4(In.PositionL, 1.0f), WorldMatrix);
+    VertexOutput out;
+    float4 world_pos = mul(float4(input.local_space_position, 1.0f), world_matrix);
 
-    Out.PositionH = mul(WorldPos, ViewProj);
+    out.sv_position = mul(world_pos, view_proj);
 
-    Out.PositionW = WorldPos.xyz;
+    out.world_space_position = world_pos.xyz;
 
-    Out.PositionV = mul(WorldPos, View).xyz;
-    Out.PrevPositionV = mul(WorldPos, PrevView).xyz;
+    out.view_space_position = mul(world_pos, view_matrix).xyz;
+    out.prev_view_space_position = mul(world_pos, prev_view_matrix).xyz;
 
-    Out.NormalW = normalize(mul(float4(In.NormalL, 1.0f), InvTransWorld)).xyz;
-    Out.TangentW = normalize(mul(In.TangentL, InvTransWorld));
-    Out.UV = In.UV;
+    out.world_space_normal = normalize(mul(float4(input.local_space_normal, 1.0f), inv_trans_world)).xyz;
+    out.world_space_tangent = normalize(mul(input.local_space_tangent, inv_trans_world));
+    out.uv = input.uv;
 
-    return Out;
+    return out;
 }
 

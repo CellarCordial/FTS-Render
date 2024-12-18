@@ -1,7 +1,7 @@
 #ifndef SHADER_MATERIAL_SLANG
 #define SHADER_MATERIAL_SLANG
 
-struct FMaterial
+struct Material
 {
     float4 fDiffuse;
     float  fRoughness;

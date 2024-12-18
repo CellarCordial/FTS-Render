@@ -3,7 +3,7 @@
 
 #include "../octahedral.hlsli"
 
-cbuffer gPassConstants : register(b0)
+cbuffer pass_constants : register(b0)
 {
     uint dwIrradianceTextureRes;
     uint dwRayNumPerProbe;
@@ -24,7 +24,7 @@ RWTexture2D<float3> gOutputIrradianceTexture : register(u0);
 #if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y)
 
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
-void CS(uint3 ThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID, uint dwGroupIndex : SV_GroupIndex)
+void compute_shader(uint3 ThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID, uint dwGroupIndex : SV_GroupIndex)
 {
     if (any(ThreadID.xy >= dwIrradianceTextureRes)) return;
     uint2 StandaloneIrradianceUV = ThreadID + 1;
@@ -35,12 +35,12 @@ void CS(uint3 ThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID, uint d
     float3 IrradianceSum = float3(0.0f, 0.0f, 0.0f);
     for (uint ix = 0; ix < dwRayNumPerProbe; ++ix)
     {
-        uint2 UV = uint2(ix, dwProbeIndex);
-        float3 Radiance = gRadianceTexture[UV];
-        float3 RayDirection = gDirectionDistanceTexture[UV].xyz;
+        uint2 uv = uint2(ix, dwProbeIndex);
+        float3 Radiance = gRadianceTexture[uv];
+        float3 RayDirection = gDirectionDistanceTexture[uv].xyz;
 
-        float2 NormalizedIrradianceUV = ((float2(StandaloneIrradianceUV) + 0.5f) / float(dwIrradianceTextureRes)) * 2.0f - 1.0f;
-        float3 PixelDirection = OctahedronToUnitVector(NormalizedIrradianceUV);
+        float2 normalizedIrradianceUV = ((float2(StandaloneIrradianceUV) + 0.5f) / float(dwIrradianceTextureRes)) * 2.0f - 1.0f;
+        float3 PixelDirection = OctahedronToUnitVector(normalizedIrradianceUV);
 
         float fWeight = max(0.0f, dot(PixelDirection, RayDirection));
         IrradianceSum += Radiance * fWeight;

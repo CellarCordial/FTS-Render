@@ -166,7 +166,7 @@ namespace brdf
             if (min(wo.z, wi.z) < gfMinCosTheta) return float3(0.0f, 0.0f, 0.0f);
             
             float3 h = normalize(wo + wi);
-            float woDotH = dot(wo, h);
+            float wodotH = dot(wo, h);
             
             float D = EvalNdfGGX(fAlpha, h.z);
             #if SPECULAR_MASKING_FUNCTION
@@ -174,7 +174,7 @@ namespace brdf
             #else
             float G = EvalMaskingSmithGGXCorrelated(fAlpha, wo.z, wi.z);
             #endif
-            float3 F = EvalFresnelSchlick(Albedo, 1, woDotH);
+            float3 F = EvalFresnelSchlick(Albedo, 1, wodotH);
             return F * D * G * 0.25 / wo.z;
         }
 
@@ -190,8 +190,8 @@ namespace brdf
             #endif
             
             // Reflect the outgoing direction to find the incident direction.
-            float woDotH = dot(wo, h);
-            wi = 2 * woDotH * h - wo;
+            float wodotH = dot(wo, h);
+            wi = 2 * wodotH * h - wo;
             if (wi.z < gfMinCosTheta) return false;
             
             #ifdef SPECULAR_MASKING_FUNCTION
@@ -201,14 +201,14 @@ namespace brdf
             float G = evalMaskingSmithGGXCorrelated(fAlpha, wo.z, wi.z);
             float GOverG1wo = G * (1.f + evalLambdaGGX(fAlpha * fAlpha, wo.z));
             #endif
-            float3 F = EvalFresnelSchlick(Albedo, 1.0f, woDotH);
+            float3 F = EvalFresnelSchlick(Albedo, 1.0f, wodotH);
             
-            fPdf /= (4 * woDotH); // Jacobian of the reflection operator.
+            fPdf /= (4 * wodotH); // Jacobian of the reflection operator.
             
             #ifdef GGX_VNDF_SAMPLE
             Weight = F * GOverG1wo;
             #else
-            Weight = F * G * woDotH / (wo.z * h.z);
+            Weight = F * G * wodotH / (wo.z * h.z);
             #endif
             return true;
         }

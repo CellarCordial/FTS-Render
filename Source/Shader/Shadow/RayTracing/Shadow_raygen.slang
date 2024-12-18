@@ -1,5 +1,5 @@
 #include "../../math_helper.slang"
-#include "../../ray_tracing_helper/shadow_helper.slang"
+#include "../../shadow_helper.slang"
 
 cbuffer pass_constants : register(b0)
 {
@@ -44,7 +44,7 @@ void ray_generation()
     
     RayDesc ray;
     ray.Origin = ray_origin;
-    ray.Direction = mul(create_orthonormal_basis(sun_direction), sample_direction_from_cone(random, cos(sun_angular_radius)));
+    ray.direction = mul(create_orthonormal_basis(sun_direction), sample_direction_from_cone(random, cos(sun_angular_radius)));
     ray.TMin = 0.0f;
     ray.TMax = MAX_FLOAT;
 

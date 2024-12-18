@@ -1,9 +1,9 @@
-#include "GlobalRender.h"
+#include "global_render.h"
 
 int main()
 {
-	FTS::FGlobalRender Render;
-	if (!Render.Init() || !Render.Run())
+	fantasy::GlobalRender render;
+	if (!render.Init() || !render.run())
 	{
 		LOG_ERROR("Render Failed.");
 		return -1;

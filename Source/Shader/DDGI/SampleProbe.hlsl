@@ -5,12 +5,12 @@
 #include "../DDGICommon.hlsli"
 
 
-cbuffer gPassConstants : register(b0)
+cbuffer pass_constants : register(b0)
 {
     float4x4 InvViewProj;
 
-    float3 CameraPos;
-    float PAD;
+    float3 camera_position;
+    float pad;
 
     FDDGIVolumeData VolumeData;
 };
@@ -30,20 +30,20 @@ SamplerState gSampler : register(s0);
 
 
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
-void CS(uint3 ThreadID : SV_DispatchThreadID)
+void compute_shader(uint3 ThreadID : SV_DispatchThreadID)
 {
-    uint2 UV = ThreadID.xy;
-    float fDepth = gDepthTexture[UV];
+    uint2 uv = ThreadID.xy;
+    float depth = gDepthTexture[uv];
     
-    if (abs(fDepth - 1.0f) <= 0.0001f)
+    if (abs(depth - 1.0f) <= 0.0001f)
     {
-        gOutputTexture[UV] = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        gOutputTexture[uv] = float4(0.0f, 0.0f, 0.0f, 0.0f);
         return;
     }
     
-    float3 PixelWorldPos = GetWorldPostionFromDepthNDC(UV, fDepth, InvViewProj);
-    float3 PixelWorldNormal = OctahedronToUnitVector(gGBufferNormal[UV]);
-    float3 PixelToCamera = normalize(CameraPos - PixelWorldPos);
+    float3 PixelWorldPos = GetWorldPostionFromDepthNDC(uv, depth, InvViewProj);
+    float3 PixelWorldNormal = OctahedronToUnitVector(gGBufferNormal[uv]);
+    float3 PixelToCamera = normalize(camera_position - PixelWorldPos);
 
     float3 Irradiance = SampleProbeIrradiance(
         VolumeData, 

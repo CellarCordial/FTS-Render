@@ -2,7 +2,7 @@
 // #define BLUR_RADIUS 1
 // #define TEMPORAL
 
-cbuffer gPassConstants : register(b0)
+cbuffer pass_constants : register(b0)
 {
     float w0;
     float w1;
@@ -32,7 +32,7 @@ groupshared float2 gOcclusionCache[THREAD_GROUP_NUM_X + 2 * BLUR_RADIUS];
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_NUM_X, 1, 1)]
-void CS(uint3 ThreadID: SV_ThreadID, uint3 GroupThreadID : SV_GroupThreadID)
+void compute_shader(uint3 ThreadID: SV_ThreadID, uint3 GroupThreadID : SV_GroupThreadID)
 {
     uint dwMipLevelNum;
     uint2 SSAOTextureRes;

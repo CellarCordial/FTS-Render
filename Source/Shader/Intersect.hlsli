@@ -117,9 +117,9 @@ float InterectRayPlane(in float3 ro, in float3 rd, in float4 p)
     return -(dot(ro, p.xyz) + p.w) / dot(rd, p.xyz);
 }
 
-float IntersectRayBoxPlane(float3 o, float3 d, float3 Lower, float3 Upper, out float3 Normal)
+float IntersectRayBoxPlane(float3 o, float3 d, float3 Lower, float3 Upper, out float3 normal)
 {
-    Normal = float3(0.0f, 0.0f, 0.0f);
+    normal = float3(0.0f, 0.0f, 0.0f);
     float fStep = 1000.0f;
     float t;
     
@@ -132,7 +132,7 @@ float IntersectRayBoxPlane(float3 o, float3 d, float3 Lower, float3 Upper, out f
             float3 ClampPos = clamp(p, Lower, Upper);
             if (length(ClampPos - p) < 0.001f && t - fStep < 0.001f)
             {
-                Normal = float3(1.0f, 0.0f, 0.0f);
+                normal = float3(1.0f, 0.0f, 0.0f);
                 fStep = t;
             }
         }
@@ -144,7 +144,7 @@ float IntersectRayBoxPlane(float3 o, float3 d, float3 Lower, float3 Upper, out f
             float3 ClampPos = clamp(p, Lower, Upper);
             if (length(ClampPos - p) < 0.001f && t - fStep < 0.001f)
             {
-                Normal = float3(-1.0f, 0.0f, 0.0f);
+                normal = float3(-1.0f, 0.0f, 0.0f);
                 fStep = t;
             }
         }
@@ -160,7 +160,7 @@ float IntersectRayBoxPlane(float3 o, float3 d, float3 Lower, float3 Upper, out f
             float3 ClampPos = clamp(p, Lower, Upper);
             if (length(ClampPos - p) < 0.001f && t - fStep < 0.001f)
             {
-                Normal = float3(0.0f, 1.0f, 0.0f);
+                normal = float3(0.0f, 1.0f, 0.0f);
                 fStep = t;
             }
         }
@@ -172,7 +172,7 @@ float IntersectRayBoxPlane(float3 o, float3 d, float3 Lower, float3 Upper, out f
             float3 ClampPos = clamp(p, Lower, Upper);
             if (length(ClampPos - p) < 0.001f && t - fStep < 0.001f)
             {
-                Normal = float3(0.0f, -1.0f, 0.0f);
+                normal = float3(0.0f, -1.0f, 0.0f);
                 fStep = t;
             }
         }
@@ -187,7 +187,7 @@ float IntersectRayBoxPlane(float3 o, float3 d, float3 Lower, float3 Upper, out f
             float3 ClampPos = clamp(p, Lower, Upper);
             if (length(ClampPos - p) < 0.001f && t - fStep < 0.001f)
             {
-                Normal = float3(0.0f, 0.0f, 1.0f);
+                normal = float3(0.0f, 0.0f, 1.0f);
                 fStep = t;
             }
         }
@@ -199,7 +199,7 @@ float IntersectRayBoxPlane(float3 o, float3 d, float3 Lower, float3 Upper, out f
             float3 ClampPos = clamp(p, Lower, Upper);
             if (length(ClampPos - p) < 0.001f && t - fStep < 0.001f)
             {
-                Normal = float3(0.0f, 0.0f, -1.0f);
+                normal = float3(0.0f, 0.0f, -1.0f);
                 fStep = t;
             }
         }
@@ -239,10 +239,10 @@ bool IntersectRayCircle(float2 o, float2 d, float r, out float fClosestIntersect
     float A = dot(d, d);
     float B = 2.0f * dot(o, d);
     float C = dot(o, o) - r * r;
-    float fDelta = B * B - 4.0f * A * C;
-    if (fDelta < 0.0f) return false;
+    float delta = B * B - 4.0f * A * C;
+    if (delta < 0.0f) return false;
 
-    fClosestIntersectDistance = (-B + (C <= 0 ? sqrt(fDelta) : -sqrt(fDelta))) / (2.0f * A);
+    fClosestIntersectDistance = (-B + (C <= 0 ? sqrt(delta) : -sqrt(delta))) / (2.0f * A);
 
     // 现确认光线所在直线与圆相交.
     // C <= 0: 圆心到光线起点 o 的距离小于 r, 即光线从圆内部射出, 若 true, 则一定与圆相交.
@@ -257,10 +257,10 @@ bool IntersectRaySphere(float3 o, float3 d, float r, out float ClosestIntersectD
     float A = dot(d, d);
     float B = 2.0f * dot(o, d);
     float C = dot(o, o) - r * r;
-    float fDelta = B * B - 4.0f * A * C;
-    if (fDelta < 0.0f) return false;
+    float delta = B * B - 4.0f * A * C;
+    if (delta < 0.0f) return false;
 
-    ClosestIntersectDistance = (-B + (C <= 0 ? sqrt(fDelta) : -sqrt(fDelta))) / (2.0f * A);
+    ClosestIntersectDistance = (-B + (C <= 0 ? sqrt(delta) : -sqrt(delta))) / (2.0f * A);
 
     return C <= 0 || B <= 0;
 }
@@ -270,8 +270,8 @@ bool IntersectRaySphere(float3 o, float3 d, float r)
     float A = dot(d, d);
     float B = 2.0f * dot(o, d);
     float C = dot(o, o) - r * r;
-    float fDelta = B * B - 4.0f * A * C;
-    return fDelta >= 0.0f && (C <= 0 || B <= 0);
+    float delta = B * B - 4.0f * A * C;
+    return delta >= 0.0f && (C <= 0 || B <= 0);
 }
 
 #endif

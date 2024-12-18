@@ -1,31 +1,31 @@
 #include "../DDGICommon.hlsli"
 
-cbuffer gPassConstants : register(b0)
+cbuffer pass_constants : register(b0)
 {
     FDDGIVolumeData VolumeData;
-    float4x4 ViewProj;
+    float4x4 view_proj;
     float fProbeScale;
 };
 
 Texture2D gIrradianceTexture : register(t0);
 SamplerState gSampler : register(s0);
 
-struct FVertexInput
+struct VertexInput
 {
-    float3 Position : POSITION;
-    float3 Normal   : NORMAL;
+    float3 position : POSITION;
+    float3 normal   : NORMAL;
 };
 
-struct FVertexOutput
+struct VertexOutput
 {
-    float4 PositionH  : SV_Position;
-    float3 Normal     : NORMAL;
+    float4 sv_position  : SV_Position;
+    float3 normal     : NORMAL;
     uint dwProbeIndex : PROBE_INDEX;
 };
 
-FVertexOutput VS(FVertexInput In, uint dwProbeIndex : SV_InstanceID)
+VertexOutput vertex_shader(VertexInput In, uint dwProbeIndex : SV_InstanceID)
 {
-    FVertexOutput Out;
+    VertexOutput Out;
 
     uint3 ProbeID = uint3(
         dwProbeIndex % VolumeData.ProbesNum.x,
@@ -35,22 +35,22 @@ FVertexOutput VS(FVertexInput In, uint dwProbeIndex : SV_InstanceID)
 
     float3 ProbePos = VolumeData.OriginPos + VolumeData.fProbeIntervalSize * float3(ProbeID);
 
-    Out.PositionH = mul(float4(In.Position * fProbeScale, 1.0f), ViewProj);
-    Out.Normal = In.Normal;
+    Out.sv_position = mul(float4(In.position * fProbeScale, 1.0f), view_proj);
+    Out.normal = In.normal;
     Out.dwProbeIndex = dwProbeIndex;
 
     return Out;
 }
 
-float4 PS(FVertexOutput In) : SV_Target0
+float4 pixel_shader(VertexOutput In) : SV_Target0
 {
-    float2 UV = GetProbeTextureUV(
-        normalize(In.Normal),
+    float2 uv = GetProbeTextureUV(
+        normalize(In.normal),
         In.dwProbeIndex,
         VolumeData.dwIrradianceTexturesWidth, 
         VolumeData.dwIrradianceTexturesHeight, 
         VolumeData.dwSingleDepthTextureSize
     );
 
-    return gIrradianceTexture.Sample(gSampler, UV);
+    return gIrradianceTexture.Sample(gSampler, uv);
 }

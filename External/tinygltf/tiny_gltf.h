@@ -6962,7 +6962,7 @@ bool TinyGLTF::LoadBinaryFromFile(Model *model, std::string *err,
 }
 
 ///////////////////////
-// GLTF Serialization
+// GLTF serialization
 ///////////////////////
 namespace detail {
 detail::json JsonFromString(const char *s) {
