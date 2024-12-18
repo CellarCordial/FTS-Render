@@ -15,7 +15,7 @@ namespace fantasy
         bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
         bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
-		friend class AtmosphereDebugRender;
+		friend class AtmosphereTest;
 
     private:
         constant::AtmosphereProperties _standard_atomsphere_properties;

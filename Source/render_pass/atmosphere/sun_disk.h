@@ -32,7 +32,7 @@ namespace fantasy
 
 		bool finish_pass() override;
 
-		friend class AtmosphereDebugRender;
+		friend class AtmosphereTest;
 
 	private:
 		void GenerateSunDiskVertices();

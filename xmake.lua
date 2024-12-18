@@ -25,6 +25,7 @@ target("FTS-Render")
     add_files(
 		"$(projectdir)/source/gui/**.cpp",
 		"$(projectdir)/source/core/**.cpp",
+		"$(projectdir)/source/test/**.cpp",
 		"$(projectdir)/source/scene/**.cpp",
 		"$(projectdir)/source/shader/*.cpp",
 		"$(projectdir)/source/global_render.cpp",

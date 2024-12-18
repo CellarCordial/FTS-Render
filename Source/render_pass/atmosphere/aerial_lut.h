@@ -32,7 +32,7 @@ namespace fantasy
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
-		friend class AtmosphereDebugRender;
+		friend class AtmosphereTest;
 
 	private:
 		bool _resource_writed = false;

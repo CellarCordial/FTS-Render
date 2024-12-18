@@ -1,5 +1,5 @@
-#ifndef RENDER_PASS_SKY_H
-#define RENDER_PASS_SKY_H
+#ifndef RENDER_PASS_SKY_LUT_H
+#define RENDER_PASS_SKY_LUT_H
 
 #include "../../render_graph/render_graph.h"
 #include "../../core/math/vector.h"
@@ -10,36 +10,43 @@ namespace fantasy
 {
 	namespace constant
 	{
-		struct SkyPassConstant
+		struct SkyLUTPassConstant
 		{
-			Vector3F frustum_a; float pad0 = 0.0f;
-			Vector3F frustum_b; float pad1 = 0.0f;
-			Vector3F frustum_c; float pad2 = 0.0f;
-			Vector3F frustum_d; float pad3 = 0.0f;
+			Vector3F camera_position;
+			int32_t march_step_count = 40;
+
+			Vector3F sun_direction;
+			uint32_t enable_multi_scattering = 1;
+
+			Vector3F sun_intensity;
+			float pad = 0.0f;
 		};
 	}
 
-	class SkyPass : public RenderPassInterface
+	class SkyLUTPass : public RenderPassInterface
 	{
 	public:
-		SkyPass() { type = RenderPassType::Graphics; }
+		SkyLUTPass() { type = RenderPassType::Graphics; }
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
-		friend class AtmosphereDebugRender;
+		friend class AtmosphereTest;
 
 	private:
-		constant::SkyPassConstant _pass_constant;
+		constant::SkyLUTPassConstant _pass_constant;
 
-		std::shared_ptr<TextureInterface> _depth_texture;
-		std::shared_ptr<SamplerInterface> _sampler; // U_Wrap VW_Clamp Linear
+		std::shared_ptr<BufferInterface> _pass_constant_buffer;
+		std::shared_ptr<TextureInterface> _sky_lut_texture;
+
+		std::shared_ptr<TextureInterface> _transmittance_texture;
+		std::shared_ptr<TextureInterface> _multi_scattering_texture;
 
 		std::unique_ptr<BindingLayoutInterface> _binding_layout;
-		
+
 		std::unique_ptr<Shader> _vs;
 		std::unique_ptr<Shader> _ps;
-		
+
 		std::unique_ptr<FrameBufferInterface> _frame_buffer;
 		std::unique_ptr<GraphicsPipelineInterface> _pipeline;
 		

@@ -34,7 +34,7 @@ namespace fantasy
 
         bool finish_pass() override;
 
-		friend class AtmosphereDebugRender;
+		friend class AtmosphereTest;
 
     private:
         void create_poisson_disk_samples();

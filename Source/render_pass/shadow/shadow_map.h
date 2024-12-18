@@ -33,7 +33,7 @@ namespace fantasy
 
         bool finish_pass() override;
 
-		friend class AtmosphereDebugRender;
+		friend class AtmosphereTest;
 
     private:
         bool _resource_writed = false;

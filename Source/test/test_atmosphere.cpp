@@ -1,11 +1,10 @@
-#include "atmosphere_debug.h"
-#include "../../shader/shader_compiler.h"
-#include "../../core/tools/check_cast.h"
-#include "../../scene/scene.h"
-#include "../../gui/gui_panel.h"
-#include "../../scene/camera.h"
-#include "../../scene/light.h"
-#include "transmittance_lut.h"
+#include "test_atmosphere.h"
+#include "../shader/shader_compiler.h"
+#include "../core/tools/check_cast.h"
+#include "../scene/scene.h"
+#include "../gui/gui_panel.h"
+#include "../scene/camera.h"
+#include "../scene/light.h"
 #include <memory>
 
 namespace fantasy
@@ -242,7 +241,7 @@ namespace fantasy
 	}
 
 
-	bool AtmosphereDebugRender::setup(RenderGraph* render_graph)
+	bool AtmosphereTest::setup(RenderGraph* render_graph)
 	{
 		ReturnIfFalse(render_graph != nullptr);
 

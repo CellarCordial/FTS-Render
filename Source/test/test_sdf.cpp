@@ -1,9 +1,9 @@
-#include "sdf_debug.h"
-#include "../../shader/shader_compiler.h"
-#include "../../core/tools/check_cast.h"
-#include "../../scene/scene.h"
-#include "../../scene/camera.h"
-#include "../../scene/scene.h"
+#include "test_sdf.h"
+#include "../shader/shader_compiler.h"
+#include "../core/tools/check_cast.h"
+#include "../scene/scene.h"
+#include "../scene/camera.h"
+#include "../scene/scene.h"
 #include <memory>
 
 namespace fantasy
@@ -129,7 +129,7 @@ namespace fantasy
 		return true;
 	}
 
-	bool SdfDebugRender::setup(RenderGraph* render_graph)
+	bool SdfTest::setup(RenderGraph* render_graph)
 	{
 		ReturnIfFalse(render_graph != nullptr);
 

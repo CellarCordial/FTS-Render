@@ -9,8 +9,8 @@
 #include "core/tools/ecs.h"
 #include "gui/gui_pass.h"
 #include "render_graph/render_graph.h"
-#include "render_pass/atomsphere/atmosphere_debug.h"
-#include "render_pass/sdf/sdf_debug.h"
+#include "test/test_atmosphere.h"
+#include "test/test_sdf.h"
 #include "scene/camera.h"
 
 namespace fantasy
@@ -25,7 +25,6 @@ namespace fantasy
 
 	private:
 		bool D3D12Init();
-		bool VulkanInit();
 
 		bool create_samplers();
 
@@ -42,11 +41,11 @@ namespace fantasy
 		std::shared_ptr<DeviceInterface> _device;
 		std::shared_ptr<TextureInterface> _final_texture;
 		std::shared_ptr<TextureInterface> _back_buffers[NUM_FRAMES_IN_FLIGHT];
-
 		std::unique_ptr<RenderGraph> _render_graph;
 		std::shared_ptr<GuiPass> _gui_pass;
-		AtmosphereDebugRender _atmosphere_debug_render;
-		SdfDebugRender _sdf_debug_render;
+
+		AtmosphereTest _atmosphere_test;
+		SdfTest _sdf_test;
 
 	};
 }

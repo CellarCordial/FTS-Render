@@ -24,7 +24,7 @@ namespace fantasy
 		bool compile(DeviceInterface* device, RenderResourceCache* cache);
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache);
 
-		void Init(GLFWwindow* window, DeviceInterface* device) { gui::initialize(window, device); }
+		void init(GLFWwindow* window, DeviceInterface* device) { gui::initialize(window, device); }
 
 	private:
 		std::unique_ptr<FrameBufferInterface> _frame_buffer;

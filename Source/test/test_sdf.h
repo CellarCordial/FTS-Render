@@ -1,10 +1,10 @@
 #ifndef RENDER_PASS_SDF_MODE_H
 #define RENDER_PASS_SDF_MODE_H
 
-#include "../../render_graph/render_graph.h"
-#include "../../core/math/vector.h"
-#include "sdf_generate.h"
-#include "global_sdf.h"
+#include "../render_graph/render_graph.h"
+#include "../core/math/vector.h"
+#include "../render_pass/sdf/sdf_generate.h"
+#include "../render_pass/sdf/global_sdf.h"
 #include <memory>
 
 
@@ -63,7 +63,7 @@ namespace fantasy
         FGraphicsState _graphics_state;
     };
 
-	class SdfDebugRender
+	class SdfTest
 	{
     public:
         bool setup(RenderGraph* render_graph);

@@ -1,12 +1,10 @@
+#include "global_render.h"
+
 #include "core/tools/log.h"
-#include "dynamic_rhi/device.h"
 #include "dynamic_rhi/dynamic_rhi.h"
-#include "dynamic_rhi/resource.h"
 #include "gui/gui_pass.h"
-#include "render_graph/render_graph.h"
 #include "shader/shader_compiler.h"
 #include "core/parallel/parallel.h"
-#include "global_render.h"
 #include "scene/scene.h"
 #include <d3d12.h>
 #include <glfw3.h>
@@ -22,6 +20,23 @@
 
 namespace fantasy
 {
+	bool GlobalRender::run()
+	{
+		_atmosphere_test.setup(_render_graph.get()); _atmosphere_test.get_last_pass()->precede(_gui_pass.get());
+		// _sdf_test.setup(_render_graph.get()); _sdf_test.get_last_pass()->precede(_gui_pass.get());
+
+
+		ReturnIfFalse(_render_graph->compile());
+		while (!glfwWindowShouldClose(_window))
+		{
+			glfwPollEvents();
+			_world.tick(_timer.tick());
+			ReturnIfFalse(_render_graph->execute());
+		}
+		return true;
+	}
+
+
 	GlobalRender::~GlobalRender()
 	{
 		shader_compile::destroy();
@@ -43,44 +58,22 @@ namespace fantasy
 		shader_compile::initialize();
 		parallel::initialize();
 
-		// Entity System.
-		{
-			_world.register_system(new SceneSystem());
-
-			Entity* entity = _world.create_entity();
-			_camera = entity->assign<Camera>(_window);
-		}
+		_world.register_system(new SceneSystem());
+		_world.create_entity()->assign<Camera>(_window);
 
 		ReturnIfFalse(D3D12Init());
 		ReturnIfFalse(create_samplers());
 
 		_gui_pass = std::make_shared<GuiPass>();
-		_gui_pass->Init(_window, _device.get());
-
+		_gui_pass->init(_window, _device.get());
 		_render_graph->add_pass(_gui_pass);
 
-		// _atmosphere_debug_render.setup(_render_graph.get()); _atmosphere_debug_render.get_last_pass()->precede(_gui_pass.get());
-		_sdf_debug_render.setup(_render_graph.get()); _sdf_debug_render.get_last_pass()->precede(_gui_pass.get());
-
-		return true;
-	}
-
-	bool GlobalRender::run()
-	{
-		ReturnIfFalse(_render_graph->compile());
-		while (!glfwWindowShouldClose(_window))
-		{
-			glfwPollEvents();
-			_world.tick(_timer.tick());
-			ReturnIfFalse(_render_graph->execute());
-		}
 		return true;
 	}
 
 	bool GlobalRender::D3D12Init()
 	{
 #ifdef DEBUG
-		// Enable the D3D12 debug layer.
 		{
 			Microsoft::WRL::ComPtr<ID3D12Debug> d3d12_debug_controller;
 			D3D12GetDebugInterface(IID_PPV_ARGS(d3d12_debug_controller.GetAddressOf()));
@@ -162,12 +155,6 @@ namespace fantasy
 		cache->collect(_final_texture, ResourceType::Texture);
 
 		return true;
-	}
-
-	bool GlobalRender::VulkanInit()
-	{
-
-		return false;
 	}
 
 	bool GlobalRender::create_samplers()

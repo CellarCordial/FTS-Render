@@ -1,15 +1,15 @@
 #ifndef RENDER_PASS_ATMOSPHERE_DEBUG_H
 #define RENDER_PASS_ATMOSPHERE_DEBUG_H
 
-#include "../../render_graph/render_graph.h"
-#include "../../core/math/matrix.h"
-#include "multi_scattering_lut.h"
-#include "transmittance_lut.h"
-#include "aerial_lut.h"
-#include "sun_disk.h"
-#include "sky_lut.h"
-#include "sky.h"
-#include "../shadow/shadow_map.h"
+#include "../render_graph/render_graph.h"
+#include "../core/math/matrix.h"
+#include "../render_pass/atmosphere/multi_scattering_lut.h"
+#include "../render_pass/atmosphere/transmittance_lut.h"
+#include "../render_pass/atmosphere/aerial_lut.h"
+#include "../render_pass/atmosphere/sun_disk.h"
+#include "../render_pass/atmosphere/sky_lut.h"
+#include "../render_pass/atmosphere/sky.h"
+#include "../render_pass/shadow/shadow_map.h"
 #include <memory>
 
 namespace fantasy
@@ -52,7 +52,7 @@ namespace fantasy
 		bool compile(DeviceInterface* device, RenderResourceCache* cache);
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache);
 
-		friend class AtmosphereDebugRender;
+		friend class AtmosphereTest;
 
 	private:
 		bool _writed_resource = false;
@@ -85,7 +85,7 @@ namespace fantasy
 		uint64_t _draw_argument_count = 0;
 	};
 
-	class AtmosphereDebugRender
+	class AtmosphereTest
 	{
 	public:
 		bool setup(RenderGraph* render_graph);
