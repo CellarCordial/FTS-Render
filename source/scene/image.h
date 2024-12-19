@@ -31,7 +31,7 @@ namespace fantasy
             return !((*this) == other);
         }
         
-        static Image LoadImageFromFile(const char* file_name);
+        static Image load_image_from_file(const char* file_name);
     };
 
 

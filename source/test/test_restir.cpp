@@ -10,13 +10,14 @@ namespace fantasy
 	{
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(6);
+			BindingLayoutItemArray binding_layout_items(7);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::RestirTestPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(1);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(2);
 			binding_layout_items[4] = BindingLayoutItem::create_texture_srv(3);
 			binding_layout_items[5] = BindingLayoutItem::create_texture_srv(4);
+			binding_layout_items[6] = BindingLayoutItem::create_sampler(0);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -25,7 +26,7 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc shader_compile_desc;
-			shader_compile_desc.shader_name = "full_screen_quad.slang";
+			shader_compile_desc.shader_name = "full_screen_quad_vs.slang";
 			shader_compile_desc.entry_point = "vertex_shader";
 			shader_compile_desc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = shader_compile::compile_shader(shader_compile_desc);
@@ -68,13 +69,14 @@ namespace fantasy
 
 		// Binding Set.
 		{
-			BindingSetItemArray binding_set_items(6);
+			BindingSetItemArray binding_set_items(7);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::RestirTestPassConstant));
 			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("world_space_position_depth_texture")));
 			binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("normal_texture")));
 			binding_set_items[3] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("base_color_texture")));
 			binding_set_items[4] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("pbr_texture")));
 			binding_set_items[5] = BindingSetItem::create_texture_srv(4, check_cast<TextureInterface>(cache->require("emissive_texture")));
+			binding_set_items[6] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("LinearWarpSampler")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
 				_binding_layout.get()

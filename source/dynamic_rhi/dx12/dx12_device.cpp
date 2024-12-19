@@ -455,6 +455,11 @@ namespace fantasy
         if (dx12_root_signature == nullptr)
         {
             dx12_root_signature = build_root_signature(desc.binding_layouts, allow_input_layout);
+            if (!dx12_root_signature)
+            {
+                LOG_ERROR("Call to DeviceInterface::create_graphics_pipeline failed.");
+                return nullptr;
+            }
 
             dx12_root_signature->hash_index = hash_key;
             _descriptor_heaps->dx12_root_signatures[hash_key] = dx12_root_signature;

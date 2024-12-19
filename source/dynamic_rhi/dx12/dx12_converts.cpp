@@ -341,8 +341,17 @@ namespace fantasy
         if (!desc.is_shader_resource)  ret.Flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
         if (desc.is_uav)              ret.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         if (desc.is_render_target)     ret.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
-        if (desc.is_depth_stencil && ( crFormatInfo.has_depth || crFormatInfo.has_stencil)) ret.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
-
+        if (desc.is_depth_stencil) 
+        {
+            if ( crFormatInfo.has_depth || crFormatInfo.has_stencil)
+            {
+                ret.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+            }
+            else 
+            {
+                LOG_ERROR("When texture desc 'is_depth_stencil' is true, its format must be depth_stencil type.");
+            }
+        }
         return ret;
     }
 

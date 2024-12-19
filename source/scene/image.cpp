@@ -10,7 +10,7 @@
 
 namespace fantasy 
 {
-    Image Image::LoadImageFromFile(const char* file_name)
+    Image Image::load_image_from_file(const char* file_name)
     {
         int32_t width = 0, height = 0;
         auto data = stbi_load(file_name, &width, &height, 0, STBI_rgb_alpha);

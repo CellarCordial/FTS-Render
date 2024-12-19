@@ -16,6 +16,9 @@ namespace fantasy
             Matrix4x4 view_proj;
             Matrix4x4 view_matrix;
             Matrix4x4 prev_view_matrix;
+
+            uint32_t geometry_constant_index;
+            Vector3F pad;
         };
 
         struct GeometryConstant
@@ -46,15 +49,19 @@ namespace fantasy
 
     private:
 		bool _update_gbuffer = false;
+        bool _resource_writed = false;
         std::vector<uint32_t> _indices;
         std::vector<Vertex> _vertices;
 
         constant::GBufferPassConstant _pass_constant;
         std::vector<constant::GeometryConstant> _geometry_constants;
 
+        Image _black_image;
+        std::shared_ptr<TextureInterface> _black_texture;
+
 		std::shared_ptr<BufferInterface> _vertex_buffer;
 		std::shared_ptr<BufferInterface> _index_buffer;
-		std::shared_ptr<BufferInterface> _material_factor;
+		std::shared_ptr<BufferInterface> _geometry_constant_buffer;
 
         std::shared_ptr<TextureInterface> _world_space_position_texture;
         std::shared_ptr<TextureInterface> _world_space_normal_texture;

@@ -43,7 +43,7 @@ float2 IntegrateBrdf(float n_dot_v, float roughness)
         float pdf;
         float3 weight_a;
         float3 light_direction;
-        float2 random = Hammersley(ix, SAMPLE_COUNT);
+        float2 random = hammersley(ix, SAMPLE_COUNT);
 
         if (specular_a.sample(view_direction, random, light_direction, pdf, weight_a))
         {

@@ -47,7 +47,7 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc vs_compile_desc;
-			vs_compile_desc.shader_name = "shadow/shadow_map.hlsl";
+			vs_compile_desc.shader_name = "shadow/shadow_map_vs.slang";
 			vs_compile_desc.entry_point = "vertex_shader";
 			vs_compile_desc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = shader_compile::compile_shader(vs_compile_desc);
@@ -123,12 +123,13 @@ namespace fantasy
 
 		// Pipeline.
 		{
-			GraphicsPipelineDesc PipelineDesc;
-			PipelineDesc.vertex_shader = _vs.get();
-			PipelineDesc.input_layout = _input_layout.get();
-			PipelineDesc.binding_layouts.push_back(_binding_layout.get());
-			PipelineDesc.render_state.depth_stencil_state.enable_depth_test = true;
-			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(device->create_graphics_pipeline(PipelineDesc, _frame_buffer.get())));
+			GraphicsPipelineDesc pipeline_desc;
+			pipeline_desc.vertex_shader = _vs.get();
+			pipeline_desc.input_layout = _input_layout.get();
+			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.render_state.depth_stencil_state.enable_depth_test = true;
+			pipeline_desc.render_state.depth_stencil_state.enable_depth_write = true;
+			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(device->create_graphics_pipeline(pipeline_desc, _frame_buffer.get())));
 		}
 
 		// Graphics state.

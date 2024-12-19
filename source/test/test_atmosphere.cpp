@@ -58,10 +58,11 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc shader_compile_desc;
-			shader_compile_desc.shader_name = "test/atmosphere_debug.hlsl";
+			shader_compile_desc.shader_name = "test/atmosphere_test_vs.slang";
 			shader_compile_desc.entry_point = "vertex_shader";
 			shader_compile_desc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = shader_compile::compile_shader(shader_compile_desc);
+			shader_compile_desc.shader_name = "test/atmosphere_test_ps.slang";
 			shader_compile_desc.entry_point = "pixel_shader";
 			shader_compile_desc.target = ShaderTarget::Pixel;
 			ShaderData ps_data = shader_compile::compile_shader(shader_compile_desc);
@@ -92,6 +93,7 @@ namespace fantasy
 			pipeline_desc.input_layout = _input_layout.get();
 			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
 			pipeline_desc.render_state.depth_stencil_state.enable_depth_test = true;
+			pipeline_desc.render_state.depth_stencil_state.enable_depth_write = true;
 			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(device->create_graphics_pipeline(
 				pipeline_desc,
 				_frame_buffer.get()
@@ -108,7 +110,7 @@ namespace fantasy
 		// Texture.
 		{
 			std::string image_path = std::string(PROJ_DIR) + "asset/image/BlueNoise.png";
-			_blue_noise_image = Image::LoadImageFromFile(image_path.c_str());
+			_blue_noise_image = Image::load_image_from_file(image_path.c_str());
 			ReturnIfFalse(_blue_noise_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_shader_resource(
 					_blue_noise_image.width,

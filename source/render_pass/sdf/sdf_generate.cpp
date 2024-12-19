@@ -50,7 +50,7 @@ namespace fantasy
         // Shader.
 		{
 			ShaderCompileDesc cs_compile_desc;
-			cs_compile_desc.shader_name = "sdf/sdf_generate_cs.hlsl";
+			cs_compile_desc.shader_name = "sdf/sdf_generate_cs.slang";
 			cs_compile_desc.entry_point = "compute_shader";
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.push_back("GROUP_THREAD_NUM_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));

@@ -2,6 +2,7 @@
 
 #include "../core/tools/file.h"
 #include "../core/tools/log.h"
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <winerror.h>
@@ -72,7 +73,6 @@ namespace shader_compile
 
     void destroy()
     {
-        global_session->release();
     }
 
     ShaderData compile_shader(const ShaderCompileDesc& desc)
@@ -86,7 +86,6 @@ namespace shader_compile
         const std::string proj_path = PROJ_DIR;
         const std::string cache_path = proj_path + "asset/shader_cache/" + remove_file_extension(desc.shader_name.c_str()) + "_" + desc.entry_point + "_DEBUG.bin";
         const std::string shader_path = proj_path + "source/shader/" + desc.shader_name;
-        const std::string shader_name = desc.shader_name.substr(0, desc.shader_name.find_last_of('.'));
 
         if (check_cache(cache_path.c_str(), shader_path.c_str()))
         {
@@ -111,13 +110,21 @@ namespace shader_compile
         session_desc.targets = &target_desc;
         session_desc.targetCount = 1;
 
-        std::vector<slang::PreprocessorMacroDesc> preprocessor_macro_desc;
-        for (const auto& crDefine : desc.defines)
+        std::vector<std::string> macro_names;
+        std::vector<std::string> macro_values;
+        for (auto& define : desc.defines)
         {
-            auto equal_position = crDefine.find_first_of('=');
+            auto equal_position = define.find_first_of('=');
+            macro_names.emplace_back(define.substr(0, equal_position));
+            macro_values.emplace_back(define.substr(equal_position + 1));
+        }
+
+        std::vector<slang::PreprocessorMacroDesc> preprocessor_macro_desc;
+        for (uint32_t ix = 0; ix < desc.defines.size(); ++ix)
+        {
             preprocessor_macro_desc.push_back(slang::PreprocessorMacroDesc{
-                .name = crDefine.substr(0, equal_position).c_str(),
-                .value = crDefine.substr(equal_position + 1).c_str()
+                .name = macro_names[ix].c_str(),
+                .value = macro_values[ix].c_str()
             });
         }
 

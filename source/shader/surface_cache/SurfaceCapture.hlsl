@@ -54,7 +54,7 @@ struct FPixelOutput
     float4 emmisive : SV_Target3;
 };
 
-float3 CalcNormal(float3 TextureNormal, float3 VertexNormal, float4 VertexTangent)
+float3 calcute_normal(float3 TextureNormal, float3 VertexNormal, float4 VertexTangent)
 {
     float3 UnpackedNormal = TextureNormal * 2.0f - 1.0f;
     float3 N = VertexNormal;
@@ -69,7 +69,7 @@ FPixelOutput pixel_shader(VertexOutput In)
     FPixelOutput Out;
 
     Out.Color = gDiffuse.Sample(gSampler, In.uv);
-    Out.normal = float4(CalcNormal(gNormal.Sample(gSampler, In.uv).xyz, In.world_space_normal, In.world_space_tangent), 1.0f);
+    Out.normal = float4(calcute_normal(gNormal.Sample(gSampler, In.uv).xyz, In.world_space_normal, In.world_space_tangent), 1.0f);
     
     float fOcclusion = gOcclusion.Sample(gSampler, In.uv).r;
     float2 MetallicRoughness = gMetallicRoughness.Sample(gSampler, In.uv).rg;

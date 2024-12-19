@@ -293,7 +293,7 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc cs_compile_desc;
-			cs_compile_desc.shader_name = "sdf/sdf_merge_cs.hlsl";
+			cs_compile_desc.shader_name = "sdf/sdf_merge_cs.slang";
 			cs_compile_desc.entry_point = "compute_shader";
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
@@ -307,7 +307,7 @@ namespace fantasy
 			ReturnIfFalse(_cs = std::unique_ptr<Shader>(create_shader(cs_desc, cs_data.data(), cs_data.size())));
 
 
-			cs_compile_desc.shader_name = "sdf/sdf_clear_cs.hlsl";
+			cs_compile_desc.shader_name = "sdf/sdf_clear_cs.slang";
 			ShaderData clear_pass_cs_data = shader_compile::compile_shader(cs_compile_desc);
 			ReturnIfFalse(_clear_pass_cs = std::unique_ptr<Shader>(create_shader(cs_desc, clear_pass_cs_data.data(), clear_pass_cs_data.size())));
 		}

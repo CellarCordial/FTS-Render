@@ -18,10 +18,10 @@ namespace ray_tracing
 {
     struct GBufferData
     {
-        float3 view_space_position;
-        float3 view_space_normal;
-        float4 base_color;
-        float4 pbr;
+        float3 view_space_position = float3(0, 0, 0);
+        float3 view_space_normal = float3(0, 0, 0);
+        float4 base_color = float4(0, 0, 0, 0);
+        float4 pbr = float4(0, 0, 0, 0);
     };
 
     struct GBufferRayPayload
@@ -31,6 +31,7 @@ namespace ray_tracing
             _hit_time = hit_time;
             _path_length = path_length;
             _ray_cone = ray_cone;
+            _data = GBufferData();
         }
 
         bool is_hit()
@@ -46,9 +47,9 @@ namespace ray_tracing
 
     struct GBufferTraceResult
     {
-        bool is_hit;
-        float3 hit_position;
-        float ray_hit_time;
+        bool is_hit = false;
+        float3 hit_position = float3(0, 0, 0);
+        float ray_hit_time = 0.0f;
         GBufferData data;
     };
 

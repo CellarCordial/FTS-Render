@@ -3,7 +3,6 @@
 #include "../../shader/shader_compiler.h"
 #include "../../scene/camera.h"
 #include "../../scene/scene.h"
-#include "../../core/tools/check_cast.h"
 #include <cstdint>
 #include <memory>
 
@@ -14,7 +13,7 @@ namespace fantasy
         cache->get_world()->each<event::UpdateGBuffer>(
             [this](Entity* entity, event::UpdateGBuffer* event) -> bool 
             {
-                _update_gbuffer = true;
+				event->add_event([this]() { _update_gbuffer = true; return true;});
                 return true;
             } 
         );
@@ -23,12 +22,12 @@ namespace fantasy
 		{
 			BindingLayoutItemArray binding_layout_items(8);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::GBufferPassConstant));
-			binding_layout_items[1] = BindingLayoutItem::create_push_constants(0, sizeof(constant::GeometryConstant));
-			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
-			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(1);
-			binding_layout_items[4] = BindingLayoutItem::create_texture_srv(2);
-			binding_layout_items[5] = BindingLayoutItem::create_texture_srv(3);
-			binding_layout_items[6] = BindingLayoutItem::create_texture_srv(4);
+			binding_layout_items[1] = BindingLayoutItem::create_texture_srv(0);
+			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(1);
+			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(2);
+			binding_layout_items[4] = BindingLayoutItem::create_texture_srv(3);
+			binding_layout_items[5] = BindingLayoutItem::create_texture_srv(4);
+			binding_layout_items[6] = BindingLayoutItem::create_structured_buffer_srv(5);
 			binding_layout_items[7] = BindingLayoutItem::create_sampler(0);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
@@ -86,11 +85,21 @@ namespace fantasy
 		}
 
 
-
-
-
         // Texture
         {
+			std::string path = std::string(PROJ_DIR) + "asset/image/black.png";
+			_black_image = Image::load_image_from_file(path.c_str());
+			ReturnIfFalse(_black_image.is_valid());
+			ReturnIfFalse(_black_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_shader_resource(
+					_black_image.width,
+					_black_image.height,
+					_black_image.format,
+					"black_texture"
+				)
+			)));
+			cache->collect(_black_texture, ResourceType::Texture);
+
             ReturnIfFalse(_world_space_position_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target(
 					CLIENT_WIDTH,
@@ -103,7 +112,7 @@ namespace fantasy
 				TextureDesc::create_render_target(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RGB32_FLOAT,
+					Format::RGBA32_FLOAT,
 					"normal_texture"
 				)
 			)));
@@ -135,7 +144,7 @@ namespace fantasy
 				TextureDesc::create_render_target(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RGB32_FLOAT,
+					Format::RGBA32_FLOAT,
 					"view_space_velocity_texture"
 				)
 			)));
@@ -143,7 +152,7 @@ namespace fantasy
                 TextureDesc::create_depth(
                     CLIENT_WIDTH, 
                     CLIENT_HEIGHT, 
-                    Format::R32_FLOAT,
+                    Format::D32,
                     "depth_texture"
                 )
             )))
@@ -237,12 +246,21 @@ namespace fantasy
             }
         ))
 
+		if (!_resource_writed)
+		{
+			
+
+			_resource_writed = true;
+		}
+
         if (_update_gbuffer)
         {
             _binding_sets.clear();
             _index_buffer.reset();
             _vertex_buffer.reset();
             _draw_arguments.clear();
+
+			std::vector<BindingSetItemArray> binding_set_item_arrays;
 
             bool res = world->each<Mesh, Material>(
                 [&](Entity* entity, Mesh* mesh, Material* material) -> bool
@@ -287,7 +305,8 @@ namespace fantasy
                         geometry_constant.metallic = submaterial.metallic_factor;
                         geometry_constant.occlusion = submaterial.occlusion_factor;
 
-            			BindingSetItemArray binding_set_items(Material::TextureType_Num);
+						auto& binding_set_item_array = binding_set_item_arrays.emplace_back();
+						binding_set_item_array.resize(Material::TextureType_Num + 1);
                         for (uint32_t jx = 0; jx < Material::TextureType_Num; ++jx)
                         {
                             const auto& image = submaterial.images[jx];
@@ -314,15 +333,11 @@ namespace fantasy
                             }
                             else
                             {
-                                material_texture = check_cast<TextureInterface>(cache->require("BlackTexture"));
+                                material_texture = _black_texture;
                             }
 
-			                binding_set_items[jx] = BindingSetItem::create_texture_srv(0, material_texture);
+			                binding_set_item_array[jx] = BindingSetItem::create_texture_srv(0, material_texture);
                         }
-                        ReturnIfFalse(_binding_sets[ix] = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
-                            BindingSetDesc{ .binding_items = binding_set_items },
-                            _binding_layout.get()
-                        )));
 					}
                     return true;
                 }
@@ -332,15 +347,22 @@ namespace fantasy
             ReturnIfFalse(_vertex_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_vertex(
 					sizeof(Vertex) * _vertices.size(), 
-					"GeometryVertexBuffer"
+					"geometry_vertex_buffer"
 				)
 			)));
             ReturnIfFalse(_index_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
                 BufferDesc::create_index(
                     sizeof(uint32_t) * _indices.size(),
-                    "GeometryIndexBuffer"
+                    "geometry_index_buffer"
                 )
             )))
+			ReturnIfFalse(_geometry_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+				BufferDesc::create_structured(
+					_geometry_constants.size() * sizeof(constant::GeometryConstant), 
+					sizeof(constant::GeometryConstant),
+					"geometry_constant_buffer"
+				)
+			)))
             ReturnIfFalse(cmdlist->write_buffer(
                 _vertex_buffer.get(), 
                 _vertices.data(), 
@@ -351,6 +373,22 @@ namespace fantasy
                 _indices.data(), 
                 _indices.size() * sizeof(uint32_t)
             ));
+			ReturnIfFalse(cmdlist->write_buffer(
+                _geometry_constant_buffer.get(), 
+                _geometry_constants.data(), 
+                _geometry_constants.size() * sizeof(constant::GeometryConstant)
+            ));
+
+			for (uint32_t ix = 0; ix < binding_set_item_arrays.size(); ++ix)
+			{
+				auto& binding_set_item_array = binding_set_item_arrays[ix];
+				binding_set_item_array[Material::TextureType_Num] = 
+					BindingSetItem::create_structured_buffer_srv(5, _geometry_constant_buffer);
+				ReturnIfFalse(_binding_sets[ix] = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
+					BindingSetDesc{ .binding_items = binding_set_item_array },
+					_binding_layout.get()
+				)));
+			}
         }
 
         return true;

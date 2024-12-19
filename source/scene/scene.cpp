@@ -167,7 +167,7 @@ namespace fantasy
 			if (model_entity && parallel::thread_finished(thread_id) && parallel::thread_success(thread_id))
 			{
 				ReturnIfFalse(_global_entity->get_component<event::UpdateGBuffer>()->broadcast());
-				ReturnIfFalse(_global_entity->get_component<event::GenerateSdf>()->broadcast(model_entity));
+				// ReturnIfFalse(_global_entity->get_component<event::GenerateSdf>()->broadcast(model_entity));
 				// ReturnIfFalse(_global_entity->get_component<event::GenerateSurfaceCache>()->Broadcast(pModelEntity));
 
 				thread_id = INVALID_SIZE_64;
@@ -336,35 +336,35 @@ namespace fantasy
 					const auto& gltf_texture = gltf_model->textures[gltf_material.pbrMetallicRoughness.baseColorTexture.index];
 					const auto& gltf_image = gltf_model->images[gltf_texture.source];
 
-					submaterial.images[Material::TextureType_Diffuse] = Image::LoadImageFromFile((file_path + gltf_image.uri).c_str());
+					submaterial.images[Material::TextureType_Diffuse] = Image::load_image_from_file((file_path + gltf_image.uri).c_str());
 				}
 				if (gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
 				{
 					const auto& gltf_texture = gltf_model->textures[gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index];
 					const auto& gltf_image = gltf_model->images[gltf_texture.source];
 
-					submaterial.images[Material::TextureType_MetallicRoughness] = Image::LoadImageFromFile((file_path + gltf_image.uri).c_str());
+					submaterial.images[Material::TextureType_MetallicRoughness] = Image::load_image_from_file((file_path + gltf_image.uri).c_str());
 				}
 				if (gltf_material.normalTexture.index >= 0)
 				{
 					const auto& gltf_texture = gltf_model->textures[gltf_material.normalTexture.index];
 					const auto& gltf_image = gltf_model->images[gltf_texture.source];
 
-					submaterial.images[Material::TextureType_Normal] = Image::LoadImageFromFile((file_path + gltf_image.uri).c_str());
+					submaterial.images[Material::TextureType_Normal] = Image::load_image_from_file((file_path + gltf_image.uri).c_str());
 				}
 				if (gltf_material.occlusionTexture.index >= 0)
 				{
 					const auto& gltf_texture = gltf_model->textures[gltf_material.occlusionTexture.index];
 					const auto& gltf_image = gltf_model->images[gltf_texture.source];
 
-					submaterial.images[Material::TextureType_Occlusion] = Image::LoadImageFromFile((file_path + gltf_image.uri).c_str());
+					submaterial.images[Material::TextureType_Occlusion] = Image::load_image_from_file((file_path + gltf_image.uri).c_str());
 				}
 				if (gltf_material.emissiveTexture.index >= 0)
 				{
 					const auto& gltf_texture = gltf_model->textures[gltf_material.emissiveTexture.index];
 					const auto& gltf_image = gltf_model->images[gltf_texture.source];
 
-					submaterial.images[Material::TextureType_Emissive] = Image::LoadImageFromFile((file_path + gltf_image.uri).c_str());
+					submaterial.images[Material::TextureType_Emissive] = Image::load_image_from_file((file_path + gltf_image.uri).c_str());
 				}
 			},
 			material->submaterials.size()

@@ -26,10 +26,11 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc ShaderCompileDesc;
-			ShaderCompileDesc.shader_name = "test/sdf_debug.hlsl";
+			ShaderCompileDesc.shader_name = "full_screen_quad_vs.slang";
 			ShaderCompileDesc.entry_point = "vertex_shader";
 			ShaderCompileDesc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = shader_compile::compile_shader(ShaderCompileDesc);
+			ShaderCompileDesc.shader_name = "test/sdf_test_ps.slang";
 			ShaderCompileDesc.entry_point = "pixel_shader";
 			ShaderCompileDesc.target = ShaderTarget::Pixel;
 			ShaderData ps_data = shader_compile::compile_shader(ShaderCompileDesc);

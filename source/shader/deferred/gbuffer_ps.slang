@@ -7,9 +7,12 @@ cbuffer pass_constants : register(b0)
 
     float4x4 view_matrix;
     float4x4 PrevViewMatrix;
+
+    uint geometry_constant_index;
+    uint3 pad;
 };
 
-cbuffer geometry_constants : register(b1)
+struct GeometryConstant
 {
     float4x4 world_matrix;
     float4x4 inv_trans_world;
@@ -21,7 +24,6 @@ cbuffer geometry_constants : register(b1)
     float occlusion;
 };
 
-
 SamplerState sampler : register(s0);
 
 Texture2D diffuse_texture           : register(t0);
@@ -29,6 +31,7 @@ Texture2D normal_texture            : register(t1);
 Texture2D emissive_texture          : register(t2);
 Texture2D occlusion_texture         : register(t3);
 Texture2D metallic_roughness_texture : register(t4);
+StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t5);
 
 struct VertexOutput
 {
@@ -47,34 +50,40 @@ struct VertexOutput
 struct PixelOutput
 {
     float4 world_space_position_depth : SV_Target0;
-    float3 world_space_normal : SV_Target1;
+    float4 world_space_normal : SV_Target1;
     float4 base_color : SV_Target2;
     float4 pbr : SV_Target3;
     float4 emmisive : SV_Target4;
-    float3 view_space_velocity : SV_Target5;
+    float4 view_space_velocity : SV_Target5;
 };
 
 [shader("pixel")]
 PixelOutput pixel_shader(VertexOutput input)
 {
+    GeometryConstant constant = geometry_constant_buffer[geometry_constant_index];
+    
     PixelOutput output;
     output.world_space_position_depth = float4(input.world_space_position, input.view_space_position.z);
 
-    float3 normal = calculate_normal(normal_texture.Sample(sampler, input.uv).xyz, input.world_space_normal, input.world_space_tangent);
-    output.world_space_normal = normalize(mul(float4(normal, 1.0f), view_matrix).xyz);
+    float3 normal = calculate_normal(
+        normal_texture.Sample(sampler, input.uv).xyz,
+        normalize(input.world_space_normal),
+        normalize(input.world_space_tangent)
+    );
+    output.world_space_normal = float4(normal, 1.0f);
 
-    output.base_color = diffuse_texture.Sample(sampler, input.uv) * diffuse;
+    output.base_color = diffuse_texture.Sample(sampler, input.uv) * constant.diffuse;
     if (output.base_color.a < 0.001f) discard;
-    
+
     float4 metallic_roughness = metallic_roughness_texture.Sample(sampler, input.uv);
-    metallic_roughness.r *= metallic;
-    metallic_roughness.g *= roughness;
-    float fOcclusion = occlusion_texture.Sample(sampler, input.uv).r * occlusion;
+    metallic_roughness.r *= constant.metallic;
+    metallic_roughness.g *= constant.roughness;
+    float fOcclusion = occlusion_texture.Sample(sampler, input.uv).r * constant.occlusion;
     output.pbr = float4(metallic_roughness.rg, fOcclusion, 1.0f);
 
-    output.emmisive = emissive_texture.Sample(sampler, input.uv) * emissive;
+    output.emmisive = emissive_texture.Sample(sampler, input.uv) * constant.emissive;
 
-    output.view_space_velocity = input.prev_view_space_position - input.view_space_position;
+    output.view_space_velocity = float4(input.prev_view_space_position - input.view_space_position, 1.0f);
 
     return output;
 }
