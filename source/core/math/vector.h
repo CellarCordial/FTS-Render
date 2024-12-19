@@ -330,7 +330,7 @@ namespace fantasy
 	requires std::is_arithmetic_v<T>
 	struct Vector4
 	{
-		Vector4() : x(0), y(0), z(0), w(1) {}
+		Vector4() : x(0), y(0), z(0), w(0) {}
 
 		explicit Vector4(T _Num) : x(_Num), y(_Num), z(_Num), w(_Num) {}
 

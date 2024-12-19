@@ -26,11 +26,11 @@ namespace fantasy
             Matrix4x4 world_matrix;
             Matrix4x4 inv_trans_world;
 
-            Vector4F diffuse;
+            Vector4F diffuse;   
             Vector4F emissive;
-            float roughness;
-            float metallic;
-            float occlusion;
+            float roughness = 0.0f;
+            float metallic = 0.0f;
+            float occlusion = 0.0f;
         };
     }
 
@@ -70,6 +70,8 @@ namespace fantasy
         std::shared_ptr<TextureInterface> _emissive_texture;
         std::shared_ptr<TextureInterface> _view_space_velocity_texture;
         std::shared_ptr<TextureInterface> _depth_texture;
+
+        std::shared_ptr<SamplerInterface> _anisotropic_warp_sampler;
 		
 		std::unique_ptr<BindingLayoutInterface> _binding_layout;
 		std::unique_ptr<InputLayoutInterface> _input_layout;

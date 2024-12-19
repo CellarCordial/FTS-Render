@@ -3,7 +3,7 @@
 
 #include "octahedral.slang"
 #include "math_helper.slang"
-#include "brdf_helper.slang"
+#include "bxdf.slang"
 #include "gbuffer.slang"
 #include "shadow_helper.slang"
 
@@ -142,12 +142,12 @@ namespace voxel_irradiance
     {
         RayDesc ray_desc;
         ray_desc.Origin = origin.position;
-        ray_desc.direction = sample_param.get_direction();
+        ray_desc.Direction = sample_param.get_direction();
         ray_desc.TMin = 0.0f;
         ray_desc.TMax = MAX_FLOAT;
 
         IrcacheTraceResult result;
-        result.direction = ray_desc.direction;
+        result.direction = ray_desc.Direction;
 
         ray_tracing::GBufferTraceResult trace_result = ray_tracing::GBufferTracing(RayCone(0.1f), ray_desc, 0, false).trace(accel_struct);
         if (trace_result.is_hit)

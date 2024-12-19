@@ -76,7 +76,7 @@ namespace fantasy
 			binding_set_items[3] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("base_color_texture")));
 			binding_set_items[4] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("pbr_texture")));
 			binding_set_items[5] = BindingSetItem::create_texture_srv(4, check_cast<TextureInterface>(cache->require("emissive_texture")));
-			binding_set_items[6] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("LinearWarpSampler")));
+			binding_set_items[6] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_wrap_sampler")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
 				_binding_layout.get()
@@ -96,7 +96,7 @@ namespace fantasy
             {
                 if (ImGui::CollapsingHeader("Restir Test"))
 				{
-                    const char* types[] = { "Position", "Depth", "Normal", "BaseColor", "Metallic", "Roughness", "Occlusion", "Emissive" };
+                    const char* types[] = { "FinalGather", "Position", "Depth", "Normal", "BaseColor", "Metallic", "Roughness", "Occlusion", "Emissive" };
                     static int current_type_index = 0;
                     ImGui::Combo("Show Type", &current_type_index, types, IM_ARRAYSIZE(types));
                 }

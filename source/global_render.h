@@ -12,7 +12,6 @@
 #include "test/test_atmosphere.h"
 #include "test/test_sdf.h"
 #include "test/test_restir.h"
-#include "scene/camera.h"
 
 namespace fantasy
 {
@@ -32,7 +31,6 @@ namespace fantasy
 	private:
 		Timer _timer;
 		World _world;
-		Camera* _camera = nullptr;
 		GLFWwindow* _window = nullptr;
 
 		// D3D12.

@@ -73,7 +73,7 @@ namespace fantasy
 			BindingSetItemArray binding_set_items(3);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::SdfDebugPassConstants));
 			binding_set_items[1] = BindingSetItem::create_texture_srv(0, _sdf_texture);
-			binding_set_items[2] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("LinearClampSampler")));
+			binding_set_items[2] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
 				_binding_layout.get()

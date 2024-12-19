@@ -1,7 +1,7 @@
 #include "../../restir_helper.slang"
 #include "../../shadow_helper.slang"
 #include "../../vxgi_helper.slang"
-#include "../../brdf_helper.slang"
+#include "../../bxdf.slang"
 
 using namespace voxel_irradiance;
 

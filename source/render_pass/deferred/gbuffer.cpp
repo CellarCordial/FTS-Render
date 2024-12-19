@@ -3,6 +3,7 @@
 #include "../../shader/shader_compiler.h"
 #include "../../scene/camera.h"
 #include "../../scene/scene.h"
+#include "../../core/tools/check_cast.h"
 #include <cstdint>
 #include <memory>
 
@@ -193,6 +194,14 @@ namespace fantasy
 				device->create_graphics_pipeline(pipeline_desc, _frame_buffer.get())
 			));
 		}
+
+		_graphics_state.binding_sets.resize(1);
+		_graphics_state.vertex_buffer_bindings.resize(1);
+        _graphics_state.pipeline = _pipeline.get();
+        _graphics_state.frame_buffer = _frame_buffer.get();
+        _graphics_state.viewport_state = ViewportState::create_default_viewport(CLIENT_WIDTH, CLIENT_HEIGHT);
+		ReturnIfFalse(_anisotropic_warp_sampler = check_cast<SamplerInterface>(cache->require("anisotropic_wrap_sampler")));
+
 		return true;
 	}
 
@@ -202,19 +211,11 @@ namespace fantasy
 
         ReturnIfFalse(update(cmdlist, cache));
 
-        _graphics_state.pipeline = _pipeline.get();
-        _graphics_state.frame_buffer = _frame_buffer.get();
-        _graphics_state.index_buffer_binding = IndexBufferBinding{ .buffer = _index_buffer };
-        _graphics_state.vertex_buffer_bindings.push_back(VertexBufferBinding{ .buffer = _vertex_buffer });
-        _graphics_state.viewport_state = ViewportState::create_default_viewport(CLIENT_WIDTH, CLIENT_HEIGHT);
-
         for (uint32_t ix = 0; ix < _draw_arguments.size(); ++ix)
         {
-			_graphics_state.binding_sets.push_back(_binding_sets[ix].get());
-
+			_graphics_state.binding_sets[0] = _binding_sets[ix].get();
             ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
             ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::GBufferPassConstant)));
-            ReturnIfFalse(cmdlist->set_push_constants(&_geometry_constants[ix], sizeof(constant::GeometryConstant)));
             ReturnIfFalse(cmdlist->draw_indexed(_draw_arguments[ix]));
         }
 
@@ -248,13 +249,21 @@ namespace fantasy
 
 		if (!_resource_writed)
 		{
-			
-
 			_resource_writed = true;
+
+			ReturnIfFalse(cmdlist->write_texture(
+				_black_texture.get(), 
+				0, 
+				0, 
+				_black_image.data.get(), 
+				_black_image.size / _black_image.height
+			));
 		}
 
         if (_update_gbuffer)
         {
+			_update_gbuffer = false;
+
             _binding_sets.clear();
             _index_buffer.reset();
             _vertex_buffer.reset();
@@ -292,52 +301,64 @@ namespace fantasy
 							_draw_arguments[ix].start_vertex_location = _draw_arguments[ix - 1].start_vertex_location + mesh->submeshes[ix - 1].vertices.size();
 						}
 
-                        const auto& submaterial = material->submaterials[submesh.material_index];
+						auto& geometry_constant = _geometry_constants[ix];
 
-                        auto& geometry_constant = _geometry_constants[ix];
-
-                        geometry_constant.world_matrix = submesh.world_matrix;
-                        geometry_constant.inv_trans_world = inverse(transpose(submesh.world_matrix));
-                        
-                        geometry_constant.diffuse = submaterial.diffuse_factor;
-                        geometry_constant.emissive = submaterial.emissive_factor;    
-                        geometry_constant.roughness = submaterial.roughness_factor;
-                        geometry_constant.metallic = submaterial.metallic_factor;
-                        geometry_constant.occlusion = submaterial.occlusion_factor;
+						geometry_constant.world_matrix = submesh.world_matrix;
+						geometry_constant.inv_trans_world = inverse(transpose(submesh.world_matrix));
 
 						auto& binding_set_item_array = binding_set_item_arrays.emplace_back();
-						binding_set_item_array.resize(Material::TextureType_Num + 1);
-                        for (uint32_t jx = 0; jx < Material::TextureType_Num; ++jx)
-                        {
-                            const auto& image = submaterial.images[jx];
-                            uint32_t texture_index = ix * Material::TextureType_Num + jx;
+						binding_set_item_array.resize(Material::TextureType_Num + 3);
+						binding_set_item_array[0] = BindingSetItem::create_push_constants(0, sizeof(constant::GBufferPassConstant));
 
-                            std::shared_ptr<TextureInterface> material_texture;
-                            
-                            if (image.is_valid())
-                            {
-                                ReturnIfFalse(material_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-                                    TextureDesc::create_shader_resource(
-                                        image.width,
-                                        image.height,
-                                        image.format
-                                    )
-                                )));
-                                ReturnIfFalse(cmdlist->write_texture(
-                                    material_texture.get(), 
-                                    0, 
-                                    0, 
-                                    image.data.get(), 
-                                    image.size / image.height
-                                ));
-                            }
-                            else
-                            {
-                                material_texture = _black_texture;
-                            }
+						if (submesh.material_index != INVALID_SIZE_32)
+						{
+							const auto& submaterial = material->submaterials[submesh.material_index];
 
-			                binding_set_item_array[jx] = BindingSetItem::create_texture_srv(0, material_texture);
-                        }
+							geometry_constant.diffuse = submaterial.diffuse_factor;
+							geometry_constant.emissive = submaterial.emissive_factor;    
+							geometry_constant.roughness = submaterial.roughness_factor;
+							geometry_constant.metallic = submaterial.metallic_factor;
+							geometry_constant.occlusion = submaterial.occlusion_factor;
+
+							for (uint32_t jx = 0; jx < Material::TextureType_Num; ++jx)
+							{
+								const auto& image = submaterial.images[jx];
+								uint32_t texture_index = ix * Material::TextureType_Num + jx;
+
+								std::shared_ptr<TextureInterface> material_texture;
+								
+								if (image.is_valid())
+								{
+									ReturnIfFalse(material_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+										TextureDesc::create_shader_resource(
+											image.width,
+											image.height,
+											image.format
+										)
+									)));
+									ReturnIfFalse(cmdlist->write_texture(
+										material_texture.get(), 
+										0, 
+										0, 
+										image.data.get(), 
+										image.size / image.height
+									));
+								}
+								else
+								{
+									material_texture = _black_texture;
+								}
+
+								binding_set_item_array[jx + 1] = BindingSetItem::create_texture_srv(jx, material_texture);
+							}
+						}
+						else 
+						{
+							for (uint32_t jx = 0; jx < Material::TextureType_Num; ++jx)
+							{
+								binding_set_item_array[jx + 1] = BindingSetItem::create_texture_srv(jx, _black_texture);
+							}
+						}
 					}
                     return true;
                 }
@@ -382,13 +403,19 @@ namespace fantasy
 			for (uint32_t ix = 0; ix < binding_set_item_arrays.size(); ++ix)
 			{
 				auto& binding_set_item_array = binding_set_item_arrays[ix];
-				binding_set_item_array[Material::TextureType_Num] = 
+				binding_set_item_array[Material::TextureType_Num + 1] = 
 					BindingSetItem::create_structured_buffer_srv(5, _geometry_constant_buffer);
+				binding_set_item_array[Material::TextureType_Num + 2] = 
+					BindingSetItem::create_sampler(0, _anisotropic_warp_sampler);
 				ReturnIfFalse(_binding_sets[ix] = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 					BindingSetDesc{ .binding_items = binding_set_item_array },
 					_binding_layout.get()
 				)));
+
 			}
+
+			_graphics_state.index_buffer_binding = IndexBufferBinding{ .buffer = _index_buffer };
+        	_graphics_state.vertex_buffer_bindings[0] = VertexBufferBinding{ .buffer = _vertex_buffer };
         }
 
         return true;

@@ -54,7 +54,7 @@ namespace fantasy
         Matrix4x4 view_matrix;
         Matrix4x4 proj_matrix;
         Matrix4x4 prev_view_matrix;
-        Vector3F position = { 4.087f, 3.6999f, 3.957f };
+        Vector3F position = { 0.0f, 0.0f, -2.0f };
         Vector3F direction = { 0.0f, 0.0f, 1.0f };
         Vector3F up = { 0.0f, 1.0f, 0.0f };
 

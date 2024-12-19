@@ -113,7 +113,7 @@ namespace fantasy
 			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("TransmittanceTexture")));
 			binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(1, _dir_sample_buffer);
 			binding_set_items[4] = BindingSetItem::create_texture_uav(0, _multi_scattering_texture);
-			binding_set_items[5] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("LinearClampSampler")));
+			binding_set_items[5] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
 				_binding_layout.get()

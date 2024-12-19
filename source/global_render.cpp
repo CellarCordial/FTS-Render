@@ -2,10 +2,12 @@
 
 #include "core/tools/log.h"
 #include "dynamic_rhi/dynamic_rhi.h"
+#include "dynamic_rhi/resource.h"
 #include "gui/gui_pass.h"
 #include "shader/shader_compiler.h"
 #include "core/parallel/parallel.h"
 #include "scene/scene.h"
+#include "scene/camera.h"
 #include <d3d12.h>
 #include <glfw3.h>
 #include <memory>
@@ -164,25 +166,33 @@ namespace fantasy
 		std::shared_ptr<SamplerInterface> point_clamp_sampler;
 		std::shared_ptr<SamplerInterface> linear_warp_sampler;
 		std::shared_ptr<SamplerInterface> point_wrap_sampler;
+		std::shared_ptr<SamplerInterface> anisotropic_wrap_sampler;
 
 		SamplerDesc sampler_desc;
-		sampler_desc.name = "LinearWarpSampler";
+		sampler_desc.name = "linear_wrap_sampler";
 		ReturnIfFalse(linear_warp_sampler = std::shared_ptr<SamplerInterface>(_device->create_sampler(sampler_desc)));
 		sampler_desc.SetFilter(false);
-		sampler_desc.name = "PointWrapSampler";
+		sampler_desc.name = "point_wrap_sampler";
 		ReturnIfFalse(point_wrap_sampler = std::shared_ptr<SamplerInterface>(_device->create_sampler(sampler_desc)));
 		sampler_desc.SetAddressMode(SamplerAddressMode::Clamp);
-		sampler_desc.name = "PointClampSampler";
+		sampler_desc.name = "point_clamp_sampler";
 		ReturnIfFalse(point_clamp_sampler = std::shared_ptr<SamplerInterface>(_device->create_sampler(sampler_desc)));
 		sampler_desc.SetFilter(true);
-		sampler_desc.name = "LinearClampSampler";
+		sampler_desc.name = "linear_clamp_sampler";
 		ReturnIfFalse(linear_clamp_sampler = std::shared_ptr<SamplerInterface>(_device->create_sampler(sampler_desc)));
+
+		sampler_desc.name = "anisotropic_wrap_sampler";
+		sampler_desc.SetAddressMode(SamplerAddressMode::Wrap);
+		sampler_desc.max_anisotropy = 8.0f;
+		ReturnIfFalse(anisotropic_wrap_sampler = std::shared_ptr<SamplerInterface>(_device->create_sampler(sampler_desc)));
+
 
 		RenderResourceCache* cache = _render_graph->GetResourceCache();
 		cache->collect(linear_clamp_sampler, ResourceType::Sampler);
 		cache->collect(point_clamp_sampler, ResourceType::Sampler);
 		cache->collect(linear_warp_sampler, ResourceType::Sampler);
 		cache->collect(point_wrap_sampler, ResourceType::Sampler);
+		cache->collect(anisotropic_wrap_sampler, ResourceType::Sampler);
 
 		return true;
 	}

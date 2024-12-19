@@ -94,7 +94,7 @@ namespace fantasy
 			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, _pass_constant_buffer);
 			binding_set_items[2] = BindingSetItem::create_texture_srv(0, _multi_scattering_texture);
 			binding_set_items[3] = BindingSetItem::create_texture_srv(1, _transmittance_texture);
-			binding_set_items[4] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("LinearClampSampler")));
+			binding_set_items[4] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
 				_binding_layout.get()
