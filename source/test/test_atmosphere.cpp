@@ -107,7 +107,7 @@ namespace fantasy
 
 		// Texture.
 		{
-			std::string image_path = std::string(PROJ_DIR) + "asset/Images/BlueNoise.png";
+			std::string image_path = std::string(PROJ_DIR) + "asset/image/BlueNoise.png";
 			_blue_noise_image = Image::LoadImageFromFile(image_path.c_str());
 			ReturnIfFalse(_blue_noise_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_shader_resource(
@@ -286,7 +286,7 @@ namespace fantasy
 
 		ReturnIfFalse(world->broadcast(event::OnModelLoad{ 
 			.entity = world->create_entity(),
-			.model_path = "asset/Model/Mountain/terrain.gltf" 
+			.model_path = "asset/model/Mountain/terrain.gltf" 
 		}));
 
 

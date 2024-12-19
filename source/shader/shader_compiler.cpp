@@ -84,8 +84,9 @@ namespace shader_compile
         }
 
         const std::string proj_path = PROJ_DIR;
-        const std::string cache_path = proj_path + "asset/ShaderCache/" + remove_file_extension(desc.shader_name.c_str()) + "_" + desc.entry_point + "_DEBUG.bin";
-        const std::string shader_path = proj_path + "Source/Shader/" + desc.shader_name;
+        const std::string cache_path = proj_path + "asset/shader_cache/" + remove_file_extension(desc.shader_name.c_str()) + "_" + desc.entry_point + "_DEBUG.bin";
+        const std::string shader_path = proj_path + "source/shader/" + desc.shader_name;
+        const std::string shader_name = desc.shader_name.substr(0, desc.shader_name.find_last_of('.'));
 
         if (check_cache(cache_path.c_str(), shader_path.c_str()))
         {
@@ -138,10 +139,14 @@ namespace shader_compile
         session_desc.searchPathCount = 1;
 
         Slang::ComPtr<slang::ISession> session;
-        global_session->createSession(session_desc, session.writeRef());
+        if (SLANG_FAILED(global_session->createSession(session_desc, session.writeRef())))
+        {
+            LOG_ERROR("Create session failed.");
+            return ShaderData{};
+        }
 
         Slang::ComPtr<slang::IBlob> diagnostics;
-        Slang::ComPtr<slang::IModule> module(session->loadModule("MyShaders", diagnostics.writeRef()));
+        Slang::ComPtr<slang::IModule> module(session->loadModule(shader_path.c_str(), diagnostics.writeRef()));
         if (diagnostics)
         {
             LOG_ERROR((const char*) diagnostics->getBufferPointer());
@@ -150,15 +155,22 @@ namespace shader_compile
         diagnostics.setNull();
 
         Slang::ComPtr<slang::IEntryPoint> entry_point;
-        module->getDefinedEntryPoint(0, entry_point.writeRef());
+        if (SLANG_FAILED(module->findEntryPointByName(desc.entry_point.c_str(), entry_point.writeRef())))
+        {
+            LOG_ERROR("Find entry point failed.");
+            return ShaderData{};
+        }
 
         slang::IComponentType* components[] = { module, entry_point };
         Slang::ComPtr<slang::IComponentType> program;
-        session->createCompositeComponentType(components, 2, program.writeRef());
+        if (SLANG_FAILED(session->createCompositeComponentType(components, 2, program.writeRef())))
+        {
+            LOG_ERROR("Create composite component type failed.");
+            return ShaderData{};
+        }
 
         Slang::ComPtr<slang::IComponentType> linked_program;
-        program->link(linked_program.writeRef(), diagnostics.writeRef());
-        if (diagnostics)
+        if (SLANG_FAILED(program->link(linked_program.writeRef(), diagnostics.writeRef())) || diagnostics)
         {
             LOG_ERROR((const char*) diagnostics->getBufferPointer());
             return ShaderData{};
@@ -168,8 +180,7 @@ namespace shader_compile
         int entryPointIndex = 0;
         int targetIndex = 0;
         Slang::ComPtr<slang::IBlob> pKernelBlob;
-        linked_program->getEntryPointCode(0, 0, pKernelBlob.writeRef(), diagnostics.writeRef());
-        if (diagnostics)
+        if (SLANG_FAILED(linked_program->getEntryPointCode(0, 0, pKernelBlob.writeRef(), diagnostics.writeRef())) || diagnostics)
         {
             LOG_ERROR((const char*) diagnostics->getBufferPointer());
             return ShaderData{};
@@ -181,7 +192,7 @@ namespace shader_compile
 
         save_to_cache(cache_path.c_str(), shader_data);
 
-        return ShaderData{};
+        return shader_data;
     }
 }
 

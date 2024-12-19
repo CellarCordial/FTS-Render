@@ -120,10 +120,10 @@ namespace fantasy
     {
         ReturnIfFalse(render_graph != nullptr);
 
-		_brdf_lut_pass = std::make_shared<BrdfLUTPass>();
+		_gbuffer_pass = std::make_shared<GBufferPass>();
 		_test_pass = std::make_shared<RestirTestPass>();
 
-		render_graph->add_pass(_brdf_lut_pass);
+		render_graph->add_pass(_gbuffer_pass);
 		render_graph->add_pass(_test_pass);
 
 		return true;

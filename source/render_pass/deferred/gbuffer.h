@@ -34,6 +34,8 @@ namespace fantasy
     class GBufferPass : public RenderPassInterface
     {
     public:
+		GBufferPass() { type = RenderPassType::Graphics; }
+
         bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
         bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 

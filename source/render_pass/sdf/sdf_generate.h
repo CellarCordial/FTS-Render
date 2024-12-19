@@ -1,6 +1,6 @@
 #ifndef RENDER_PASS_SDF_GENERATE_H
 #define RENDER_PASS_SDF_GENERATE_H
-#include "../../render_graph/render_graph.h"
+#include "../../render_graph/render_pass.h"
 #include "../../core/tools/file.h"
 #include "../../core/math/vector.h"
 #include "../../scene/scene.h"

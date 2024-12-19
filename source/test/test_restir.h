@@ -2,7 +2,7 @@
 #define TEST_RESTIR_H
 
 #include "../render_graph/render_graph.h"
-#include "../render_pass/deferred/brdf_lut.h"
+#include "../render_pass/deferred/gbuffer.h"
 #include <cstdint>
 #include <memory>
 
@@ -20,6 +20,8 @@ namespace fantasy
     class RestirTestPass : public RenderPassInterface
     {
     public:
+		RestirTestPass() { type = RenderPassType::Graphics; }
+
         bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
         bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
@@ -48,7 +50,7 @@ namespace fantasy
         RenderPassInterface* get_last_pass() { return _test_pass.get(); }
 
     private:
-        std::shared_ptr<BrdfLUTPass> _brdf_lut_pass;
+        std::shared_ptr<GBufferPass> _gbuffer_pass;
         std::shared_ptr<RestirTestPass> _test_pass; 
     };
 

@@ -1,3 +1,6 @@
+#ifndef RENDER_GRAPH_RENDER_PASS_H
+#define RENDER_GRAPH_RENDER_PASS_H
+
 #include "../dynamic_rhi/device.h"
 #include "render_resource_cache.h"
 #include <unordered_set>
@@ -13,7 +16,7 @@ namespace fantasy
         Precompute      = 1 << 3,
 		Exclude         = 1 << 4
     };  
-	ENUM_CLASS_FLAG_OPERATORS(RenderPassType);
+	ENUM_CLASS_FLAG_OPERATORS(RenderPassType)
 
     
     struct RenderPassInterface
@@ -54,3 +57,5 @@ namespace fantasy
         uint32_t index = INVALID_SIZE_32;
     };
 }
+
+#endif
