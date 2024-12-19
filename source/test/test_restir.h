@@ -13,7 +13,7 @@ namespace fantasy
     {
         struct RestirTestPassConstant
         {
-            uint32_t show_type;
+            int32_t show_type;
         };
     }
 

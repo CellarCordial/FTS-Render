@@ -99,6 +99,7 @@ namespace fantasy
 
         std::vector<Submesh> submeshes;
         Matrix4x4 world_matrix;
+        bool moved = false;
         bool culling = false;
     };
 

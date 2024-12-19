@@ -223,26 +223,29 @@ namespace fantasy
 		_loaded_model_names.insert(event.model_path);
 
 		
-		Entity* tmp_model_entity = event.entity;
-		gui::add(
-			[tmp_model_entity, this]()
-			{
-				std::string model_name = *tmp_model_entity->get_component<std::string>();
-				model_name += " Transform";
-				if (ImGui::TreeNode(model_name.c_str()))
-				{
-					bool changed = false;
+		// Entity* tmp_model_entity = event.entity;
+		// gui::add(
+		// 	[tmp_model_entity, this]()
+		// 	{
+		// 		std::string model_name = *tmp_model_entity->get_component<std::string>();
+		// 		model_name += " Transform";
+		// 		if (ImGui::TreeNode(model_name.c_str()))
+		// 		{
+		// 			bool changed = false;
 
-					Transform tmp_trans = *tmp_model_entity->get_component<Transform>();
-					changed |= ImGui::SliderFloat3("position", reinterpret_cast<float*>(&tmp_trans.position), -32.0f, 32.0f);		
-					changed |= ImGui::SliderFloat3("rotation", reinterpret_cast<float*>(&tmp_trans.rotation), -180.0f, 180.0f);
-					changed |= ImGui::SliderFloat3("scale", reinterpret_cast<float*>(&tmp_trans.scale), 0.1f, 8.0f);
-					if (changed) _world->broadcast(event::OnModelTransform{ .entity = tmp_model_entity, .transform = tmp_trans });
+		// 			Transform tmp_trans = *tmp_model_entity->get_component<Transform>();
+		// 			changed |= ImGui::SliderFloat3("position", reinterpret_cast<float*>(&tmp_trans.position), -32.0f, 32.0f);		
+		// 			changed |= ImGui::SliderFloat3("rotation", reinterpret_cast<float*>(&tmp_trans.rotation), -180.0f, 180.0f);
+		// 			changed |= ImGui::SliderFloat3("scale", reinterpret_cast<float*>(&tmp_trans.scale), 0.1f, 8.0f);
+		// 			if (changed)
+		// 			{
+		// 				_world->broadcast(event::OnModelTransform{ .entity = tmp_model_entity, .transform = tmp_trans });
+		// 			}
 
-					ImGui::TreePop();
-				}
-			}
-		);
+		// 			ImGui::TreePop();
+		// 		}
+		// 	}
+		// );
 
 		return true;
 	}
@@ -574,6 +577,13 @@ namespace fantasy
 		}
 
 		*transform = event.transform;
+
+		Mesh* mesh = event.entity->get_component<Mesh>();
+		Matrix4x4 S = scale(transform->scale);
+		Matrix4x4 R = rotate(transform->rotation);
+		Matrix4x4 T = translate(transform->position);
+		mesh->world_matrix = mul(mul(T, R), S);
+		mesh->moved = true;
 
 		return _world->each<event::UpdateGlobalSdf>(
 			[](Entity* entity, event::UpdateGlobalSdf* event) -> bool

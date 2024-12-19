@@ -71,8 +71,8 @@ namespace fantasy
 		{
 			BindingSetItemArray binding_set_items(7);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::RestirTestPassConstant));
-			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("world_space_position_depth_texture")));
-			binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("normal_texture")));
+			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
+			binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("world_space_normal_texture")));
 			binding_set_items[3] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("base_color_texture")));
 			binding_set_items[4] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("pbr_texture")));
 			binding_set_items[5] = BindingSetItem::create_texture_srv(4, check_cast<TextureInterface>(cache->require("emissive_texture")));
@@ -96,9 +96,8 @@ namespace fantasy
             {
                 if (ImGui::CollapsingHeader("Restir Test"))
 				{
-                    const char* types[] = { "FinalGather", "Position", "Depth", "Normal", "BaseColor", "Metallic", "Roughness", "Occlusion", "Emissive" };
-                    static int current_type_index = 0;
-                    ImGui::Combo("Show Type", &current_type_index, types, IM_ARRAYSIZE(types));
+                    const char* types[] = { "FinalGather", "World Position", "View Depth", "World Normal", "BaseColor", "Metallic", "Roughness", "Occlusion", "Emissive" };
+                    ImGui::Combo("Show Type", &_pass_constant.show_type, types, IM_ARRAYSIZE(types));
                 }
             }
         );
@@ -109,6 +108,8 @@ namespace fantasy
 	bool RestirTestPass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
 		ReturnIfFalse(cmdlist->open());
+
+		clear_color_attachment(cmdlist, _frame_buffer.get(), 0);
 
 		ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
 		ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::RestirTestPassConstant)));

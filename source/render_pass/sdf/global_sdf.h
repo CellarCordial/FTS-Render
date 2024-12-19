@@ -1,7 +1,7 @@
 #ifndef RENDER_PASS_GLOBAL_SDF_H
 #define RENDER_PASS_GLOBAL_SDF_H
 
-#include "../../render_graph/render_graph.h"
+#include "../../render_graph/render_pass.h"
 #include "../../core/math/matrix.h"
 #include "../../scene/scene.h"
 #include <memory>

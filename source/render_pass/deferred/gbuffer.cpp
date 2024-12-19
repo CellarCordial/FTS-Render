@@ -101,12 +101,12 @@ namespace fantasy
 			)));
 			cache->collect(_black_texture, ResourceType::Texture);
 
-            ReturnIfFalse(_world_space_position_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+            ReturnIfFalse(_world_position_view_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA32_FLOAT,
-					"world_space_position_depth_texture"
+					"world_position_view_depth_texture"
 				)
 			)));
             ReturnIfFalse(_world_space_normal_texture = std::shared_ptr<TextureInterface>(device->create_texture(
@@ -114,7 +114,7 @@ namespace fantasy
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA32_FLOAT,
-					"normal_texture"
+					"world_space_normal_texture"
 				)
 			)));
             ReturnIfFalse(_base_color_texture = std::shared_ptr<TextureInterface>(device->create_texture(
@@ -158,7 +158,7 @@ namespace fantasy
                 )
             )))
             
-			cache->collect(_world_space_position_texture, ResourceType::Texture);
+			cache->collect(_world_position_view_depth_texture, ResourceType::Texture);
 			cache->collect(_world_space_normal_texture, ResourceType::Texture);
 			cache->collect(_base_color_texture, ResourceType::Texture);
 			cache->collect(_pbr_texture, ResourceType::Texture);
@@ -170,7 +170,7 @@ namespace fantasy
 		// Frame Buffer.
 		{
 			FrameBufferDesc frame_buffer_desc;
-			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_space_position_texture));
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_position_view_depth_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_space_normal_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_base_color_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_pbr_texture));
@@ -211,8 +211,16 @@ namespace fantasy
 
         ReturnIfFalse(update(cmdlist, cache));
 
+		uint64_t color_attachment_count = _frame_buffer->get_desc().color_attachments.size();
+		for (uint32_t ix = 0; ix < color_attachment_count; ++ix)
+		{
+			clear_color_attachment(cmdlist, _frame_buffer.get(), ix);
+		}
+		clear_depth_stencil_attachment(cmdlist, _frame_buffer.get());
+
         for (uint32_t ix = 0; ix < _draw_arguments.size(); ++ix)
         {
+			_pass_constant.geometry_constant_index = ix;
 			_graphics_state.binding_sets[0] = _binding_sets[ix].get();
             ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
             ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::GBufferPassConstant)));
@@ -242,7 +250,6 @@ namespace fantasy
             {
                 _pass_constant.view_matrix = camera->view_matrix;
                 _pass_constant.view_proj = camera->get_view_proj();
-                _pass_constant.prev_view_matrix = camera->prev_view_matrix;
                 return true;
             }
         ))
@@ -268,6 +275,7 @@ namespace fantasy
             _index_buffer.reset();
             _vertex_buffer.reset();
             _draw_arguments.clear();
+			_geometry_constants.clear();
 
 			std::vector<BindingSetItemArray> binding_set_item_arrays;
 
@@ -290,15 +298,16 @@ namespace fantasy
 
 					for (uint64_t ix = old_size; ix < _draw_arguments.size(); ++ix)
 					{
-						const auto& submesh = mesh->submeshes[ix];
+						uint64_t submesh_index = ix - old_size;
+						const auto& submesh = mesh->submeshes[submesh_index];
 						_vertices.insert(_vertices.end(), submesh.vertices.begin(), submesh.vertices.end());
 						_indices.insert(_indices.end(), submesh.indices.begin(), submesh.indices.end());
 
-						if (ix != 0)
+						if (submesh_index != 0)
 						{
 							_draw_arguments[ix].index_count = submesh.indices.size();
-							_draw_arguments[ix].start_index_location = _draw_arguments[ix - 1].start_index_location + mesh->submeshes[ix - 1].indices.size();
-							_draw_arguments[ix].start_vertex_location = _draw_arguments[ix - 1].start_vertex_location + mesh->submeshes[ix - 1].vertices.size();
+							_draw_arguments[ix].start_index_location = _draw_arguments[ix - 1].start_index_location + mesh->submeshes[submesh_index - 1].indices.size();
+							_draw_arguments[ix].start_vertex_location = _draw_arguments[ix - 1].start_vertex_location + mesh->submeshes[submesh_index - 1].vertices.size();
 						}
 
 						auto& geometry_constant = _geometry_constants[ix];
@@ -376,14 +385,14 @@ namespace fantasy
                     sizeof(uint32_t) * _indices.size(),
                     "geometry_index_buffer"
                 )
-            )))
+            )));
 			ReturnIfFalse(_geometry_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_structured(
 					_geometry_constants.size() * sizeof(constant::GeometryConstant), 
 					sizeof(constant::GeometryConstant),
 					"geometry_constant_buffer"
 				)
-			)))
+			)));
             ReturnIfFalse(cmdlist->write_buffer(
                 _vertex_buffer.get(), 
                 _vertices.data(), 
@@ -417,7 +426,6 @@ namespace fantasy
 			_graphics_state.index_buffer_binding = IndexBufferBinding{ .buffer = _index_buffer };
         	_graphics_state.vertex_buffer_bindings[0] = VertexBufferBinding{ .buffer = _vertex_buffer };
         }
-
         return true;
     }
 }

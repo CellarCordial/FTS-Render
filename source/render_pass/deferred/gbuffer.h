@@ -63,7 +63,7 @@ namespace fantasy
 		std::shared_ptr<BufferInterface> _index_buffer;
 		std::shared_ptr<BufferInterface> _geometry_constant_buffer;
 
-        std::shared_ptr<TextureInterface> _world_space_position_texture;
+        std::shared_ptr<TextureInterface> _world_position_view_depth_texture;
         std::shared_ptr<TextureInterface> _world_space_normal_texture;
         std::shared_ptr<TextureInterface> _base_color_texture;
         std::shared_ptr<TextureInterface> _pbr_texture;

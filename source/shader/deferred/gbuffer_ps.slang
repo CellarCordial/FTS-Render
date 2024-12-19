@@ -49,7 +49,7 @@ struct VertexOutput
 
 struct PixelOutput
 {
-    float4 world_space_position_depth : SV_TARGET0;
+    float4 world_position_view_depth : SV_TARGET0;
     float4 world_space_normal : SV_TARGET1;
     float4 base_color : SV_TARGET2;
     float4 pbr : SV_TARGET3;
@@ -61,9 +61,9 @@ struct PixelOutput
 PixelOutput pixel_shader(VertexOutput input)
 {
     GeometryConstant constant = geometry_constant_buffer[geometry_constant_index];
-    
+
     PixelOutput output;
-    output.world_space_position_depth = float4(input.world_space_position, input.view_space_position.z);
+    output.world_position_view_depth = float4(input.world_space_position, input.view_space_position.z);
 
     float3 normal = calculate_normal(
         normal_texture.Sample(sampler0, input.uv).xyz,
