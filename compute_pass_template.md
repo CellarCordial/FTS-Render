@@ -5,7 +5,7 @@
 #ifndef RENDER_PASS_H
 #define RENDER_PASS_H
 
-#include "../../render_graph/render_graph.h"
+#include "../../render_graph/render_pass.h"
 #include <memory>
 
 namespace fantasy
@@ -127,10 +127,10 @@ namespace fantasy
 		// Binding Set.
 		{
 			SamplerInterface* pLinearClampSampler, * pPointClampSampler, * pLinearWarpSampler, * pPointWrapSampler;
-			ReturnIfFalse(cache->require("LinearClampSampler")->QueryInterface(IID_ISampler, PPV_ARG(&pLinearClampSampler)));
-			ReturnIfFalse(cache->require("PointClampSampler")->QueryInterface(IID_ISampler, PPV_ARG(&pPointClampSampler)));
-			ReturnIfFalse(cache->require("LinearWarpSampler")->QueryInterface(IID_ISampler, PPV_ARG(&pLinearWarpSampler)));
-			ReturnIfFalse(cache->require("PointWrapSampler")->QueryInterface(IID_ISampler, PPV_ARG(&pPointWrapSampler)));
+			ReturnIfFalse(cache->require("linear_clamp_sampler")->QueryInterface(IID_ISampler, PPV_ARG(&pLinearClampSampler)));
+			ReturnIfFalse(cache->require("point_clamp_sampler")->QueryInterface(IID_ISampler, PPV_ARG(&pPointClampSampler)));
+			ReturnIfFalse(cache->require("linear_wrap_sampler")->QueryInterface(IID_ISampler, PPV_ARG(&pLinearWarpSampler)));
+			ReturnIfFalse(cache->require("point_wrap_sampler")->QueryInterface(IID_ISampler, PPV_ARG(&pPointWrapSampler)));
  
 			BindingSetItemArray binding_set_items(N);
 			binding_set_items[Index] = BindingSetItem::create_push_constants(Slot, sizeof(constant));

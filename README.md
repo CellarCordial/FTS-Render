@@ -29,6 +29,6 @@ xmake build FTS-Render
 - SSAO
 - Restir GI
 - Screen Space Probe
-- Irradiance Cache
+- VXGI
 - Vulkan RHI
     

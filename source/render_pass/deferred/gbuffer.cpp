@@ -188,7 +188,7 @@ namespace fantasy
 			pipeline_desc.input_layout = _input_layout.get();
 			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
 			pipeline_desc.render_state.depth_stencil_state.enable_depth_test = true;
-			pipeline_desc.render_state.depth_stencil_state.enable_depth_write = false;
+			pipeline_desc.render_state.depth_stencil_state.enable_depth_write = true;
 			pipeline_desc.render_state.depth_stencil_state.depth_func = ComparisonFunc::LessOrEqual;
 			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(
 				device->create_graphics_pipeline(pipeline_desc, _frame_buffer.get())

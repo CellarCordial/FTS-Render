@@ -52,20 +52,20 @@ VertexOutput vertex_shader(VertexInput input)
 {
     GeometryConstant constant = geometry_constant_buffer[geometry_constant_index];
 
-    VertexOutput out;
+    VertexOutput output;
     float4 world_pos = mul(float4(input.local_space_position, 1.0f), constant.world_matrix);
 
-    out.sv_position = mul(world_pos, view_proj);
+    output.sv_position = mul(world_pos, view_proj);
 
-    out.world_space_position = world_pos.xyz;
+    output.world_space_position = world_pos.xyz;
 
-    out.view_space_position = mul(world_pos, view_matrix).xyz;
-    out.prev_view_space_position = mul(world_pos, prev_view_matrix).xyz;
+    output.view_space_position = mul(world_pos, view_matrix).xyz;
+    output.prev_view_space_position = mul(world_pos, prev_view_matrix).xyz;
 
-    out.world_space_normal = normalize(mul(float4(input.local_space_normal, 1.0f), constant.inv_trans_world)).xyz;
-    out.world_space_tangent = normalize(mul(input.local_space_tangent, constant.inv_trans_world));
-    out.uv = input.uv;
+    output.world_space_normal = normalize(mul(float4(input.local_space_normal, 1.0f), constant.inv_trans_world)).xyz;
+    output.world_space_tangent = normalize(mul(input.local_space_tangent, constant.inv_trans_world));
+    output.uv = input.uv;
 
-    return out;
+    return output;
 }
 

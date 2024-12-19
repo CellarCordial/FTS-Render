@@ -24,7 +24,7 @@ struct GeometryConstant
     float occlusion;
 };
 
-SamplerState sampler : register(s0);
+SamplerState sampler0 : register(s0);
 
 Texture2D diffuse_texture           : register(t0);
 Texture2D normal_texture            : register(t1);
@@ -49,12 +49,12 @@ struct VertexOutput
 
 struct PixelOutput
 {
-    float4 world_space_position_depth : SV_Target0;
-    float4 world_space_normal : SV_Target1;
-    float4 base_color : SV_Target2;
-    float4 pbr : SV_Target3;
-    float4 emmisive : SV_Target4;
-    float4 view_space_velocity : SV_Target5;
+    float4 world_space_position_depth : SV_TARGET0;
+    float4 world_space_normal : SV_TARGET1;
+    float4 base_color : SV_TARGET2;
+    float4 pbr : SV_TARGET3;
+    float4 emmisive : SV_TARGET4;
+    float4 view_space_velocity : SV_TARGET5;
 };
 
 [shader("pixel")]
@@ -66,22 +66,21 @@ PixelOutput pixel_shader(VertexOutput input)
     output.world_space_position_depth = float4(input.world_space_position, input.view_space_position.z);
 
     float3 normal = calculate_normal(
-        normal_texture.Sample(sampler, input.uv).xyz,
+        normal_texture.Sample(sampler0, input.uv).xyz,
         normalize(input.world_space_normal),
         normalize(input.world_space_tangent)
     );
     output.world_space_normal = float4(normal, 1.0f);
 
-    output.base_color = diffuse_texture.Sample(sampler, input.uv) * constant.diffuse;
-    if (output.base_color.a < 0.001f) discard;
+    output.base_color = diffuse_texture.Sample(sampler0, input.uv) * constant.diffuse;
 
-    float4 metallic_roughness = metallic_roughness_texture.Sample(sampler, input.uv);
+    float4 metallic_roughness = metallic_roughness_texture.Sample(sampler0, input.uv);
     metallic_roughness.r *= constant.metallic;
     metallic_roughness.g *= constant.roughness;
-    float fOcclusion = occlusion_texture.Sample(sampler, input.uv).r * constant.occlusion;
+    float fOcclusion = occlusion_texture.Sample(sampler0, input.uv).r * constant.occlusion;
     output.pbr = float4(metallic_roughness.rg, fOcclusion, 1.0f);
 
-    output.emmisive = emissive_texture.Sample(sampler, input.uv) * constant.emissive;
+    output.emmisive = emissive_texture.Sample(sampler0, input.uv) * constant.emissive;
 
     output.view_space_velocity = float4(input.prev_view_space_position - input.view_space_position, 1.0f);
 
