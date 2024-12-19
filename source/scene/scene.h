@@ -38,6 +38,7 @@ namespace fantasy
 			Transform transform;
 		};
 
+		DELCARE_DELEGATE_EVENT(UpdateGBuffer);
 		DELCARE_DELEGATE_EVENT(UpdateGlobalSdf);
 		DELCARE_DELEGATE_EVENT(GenerateSdf, Entity*);
 		DELCARE_DELEGATE_EVENT(GenerateSurfaceCache, Entity*);

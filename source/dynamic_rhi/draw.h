@@ -69,11 +69,19 @@ namespace fantasy
         uint32_t start_index_location = 0;
         uint32_t start_vertex_location = 0;
         uint32_t start_instance_location = 0;
+
+
+        static DrawArguments full_screen_quad()
+        {
+            DrawArguments ret{};
+            ret.index_count = 6;
+            return ret;
+        } 
     };
 
     using PipelineStateBindingSetArray = StackArray<BindingSetInterface*, MAX_BINDING_LAYOUTS>;
 
-    struct FGraphicsState
+    struct GraphicsState
     {
         GraphicsPipelineInterface* pipeline = nullptr;
         PipelineStateBindingSetArray binding_sets; // 需要与 BindingLaouts 数组的顺序相对应.

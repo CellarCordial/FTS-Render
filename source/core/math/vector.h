@@ -20,6 +20,8 @@ namespace fantasy
 	{
 		Vector2() : x(0), y(0) {}
 
+		Vector2(const T v[2]) : x(v[0]), y(v[1]) {}
+
 		Vector2(T _x, T _y) : x(_x), y(_y) {}
 
 		Vector2(const Vector2<T>& vec) : x(vec.x), y(vec.y) {}
@@ -163,6 +165,8 @@ namespace fantasy
 		Vector3() : x(0), y(0), z(0) {}
 
 		explicit Vector3(T _Num) : x(_Num), y(_Num), z(_Num) {}
+
+		Vector3(const T v[3]) : x(v[0]), y(v[1]), z(v[2]) {}
 
 		Vector3(T _x, T _y, T _z) : x(_x), y(_y), z(_z) {}
 
@@ -330,6 +334,8 @@ namespace fantasy
 
 		explicit Vector4(T _Num) : x(_Num), y(_Num), z(_Num), w(_Num) {}
 
+		Vector4(const T v[4]) : x(v[0]), y(v[1]), z(v[2]), w(v[3]) {}
+		
 		Vector4(T _x, T _y, T _z, T _w) : x(_x), y(_y), z(_z), w(_w) {}
 
 		Vector4(const Vector4<T>& vec) : x(vec.x), y(vec.y), z(vec.z), w(vec.w) {}

@@ -22,8 +22,9 @@ namespace fantasy
 {
 	bool GlobalRender::run()
 	{
-		_atmosphere_test.setup(_render_graph.get()); _atmosphere_test.get_last_pass()->precede(_gui_pass.get());
+		// _atmosphere_test.setup(_render_graph.get()); _atmosphere_test.get_last_pass()->precede(_gui_pass.get());
 		// _sdf_test.setup(_render_graph.get()); _sdf_test.get_last_pass()->precede(_gui_pass.get());
+		_restir_test.setup(_render_graph.get()); _restir_test.get_last_pass()->precede(_gui_pass.get());
 
 
 		ReturnIfFalse(_render_graph->compile());

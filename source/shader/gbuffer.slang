@@ -4,6 +4,16 @@
 #include "ray_cone.slang"
 #include "../math_helper.slang"
 
+float3 calculate_normal(float3 texture_normal, float3 vertex_normal, float4 vertex_tangent)
+{
+    float3 unpacked_normal = texture_normal * 2.0f - 1.0f;
+    float3 N = vertex_normal;
+    float3 T = normalize(vertex_tangent.xyz - N * dot(vertex_tangent.xyz, N));
+    float3 B = cross(N, T) * vertex_tangent.w;
+    float3x3 TBN = float3x3(T, B, N);
+    return normalize(mul(unpacked_normal, TBN));
+}
+
 namespace ray_tracing
 {
     struct GBufferData
@@ -58,7 +68,7 @@ namespace ray_tracing
             {
                 res.is_hit = true;
                 res.ray_hit_time = payload._hit_time;
-                res.hit_position = _ray_desc.Origin + _ray_desc.direction * payload._hit_time;
+                res.hit_position = _ray_desc.Origin + _ray_desc.Direction * payload._hit_time;
                 res.data = payload._data;
             }
             else

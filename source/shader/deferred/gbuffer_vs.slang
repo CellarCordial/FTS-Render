@@ -9,7 +9,7 @@ cbuffer pass_constants : register(b0)
     float4x4 prev_view_matrix;
 };
 
-cbuffer GeometryConstants : register(b1)
+cbuffer geometry_constants : register(b1)
 {
     float4x4 world_matrix;
     float4x4 inv_trans_world;
@@ -21,9 +21,9 @@ cbuffer GeometryConstants : register(b1)
 struct VertexInput
 {
     float3 local_space_position : POSITION;
-    float3 local_space_normal   : NORMAL;
+    float3 local_space_normal : NORMAL;
     float4 local_space_tangent  : TANGENT;
-    float2 uv        : TEXCOORD;
+    float2 uv : TEXCOORD;
 };
 
 struct VertexOutput

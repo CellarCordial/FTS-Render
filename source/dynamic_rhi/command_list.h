@@ -109,7 +109,7 @@ namespace fantasy
         ) = 0;
 
         virtual bool set_push_constants(const void* data, uint64_t byte_size) = 0;
-        virtual bool set_graphics_state(const FGraphicsState& state) = 0;
+        virtual bool set_graphics_state(const GraphicsState& state) = 0;
         virtual bool set_compute_state(const ComputeState& state) = 0;
         
         virtual bool draw(const DrawArguments& arguments) = 0;

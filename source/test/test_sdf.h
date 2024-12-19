@@ -1,5 +1,5 @@
-#ifndef RENDER_PASS_SDF_MODE_H
-#define RENDER_PASS_SDF_MODE_H
+#ifndef TEST_SDF_MODE_H
+#define TEST_SDF_MODE_H
 
 #include "../render_graph/render_graph.h"
 #include "../core/math/vector.h"
@@ -60,7 +60,7 @@ namespace fantasy
         std::unique_ptr<GraphicsPipelineInterface> _pipeline;
 
         std::unique_ptr<BindingSetInterface> _binding_set;
-        FGraphicsState _graphics_state;
+        GraphicsState _graphics_state;
     };
 
 	class SdfTest

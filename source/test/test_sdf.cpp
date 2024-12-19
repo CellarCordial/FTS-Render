@@ -26,7 +26,7 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc ShaderCompileDesc;
-			ShaderCompileDesc.shader_name = "sdf/sdf_debug.hlsl";
+			ShaderCompileDesc.shader_name = "test/sdf_debug.hlsl";
 			ShaderCompileDesc.entry_point = "vertex_shader";
 			ShaderCompileDesc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = shader_compile::compile_shader(ShaderCompileDesc);

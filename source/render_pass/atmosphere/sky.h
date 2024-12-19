@@ -44,7 +44,7 @@ namespace fantasy
 		std::unique_ptr<GraphicsPipelineInterface> _pipeline;
 		
 		std::unique_ptr<BindingSetInterface> _binding_set;
-		FGraphicsState _graphics_state;
+		GraphicsState _graphics_state;
 	};
 }
 

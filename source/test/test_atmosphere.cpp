@@ -58,7 +58,7 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc shader_compile_desc;
-			shader_compile_desc.shader_name = "atmosphere/atmosphere_debug.hlsl";
+			shader_compile_desc.shader_name = "test/atmosphere_debug.hlsl";
 			shader_compile_desc.entry_point = "vertex_shader";
 			shader_compile_desc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = shader_compile::compile_shader(shader_compile_desc);
@@ -311,7 +311,7 @@ namespace fantasy
 		gui::add(
 			[this, properties, light_ptr]()
 			{
-				if (ImGui::CollapsingHeader("Atmosphere Debug Render"))
+				if (ImGui::CollapsingHeader("Atmosphere Test"))
 				{
 					bool dirty = false;
 					if (ImGui::TreeNode("Atmosphere Properties"))

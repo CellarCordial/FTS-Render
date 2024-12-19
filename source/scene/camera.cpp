@@ -9,6 +9,7 @@ namespace fantasy
     {
         set_lens(60.0f, 1.0f * CLIENT_WIDTH / CLIENT_HEIGHT, 0.1f, 100.0f);
         update_view_matrix();
+        prev_view_matrix = view_matrix;
     }
 
     void Camera::handle_input(float delta_time)
@@ -40,6 +41,7 @@ namespace fantasy
     {
         if(_view_need_update)
         {
+            prev_view_matrix = view_matrix;
             view_matrix = look_at_left_hand(position, position + direction, up);
             _view_need_update = false;
         }

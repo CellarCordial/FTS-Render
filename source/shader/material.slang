@@ -3,11 +3,11 @@
 
 struct Material
 {
-    float4 fDiffuse;
-    float  fRoughness;
-    float  fMetallic;
-    float  fOcclusion;
-    float4  fEmissive;
+    float4 diffuse;
+    float  roughness;
+    float  metallic;
+    float  occlusion;
+    float4  emissive;
 };
 
 

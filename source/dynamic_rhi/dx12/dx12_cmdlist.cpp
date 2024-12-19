@@ -1014,7 +1014,7 @@ namespace fantasy
         return true;
     }
 
-    bool DX12CommandList::set_graphics_state(const FGraphicsState& state)
+    bool DX12CommandList::set_graphics_state(const GraphicsState& state)
     { 
         DX12GraphicsPipeline* current_dx12_graphics_pipeline = check_cast<DX12GraphicsPipeline*>(_current_graphics_state.pipeline);
         DX12GraphicsPipeline* dx12_graphics_pipeline = check_cast<DX12GraphicsPipeline*>(state.pipeline);

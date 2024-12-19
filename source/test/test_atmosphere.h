@@ -1,5 +1,5 @@
-#ifndef RENDER_PASS_ATMOSPHERE_DEBUG_H
-#define RENDER_PASS_ATMOSPHERE_DEBUG_H
+#ifndef TEST_ATMOSPHERE_DEBUG_H
+#define TEST_ATMOSPHERE_DEBUG_H
 
 #include "../render_graph/render_graph.h"
 #include "../core/math/matrix.h"
@@ -79,7 +79,7 @@ namespace fantasy
 		std::unique_ptr<GraphicsPipelineInterface> _pipeline;
 
 		std::unique_ptr<BindingSetInterface> _binding_set;
-		FGraphicsState _graphics_state;
+		GraphicsState _graphics_state;
 
 		DrawArguments* _draw_arguments = nullptr;
 		uint64_t _draw_argument_count = 0;

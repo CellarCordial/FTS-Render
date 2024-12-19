@@ -73,7 +73,7 @@ namespace fantasy
 						_draw_arguments[old_size].start_vertex_location = _vertices.size();
 					}
 
-					for (uint64_t ix = 0; ix < mesh->submeshes.size(); ++ix)
+					for (uint64_t ix = old_size; ix < mesh->submeshes.size(); ++ix)
 					{
 						const auto& submesh = mesh->submeshes[ix];
 						_vertices.insert(_vertices.end(), submesh.vertices.begin(), submesh.vertices.end());

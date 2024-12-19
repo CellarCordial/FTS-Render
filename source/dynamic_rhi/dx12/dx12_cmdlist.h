@@ -180,7 +180,7 @@ namespace fantasy
         bool copy_buffer(BufferInterface* dst, uint64_t dst_byte_offset, BufferInterface* src, uint64_t src_byte_offset, uint64_t data_byte_size) override;
         
         bool set_push_constants(const void* data, uint64_t byte_size) override;
-        bool set_graphics_state(const FGraphicsState& state) override;
+        bool set_graphics_state(const GraphicsState& state) override;
         bool set_compute_state(const ComputeState& state) override;
         
         bool draw(const DrawArguments& arguments) override;
@@ -290,7 +290,7 @@ namespace fantasy
     
         // Cache
 
-        FGraphicsState _current_graphics_state;
+        GraphicsState _current_graphics_state;
         ComputeState _current_compute_state;
         bool _current_graphics_state_valid = false;
         bool _current_compute_state_valid = false;

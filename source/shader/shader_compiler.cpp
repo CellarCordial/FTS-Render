@@ -61,67 +61,67 @@ namespace shader_compile
 {
     namespace
     {
-        Slang::ComPtr<slang::IGlobalSession> gpGlobalSession;
+        Slang::ComPtr<slang::IGlobalSession> global_session;
     }
 
     void initialize()
     {
-        SlangResult Res = createGlobalSession(gpGlobalSession.writeRef());
-        assert(Res == SLANG_OK);
+        SlangResult res = createGlobalSession(global_session.writeRef());
+        assert(res == SLANG_OK);
     }
 
     void destroy()
     {
-        gpGlobalSession->release();
+        global_session->release();
     }
 
     ShaderData compile_shader(const ShaderCompileDesc& desc)
     {
-        if (gpGlobalSession == nullptr)
+        if (global_session == nullptr)
         {
             LOG_ERROR("Please call fantasy::StaticShaderCompiler::initialize() first.");
             return ShaderData{};
         }
 
-        const std::string ProjPath = PROJ_DIR;
-        const std::string CachePath = ProjPath + "asset/ShaderCache/" + RemoveFileExtension(desc.shader_name.c_str()) + "_" + desc.entry_point + "_DEBUG.bin";
-        const std::string ShaderPath = ProjPath + "Source/Shader/" + desc.shader_name;
+        const std::string proj_path = PROJ_DIR;
+        const std::string cache_path = proj_path + "asset/ShaderCache/" + remove_file_extension(desc.shader_name.c_str()) + "_" + desc.entry_point + "_DEBUG.bin";
+        const std::string shader_path = proj_path + "Source/Shader/" + desc.shader_name;
 
-        if (check_cache(CachePath.c_str(), ShaderPath.c_str()))
+        if (check_cache(cache_path.c_str(), shader_path.c_str()))
         {
-            return load_from_cache(CachePath.c_str());
+            return load_from_cache(cache_path.c_str());
         }
 
-		size_t pos = ShaderPath.find_last_of('/');
+		size_t pos = shader_path.find_last_of('/');
 		if (pos == std::string::npos)
 		{
 			LOG_ERROR("Find hlsl file's Directory failed.");
 			return ShaderData{};
 		}
-		const std::string strFileDirectory = ShaderPath.substr(0, pos);
+		const std::string file_directory = shader_path.substr(0, pos);
 
 
-        slang::SessionDesc SessionDesc{};
+        slang::SessionDesc session_desc{};
 
-        slang::TargetDesc TargetDesc = {};
-        TargetDesc.format = SLANG_DXIL;
-        TargetDesc.profile = gpGlobalSession->findProfile("sm_6_5");
+        slang::TargetDesc target_desc = {};
+        target_desc.format = SLANG_DXIL;
+        target_desc.profile = global_session->findProfile("sm_6_5");
 
-        SessionDesc.targets = &TargetDesc;
-        SessionDesc.targetCount = 1;
+        session_desc.targets = &target_desc;
+        session_desc.targetCount = 1;
 
-        std::vector<slang::PreprocessorMacroDesc> PreprocessorMacroDesc;
+        std::vector<slang::PreprocessorMacroDesc> preprocessor_macro_desc;
         for (const auto& crDefine : desc.defines)
         {
-            auto EqualPos = crDefine.find_first_of('=');
-            PreprocessorMacroDesc.push_back(slang::PreprocessorMacroDesc{
-                .name = crDefine.substr(0, EqualPos).c_str(),
-                .value = crDefine.substr(EqualPos + 1).c_str()
+            auto equal_position = crDefine.find_first_of('=');
+            preprocessor_macro_desc.push_back(slang::PreprocessorMacroDesc{
+                .name = crDefine.substr(0, equal_position).c_str(),
+                .value = crDefine.substr(equal_position + 1).c_str()
             });
         }
 
-        SessionDesc.preprocessorMacros = PreprocessorMacroDesc.data();
-        SessionDesc.preprocessorMacroCount = PreprocessorMacroDesc.size();
+        session_desc.preprocessorMacros = preprocessor_macro_desc.data();
+        session_desc.preprocessorMacroCount = preprocessor_macro_desc.size();
 
         std::array<slang::CompilerOptionEntry, 1> options = 
         {
@@ -130,56 +130,56 @@ namespace shader_compile
                 { slang::CompilerOptionValueKind::Int, 1, 0, nullptr, nullptr }
             }
         };
-        SessionDesc.compilerOptionEntries = options.data();
-        SessionDesc.compilerOptionEntryCount = options.size();
+        session_desc.compilerOptionEntries = options.data();
+        session_desc.compilerOptionEntryCount = options.size();
 
-        const char* searchPaths[] = { strFileDirectory.c_str() };
-        SessionDesc.searchPaths = searchPaths;
-        SessionDesc.searchPathCount = 1;
+        const char* searchPaths[] = { file_directory.c_str() };
+        session_desc.searchPaths = searchPaths;
+        session_desc.searchPathCount = 1;
 
-        Slang::ComPtr<slang::ISession> pSession;
-        gpGlobalSession->createSession(SessionDesc, pSession.writeRef());
+        Slang::ComPtr<slang::ISession> session;
+        global_session->createSession(session_desc, session.writeRef());
 
-        Slang::ComPtr<slang::IBlob> pDiagnostics;
-        Slang::ComPtr<slang::IModule> pModule(pSession->loadModule("MyShaders", pDiagnostics.writeRef()));
-        if (pDiagnostics)
+        Slang::ComPtr<slang::IBlob> diagnostics;
+        Slang::ComPtr<slang::IModule> module(session->loadModule("MyShaders", diagnostics.writeRef()));
+        if (diagnostics)
         {
-            LOG_ERROR((const char*) pDiagnostics->getBufferPointer());
+            LOG_ERROR((const char*) diagnostics->getBufferPointer());
             return ShaderData{};
         }
-        pDiagnostics.setNull();
+        diagnostics.setNull();
 
-        Slang::ComPtr<slang::IEntryPoint> pEntryPoint;
-        pModule->getDefinedEntryPoint(0, pEntryPoint.writeRef());
+        Slang::ComPtr<slang::IEntryPoint> entry_point;
+        module->getDefinedEntryPoint(0, entry_point.writeRef());
 
-        slang::IComponentType* components[] = { pModule, pEntryPoint };
-        Slang::ComPtr<slang::IComponentType> pProgram;
-        pSession->createCompositeComponentType(components, 2, pProgram.writeRef());
+        slang::IComponentType* components[] = { module, entry_point };
+        Slang::ComPtr<slang::IComponentType> program;
+        session->createCompositeComponentType(components, 2, program.writeRef());
 
-        Slang::ComPtr<slang::IComponentType> pLinkedProgram;
-        pProgram->link(pLinkedProgram.writeRef(), pDiagnostics.writeRef());
-        if (pDiagnostics)
+        Slang::ComPtr<slang::IComponentType> linked_program;
+        program->link(linked_program.writeRef(), diagnostics.writeRef());
+        if (diagnostics)
         {
-            LOG_ERROR((const char*) pDiagnostics->getBufferPointer());
+            LOG_ERROR((const char*) diagnostics->getBufferPointer());
             return ShaderData{};
         }
-        pDiagnostics.setNull();
+        diagnostics.setNull();
 
         int entryPointIndex = 0;
         int targetIndex = 0;
         Slang::ComPtr<slang::IBlob> pKernelBlob;
-        pLinkedProgram->getEntryPointCode(0, 0, pKernelBlob.writeRef(), pDiagnostics.writeRef());
-        if (pDiagnostics)
+        linked_program->getEntryPointCode(0, 0, pKernelBlob.writeRef(), diagnostics.writeRef());
+        if (diagnostics)
         {
-            LOG_ERROR((const char*) pDiagnostics->getBufferPointer());
+            LOG_ERROR((const char*) diagnostics->getBufferPointer());
             return ShaderData{};
         }
-        pDiagnostics.setNull();
+        diagnostics.setNull();
 
-        ShaderData ShaderData;
-        ShaderData.set_byte_code(pKernelBlob->getBufferPointer(), pKernelBlob->getBufferSize());
+        ShaderData shader_data;
+        shader_data.set_byte_code(pKernelBlob->getBufferPointer(), pKernelBlob->getBufferSize());
 
-        save_to_cache(CachePath.c_str(), ShaderData);
+        save_to_cache(cache_path.c_str(), shader_data);
 
         return ShaderData{};
     }

@@ -54,7 +54,7 @@ namespace fantasy
         std::unique_ptr<FrameBufferInterface> _frame_buffer;
         std::unique_ptr<GraphicsPipelineInterface> _pipeline;
         
-        FGraphicsState _graphics_state;
+        GraphicsState _graphics_state;
 
         std::vector<DrawArguments> _draw_arguments;
     };

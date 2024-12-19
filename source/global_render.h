@@ -11,6 +11,7 @@
 #include "render_graph/render_graph.h"
 #include "test/test_atmosphere.h"
 #include "test/test_sdf.h"
+#include "test/test_restir.h"
 #include "scene/camera.h"
 
 namespace fantasy
@@ -46,7 +47,7 @@ namespace fantasy
 
 		AtmosphereTest _atmosphere_test;
 		SdfTest _sdf_test;
-
+		RestirTest _restir_test;
 	};
 }
 

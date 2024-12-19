@@ -1,14 +1,8 @@
 #define THREAD_GROUP_NUM_X 1
 #define THREAD_GROUP_NUM_Y 1
 
-#include "../brdf_helper.slang"
+#include "../bxdf.slang"
 #include "../math_helper.slang"
-
-
-cbuffer pass_constants : register(b0)
-{
-    uint2 brdf_lut_resolution;
-};
 
 RWTexture2D<float2> brdf_lut_texture : register(u0);
 
@@ -20,8 +14,11 @@ float2 IntegrateBrdf(float n_dot_v, float roughness);
 [numthreads(THREAD_GROUP_NUM_X, THREAD_GROUP_NUM_Y, 1)]
 void compute_shader(uint3 thread_id : SV_Dispatchthread_id)
 {
-    float n_dot_v = ((thread_id.x + 0.5f) / brdf_lut_resolution.x) * (1.0 - 1e-3) + 1e-3;
-    float roughness = max((thread_id.y + 0.5f) / brdf_lut_resolution.y, 1e-5);
+    uint3 width_height_levels;
+    brdf_lut_texture.GetDimensions(0, width_height_levels.x, width_height_levels.y, width_height_levels.z);
+
+    float n_dot_v = ((thread_id.x + 0.5f) / width_height_levels.x) * (1.0 - 1e-3) + 1e-3;
+    float roughness = max((thread_id.y + 0.5f) / width_height_levels.y, 1e-5);
 
     brdf_lut_texture[thread_id.xy] = IntegrateBrdf(n_dot_v, roughness);
 }
@@ -48,9 +45,9 @@ float2 IntegrateBrdf(float n_dot_v, float roughness)
         float3 light_direction;
         float2 random = Hammersley(ix, SAMPLE_COUNT);
 
-        if (specular_a.Sample(view_direction, random, light_direction, pdf, weight_a))
+        if (specular_a.sample(view_direction, random, light_direction, pdf, weight_a))
         {
-            float3 WeightB = specular_b.Eval(view_direction, light_direction);
+            float3 WeightB = specular_b.eval(view_direction, light_direction);
             red_channel += weight_a.x - WeightB.x;
             green_channel += WeightB.x;
         }
