@@ -46,7 +46,7 @@ void RayMarching(float fPhaseU, float3 o, float3 d, float t, float dt, inout flo
 
     float2 uv = get_transmittance_uv(AP, height, sun_theta);
 
-    if (!IntersectRaySphere(Pos, -SunDir, AP.planet_radius))
+    if (!intersect_ray_sphere(Pos, -SunDir, AP.planet_radius))
     {
         float3 Phase = estimate_phase_func(AP, height, fPhaseU);
         float3 SunTransmittance = transmittance_texture.SampleLevel(gMTSampler, uv, 0);

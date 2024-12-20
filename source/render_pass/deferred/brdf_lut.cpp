@@ -5,8 +5,8 @@
 
 namespace fantasy
 {
-#define THREAD_GROUP_SIZE_X 16u
-#define THREAD_GROUP_SIZE_Y 16u
+#define THREAD_GROUP_SIZE_X 8u
+#define THREAD_GROUP_SIZE_Y 8u
  
 	bool BrdfLUTPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
@@ -49,7 +49,7 @@ namespace fantasy
 				TextureDesc::create_read_write(
 					_brdf_lut_resolution.x,
 					_brdf_lut_resolution.y,
-					Format::RGBA32_FLOAT,
+					Format::RGBA16_FLOAT,
 					"BrdfLUTTexture"
 				)
 			)));

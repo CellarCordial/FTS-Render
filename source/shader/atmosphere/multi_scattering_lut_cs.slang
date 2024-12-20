@@ -85,10 +85,10 @@ float3 UnitSphereDir(float u1, float u2)
 void LightIntegate(float3 WorldOri, float3 WorldDir, float sun_theta, float3 SunDir, out float3 L2, out float3 F)
 {
     float fDistance = 0.0f;
-    bool bGroundIntersect = IntersectRaySphere(WorldOri, WorldDir, AP.planet_radius, fDistance);
+    bool bGroundIntersect = intersect_ray_sphere(WorldOri, WorldDir, AP.planet_radius, fDistance);
     if (!bGroundIntersect)
     {
-        IntersectRaySphere(WorldOri, WorldDir, AP.atmosphere_radius, fDistance);
+        intersect_ray_sphere(WorldOri, WorldDir, AP.atmosphere_radius, fDistance);
     }
 
     float dt = fDistance / dwRayMarchStepCount;
@@ -113,7 +113,7 @@ void LightIntegate(float3 WorldOri, float3 WorldDir, float sun_theta, float3 Sun
         float3 DeltaTransmittance = dt * transmittance;
         float3 TotalTransmittance = exp(-fTransmittanceSum - 0.5f * DeltaTransmittance);
 
-        if (!IntersectRaySphere(p, SunDir, AP.planet_radius))
+        if (!intersect_ray_sphere(p, SunDir, AP.planet_radius))
         {
             float3 PhaseFunc = estimate_phase_func(AP, h, theta);
             float2 uv = get_transmittance_uv(AP, h, sun_theta);

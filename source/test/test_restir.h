@@ -3,6 +3,7 @@
 
 #include "../render_graph/render_graph.h"
 #include "../render_pass/deferred/gbuffer.h"
+#include "../render_pass/deferred/brdf_lut.h"
 #include <cstdint>
 #include <memory>
 
@@ -51,6 +52,7 @@ namespace fantasy
 
     private:
         std::shared_ptr<GBufferPass> _gbuffer_pass;
+        std::shared_ptr<BrdfLUTPass> _brdf_lut_pass;
         std::shared_ptr<RestirTestPass> _test_pass; 
     };
 

@@ -250,7 +250,7 @@ bool IntersectRayCircle(float2 o, float2 d, float r, out float fClosestIntersect
     return C <= 0 || B <= 0;
 }
 
-bool IntersectRaySphere(float3 o, float3 d, float r, out float ClosestIntersectDistance)
+bool intersect_ray_sphere(float3 o, float3 d, float r, out float ClosestIntersectDistance)
 {
     ClosestIntersectDistance = 0.0f;
     
@@ -265,7 +265,7 @@ bool IntersectRaySphere(float3 o, float3 d, float r, out float ClosestIntersectD
     return C <= 0 || B <= 0;
 }
 
-bool IntersectRaySphere(float3 o, float3 d, float r)
+bool intersect_ray_sphere(float3 o, float3 d, float r)
 {
     float A = dot(d, d);
     float B = 2.0f * dot(o, d);

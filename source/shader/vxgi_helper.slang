@@ -3,7 +3,6 @@
 
 #include "octahedral.slang"
 #include "math_helper.slang"
-#include "bxdf.slang"
 #include "gbuffer.slang"
 #include "shadow_helper.slang"
 
@@ -129,40 +128,6 @@ namespace voxel_irradiance
     bool is_ircache_entry_life_valid(uint age)
     {
         return age < IRCACHE_ENTRY_RANK_COUNT * IRCACHE_ENTRY_LIFE_PER_RANK;
-    }
-
-    IrcacheTraceResult ircache_ray_trace(
-        Vertex origin, 
-        brdf::IBrdf brdf, 
-        SampleParameter sample_param, 
-        uint age, 
-        float3 sun_direction,
-        RaytracingAccelerationStructure accel_struct
-    )
-    {
-        RayDesc ray_desc;
-        ray_desc.Origin = origin.position;
-        ray_desc.Direction = sample_param.get_direction();
-        ray_desc.TMin = 0.0f;
-        ray_desc.TMax = MAX_FLOAT;
-
-        IrcacheTraceResult result;
-        result.direction = ray_desc.Direction;
-
-        ray_tracing::GBufferTraceResult trace_result = ray_tracing::GBufferTracing(RayCone(0.1f), ray_desc, 0, false).trace(accel_struct);
-        if (trace_result.is_hit)
-        {
-            result.hit_position = trace_result.hit_position;
-            
-            
-
-        }
-        else
-        {
-            
-        }
-
-        return result;
     }
 }
 

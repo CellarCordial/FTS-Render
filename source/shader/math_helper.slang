@@ -82,8 +82,7 @@ float4 sample_from_blue_noise(uint2 pixel_id, uint random, Texture2D<float4> blu
 {
     uint blue_noise_texture_width;
     uint blue_noise_texture_height;
-    uint blue_noise_texture_mip_levels;
-    blue_noise_texture.GetDimensions(0, blue_noise_texture_width, blue_noise_texture_height, blue_noise_texture_mip_levels);
+    blue_noise_texture.GetDimensions(blue_noise_texture_width, blue_noise_texture_height);
 
     uint2 resolution = uint2(blue_noise_texture_width, blue_noise_texture_height);
     uint2 offset = uint2(resolution * generate_random2(random));
