@@ -9,6 +9,7 @@
 #include <memory>
 #include <minwindef.h>
 #include <pix_win.h>
+#include <utility>
 
 #include "dx12_converts.h"
 #include "dx12_device.h"
@@ -1173,8 +1174,12 @@ namespace fantasy
 
         _current_graphics_state_valid = true;
         _current_compute_state_valid = false;
+        _current_ray_tracing_state_valid = false;
         _current_graphics_state = state;
         _current_graphics_state.dynamic_stencil_ref_value = btEffectiveStencilRefValue;
+
+        
+
 
         return true;
     }
@@ -1225,7 +1230,10 @@ namespace fantasy
         
         _current_compute_state_valid = true;
         _current_graphics_state_valid = false;
+        _current_ray_tracing_state_valid = false;
         _current_compute_state = state;
+
+
         return true;
     }
 
@@ -1557,18 +1565,159 @@ namespace fantasy
     }
 
 
-#ifdef RAY_TRACING
-
     bool DX12CommandList::set_ray_tracing_state(const ray_tracing::PipelineState& state)
     {
+        ray_tracing::DX12ShaderTable* shader_table = check_cast<ray_tracing::DX12ShaderTable*>(state.shader_table);
+        ray_tracing::DX12Pipeline* pipeline = check_cast<ray_tracing::DX12Pipeline*>(shader_table->get_pipeline());
+        ray_tracing::DX12ShaderTableState* shader_table_state = get_shaderTableState(shader_table);
+
+        bool rebuild_shader_table = shader_table_state->committed_version != shader_table->_version ||
+            shader_table_state->d3d12_descriptor_heap_srv != _descriptor_heaps->shader_resource_heap.get_shader_visible_heap() ||
+            shader_table_state->d3d12_descriptor_heap_samplers != _descriptor_heaps->sampler_heap.get_shader_visible_heap();
+
+        if (rebuild_shader_table)
+        {
+            uint32_t entry_size = pipeline->get_shaderTableEntrySize();
+            uint8_t* cpu_address;
+            D3D12_GPU_VIRTUAL_ADDRESS gpu_address;
+            ReturnIfFalse(_upload_manager.suballocate_buffer(
+                entry_size * shader_table->get_entry_count(), 
+                nullptr, 
+                nullptr, 
+                &cpu_address, 
+                &gpu_address, 
+                _recording_version, 
+                D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT
+            ));
+
+            uint32_t entry_index = 0;
+
+            auto WriteEntry = [&](const ray_tracing::DX12ShaderTable::ShaderEntry& entry) 
+            {
+                memcpy(cpu_address, entry.shader_identifier, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+
+                if (entry.binding_set)
+                {
+                    DX12BindingSet* bindingSet = check_cast<DX12BindingSet*>(entry.binding_set);
+                    DX12BindingLayout* layout = check_cast<DX12BindingLayout*>(bindingSet->get_layout());
+
+                    if (layout->descriptor_table_sampler_size > 0)
+                    {
+                        auto table = reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(
+                            cpu_address + 
+                            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 
+                            layout->root_param_sampler_index * sizeof(D3D12_GPU_DESCRIPTOR_HANDLE)
+                        );
+                        *table = _descriptor_heaps->sampler_heap.get_gpu_handle(bindingSet->descriptor_table_sampler_base_index);
+                    }
+
+                    if (layout->descriptor_table_srv_etc_size > 0)
+                    {
+                        auto table = reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(
+                            cpu_address + 
+                            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 
+                            layout->root_param_srv_etc_index * sizeof(D3D12_GPU_DESCRIPTOR_HANDLE)
+                        );
+                        *table = _descriptor_heaps->shader_resource_heap.get_gpu_handle(bindingSet->descriptor_table_srv_etc_base_index);
+                    }
+
+                    ReturnIfFalse(layout->descriptor_volatile_constant_buffers.empty());
+                }
+
+                cpu_address += entry_size;
+                gpu_address += entry_size;
+                entry_index += 1;
+
+                return true;
+            };
+
+            D3D12_DISPATCH_RAYS_DESC& d3d12_dispatch_rays_desc = shader_table_state->d3d12_dispatch_rays_desc;
+            memset(&d3d12_dispatch_rays_desc, 0, sizeof(D3D12_DISPATCH_RAYS_DESC));
+
+            d3d12_dispatch_rays_desc.RayGenerationShaderRecord.StartAddress = gpu_address;
+            d3d12_dispatch_rays_desc.RayGenerationShaderRecord.SizeInBytes = entry_size;
+            WriteEntry(shader_table->_raygen_shader);
+
+            if (!shader_table->_miss_shaders.empty())
+            {
+                d3d12_dispatch_rays_desc.MissShaderTable.StartAddress = gpu_address;
+                d3d12_dispatch_rays_desc.MissShaderTable.SizeInBytes = entry_size * static_cast<uint32_t>(shader_table->_miss_shaders.size());
+                d3d12_dispatch_rays_desc.MissShaderTable.StrideInBytes = shader_table->_miss_shaders.size() == 1 ? 0 : entry_size;
+                for (const auto& entry : shader_table->_miss_shaders) WriteEntry(entry);
+            }
+            if (!shader_table->_hit_groups.empty())
+            {
+                d3d12_dispatch_rays_desc.HitGroupTable.StartAddress = gpu_address;
+                d3d12_dispatch_rays_desc.HitGroupTable.SizeInBytes = entry_size * static_cast<uint32_t>(shader_table->_hit_groups.size());
+                d3d12_dispatch_rays_desc.HitGroupTable.StrideInBytes = shader_table->_hit_groups.size() == 1 ? 0 : entry_size;
+                for (const auto& entry : shader_table->_miss_shaders) WriteEntry(entry);
+            }
+            if (!shader_table->_callable_shaders.empty())
+            {
+                d3d12_dispatch_rays_desc.CallableShaderTable.StartAddress = gpu_address;
+                d3d12_dispatch_rays_desc.CallableShaderTable.SizeInBytes = entry_size * static_cast<uint32_t>(shader_table->_callable_shaders.size());
+                d3d12_dispatch_rays_desc.CallableShaderTable.StrideInBytes = shader_table->_callable_shaders.size() == 1 ? 0 : entry_size;
+                for (const auto& entry : shader_table->_miss_shaders) WriteEntry(entry);
+            }
+
+            shader_table_state->committed_version = shader_table->_version;
+            shader_table_state->d3d12_descriptor_heap_srv = _descriptor_heaps->shader_resource_heap.get_shader_visible_heap();
+            shader_table_state->d3d12_descriptor_heap_samplers = _descriptor_heaps->sampler_heap.get_shader_visible_heap();
+            
+            _cmdlist_ref_instances->ref_resources.push_back(shader_table);
+        }
+
+        
+        ray_tracing::DX12Pipeline* current_pipeline = check_cast<ray_tracing::DX12Pipeline*>(_current_ray_tracing_state.shader_table->get_pipeline());
+        const bool update_root_signature = 
+            !_current_ray_tracing_state_valid || 
+            _current_ray_tracing_state.shader_table == nullptr ||
+            current_pipeline->_global_root_signature != pipeline->_global_root_signature;
+
+        
+        uint32_t binding_update_mask = 0;     // 按位判断 bindingset 数组中哪一个 bindingset 需要更新绑定
+
+        if (!update_root_signature) binding_update_mask = ~0u;
+
+        if (commit_descriptor_heaps()) binding_update_mask = ~0u;
+
+        if (binding_update_mask == 0)
+        {
+            binding_update_mask = find_array_different_bits(
+                _current_graphics_state.binding_sets, 
+                _current_graphics_state.binding_sets.size(), 
+                state.binding_sets, 
+                state.binding_sets.size()
+            );
+        } 
+
+        if (update_root_signature) 
+        {
+            active_cmdlist->d3d12_cmdlist4->SetComputeRootSignature(pipeline->_global_root_signature->d3d12_root_signature.Get());
+        }
+
+        bool update_pipeline = !_current_ray_tracing_state_valid || _current_ray_tracing_state.shader_table->get_pipeline() != pipeline;
+
+        if (update_pipeline)
+        {
+            active_cmdlist->d3d12_cmdlist4->SetPipelineState1(reinterpret_cast<ID3D12StateObject*>(pipeline->get_native_object()));
+            _cmdlist_ref_instances->ref_resources.push_back(pipeline);
+        }
+
+        set_compute_bindings(state.binding_sets, binding_update_mask, pipeline->_global_root_signature.get());
+
+        _current_graphics_state_valid = false;
+        _current_compute_state_valid = false;
+        _current_ray_tracing_state_valid = true;
+        _current_ray_tracing_state = state;
         return false;
     }
 
-    bool DX12CommandList::dispatch_rays(const ray_tracing::FDispatchRaysArguments& arguments)
+    bool DX12CommandList::dispatch_rays(const ray_tracing::DispatchRaysArguments& arguments)
     {
         ReturnIfFalse(_current_ray_tracing_state_valid && update_compute_volatile_buffers());
 
-        D3D12_DISPATCH_RAYS_DESC desc = get_shaderTableState(_current_ray_tracing_state.shader_table)->DispatchRaysDesc;
+        D3D12_DISPATCH_RAYS_DESC desc = get_shaderTableState(_current_ray_tracing_state.shader_table)->d3d12_dispatch_rays_desc;
         desc.Width = arguments.width;
         desc.Height = arguments.height;
         desc.Depth = arguments.depth;
@@ -1799,21 +1948,18 @@ namespace fantasy
         return true;
     }
 
-    ray_tracing::ShaderTableState* DX12CommandList::get_shaderTableState(ray_tracing::ShaderTableInterface* shader_table)
+    ray_tracing::DX12ShaderTableState* DX12CommandList::get_shaderTableState(ray_tracing::ShaderTableInterface* shader_table)
     {
         auto iter = _shader_table_states.find(shader_table);
         if (iter != _shader_table_states.end()) return iter->second.get();
 
-        std::unique_ptr<ray_tracing::ShaderTableState> shader_table_state = std::make_unique<ray_tracing::ShaderTableState>();
+        std::unique_ptr<ray_tracing::DX12ShaderTableState> shader_table_state = std::make_unique<ray_tracing::DX12ShaderTableState>();
         auto* ret = shader_table_state.get();
 
         _shader_table_states[shader_table] = std::move(shader_table_state);
 
         return ret;
     }
-
-#endif
-
 
     bool DX12CommandList::allocate_upload_buffer(uint64_t size, uint8_t** cpu_address, D3D12_GPU_VIRTUAL_ADDRESS* gpu_address)
     {
@@ -2308,11 +2454,25 @@ namespace fantasy
             IID_PPV_ARGS(ret->d3d12_cmdlist.GetAddressOf())
         );
 
-#ifdef RAY_TRACING
         ret->d3d12_cmdlist->QueryInterface(IID_PPV_ARGS(ret->d3d12_cmdlist4.GetAddressOf()));
-#endif
         ret->d3d12_cmdlist->QueryInterface(IID_PPV_ARGS(ret->d3d12_cmdlist6.GetAddressOf()));
 
         return ret;
     }
+
+    ray_tracing::DX12ShaderTableState* DX12CommandList::get_shader_tabel_state(ray_tracing::ShaderTableInterface* shader_table)
+    {
+        auto iter = _shader_table_states.find(shader_table);
+        if (iter != _shader_table_states.end())
+        {
+            return iter->second.get();
+        }
+
+        std::unique_ptr<ray_tracing::DX12ShaderTableState> shader_table_state = std::make_unique<ray_tracing::DX12ShaderTableState>();
+        ray_tracing::DX12ShaderTableState* ret = shader_table_state.get();
+
+        _shader_table_states.insert(std::make_pair(shader_table, std::move(shader_table_state)));
+        return ret;
+    }
+
 }

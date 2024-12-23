@@ -378,8 +378,6 @@ namespace fantasy
         return ret;
     }
 
-
-#ifdef RAY_TRACING
     namespace ray_tracing 
     {
 
@@ -435,8 +433,6 @@ namespace fantasy
             return ret;
         }
     }
-
-#endif
 
     static const DxgiFormatMapping dxgi_format_mappings[] = {
         { Format::UNKNOWN,              DXGI_FORMAT_UNKNOWN,                DXGI_FORMAT_UNKNOWN,                  DXGI_FORMAT_UNKNOWN                },

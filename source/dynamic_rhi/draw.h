@@ -102,6 +102,21 @@ namespace fantasy
         PipelineStateBindingSetArray binding_sets;
     };
 
+    namespace ray_tracing 
+    {
+        struct PipelineState
+        {
+            ShaderTableInterface* shader_table = nullptr;
+            PipelineStateBindingSetArray binding_sets;
+        };
+
+        struct DispatchRaysArguments
+        {
+            uint32_t width = 1;	
+            uint32_t height = 1;
+            uint32_t depth = 1;
+        };
+    }
 }
 
 

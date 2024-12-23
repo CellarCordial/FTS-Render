@@ -1,7 +1,3 @@
-
-
-/*--------------------------------------- Compute Pass -----------------------------------------------*/
-
 #ifndef RENDER_PASS_H
 #define RENDER_PASS_H
 
@@ -12,7 +8,7 @@ namespace fantasy
 {
 	namespace constant
 	{
-		struct PassConstant
+		struct Constant
 		{
 
 		};
@@ -28,7 +24,7 @@ namespace fantasy
 
 	private:
 		bool _resource_writed = false;
-		constant::PassConstant _pass_constant;
+		constant::Constant _pass_constant;
 
 		std::shared_ptr<BufferInterface> _buffer;
 		std::shared_ptr<TextureInterface> _texture;
@@ -45,9 +41,10 @@ namespace fantasy
 #endif
 
 
-#include "###RenderPass.h"
-#include "../../../Shader/ShaderCompiler.h"
-#include "../../../gui/GuiPanel.h"
+#include ".h"
+#include "../../shader/shader_compiler.h"
+#include "../../core/tools/check_cast.h"
+#include "../../gui/gui_panel.h"
 
 
 namespace fantasy
@@ -115,8 +112,8 @@ namespace fantasy
 		{
 			ReturnIfFalse(_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_(
-					width,
-					height,
+					CLIENT_WIDTH,
+					CLIENT_HEIGHT,
 					Format::RGBA32_FLOAT,
 					"Texture"
 				)
@@ -126,24 +123,18 @@ namespace fantasy
  
 		// Binding Set.
 		{
-			SamplerInterface* pLinearClampSampler, * pPointClampSampler, * pLinearWarpSampler, * pPointWrapSampler;
-			ReturnIfFalse(cache->require("linear_clamp_sampler")->QueryInterface(IID_ISampler, PPV_ARG(&pLinearClampSampler)));
-			ReturnIfFalse(cache->require("point_clamp_sampler")->QueryInterface(IID_ISampler, PPV_ARG(&pPointClampSampler)));
-			ReturnIfFalse(cache->require("linear_wrap_sampler")->QueryInterface(IID_ISampler, PPV_ARG(&pLinearWarpSampler)));
-			ReturnIfFalse(cache->require("point_wrap_sampler")->QueryInterface(IID_ISampler, PPV_ARG(&pPointWrapSampler)));
- 
 			BindingSetItemArray binding_set_items(N);
 			binding_set_items[Index] = BindingSetItem::create_push_constants(Slot, sizeof(constant));
-			binding_set_items[Index] = BindingSetItem::create_constant_buffer(Slot, pPassConstantBuffer);
-			binding_set_items[Index] = BindingSetItem::create_structured_buffer_srv(Slot, pShaderResourceBuffer);
-			binding_set_items[Index] = BindingSetItem::create_structured_buffer_uav(Slot, pUnorderedAccessBuffer);
-			binding_set_items[Index] = BindingSetItem::create_raw_buffer_srv(Slot, pShaderResourceRawBuffer);
-			binding_set_items[Index] = BindingSetItem::create_raw_buffer_uav(Slot, pUnorderedAccessRawBuffer);
-			binding_set_items[Index] = BindingSetItem::create_typed_buffer_srv(Slot, pShaderResourceTypedBuffer, pShaderResourceTypedBuffer->get_desc().Format);
-			binding_set_items[Index] = BindingSetItem::create_typed_buffer_uav(Slot, pUnorderedAccessTypedBuffer, pUnorderedAccessTypedBuffer->get_desc().Format);
-			binding_set_items[Index] = BindingSetItem::create_texture_srv(Slot, pShaderResourceTexture, pShaderResourceTexture->get_desc().Format);
-			binding_set_items[Index] = BindingSetItem::create_texture_uav(Slot, pUnorderedAccessTexture, pUnorderedAccessTexture->get_desc().Format);
-			binding_set_items[Index] = BindingSetItem::create_sampler(Slot, sampler.Get());
+			binding_set_items[Index] = BindingSetItem::create_constant_buffer(Slot, _buffer);
+			binding_set_items[Index] = BindingSetItem::create_structured_buffer_srv(Slot, _buffer);
+			binding_set_items[Index] = BindingSetItem::create_structured_buffer_uav(Slot, _buffer);
+			binding_set_items[Index] = BindingSetItem::create_raw_buffer_srv(Slot, _buffer);
+			binding_set_items[Index] = BindingSetItem::create_raw_buffer_uav(Slot, _buffer);
+			binding_set_items[Index] = BindingSetItem::create_typed_buffer_srv(Slot, _buffer);
+			binding_set_items[Index] = BindingSetItem::create_typed_buffer_uav(Slot, _buffer);
+			binding_set_items[Index] = BindingSetItem::create_texture_srv(Slot, _texture);
+			binding_set_items[Index] = BindingSetItem::create_texture_uav(Slot, _texture);
+			binding_set_items[Index] = BindingSetItem::create_sampler(Slot, sampler);
             ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
                 BindingSetDesc{ .binding_items = binding_set_items },
                 _binding_layout.get()
@@ -152,8 +143,8 @@ namespace fantasy
 
 		// Compute state.
 		{
-			_compute_state.binding_sets.push_back(_binding_set.Get());
-			_compute_state.pipeline = _pipeline.Get();
+			_compute_state.binding_sets.push_back(_binding_set.get());
+			_compute_state.pipeline = _pipeline.get();
 		}
  
 		return true;
@@ -163,28 +154,15 @@ namespace fantasy
 	{
 		ReturnIfFalse(cmdlist->open());
 
-		// Update constant.
-		{
-			_pass_constant;
-			ReturnIfFalse(cmdlist->write_buffer(_pass_constant_buffer.Get(), &_pass_constant, sizeof(constant::AerialLUTPassConstant)));
-		}
-
-		if (!_resource_writed)
-		{
-			_resource_writed = true;
-		}
-
-
 		Vector2I thread_group_num = {
-			static_cast<uint32_t>((Align(OutputTextureRes.x, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
-			static_cast<uint32_t>((Align(OutputTextureRes.y, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
+			static_cast<uint32_t>((Align(_texture_resolution.x, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
+			static_cast<uint32_t>((Align(_texture_resolution.y, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
 		};
 
-		ReturnIfFalse(cmdlist->set_compute_state(ComputeState));
+		ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
 		ReturnIfFalse(cmdlist->dispatch(thread_group_num.x, thread_group_num.y));
 
 		ReturnIfFalse(cmdlist->close());
-		return true;
 	}
 }
 

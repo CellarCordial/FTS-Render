@@ -1,4 +1,4 @@
-#include "VulkanBase.h"
+#include "vulkan_base.h"
 #include "../source/core/tools/log.h"
 #include "glfw3.h"
 #include <minwindef.h>
@@ -67,7 +67,6 @@ namespace fantasy
 		uint32_t glfw_extension_count = 0;
 		const CHAR** glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
 		_extensions.insert(_extensions.end(), glfw_extensions, glfw_extensions + glfw_extension_count);
-		// _extensions.push_back("VK_KHR_SWAPCHAIN_EXTENSION_NAME");
 
 #ifdef DEBUG
 		_extensions.push_back("VK_EXT_debug_utils");

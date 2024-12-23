@@ -2,9 +2,6 @@
 #define RHI_COMMAND_LIST_H
 
 #include "draw.h"
-#if RAY_TRACING
-#include "ray_tracing.h"
-#endif
 namespace fantasy
 {
     enum class CommandQueueType : uint8_t
@@ -143,9 +140,8 @@ namespace fantasy
             uint32_t mip_level
         ) = 0;
 
-#if RAY_TRACING
 		virtual bool set_ray_tracing_state(const ray_tracing::PipelineState& state) = 0;
-		virtual bool dispatch_rays(const ray_tracing::FDispatchRaysArguments& arguments) = 0;
+		virtual bool dispatch_rays(const ray_tracing::DispatchRaysArguments& arguments) = 0;
 
 		virtual bool build_bottom_level_accel_struct(
             ray_tracing::AccelStructInterface* accel_struct,
@@ -159,7 +155,6 @@ namespace fantasy
         ) = 0;
 
 		virtual bool set_accel_struct_state(ray_tracing::AccelStructInterface* accel_struct, ResourceStates state) = 0;
-#endif        
 
         virtual DeviceInterface* get_deivce() = 0;
         virtual CommandListDesc get_desc() = 0;

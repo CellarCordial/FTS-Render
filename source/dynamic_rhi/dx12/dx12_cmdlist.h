@@ -208,9 +208,8 @@ namespace fantasy
 		CommandListDesc get_desc() override;
         void* get_native_object() override;
 
-#ifdef RAY_TRACING
         bool set_ray_tracing_state(const ray_tracing::PipelineState& state) override;
-		bool dispatch_rays(const ray_tracing::FDispatchRaysArguments& arguments) override;
+		bool dispatch_rays(const ray_tracing::DispatchRaysArguments& arguments) override;
 
 		bool build_bottom_level_accel_struct(
             ray_tracing::AccelStructInterface* accel_struct,
@@ -226,9 +225,7 @@ namespace fantasy
 		bool set_accel_struct_state(ray_tracing::AccelStructInterface* accel_struct, ResourceStates state) override;
 
 
-        ray_tracing::ShaderTableState* get_shaderTableState(ray_tracing::ShaderTableInterface* shader_table);
-#endif
-
+        ray_tracing::DX12ShaderTableState* get_shaderTableState(ray_tracing::ShaderTableInterface* shader_table);
 
         bool allocate_upload_buffer(uint64_t size, uint8_t** cpu_address, D3D12_GPU_VIRTUAL_ADDRESS* gpu_address);
 
@@ -258,6 +255,7 @@ namespace fantasy
         void clear_state_cache();
         bool bind_graphics_pipeline(GraphicsPipelineInterface* graphics_pipeline, bool update_root_signature) const;
         std::shared_ptr<DX12InternalCommandList> create_internal_cmdlist() const;
+        ray_tracing::DX12ShaderTableState* get_shader_tabel_state(ray_tracing::ShaderTableInterface* shader_table);
 
         struct VolatileConstantBufferBinding
         {
@@ -295,14 +293,12 @@ namespace fantasy
         bool _current_graphics_state_valid = false;
         bool _current_compute_state_valid = false;
 
-#ifdef RAY_TRACING
+        // Ray tracing
         DX12UploadManager _dx12_scratch_manager;
-
         ray_tracing::PipelineState _current_ray_tracing_state;
         bool _current_ray_tracing_state_valid = false;
+        std::unordered_map<ray_tracing::ShaderTableInterface*, std::unique_ptr<ray_tracing::DX12ShaderTableState>> _shader_table_states;
 
-        std::unordered_map<ray_tracing::ShaderTableInterface*, std::unique_ptr<ray_tracing::ShaderTableState>> _shader_table_states;
-#endif
 
         ID3D12DescriptorHeap* _current_srv_etc_heap = nullptr;
         ID3D12DescriptorHeap* _current_sampler_heap = nullptr;

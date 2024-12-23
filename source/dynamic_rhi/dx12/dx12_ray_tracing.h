@@ -1,26 +1,25 @@
 #ifndef RHI_DX12_RAY_TRACING_H
 #define RHI_DX12_RAY_TRACING_H
 
+#include <cstdint>
 #include <d3d12.h>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <wrl/client.h>
 
-#if RAY_TRACING
-#include "../ray_tracing.h"
 #include "dx12_descriptor.h"
 
 namespace fantasy
 {
 	namespace ray_tracing
 	{
-		struct ShaderTableState
+		struct DX12ShaderTableState
 		{
-			uint32_t dwCommittedVersion = 0;
-			ID3D12DescriptorHeap* pDescriptorHeapSRV = nullptr;
-			ID3D12DescriptorHeap* pDescriptorHeapSamplers = nullptr;
-			D3D12_DISPATCH_RAYS_DESC DispatchRaysDesc = {};
+			uint32_t committed_version = 0;
+			ID3D12DescriptorHeap* d3d12_descriptor_heap_srv = nullptr;
+			ID3D12DescriptorHeap* d3d12_descriptor_heap_samplers = nullptr;
+			D3D12_DISPATCH_RAYS_DESC d3d12_dispatch_rays_desc = {};
 		};
 
 		struct DX12ExportTableEntry
@@ -97,10 +96,10 @@ namespace fantasy
 			std::unique_ptr<BufferInterface> _data_buffer;
 		};
 
-		class ShaderTable : public ShaderTableInterface
+		class DX12ShaderTable : public ShaderTableInterface
 		{
 		public:
-			ShaderTable(const DX12Context* context, PipelineInterface* pipeline);
+			DX12ShaderTable(const DX12Context* context, PipelineInterface* pipeline);
 
 			bool initalize() { return true; }
 
@@ -114,11 +113,6 @@ namespace fantasy
 			void clear_callable_shaders() override;
 			PipelineInterface* get_pipeline() const override { return _pipeline; }
 
-		private:
-			bool verify_export(const DX12ExportTableEntry* export_name, BindingSetInterface* binding_set) const;
-
-		private:
-			const DX12Context* _context;
 			
 			struct ShaderEntry
 			{
@@ -126,13 +120,20 @@ namespace fantasy
 				const void* shader_identifier = nullptr;
 			};
 
+			uint32_t get_entry_count() const;
 			uint32_t _version = 0;
-
-			PipelineInterface* _pipeline;
 			ShaderEntry _raygen_shader;
 			std::vector<ShaderEntry> _hit_groups;
 			std::vector<ShaderEntry> _miss_shaders;
 			std::vector<ShaderEntry> _callable_shaders;
+
+		private:
+			bool verify_export(const DX12ExportTableEntry* export_name, BindingSetInterface* binding_set) const;
+
+		private:
+			const DX12Context* _context;
+
+			PipelineInterface* _pipeline;
 		};
 
 
@@ -155,6 +156,8 @@ namespace fantasy
 			const DX12ExportTableEntry* get_export(const char* name);
 			uint32_t get_shaderTableEntrySize() const;
 		
+			std::unique_ptr<DX12RootSignature> _global_root_signature;
+
 		private:
 			const DX12Context* _context;
 
@@ -162,14 +165,11 @@ namespace fantasy
 			uint32_t _max_local_root_parameter_count = 0;
 			std::unordered_map<BindingLayoutInterface*, std::unique_ptr<DX12RootSignature>> _local_binding_roots;
 			std::unordered_map<std::string, DX12ExportTableEntry> export_names;
-			std::unique_ptr<DX12RootSignature> _global_root_signature;
 			Microsoft::WRL::ComPtr<ID3D12StateObject> _d3d12_state_object;
 			Microsoft::WRL::ComPtr<ID3D12StateObjectProperties> _d3d12_state_object_properties;
 		};
 	}
 
 }
-
-#endif
 
 #endif

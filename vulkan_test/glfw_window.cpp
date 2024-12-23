@@ -1,4 +1,4 @@
-#include "GlfwWindow.h"
+#include "glfw_window.h"
 #include "../source/core/tools/log.h"
 
 

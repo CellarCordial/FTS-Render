@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 
-#include "GlfwWindow.h"
+#include "glfw_window.h"
 #include "../source/core/math/common.h"
 
 namespace fantasy

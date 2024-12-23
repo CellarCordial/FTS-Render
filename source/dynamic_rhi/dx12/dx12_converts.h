@@ -6,9 +6,6 @@
 #include "dx12_forward.h"
 #include <d3d12.h>
 
-#ifdef RAY_TRACING
-#include "../ray_tracing.h"
-#endif
 
 namespace fantasy
 {
@@ -51,8 +48,6 @@ namespace fantasy
 
     D3D12_CLEAR_VALUE convert_clear_value(const TextureDesc& desc);
 
-
-#ifdef RAY_TRACING
     namespace ray_tracing 
     {
         D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS convert_accel_struct_build_flags(AccelStructBuildFlags Flags);
@@ -60,7 +55,6 @@ namespace fantasy
         D3D12_RAYTRACING_INSTANCE_FLAGS convert_instance_flags(InstanceFlags Flags);
         D3D12_RAYTRACING_INSTANCE_DESC convert_instance_desc(const InstanceDesc& crInstanceDesc);
     }
-#endif
 }
 
 

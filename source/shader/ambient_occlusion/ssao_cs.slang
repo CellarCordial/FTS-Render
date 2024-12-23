@@ -1,6 +1,6 @@
 #define THREAD_GROUP_NUM_X 1
 #define THREAD_GROUP_NUM_Y 1
-#define TEMPORAL
+// #define TEMPORAL
 
 cbuffer pass_constants : register(b0)
 {
@@ -19,9 +19,9 @@ cbuffer pass_constants : register(b0)
 Texture2D<float3> view_space_position_texture : register(t0);
 Texture2D<float3> view_space_normal_texture : register(t1);
 Texture2D<float3> tangent_noise_texture : register(t2);
-SamplerState sampler : register(s0);
+SamplerState sampler0 : register(s0);
 
-StructuredBuffer<float3> tangent_space_sample_dirs : register(t3);
+StructuredBuffer<float3> _tangent_space_sample_dirs_buffer : register(t3);
 
 #ifdef TEMPORAL
 Texture2D<float3> view_space_view_space_velocity_texture : register(t4);
@@ -56,13 +56,13 @@ void compute_shader(uint3 thread_id: SV_Dispatchthread_id)
     float occlusion_sum = 0.0f;
     for (uint ix = 0; ix < sample_num; ++ix)
     {
-        float3 view_space_sample_dir = mul(tangent_space_sample_dirs[ix], TBN);
+        float3 view_space_sample_dir = mul(_tangent_space_sample_dirs_buffer[ix], TBN);
         float3 view_space_sample_position = view_space_position + view_space_sample_dir * sample_radius;
 
         float4 proj_space_sample_position = mul(float4(view_space_sample_position, 1.0f), proj_matrix);
         float2 sample_position_uv = ((proj_space_sample_position.xy / proj_space_sample_position.w) * float2(0.5f, -0.5f) + 0.5f);
 
-        float sample_depth = view_space_position_texture.Sample(sampler, sample_position_uv).z;
+        float sample_depth = view_space_position_texture.Sample(sampler0, sample_position_uv).z;
         float range_check = smoothstep(0.0f, 1.0f, sample_radius / abs(view_space_position.z - sample_depth));
 
         occlusion_sum += (sample_depth <= view_space_sample_position.z + sample_bias ? 1.0f : 0.0f) * range_check;
@@ -95,7 +95,7 @@ void compute_shader(uint3 thread_id: SV_Dispatchthread_id)
     }
 
     // 若 (Func0) 或 (Func1) 达成条件, 则舍弃之前积累的 Occlusion. (Occlusion.y = n_t(p) / n_max)
-    float2 history_occlusition = history_ssao_texture.Sample(sampler, history_uv);
+    float2 history_occlusition = history_ssao_texture.Sample(sampler0, history_uv);
     history_occlusition.y *= discard_history_sample_accumulation ? 0 : max_sample_num;
 
     // n_{t+1}(p) = min(n_t(p) + k * n_max)

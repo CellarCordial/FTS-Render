@@ -387,6 +387,7 @@ namespace fantasy
         bool is_index_buffer = false;
         bool is_constant_buffer = false;
         bool is_shader_binding_table = false;
+        bool is_accel_struct_storage = false;
 
 
         bool is_virtual = false;
@@ -396,10 +397,6 @@ namespace fantasy
         CpuAccessMode cpu_access = CpuAccessMode::None;
 
         uint32_t ma_versions = 0; // 仅在 Vulkan 的 volatile 缓冲区中有效，表示最大版本数，必须为非零值
-
-#ifdef RAY_TRACING
-        bool is_accel_struct_storage = false;
-#endif
 
         static BufferDesc create_constant(uint64_t byte_size, bool is_volatile = true, std::string name = "")
         {
@@ -462,7 +459,7 @@ namespace fantasy
             ret.name = name;
             return ret;
         }
-#ifdef RAY_TRACING
+
         static BufferDesc create_accel_struct(uint64_t byte_size, bool is_top_level, std::string name = "")
         {
             BufferDesc ret;
@@ -473,7 +470,6 @@ namespace fantasy
             ret.name = name;
             return ret;
         }
-#endif
     };
 
     struct BufferRange

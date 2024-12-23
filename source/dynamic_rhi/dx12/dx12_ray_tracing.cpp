@@ -1,12 +1,12 @@
 #include "dx12_converts.h"
 #include <combaseapi.h>
+#include <cstdint>
 #include <d3d12.h>
 #include <memory>
 #include <rpcndr.h>
 #include <string>
 #include <unordered_map>
 #include <winnt.h>
-#if RAY_TRACING
 #include "dx12_ray_tracing.h"
 #include "dx12_resource.h"
 #include "dx12_pipeline.h"
@@ -122,13 +122,13 @@ namespace fantasy
 			return PreBuildInfo;
 		}
 
-		ShaderTable::ShaderTable(const DX12Context* context, PipelineInterface* pipeline) : 
+		DX12ShaderTable::DX12ShaderTable(const DX12Context* context, PipelineInterface* pipeline) : 
 			_context(context), _pipeline(pipeline)
 		{
 		}
 
 
-		void ShaderTable::set_raygen_shader(const char* name, BindingSetInterface* binding_set)
+		void DX12ShaderTable::set_raygen_shader(const char* name, BindingSetInterface* binding_set)
 		{
 			DX12Pipeline* dx12_pipeline = check_cast<DX12Pipeline*>(_pipeline);
 
@@ -141,7 +141,7 @@ namespace fantasy
 			}
 		}
 
-		int32_t ShaderTable::add_miss_shader(const char* name, BindingSetInterface* binding_set)
+		int32_t DX12ShaderTable::add_miss_shader(const char* name, BindingSetInterface* binding_set)
 		{
 			DX12Pipeline* dx12_pipeline = check_cast<DX12Pipeline*>(_pipeline);
 
@@ -159,7 +159,7 @@ namespace fantasy
 			return -1;
 		}
 
-		int32_t ShaderTable::add_hit_group(const char* name, BindingSetInterface* binding_set)
+		int32_t DX12ShaderTable::add_hit_group(const char* name, BindingSetInterface* binding_set)
 		{
 			DX12Pipeline* dx12_pipeline = check_cast<DX12Pipeline*>(_pipeline);
 
@@ -177,7 +177,7 @@ namespace fantasy
 			return -1;
 		}
 
-		int32_t ShaderTable::add_callable_shader(const char* name, BindingSetInterface* binding_set)
+		int32_t DX12ShaderTable::add_callable_shader(const char* name, BindingSetInterface* binding_set)
 		{
 			DX12Pipeline* dx12_pipeline = check_cast<DX12Pipeline*>(_pipeline);
 
@@ -195,25 +195,25 @@ namespace fantasy
 			return -1;
 		}
 
-		void ShaderTable::clear_miss_shaders()
+		void DX12ShaderTable::clear_miss_shaders()
 		{
 			_miss_shaders.clear();
 			_version++;
 		}
 
-		void ShaderTable::clear_hit_groups()
+		void DX12ShaderTable::clear_hit_groups()
 		{
 			_hit_groups.clear();
 			_version++;
 		}
 
-		void ShaderTable::clear_callable_shaders()
+		void DX12ShaderTable::clear_callable_shaders()
 		{
 			_callable_shaders.clear();
 			_version++;
 		}
 
-		bool ShaderTable::verify_export(const DX12ExportTableEntry* export_name, BindingSetInterface* binding_set) const
+		bool DX12ShaderTable::verify_export(const DX12ExportTableEntry* export_name, BindingSetInterface* binding_set) const
 		{
 			if (!export_name)
 			{
@@ -539,7 +539,7 @@ namespace fantasy
 
 		ShaderTableInterface* DX12Pipeline::create_shader_table()
 		{
-			ShaderTable* shader_table = new ShaderTable(_context, this);
+			DX12ShaderTable* shader_table = new DX12ShaderTable(_context, this);
 			if (!shader_table->initalize())
 			{
 				delete shader_table;
@@ -564,11 +564,12 @@ namespace fantasy
 			uint32_t required_size = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + sizeof(uint64_t) * _max_local_root_parameter_count;
 			return Align(required_size, uint32_t(D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
 		}
+		
+		uint32_t DX12ShaderTable::get_entry_count() const
+		{
+			return 1 + static_cast<uint32_t>(_miss_shaders.size() + _hit_groups.size() + _callable_shaders.size());
+		}
+
 	}
 
-
-		
 }
-
-
-#endif
