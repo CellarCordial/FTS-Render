@@ -108,10 +108,8 @@ namespace fantasy
         uint64_t execute_command_lists(CommandListInterface* const* cmdlists, uint64_t cmd_count = 1, CommandQueueType queue_type = CommandQueueType::Graphics) override;
         bool queue_wait_for_cmdlist(CommandQueueType WaitQueueType, CommandQueueType queue_type, uint64_t stInstance) override;
 
-#if RAY_TRACING
 		ray_tracing::PipelineInterface* create_ray_tracing_pipline(const ray_tracing::PipelineDesc& desc) override;
 		ray_tracing::AccelStructInterface* create_accel_struct(const ray_tracing::AccelStructDesc& desc) override;
-#endif
         
         void wait_for_idle() override;
         void collect_garbage() override;

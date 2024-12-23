@@ -990,6 +990,12 @@ namespace fantasy
             dx12_root_signature = dx12_compute_pipeline->dx12_root_signature.get();
             is_graphics = false;
         }
+        else if (_current_ray_tracing_state_valid && _current_ray_tracing_state.shader_table)
+        {
+            ray_tracing::DX12Pipeline* dx12_pipeline = check_cast<ray_tracing::DX12Pipeline*>(_current_ray_tracing_state.shader_table->get_pipeline());
+            dx12_root_signature = dx12_pipeline->_global_root_signature.get();
+            is_graphics = false;
+        }
 
 		ReturnIfFalse(dx12_root_signature && dx12_root_signature->push_constant_size == byte_size);
 
@@ -1373,6 +1379,14 @@ namespace fantasy
             case ResourceViewType::ConstantBuffer:
                 {
                     ReturnIfFalse(set_buffer_state(check_cast<BufferInterface*>(binding.resource.get()), ResourceStates::ConstantBuffer));
+                    break;
+                }
+            case ResourceViewType::AccelStruct:
+                {
+                    ReturnIfFalse(set_buffer_state(
+                        check_cast<ray_tracing::DX12AccelStruct*>(binding.resource.get())->get_buffer(), 
+                        ResourceStates::AccelStructRead
+                    ));
                     break;
                 }
             default: break;

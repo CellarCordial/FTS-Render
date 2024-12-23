@@ -109,7 +109,7 @@ namespace fantasy
 
 		_global_entity->assign<SceneGrid>();
 		_global_entity->assign<event::GenerateSdf>();
-		_global_entity->assign<event::UpdateGBuffer>();
+		_global_entity->assign<event::ModelLoaded>();
 		_global_entity->assign<event::UpdateGlobalSdf>();
 		_global_entity->assign<event::GenerateSurfaceCache>();
 
@@ -166,7 +166,7 @@ namespace fantasy
 
 			if (model_entity && parallel::thread_finished(thread_id) && parallel::thread_success(thread_id))
 			{
-				ReturnIfFalse(_global_entity->get_component<event::UpdateGBuffer>()->broadcast());
+				ReturnIfFalse(_global_entity->get_component<event::ModelLoaded>()->broadcast());
 				// ReturnIfFalse(_global_entity->get_component<event::GenerateSdf>()->broadcast(model_entity));
 				// ReturnIfFalse(_global_entity->get_component<event::GenerateSurfaceCache>()->Broadcast(pModelEntity));
 

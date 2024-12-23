@@ -286,6 +286,8 @@ namespace fantasy
 		_device->collect_garbage();
         _present_func();
 
+		_resource_cache->frame_index++;
+
         return true;
     }
 

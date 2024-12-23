@@ -613,7 +613,6 @@ namespace fantasy
         return true;
     }
 
-#if RAY_TRACING
 	ray_tracing::PipelineInterface* DX12Device::create_ray_tracing_pipline(const ray_tracing::PipelineDesc& desc)
 	{
         ray_tracing::DX12Pipeline* dx12_pipeline = new ray_tracing::DX12Pipeline(&_context);
@@ -663,8 +662,6 @@ namespace fantasy
         }
 		return dx12_accel_struct;
 	}
-
-#endif
 
 	void DX12Device::wait_for_idle()
     {

@@ -19,6 +19,7 @@ namespace fantasy
         float intensity = 5.0f;
         Vector3F direction;
         Vector2F angle = { 0.0f, 11.6f };
+        float sun_angular_radius = 0.9999f;
 
         Matrix4x4 view_proj;
     };

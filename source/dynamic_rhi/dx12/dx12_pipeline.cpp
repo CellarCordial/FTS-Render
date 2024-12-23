@@ -1,4 +1,5 @@
 ﻿#include "dx12_pipeline.h"
+#include "dx12_ray_tracing.h"
 #include "dx12_resource.h"
 #include "dx12_converts.h"
 #include <cassert>
@@ -35,8 +36,14 @@ namespace fantasy
         type1 = get_normalized_resource_type(type1);
         type2 = get_normalized_resource_type(type2);
 
-        if (type1 == ResourceViewType::TypedBuffer_SRV && type2 == ResourceViewType::Texture_SRV ||
-            type2 == ResourceViewType::TypedBuffer_SRV && type1 == ResourceViewType::Texture_SRV)
+        if (
+            type1 == ResourceViewType::TypedBuffer_SRV && type2 == ResourceViewType::Texture_SRV ||
+            type2 == ResourceViewType::TypedBuffer_SRV && type1 == ResourceViewType::Texture_SRV ||
+            type1 == ResourceViewType::TypedBuffer_SRV && type2 == ResourceViewType::AccelStruct ||
+            type1 == ResourceViewType::Texture_SRV && type2 == ResourceViewType::AccelStruct ||
+            type2 == ResourceViewType::TypedBuffer_SRV && type1 == ResourceViewType::AccelStruct ||
+            type2 == ResourceViewType::Texture_SRV && type1 == ResourceViewType::AccelStruct 
+        )
             return true;
 
         if (type1 == ResourceViewType::TypedBuffer_UAV && type2 == ResourceViewType::Texture_UAV ||
@@ -211,6 +218,7 @@ namespace fantasy
                     case ResourceViewType::TypedBuffer_SRV:
                     case ResourceViewType::StructuredBuffer_SRV:
                     case ResourceViewType::RawBuffer_SRV:
+                    case ResourceViewType::AccelStruct:
                         range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
                         break;
 
@@ -352,6 +360,7 @@ namespace fantasy
             case ResourceViewType::TypedBuffer_SRV:
             case ResourceViewType::StructuredBuffer_SRV:
             case ResourceViewType::RawBuffer_SRV:
+            case ResourceViewType::AccelStruct:
                 range.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
                 break;
 
@@ -799,6 +808,17 @@ namespace fantasy
                             found = true;
                             break;
                         }
+                        else if (type == ResourceViewType::AccelStruct && range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV)
+                        {
+                            ray_tracing::DX12AccelStruct* accel_struct = check_cast<ray_tracing::DX12AccelStruct*>(binding.resource.get());
+                            accel_struct->create_srv(d3d12_descriptor_handle.ptr);
+                            resource = binding.resource;
+
+                            bindings_which_need_transition.push_back(static_cast<uint16_t>(jx));
+
+                            found = true;
+                            break;
+                        }
                         else
                         {
                             continue;
@@ -913,6 +933,12 @@ namespace fantasy
 			dx12_buffer->create_cbv(descriptor_handle.ptr, item.range);
 			break;
 		}
+        case ResourceViewType::AccelStruct: 
+        {
+            ray_tracing::DX12AccelStruct* accel_struct = check_cast<ray_tracing::DX12AccelStruct*>(item.resource.get());
+            accel_struct->create_srv(descriptor_handle.ptr);
+            break;
+        }
 
 		case ResourceViewType::VolatileConstantBuffer:
 			assert(!"Attempted to bind a volatile constant buffer to a bindless set.");

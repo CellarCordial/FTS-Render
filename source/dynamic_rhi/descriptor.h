@@ -32,6 +32,8 @@ namespace fantasy
         ConstantBuffer,         // static
         VolatileConstantBuffer, // volatile
 
+        AccelStruct,
+
         Sampler,
         PushConstants,
 
@@ -172,6 +174,14 @@ namespace fantasy
             ret.slot = slot;
             ret.type = ResourceViewType::PushConstants;
             ret.size = dwByteSize;
+            return ret;
+        }
+
+        static BindingLayoutItem create_accel_struct(uint32_t slot)
+        {
+            BindingLayoutItem ret;
+            ret.slot = slot;
+            ret.type = ResourceViewType::AccelStruct;
             return ret;
         }
     };
@@ -427,6 +437,17 @@ namespace fantasy
             ret.range.byte_offset = 0;
             ret.range.byte_size = dwByteSize;
             ret.pad = 0;
+            return ret;
+        }
+
+        static BindingSetItem create_accel_struct(uint32_t slot, std::shared_ptr<ray_tracing::AccelStructInterface> accel_struct)
+        {
+            BindingSetItem ret;
+            ret.slot = slot;
+            ret.type = ResourceViewType::AccelStruct;
+            ret.resource = accel_struct;
+            ret.format = Format::UNKNOWN;
+            ret.dimension = TextureDimension::Unknown;
             return ret;
         }
 

@@ -1,5 +1,3 @@
-/*--------------------------------------- Graphics Pass -----------------------------------------------*/
-
 #ifndef RENDER_PASS_H
 #define RENDER_PASS_H
  
@@ -53,6 +51,7 @@ namespace fantasy
 
 #include ".h"
 #include "../../shader/shader_compiler.h"
+#include "../../core/tools/check_cast.h"
 
 namespace fantasy
 {

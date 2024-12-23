@@ -66,15 +66,15 @@ target("FTS-Render")
     )
     after_build(
         function (target)
-            local DllFiles = {
+            local dll_files = {
                 "$(projectdir)/external/glfw-3.4.bin.WIN64/lib-static-ucrt/glfw3.dll",
                 "$(projectdir)/external/DirectXShaderCompiler/bin/x64/dxil.dll",
                 "$(projectdir)/external/DirectXShaderCompiler/bin/x64/dxcompiler.dll",
                 "$(projectdir)/external/slang/bin/slang.dll"
             }
 
-            for _, File in ipairs(DllFiles) do
-                os.cp(File, target:targetdir())
+            for _, file in ipairs(dll_files) do
+                os.cp(file, target:targetdir())
             end
         end
     )

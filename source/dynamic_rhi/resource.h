@@ -3,10 +3,13 @@
 
 #include "format.h"
 #include "forward.h"
+#include <cassert>
 #include <cstdint>
+#include <memory>
+#include <vector>
 #include <windows.h>
 #include <string>
-#include "../core/math/common.h"
+#include "../core/math/matrix.h"
 
 namespace fantasy
 {
@@ -582,6 +585,204 @@ namespace fantasy
         
 		virtual ~SamplerInterface() = default;
     };
+
+
+    namespace ray_tracing
+    {
+                // Forward declaration.
+        struct ShaderTableInterface;
+
+
+        enum class GeometryFlags : uint8_t
+        {
+            None = 0,
+            Opaque = 1,
+            NoDuplicateAnyHitInvocation = 2
+        };
+        ENUM_CLASS_FLAG_OPERATORS(GeometryFlags);
+
+        enum class GeometryType : uint8_t
+        {
+            Triangle,
+            BoundingBox
+        };
+
+        struct GeometryTriangles
+        {
+            std::shared_ptr<BufferInterface> index_buffer;
+            std::shared_ptr<BufferInterface> vertex_buffer;
+            Format index_format = Format::R32_UINT;
+            Format vertex_format = Format::RGB32_FLOAT;
+            uint64_t index_count = 0;
+            uint64_t index_offset = 0;
+            uint64_t vertex_count = 0;
+            uint64_t vertex_offset = 0;
+            uint32_t vertex_stride = 0;
+
+            GeometryTriangles(
+                const std::shared_ptr<BufferInterface>& in_index_buffer, 
+                const std::shared_ptr<BufferInterface>& in_vertex_buffer,
+                uint32_t in_vertex_stride,
+                uint64_t in_index_offset = 0,
+                uint64_t in_vertex_offset = 0
+            ) :
+                index_buffer(in_index_buffer), vertex_buffer(in_vertex_buffer),
+                index_offset(in_index_offset), vertex_offset(in_vertex_offset),
+                vertex_stride(in_vertex_stride)
+            {
+                const auto& index_buffer_desc = index_buffer->get_desc();
+                const auto& vertex_buffer_desc = vertex_buffer->get_desc();
+                index_format = index_buffer_desc.format;
+                vertex_format = vertex_buffer_desc.format;
+                index_count = index_buffer_desc.byte_size / sizeof(uint32_t);
+                vertex_count = vertex_buffer_desc.byte_size / vertex_stride;
+
+                assert(index_format == Format::R32_UINT);
+            }
+        };
+
+        struct GeometryBoundingBoxes
+        {
+            std::shared_ptr<BufferInterface> buffer;		
+            std::shared_ptr<BufferInterface> unused_buffer;
+            uint64_t offset = 0;
+            uint32_t count = 0;
+            uint32_t stride = 0;
+        };
+
+
+        struct GeometryDesc
+        {
+            GeometryFlags flags = GeometryFlags::None;
+            GeometryType type = GeometryType::Triangle;
+
+            union 
+            {
+                GeometryTriangles triangles;
+                GeometryBoundingBoxes aabbs;
+            };
+
+            bool use_transform = false;
+            Matrix3x4 affine_matrix;
+
+
+
+            explicit GeometryDesc(const GeometryTriangles& in_triangles, GeometryFlags in_flags = GeometryFlags::None) :
+                triangles(in_triangles), type(GeometryType::Triangle), flags(in_flags)
+            {
+            }
+
+            explicit GeometryDesc(const GeometryBoundingBoxes& in_aabbs, GeometryFlags in_flags = GeometryFlags::None) :
+                aabbs(in_aabbs), type(GeometryType::BoundingBox), flags(in_flags)
+            {
+            }
+
+            GeometryDesc(const GeometryDesc& other) :
+                flags(other.flags), 
+                type(other.type),
+                use_transform(other.use_transform),
+                affine_matrix(other.affine_matrix)
+            {
+                if (type == GeometryType::Triangle) triangles = other.triangles;
+                else if (type == GeometryType::BoundingBox) aabbs = other.aabbs;
+            }
+
+            GeometryDesc& operator=(const GeometryDesc& other)
+            {
+                if (this != &other) 
+                {
+                    flags = other.flags;
+                    type = other.type;
+                    
+                    use_transform = other.use_transform;
+                    affine_matrix = other.affine_matrix;
+
+                    if (type == GeometryType::Triangle) triangles = other.triangles;
+                    else if (type == GeometryType::BoundingBox) aabbs = other.aabbs;
+                }
+
+                return *this;
+            }
+
+            ~GeometryDesc()
+            {
+                if (type == GeometryType::Triangle)
+                {
+                    triangles.index_buffer.reset();
+                    triangles.vertex_buffer.reset();
+                }
+                else if (type == GeometryType::BoundingBox)
+                {
+                    aabbs.buffer.reset();
+                    aabbs.unused_buffer.reset();
+                }
+            }
+        };
+
+        enum class InstanceFlags : uint8_t
+        {
+            None							= 0,
+            TriangleCullDisable				= 1,
+            TriangleFrontCounterclockwise	= 1 << 1,
+            ForceOpaque						= 1 << 2,
+            ForceNonOpaque					= 1 << 3,
+        };
+        ENUM_CLASS_FLAG_OPERATORS(InstanceFlags);
+
+        struct AccelStructInterface;
+
+        struct InstanceDesc
+        {
+            Matrix3x4 affine_matrix;
+
+            uint32_t instance_id : 24 = 0;
+            uint32_t instance_mask : 8 = 0;
+
+            uint32_t instance_contibution_to_hit_group_index : 24 = 0;
+            InstanceFlags flags : 8 = InstanceFlags::None;
+            
+            union 
+            {
+                AccelStructInterface* bottom_level_accel_struct = nullptr;
+                size_t blas_device_address;
+            };
+        };
+
+        enum class AccelStructBuildFlags : uint8_t
+        {
+            None				= 0,
+            AllowUpdate			= 1,
+            AllowCompaction		= 1 << 1,
+            PreferFastTrace		= 1 << 2,
+            PreferFastBuild		= 1 << 3,
+            MinimizeMemory		= 1 << 4,
+            PerformUpdate		= 1 << 5
+        };
+        ENUM_CLASS_FLAG_OPERATORS(AccelStructBuildFlags);
+
+        struct AccelStructDesc
+        {
+            std::string name;
+
+            bool is_virtual = false;
+            bool is_top_level = false;
+            uint64_t top_level_max_instance_num = 1;
+            std::vector<GeometryDesc> bottom_level_geometry_descs;
+
+            AccelStructBuildFlags flags = AccelStructBuildFlags::None;
+        };
+
+        
+        struct AccelStructInterface : ResourceInterface
+        {
+            virtual const AccelStructDesc& get_desc() const = 0;
+            virtual MemoryRequirements get_memory_requirements() = 0;
+            virtual bool bind_memory(HeapInterface* heap, uint64_t offset = 0) = 0;
+            virtual BufferInterface* get_buffer() const = 0;
+
+            virtual ~AccelStructInterface() = default;
+        };
+    }
 
 
     inline uint32_t calculate_texture_subresource(

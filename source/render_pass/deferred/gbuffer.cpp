@@ -11,8 +11,8 @@ namespace fantasy
 {
 	bool GBufferPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
-        cache->get_world()->each<event::UpdateGBuffer>(
-            [this](Entity* entity, event::UpdateGBuffer* event) -> bool 
+        cache->get_world()->each<event::ModelLoaded>(
+            [this](Entity* entity, event::ModelLoaded* event) -> bool 
             {
 				event->add_event([this]() { _update_gbuffer = true; return true;});
                 return true;

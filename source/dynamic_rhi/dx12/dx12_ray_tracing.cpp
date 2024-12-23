@@ -80,6 +80,18 @@ namespace fantasy
 			return ret;
 		}
 
+		void DX12AccelStruct::create_srv(size_t descriptor) const
+		{
+			D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+			srvDesc.Format = DXGI_FORMAT_UNKNOWN;
+			srvDesc.ViewDimension = D3D12_SRV_DIMENSION_RAYTRACING_ACCELERATION_STRUCTURE;
+			srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+			srvDesc.RaytracingAccelerationStructure.Location = 
+				reinterpret_cast<ID3D12Resource*>(_data_buffer->get_native_object())->GetGPUVirtualAddress();
+
+			_context->device->CreateShaderResourceView(nullptr, &srvDesc, { descriptor });
+		}
+
 		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO DX12AccelStruct::get_accel_struct_prebuild_info()
 		{
 			DX12AccelStructBuildInputs dx12_accle_struct_bulid_inputs;

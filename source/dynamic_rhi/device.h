@@ -58,10 +58,8 @@ namespace fantasy
             CommandQueueType queue_type = CommandQueueType::Graphics
         ) = 0;
 
-#if RAY_TRACING
 		virtual ray_tracing::PipelineInterface* create_ray_tracing_pipline(const ray_tracing::PipelineDesc& desc) = 0;
 		virtual ray_tracing::AccelStructInterface* create_accel_struct(const ray_tracing::AccelStructDesc& desc) = 0;
-#endif
         
         virtual bool queue_wait_for_cmdlist(CommandQueueType WaitQueueType, CommandQueueType queue_type, uint64_t stInstance) = 0;
 

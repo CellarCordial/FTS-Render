@@ -6,7 +6,8 @@ namespace fantasy
 {
     bool RenderResourceCache::initialize() 
     {
-        ReturnIfFalse(world != nullptr);
+        ReturnIfFalse(_world != nullptr);
+        
         return true;
     }
 

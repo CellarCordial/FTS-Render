@@ -428,7 +428,7 @@ namespace fantasy
             ret.InstanceID = instance_desc.instance_id;
             ret.InstanceMask = instance_desc.instance_mask;
             ret.InstanceContributionToHitGroupIndex = instance_desc.instance_contibution_to_hit_group_index;
-            ret.AccelerationStructure = instance_desc.bias_device_address;
+            ret.AccelerationStructure = instance_desc.blas_device_address;
             ret.Flags = convert_instance_flags(instance_desc.flags);
             return ret;
         }

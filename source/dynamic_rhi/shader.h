@@ -21,7 +21,15 @@ namespace fantasy
         Geometry        = 1 << 5,
         Pixel           = 1 << 6,
 
-        All             = 1 << 7,
+        RayGeneration   = 1 << 7,
+        AnyHit          = 1 << 8,
+        ClosestHit      = 1 << 9,
+        Miss            = 1 << 10,
+        Intersection    = 1 << 11,
+        Callable        = 1 << 12,
+        RayTracing      = 1 << 13,
+
+        All             = 1 << 14,
     };
 
     struct ShaderDesc

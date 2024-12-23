@@ -80,6 +80,8 @@ namespace fantasy
 			MemoryRequirements get_memory_requirements() override;
 			bool bind_memory(HeapInterface* heap, uint64_t offset = 0) override;
 
+
+			void create_srv(size_t descriptor) const;
 			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO get_accel_struct_prebuild_info();
 			static DX12GeometryDesc convert_geometry_desc(const GeometryDesc& geometry_desc, D3D12_GPU_VIRTUAL_ADDRESS gpu_address);
 

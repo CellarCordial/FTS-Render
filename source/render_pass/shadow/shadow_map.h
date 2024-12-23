@@ -1,7 +1,7 @@
 #ifndef RENDER_PASS_SHADOW_MAP_H
 #define RENDER_PASS_SHADOW_MAP_H
 
-#include "../../render_graph/render_graph.h"
+#include "../../render_graph/render_pass.h"
 #include "../../core/math/matrix.h"
 #include "../../scene/geometry.h"
 #include <memory>
