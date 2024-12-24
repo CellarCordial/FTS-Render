@@ -109,7 +109,7 @@ namespace fantasy
 		void bounding_sphere(Vector2<T>* pCenter, float* pfRadius)
 		{
 			*pCenter = (_min + _max) / 2;
-			*pfRadius = inside(*pCenter, *this) ? Distance(*pCenter, _max) : 0;
+			*pfRadius = inside(*pCenter, *this) ? distance(*pCenter, _max) : 0;
 		}
 		
 		Vector2<T> _min, _max;
@@ -278,7 +278,7 @@ namespace fantasy
 		void bounding_sphere(Vector3<T>* center, float* out_radius) const
 		{
 			*center = (_lower + _upper) / 2;
-			*out_radius = inside(*center, *this) ? Distance(*center, _upper) : 0;
+			*out_radius = inside(*center, *this) ? distance(*center, _upper) : 0;
 		}
 
 		

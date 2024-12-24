@@ -38,7 +38,6 @@ namespace fantasy
         Iterator operator[](uint32_t index);
 
     private:
-
         uint32_t _hash_mask;
         std::vector<uint32_t> _hash;
         std::vector<uint32_t> _next_index;

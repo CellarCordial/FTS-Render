@@ -370,7 +370,7 @@ namespace fantasy
 
 					if (ImGui::TreeNode("Aerial LUT Pass"))
 					{
-						ImGui::SliderFloat("max Aerial Distance", &_aerial_lut_pass->_pass_constant.max_aerial_distance, 100.0f, 5000.0f);
+						ImGui::SliderFloat("max Aerial distance", &_aerial_lut_pass->_pass_constant.max_aerial_distance, 100.0f, 5000.0f);
 						ImGui::SliderInt("Per Slice March Step Count", &_aerial_lut_pass->_pass_constant.per_slice_march_step_count, 1, 100);
 
 						_atmosphere_debug_pass->_pass_constant1.max_aerial_distance = _aerial_lut_pass->_pass_constant.max_aerial_distance;

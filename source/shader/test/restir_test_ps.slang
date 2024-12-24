@@ -10,7 +10,7 @@ Texture2D<float4> base_color_texture : register(t2);
 Texture2D<float4> pbr_texture : register(t3);
 Texture2D<float4> emissive_texture : register(t4);
 
-Texture2D<float4> depth_texture : register(t5);
+Texture2D<float> shadow_map_texture : register(t5);
 
 SamplerState sampler0 : register(s0);
 
@@ -35,6 +35,7 @@ float4 pixel_shader(VertexOutput input) : SV_Target0
     case 6: color = float4(pbr_texture.Sample(sampler0, input.uv).y, 0.0f, 0.0f, 1.0f); break;
     case 7: color = float4(pbr_texture.Sample(sampler0, input.uv).z, 0.0f, 0.0f, 1.0f); break;
     case 8: color = emissive_texture.Sample(sampler0, input.uv); break;
+    case 9: color = float4(shadow_map_texture.Sample(sampler0, input.uv), 0.0f, 0.0f, 1.0f); break;
     };
 
     return color;

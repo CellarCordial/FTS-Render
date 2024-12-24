@@ -45,6 +45,8 @@ namespace fantasy
 
     QuadricSurface merge(const QuadricSurface& surface0, const QuadricSurface& surface1)
     {
+        static_assert(sizeof(QuadricSurface) == sizeof(float) * 10);
+        
         const float* sur0 = reinterpret_cast<const float*>(&surface0);
         const float* sur1 = reinterpret_cast<const float*>(&surface1);
 

@@ -48,7 +48,7 @@ namespace fantasy
 	
 	void MeshOptimizer::BinaryHeap::remove(uint32_t index)
 	{
-		assert(IsInvalid(index));
+		assert(Is_valid(index));
 
 		float key = _keys[index];
 		uint32_t& rdwIndex = _heap_indices[index];
@@ -69,7 +69,7 @@ namespace fantasy
 	
 	void MeshOptimizer::BinaryHeap::insert(float key,uint32_t index)
 	{
-		assert(IsInvalid(index));
+		assert(Is_valid(index));
 
 		_current_size++;
 		_heap[_current_size] = index;
@@ -119,15 +119,15 @@ namespace fantasy
 		_heap_indices[_heap[index]] = index;
 	}
 
-	MeshOptimizer::MeshOptimizer(const std::span<Vector3F>& crVertices, const std::span<uint32_t>& crIndices) :
-		_vertices(crVertices), 
-		_indices(crIndices),
-		_vertex_ref_count(crVertices.size()),
-		_vertex_table(crVertices.size()),
-		_index_table(crIndices.size()),
-		_flags(crIndices.size()),
-		_triangle_surfaces(crIndices.size() / 3.0f),
-		_triangle_removed_array(crIndices.size() / 3.0f, false)
+	MeshOptimizer::MeshOptimizer(std::vector<Vector3F>& vertices, std::vector<uint32_t>& indices) :
+		_vertices(vertices), 
+		_indices(indices),
+		_vertex_ref_count(vertices.size()),
+		_vertex_table(vertices.size()),
+		_index_table(indices.size()),
+		_flags(indices.size()),
+		_triangle_surfaces(indices.size() / 3.0f),
+		_triangle_removed_array(indices.size() / 3.0f, false)
 	{
 		_remain_vertex_num = static_cast<uint32_t>(_vertices.size());
 		_remain_triangle_num = static_cast<uint32_t>(_triangle_surfaces.size());
@@ -137,85 +137,85 @@ namespace fantasy
 			_vertex_table.insert(hash(_vertices[ix]), ix);
 		}
 
-		uint64_t stEdgeNum = std::min(std::min(_indices.size(), 3 * _vertices.size() - 6), _triangle_surfaces.size() + _vertices.size());
-		_edges.resize(stEdgeNum);
-		_edges_begin_table.resize(stEdgeNum);
-		_edges_end_table.resize(stEdgeNum);
+		uint64_t edge_num = std::min(std::min(_indices.size(), 3 * _vertices.size() - 6), _triangle_surfaces.size() + _vertices.size());
+		_edges.resize(edge_num);
+		_edges_begin_table.resize(edge_num);
+		_edges_end_table.resize(edge_num);
 
-		for (uint32_t dwCorner = 0; dwCorner < _indices.size(); ++dwCorner)
+		for (uint32_t ix = 0; ix < _indices.size(); ++ix)
 		{
-			_vertex_ref_count[_indices[dwCorner]]++;
-			const auto& crVertex = _vertices[_indices[dwCorner]];
+			_vertex_ref_count[_indices[ix]]++;
+			const auto& vertex_position = _vertices[_indices[ix]];
 
-			_index_table.insert(hash(crVertex), dwCorner);
+			_index_table.insert(hash(vertex_position), ix);
 			
-			Vector3F p0 = crVertex;
-			Vector3F p1 = _vertices[_indices[TriangleIndexCycle3(dwCorner)]];
+			Vector3F p0 = vertex_position;
+			Vector3F p1 = _vertices[_indices[TriangleIndexCycle3(ix)]];
 
-			uint32_t h0 = hash(p0);
-			uint32_t h1 = hash(p1);
-			if (h0 > h1)
+			uint32_t key0 = hash(p0);
+			uint32_t key1 = hash(p1);
+			if (key0 > key1)
 			{
-				std::swap(h0, h1);
+				std::swap(key0, key1);
 				std::swap(p0, p1);
 			}
 
-			bool bAlreadyExist = false;
-			for (uint32_t ix : _edges_begin_table[h0])
+			bool already_exist = false;
+			for (uint32_t ix : _edges_begin_table[key0])
 			{
-				const auto& crEdge = _edges[ix];
-				if (crEdge.first == p0 && crEdge.second == p1) 
+				const auto& edge = _edges[ix];
+				if (edge.first == p0 && edge.second == p1) 
 				{
-					bAlreadyExist = true;
+					already_exist = true;
 					break;
 				}
 			}
-			if (!bAlreadyExist)
+			if (!already_exist)
 			{
-				_edges_begin_table.insert(h0, static_cast<uint32_t>(_edges.size()));
-				_edges_end_table.insert(h1, static_cast<uint32_t>(_edges.size()));
+				_edges_begin_table.insert(key0, static_cast<uint32_t>(_edges.size()));
+				_edges_end_table.insert(key1, static_cast<uint32_t>(_edges.size()));
 				_edges.emplace_back(std::make_pair(p0, p1));
 			}
 		}
 	}
 
 
-	bool MeshOptimizer::optimize(uint32_t dwTargetTriangleNum)
+	bool MeshOptimizer::optimize(uint32_t target_triangle_num)
 	{
 		for (uint32_t ix = 0; ix < _triangle_surfaces.size(); ++ix) fix_triangle(ix);
 
-		if (_remain_triangle_num <= dwTargetTriangleNum) return compact();
+		if (_remain_triangle_num <= target_triangle_num) return compact();
 
 		_heap.resize(_edges.size());
 
 		uint32_t ix = 0;
-		for (const auto& crEdge : _edges)
+		for (const auto& edge : _edges)
 		{
-			float fError = evaluate(crEdge.first, crEdge.second, false);
-			_heap.insert(fError, ix++);
+			float error = evaluate(edge.first, edge.second, false);
+			_heap.insert(error, ix++);
 		}
 
 		_max_error = 0.0f;
 		while (!_heap.empty())
 		{
-			uint32_t dwEdgeIndex = _heap.top();
-			if (_heap.get_key(dwEdgeIndex) >= 1e6) break;
+			uint32_t edge_index = _heap.top();
+			if (_heap.get_key(edge_index) >= 1e6) break;
 
 			_heap.pop();
 			
-			const auto& crEdge = _edges[dwEdgeIndex];
-			_edges_begin_table.remove(hash(crEdge.first), dwEdgeIndex);
-			_edges_end_table.remove(hash(crEdge.second), dwEdgeIndex);
+			const auto& edge = _edges[edge_index];
+			_edges_begin_table.remove(hash(edge.first), edge_index);
+			_edges_end_table.remove(hash(edge.second), edge_index);
 
-			_max_error = std::max(evaluate(crEdge.first, crEdge.second, true), _max_error);
+			_max_error = std::max(evaluate(edge.first, edge.second, true), _max_error);
 
-			if (_remain_triangle_num <= dwTargetTriangleNum) break;
+			if (_remain_triangle_num <= target_triangle_num) break;
 
 			for (uint32_t ix : edge_need_reevaluate_indices)
 			{
-				const auto& crReevaluateEdge = _edges[ix];
-				float fError = evaluate(crReevaluateEdge.first, crReevaluateEdge.second, false);
-				_heap.insert(fError, ix++);
+				const auto& reevaluate_edge = _edges[ix];
+				float error = evaluate(reevaluate_edge.first, reevaluate_edge.second, false);
+				_heap.insert(error, ix++);
 			}
 
 			edge_need_reevaluate_indices.clear();
@@ -223,17 +223,16 @@ namespace fantasy
 		return compact();
 	}
 
-	void MeshOptimizer::lock_position(Vector3F Pos)
+	void MeshOptimizer::lock_position(Vector3F position)
 	{
-		for (uint32_t ix : _index_table[hash(Pos)])
+		for (uint32_t ix : _index_table[hash(position)])
 		{
-			if (_vertices[_indices[ix]] == Pos)
+			if (_vertices[_indices[ix]] == position)
 			{
 				_flags[ix] |= LockFlag;
 			}
 		}
 	}
-
 
 	uint32_t MeshOptimizer::hash(const Vector3F& vec)
 	{
@@ -249,217 +248,221 @@ namespace fantasy
 		return murmur_mix(murmur_add(murmur_add(x.u, y.u), z.u));
 	}
 
-	void MeshOptimizer::fix_triangle(uint32_t dwTriangleIndex)
+	void MeshOptimizer::fix_triangle(uint32_t triangle_index)
 	{
-		if (_triangle_removed_array[dwTriangleIndex]) return;
+		if (_triangle_removed_array[triangle_index]) return;
 
-		uint32_t dwVertexIndex0 = _indices[dwTriangleIndex * 3 + 0];
-		uint32_t dwVertexIndex1 = _indices[dwTriangleIndex * 3 + 1];
-		uint32_t dwVertexIndex2 = _indices[dwTriangleIndex * 3 + 2];
+		uint32_t vertex_index0 = _indices[triangle_index * 3 + 0];
+		uint32_t vertex_index1 = _indices[triangle_index * 3 + 1];
+		uint32_t vertex_index2 = _indices[triangle_index * 3 + 2];
 
-		const Vector3F& p0 = _vertices[dwVertexIndex0];	
-		const Vector3F& p1 = _vertices[dwVertexIndex1];	
-		const Vector3F& p2 = _vertices[dwVertexIndex2];
+		const Vector3F& p0 = _vertices[vertex_index0];	
+		const Vector3F& p1 = _vertices[vertex_index1];	
+		const Vector3F& p2 = _vertices[vertex_index2];
 
-		bool bNeedRemoved = p0 == p1 || p1 == p2 || p2 == p0;
-		if (!bNeedRemoved)
+		bool need_removed = p0 == p1 || p1 == p2 || p2 == p0;
+		if (!need_removed)
 		{
 			for (uint32_t ix = 0; ix < 3; ++ix)
 			{
-				// 去除重复的 Vertex
-				uint32_t& rdwVertexIndex = _indices[dwTriangleIndex * 3 + ix];
-				const auto& crVertex = _vertices[rdwVertexIndex];
-				uint32_t dwHash = hash(crVertex);
-				for (uint32_t jx : _vertex_table[dwHash])
+				// Remove vertices at the same position.
+				uint32_t& vertex_index = _indices[triangle_index * 3 + ix];
+				const auto& vertex_position = _vertices[vertex_index];
+				uint32_t key = hash(vertex_position);
+				for (uint32_t jx : _vertex_table[key])
 				{
-					if (jx == rdwVertexIndex)
+					if (jx == vertex_index)
 					{
 						break;
 					}
-					else if (crVertex == _vertices[jx]) 
+					else if (vertex_position == _vertices[jx]) 
 					{
-						assert(_vertex_ref_count[rdwVertexIndex] > 0);
-						if (--_vertex_ref_count[rdwVertexIndex] == 0)
+						assert(_vertex_ref_count[vertex_index] > 0);
+						if (--_vertex_ref_count[vertex_index] == 0)
 						{
-							_vertex_table.remove(dwHash, rdwVertexIndex);
+							_vertex_table.remove(key, vertex_index);
 							_remain_vertex_num--;
 						}
-						rdwVertexIndex = jx;
-						if (rdwVertexIndex != INVALID_SIZE_32) _vertex_ref_count[rdwVertexIndex]++;
+						vertex_index = jx;
+						if (vertex_index != INVALID_SIZE_32) _vertex_ref_count[vertex_index]++;
 						break;
 					}
 				}
 			}
 			
-			// 判断 Triangle 是否重复
+			// Check if the triangle is duplicated.
 			for (uint32_t ix : _index_table[hash(p0)])
 			{
 				if (
-					ix != dwTriangleIndex * 3 &&
-					dwVertexIndex0 == _indices[ix] && 
-					dwVertexIndex1 == _indices[TriangleIndexCycle3(ix)] && 
-					dwVertexIndex2 == _indices[TriangleIndexCycle3(ix, 2)] 
+					ix != triangle_index * 3 &&
+					vertex_index0 == _indices[ix] && 
+					vertex_index1 == _indices[TriangleIndexCycle3(ix)] && 
+					vertex_index2 == _indices[TriangleIndexCycle3(ix, 2)] 
 				)
 				{
-					bNeedRemoved = true;
+					need_removed = true;
 				}
 			}
 		}
 
-		if (bNeedRemoved)
+		if (need_removed)
 		{
-			_triangle_removed_array.set_true(dwTriangleIndex);
+			// Remove the whole triangle.
+			_triangle_removed_array.set_true(triangle_index);
 			_remain_triangle_num--;
 
 			for (uint32_t ix = 0; ix < 3; ++ix)
 			{
-				uint32_t& rdwVertexIndex = _indices[dwTriangleIndex * 3 + ix];
-				const auto& crVertex = _vertices[rdwVertexIndex];
+				uint32_t index_index = triangle_index * 3 + ix;
+				uint32_t& vertex_index = _indices[index_index];
+				const auto& vertex_position = _vertices[vertex_index];
 
-				uint32_t dwHash = hash(crVertex);
-				_index_table.remove(dwHash, rdwVertexIndex);
+				uint32_t key = hash(vertex_position);
+				_index_table.remove(key, index_index);
 
-				assert(_vertex_ref_count[rdwVertexIndex] > 0);
-				if (--_vertex_ref_count[rdwVertexIndex] == 0)
+				assert(_vertex_ref_count[vertex_index] > 0);
+				if (--_vertex_ref_count[vertex_index] == 0)
 				{
-					_vertex_table.remove(dwHash, rdwVertexIndex);
+					_vertex_table.remove(key, vertex_index);
 					_remain_vertex_num--;
 				}
-				rdwVertexIndex = INVALID_SIZE_32;
+				vertex_index = INVALID_SIZE_32;
 			}
 		}
 		else 
 		{
-			_triangle_surfaces[dwTriangleIndex] = QuadricSurface(p0, p1, p2);
+			_triangle_surfaces[triangle_index] = QuadricSurface(p0, p1, p2);
 		}
 	}
 
 	bool MeshOptimizer::compact()
 	{
-		uint32_t dwCount = 0;
-		std::vector<uint32_t> IndicesMap(_vertices.size());
+		// key: vertex_index_before_compact; value: vertex_index_after_compact.
+		std::vector<uint32_t> indices_map(_vertices.size());	
+		
+		uint32_t count = 0;
 		for (uint32_t ix = 0; ix < _vertices.size(); ++ix)
 		{
 			if (_vertex_ref_count[ix] > 0)
 			{
-				if (ix != dwCount) _vertices[dwCount] = _vertices[ix];
-				IndicesMap[ix] = dwCount++;
+				if (ix != count) _vertices[count] = _vertices[ix];
+				indices_map[ix] = count++;
 			}
 		}
-		ReturnIfFalse(dwCount == _remain_vertex_num);
+		ReturnIfFalse(count == _remain_vertex_num);
 
-		dwCount = 0;
+		count = 0;
 		for (uint32_t ix = 0; ix < _triangle_surfaces.size(); ++ix)
 		{
 			if (!_triangle_removed_array[ix])
 			{
 				for (uint32_t jx = 0; jx < 3; ++jx)
 				{
-					_indices[dwCount * 3 + jx] = IndicesMap[_indices[ix * 3 + jx]];
+					_indices[count * 3 + jx] = indices_map[_indices[ix * 3 + jx]];
 				}
-				dwCount++;
+				count++;
 			}
 		}
-		return dwCount == _remain_triangle_num;
+		return count == _remain_triangle_num;
 	}
 
-	float MeshOptimizer::evaluate(const Vector3F& p0, const Vector3F& p1, bool bMerge)
+	float MeshOptimizer::evaluate(const Vector3F& p0, const Vector3F& p1, bool if_merge)
 	{
 		if (p0 == p1) return 0.0f;
 
-		float fError;
+		float error;
 
-		std::vector<uint32_t> AdjacencyTriangleIndices;
-		auto FuncBuildAdjacencyTrianlges = [this, &AdjacencyTriangleIndices](const Vector3F& crVertex, bool& rbLock)
+		std::vector<uint32_t> adjacency_triangle_indices;
+		auto BuildAdjacencyTrianlges = [this, &adjacency_triangle_indices](const Vector3F& vertex, bool& lock)
 		{
-			for (uint32_t ix : _index_table[hash(crVertex)])
+			for (uint32_t ix : _index_table[hash(vertex)])
 			{
-				if (_vertices[_indices[ix]] == crVertex)
+				if (_vertices[_indices[ix]] == vertex)
 				{
-					uint32_t dwTriangleIndex = ix / 3;
-					if ((_flags[dwTriangleIndex * 3] & AdjacencyFlag) == 0)
+					uint32_t triangle_index = ix / 3;
+					if ((_flags[triangle_index * 3] & AdjacencyFlag) == 0)
 					{
-						_flags[dwTriangleIndex * 3] |= AdjacencyFlag;
-						AdjacencyTriangleIndices.push_back(dwTriangleIndex);
+						_flags[triangle_index * 3] |= AdjacencyFlag;
+						adjacency_triangle_indices.push_back(triangle_index);
 					}
 
-					if (_flags[ix] & LockFlag) rbLock = true;
+					if (_flags[ix] & LockFlag) lock = true;
 				}
 			}
 		};
 
-		bool bLock0 = false, bLock1 = false;
-		FuncBuildAdjacencyTrianlges(p0, bLock0);
-		FuncBuildAdjacencyTrianlges(p1, bLock1);
+		bool lock0 = false, lock1 = false;
+		BuildAdjacencyTrianlges(p0, lock0);
+		BuildAdjacencyTrianlges(p1, lock1);
 
-		if (AdjacencyTriangleIndices.empty()) return 0.0f;
-		if (AdjacencyTriangleIndices.size() > 24) fError += 0.5f * (AdjacencyTriangleIndices.size() - 24);
+		if (adjacency_triangle_indices.empty()) return 0.0f;
+		if (adjacency_triangle_indices.size() > 24) error += 0.5f * (adjacency_triangle_indices.size() - 24);
 
-		QuadricSurface Surface;
-		for (uint32_t ix : AdjacencyTriangleIndices) Surface = merge(Surface, _triangle_surfaces[ix]);
+		QuadricSurface surface;
+		for (uint32_t ix : adjacency_triangle_indices) surface = merge(surface, _triangle_surfaces[ix]);
 
 		Vector3F p = (p0 + p1) * 0.5f;
-		if (bLock0 && bLock1) fError += 1e8;
-		else if (bLock0 && !bLock1) p = p0;
-		else if (!bLock0 && bLock1) p = p1;
+		if (lock0 && lock1) error += 1e8;
+		else if (lock0 && !lock1) p = p0;
+		else if (!lock0 && lock1) p = p1;
 		else if (
-			!Surface.get_vertex_position(p) || 
-			Distance(p, p0) + Distance(p, p1) > 2.0f * Distance(p0, p1)	// invalid
+			!surface.get_vertex_position(p) || 
+			distance(p, p0) + distance(p, p1) > 2.0f * distance(p0, p1)	// invalid
 		)
 		{
 			p = (p0 + p1) * 0.5f;
 		}
 
-		fError += Surface.distance_to_surface(p);
+		error += surface.distance_to_surface(p);
 
-		if (bMerge)
+		if (if_merge)
 		{
 			merge_begin(p0);
 			merge_begin(p1);
 
-			for (uint32_t ix : AdjacencyTriangleIndices)
+			for (uint32_t ix : adjacency_triangle_indices)
 			{
 				for (uint32_t jx = 0; jx < 3; ++jx)
 				{
-					uint32_t dwVertexIndex = ix * 3 + jx;
-					Vector3F& rPos = _vertices[_indices[dwVertexIndex]];
-					if (rPos == p0 || rPos == p1)
+					uint32_t vertex_index = ix * 3 + jx;
+					Vector3F& vertex_position = _vertices[_indices[vertex_index]];
+					if (vertex_position == p0 || vertex_position == p1)
 					{
-						rPos = p;
-						if (bLock0 || bLock1)
+						vertex_position = p;
+						if (lock0 || lock1)
 						{
-							_flags[dwVertexIndex] |= LockFlag;
+							_flags[vertex_index] |= LockFlag;
 						}
 					}
 				}
 			}
 			for (uint32_t ix : moved_edge_indices)
 			{
-				auto& rEdge = _edges[ix];
-				if (rEdge.first == p0 || rEdge.first == p1) rEdge.first = p;
-				if (rEdge.second == p0 || rEdge.second == p1) rEdge.second = p;
+				auto& edge = _edges[ix];
+				if (edge.first == p0 || edge.first == p1) edge.first = p;
+				if (edge.second == p0 || edge.second == p1) edge.second = p;
 			}
 
 			mergen_end();
 
-			std::vector<uint32_t> AdjacencyVertexIndices;
-			AdjacencyVertexIndices.reserve((AdjacencyTriangleIndices.size() * 3));
-			for (uint32_t ix : AdjacencyTriangleIndices)
+			std::vector<uint32_t> adjacency_vertex_indices;
+			adjacency_vertex_indices.reserve((adjacency_triangle_indices.size() * 3));
+			for (uint32_t ix : adjacency_triangle_indices)
 			{
 				for (uint32_t jx = 0; jx < 3; ++jx)
 				{
-					AdjacencyVertexIndices.push_back(_indices[ix * 3 + jx]);
+					adjacency_vertex_indices.push_back(_indices[ix * 3 + jx]);
 				}
 			}
-			std::sort(AdjacencyVertexIndices.begin(), AdjacencyVertexIndices.end());
-			AdjacencyVertexIndices.erase(
-				std::unique(AdjacencyVertexIndices.begin(), AdjacencyVertexIndices.end()), 
-				AdjacencyVertexIndices.end()
+			std::sort(adjacency_vertex_indices.begin(), adjacency_vertex_indices.end());
+			adjacency_vertex_indices.erase(
+				std::unique(adjacency_vertex_indices.begin(), adjacency_vertex_indices.end()), 
+				adjacency_vertex_indices.end()
 			);
 
-			for (uint32_t dwVertexIndex : AdjacencyVertexIndices)
+			for (uint32_t vertex_index : adjacency_vertex_indices)
 			{
-				const auto& crVertex = _vertices[dwVertexIndex];
+				const auto& crVertex = _vertices[vertex_index];
 				uint32_t dwHash = hash(crVertex);
 				for (uint32_t ix : _edges_begin_table[dwHash])
 				{
@@ -479,46 +482,46 @@ namespace fantasy
 				}
 			}
 			
-			for (uint32_t dwTriangleIndex : AdjacencyTriangleIndices) fix_triangle(dwTriangleIndex);
+			for (uint32_t dwTriangleIndex : adjacency_triangle_indices) fix_triangle(dwTriangleIndex);
 		}	
 
-		for (uint32_t dwTriangleIndex : AdjacencyTriangleIndices) _flags[dwTriangleIndex * 3] &= ~AdjacencyFlag;
+		for (uint32_t triangle_index : adjacency_triangle_indices) _flags[triangle_index * 3] &= ~AdjacencyFlag;
 
-		return fError;
+		return error;
 	}
 
 	void MeshOptimizer::merge_begin(const Vector3F& p)
 	{
-		uint32_t dwHash = hash(p);
-		for (uint32_t ix : _vertex_table[dwHash])
+		uint32_t key = hash(p);
+		for (uint32_t ix : _vertex_table[key])
 		{
 			if (_vertices[ix] == p)
 			{
-				_vertex_table.remove(dwHash, ix);
+				_vertex_table.remove(key, ix);
 				moved_vertex_indices.push_back(ix);
 			}
 		}
-		for (uint32_t ix : _index_table[dwHash])
+		for (uint32_t ix : _index_table[key])
 		{
 			if (_vertices[_indices[ix]] == p)
 			{
-				_index_table.remove(dwHash, ix);
+				_index_table.remove(key, ix);
 				moved_index_indices.push_back(ix);
 			}
 		}
-		for (uint32_t ix : _edges_begin_table[dwHash])
+		for (uint32_t ix : _edges_begin_table[key])
 		{
 			if (_edges[ix].first == p)
 			{
-				_edges_begin_table.remove(dwHash, ix);
+				_edges_begin_table.remove(key, ix);
 				moved_edge_indices.push_back(ix);
 			}
 		}
-		for (uint32_t ix : _edges_end_table[dwHash])
+		for (uint32_t ix : _edges_end_table[key])
 		{
 			if (_edges[ix].second == p)
 			{
-				_edges_end_table.remove(dwHash, ix);
+				_edges_end_table.remove(key, ix);
 				moved_edge_indices.push_back(ix);
 			}
 		}
@@ -536,33 +539,33 @@ namespace fantasy
 		}
 		for (uint32_t ix : moved_edge_indices)
 		{
-			auto& rEdge = _edges[ix];
+			auto& edge = _edges[ix];
 			
-			uint32_t h0 = hash(rEdge.first);
-			uint32_t h1 = hash(rEdge.second);
+			uint32_t h0 = hash(edge.first);
+			uint32_t h1 = hash(edge.second);
 			if (h0 > h1)
 			{
 				std::swap(h0, h1);
-				std::swap(rEdge.first, rEdge.second);
+				std::swap(edge.first, edge.second);
 			}
 
-			bool bAlreadyExist = false;
+			bool alread_exist = false;
 			for (uint32_t ix : _edges_begin_table[h0])
 			{
-				const auto& crEdge = _edges[ix];
-				if (crEdge.first == crEdge.first && crEdge.second == crEdge.second) 
+				const auto& edge_copy = _edges[ix];
+				if (edge_copy.first == edge_copy.first && edge_copy.second == edge_copy.second) 
 				{
-					bAlreadyExist = true;
+					alread_exist = true;
 					break;
 				}
 			}
-			if (!bAlreadyExist)
+			if (!alread_exist)
 			{
 				_edges_begin_table.insert(h0, static_cast<uint32_t>(_edges.size()));
 				_edges_end_table.insert(h1, static_cast<uint32_t>(_edges.size()));
 			}
 
-			if (rEdge.first == rEdge.second && bAlreadyExist)
+			if (edge.first == edge.second && alread_exist)
 			{
 				_heap.remove(ix);
 			}
@@ -575,74 +578,74 @@ namespace fantasy
 
 
 
-		struct Graph
+	struct Graph
+	{
+		std::vector<std::map<uint32_t,int32_t>> g;
+
+		void init(uint32_t n)
 		{
-			std::vector<std::map<uint32_t,int32_t>> g;
-
-			void init(uint32_t n)
-			{
-				g.resize(n);
-			}
-			void add_node()
-			{
-				g.push_back({});
-			}
-			void add_edge(uint32_t from,uint32_t to,int32_t cost)
-			{
-				g[from][to]=cost;
-			}
-			void increase_edge_cost(uint32_t from,uint32_t to,int32_t i_cost)
-			{
-				g[from][to]+=i_cost;
-			}
-		};
-
-		struct MetisGraph;
-
-		class Partitioner
-		{
-		private:
-			uint32_t bisect_graph(MetisGraph* graph_data,MetisGraph* child_graphs[2],uint32_t start,uint32_t end);
-			void recursive_bisect_graph(MetisGraph* graph_data,uint32_t start,uint32_t end);
-		public:
-			void init(uint32_t num_node);
-			void partition(const Graph& graph,uint32_t min_part_size,uint32_t max_part_size);
-
-			std::vector<uint32_t> node_id;
-			std::vector<std::pair<uint32_t,uint32_t>> ranges;
-			std::vector<uint32_t> sort_to;
-			uint32_t min_part_size;
-			uint32_t max_part_size;
-		};
-
-
-        void create_triangle_cluster(
-            const std::vector<Vector3F>& verts,
-            const std::vector<uint32_t>& indexes,
-            std::vector<Cluster>& clusters
-        )
-		{
-
+			g.resize(n);
 		}
-
-        void build_cluster_groups(
-            std::vector<Cluster>& clusters,
-            uint32_t offset,
-            uint32_t num_cluster,
-            std::vector<ClusterGroup>& cluster_groups,
-            uint32_t mip_level
-        )
+		void add_node()
 		{
-
+			g.push_back({});
 		}
-
-        void build_cluster_group_parent_clusters(
-            ClusterGroup& cluster_group,
-            std::vector<Cluster>& clusters
-        )
+		void add_edge(uint32_t from,uint32_t to,int32_t cost)
 		{
-
+			g[from][to]=cost;
 		}
+		void increase_edge_cost(uint32_t from,uint32_t to,int32_t i_cost)
+		{
+			g[from][to]+=i_cost;
+		}
+	};
+
+	struct MetisGraph;
+
+	class Partitioner
+	{
+	private:
+		uint32_t bisect_graph(MetisGraph* graph_data,MetisGraph* child_graphs[2],uint32_t start,uint32_t end);
+		void recursive_bisect_graph(MetisGraph* graph_data,uint32_t start,uint32_t end);
+	public:
+		void init(uint32_t num_node);
+		void partition(const Graph& graph,uint32_t min_part_size,uint32_t max_part_size);
+
+		std::vector<uint32_t> node_id;
+		std::vector<std::pair<uint32_t,uint32_t>> ranges;
+		std::vector<uint32_t> sort_to;
+		uint32_t min_part_size;
+		uint32_t max_part_size;
+	};
+
+
+	void create_triangle_cluster(
+		const std::vector<Vector3F>& verts,
+		const std::vector<uint32_t>& indexes,
+		std::vector<Cluster>& clusters
+	)
+	{
+
+	}
+
+	void build_cluster_groups(
+		std::vector<Cluster>& clusters,
+		uint32_t offset,
+		uint32_t num_cluster,
+		std::vector<ClusterGroup>& cluster_groups,
+		uint32_t mip_level
+	)
+	{
+
+	}
+
+	void build_cluster_group_parent_clusters(
+		ClusterGroup& cluster_group,
+		std::vector<Cluster>& clusters
+	)
+	{
+
+	}
 
 
 	namespace Geometry

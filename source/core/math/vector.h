@@ -649,14 +649,14 @@ namespace fantasy
 
 	// 两点距离
 	template <typename T>
-	inline float Distance(const Vector3<T>& vec1, const Vector3<T>& vec2)
+	inline float distance(const Vector3<T>& vec1, const Vector3<T>& vec2)
 	{
 		return (vec1 - vec2).Length();
 	}
 
 	// 两点距离
 	template <typename T>
-	inline float Distance(const Vector2<T>& vec1, const Vector2<T>& vec2)
+	inline float distance(const Vector2<T>& vec1, const Vector2<T>& vec2)
 	{
 		return (vec1 - vec2).Length();
 	}

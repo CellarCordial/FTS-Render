@@ -118,8 +118,8 @@ inline bool operator!=(T a, uint32_t b) { return uint32_t(a) != b; }
 
     inline uint32_t TriangleIndexCycle3(uint32_t dw)
     {
-        uint32_t dwMod3 = dw %3;
-        return dw - dwMod3 + ((1 << dwMod3) & 3);
+        uint32_t mod3 = dw % 3;
+        return dw - mod3 + ((1 << mod3) & 3);
     }
 
     inline uint32_t TriangleIndexCycle3(uint32_t dw, uint32_t dwOfs)

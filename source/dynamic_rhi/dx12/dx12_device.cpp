@@ -615,7 +615,7 @@ namespace fantasy
 
 	ray_tracing::PipelineInterface* DX12Device::create_ray_tracing_pipline(const ray_tracing::PipelineDesc& desc)
 	{
-        ray_tracing::DX12Pipeline* dx12_pipeline = new ray_tracing::DX12Pipeline(&_context);
+        ray_tracing::DX12Pipeline* dx12_pipeline = new ray_tracing::DX12Pipeline(&_context, desc);
         
         std::vector<std::unique_ptr<DX12RootSignature>> shader_root_signatures;
         std::vector<std::unique_ptr<DX12RootSignature>> hit_group_root_signatures;
@@ -625,17 +625,25 @@ namespace fantasy
         
         for (const auto& shader_desc : desc.shader_descs)
         {
-            BindingLayoutInterfaceArray tmp;
-            tmp.push_back(shader_desc.binding_layout);
-            DX12RootSignature* dx12_root_signature = build_root_signature(tmp, false);
+            DX12RootSignature* dx12_root_signature = nullptr;
+            if (shader_desc.binding_layout)
+            {
+                BindingLayoutInterfaceArray tmp;
+                tmp.push_back(shader_desc.binding_layout);
+                dx12_root_signature = build_root_signature(tmp, false);
+            }
             shader_root_signatures.emplace_back(dx12_root_signature);
         }
 
         for (const auto& hit_group_desc : desc.hit_group_descs)
         {
-            BindingLayoutInterfaceArray Tmp;
-            Tmp.push_back(hit_group_desc.binding_layout);
-            DX12RootSignature* dx12_root_signature = build_root_signature(Tmp, false);
+            DX12RootSignature* dx12_root_signature = nullptr;
+            if (hit_group_desc.binding_layout)
+            {
+                BindingLayoutInterfaceArray tmp;
+                tmp.push_back(hit_group_desc.binding_layout);
+                dx12_root_signature = build_root_signature(tmp, false);
+            }
             hit_group_root_signatures.emplace_back(dx12_root_signature);
         }
 

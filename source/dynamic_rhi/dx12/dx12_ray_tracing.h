@@ -142,7 +142,10 @@ namespace fantasy
 		class DX12Pipeline : public PipelineInterface
 		{
 		public:
-			DX12Pipeline(const DX12Context* context) : _context(context) {}
+			DX12Pipeline(const DX12Context* context, const PipelineDesc& pipeline_desc) : 
+				_context(context), _desc(pipeline_desc) 
+			{
+			}
 
 			bool initialize(
 				std::vector<std::unique_ptr<DX12RootSignature>>&& shader_root_signatures,

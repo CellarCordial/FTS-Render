@@ -1,5 +1,5 @@
-#include "../../math_helper.slang"
-#include "../../shadow_helper.slang"
+#include "../math_helper.slang"
+#include "../shadow_helper.slang"
 
 cbuffer pass_constants : register(b0)
 {

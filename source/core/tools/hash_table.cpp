@@ -81,7 +81,7 @@ namespace fantasy
 
     HashTable::Iterator HashTable::operator[](uint32_t key)
     {
-        if (_hash.empty() || _next_index.empty()) return Iterator{ .index = ~0u };
+        if (_hash.empty() || _next_index.empty()) return Iterator{ .index = INVALID_SIZE_32 };
         key &= _hash_mask;
         return Iterator{ .index = _hash[key], .next_index = _next_index };
     }

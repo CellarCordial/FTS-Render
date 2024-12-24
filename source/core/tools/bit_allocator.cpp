@@ -1,6 +1,7 @@
 #include "bit_allocator.h"
 #include "../math/common.h"
 #include "../tools/log.h"
+#include <cstdint>
 
 namespace fantasy
 {
@@ -17,18 +18,19 @@ namespace fantasy
         
         uint32_t id = _next_avaiable >> 5;
         uint32_t bit_index =  _next_avaiable & 31;
+        uint32_t find_index = 0;
         for (uint32_t ix = 0; ix < _allocateds.size(); ++ix)
         {
-            // 寻找未被分配的位
             const uint32_t pos = (id + ix) % _allocateds.size();
 
-            for (uint32_t jx = bit_index; jx < 8; ++jx)
+            for (uint32_t jx = bit_index; jx < 32; ++jx)
             {
                 if (!(_allocateds[pos] & (1 << jx)))
                 {
                     ret = pos;
                     _next_avaiable = (id << 5) + jx + 1;
                     _allocateds[pos] |= (1 << jx);
+                    find_index = jx;
                     break;
                 }
             }
@@ -37,7 +39,7 @@ namespace fantasy
 
         if (_multi_threaded) _mutex.unlock();
 
-        return ret;        
+        return (ret << 5) + find_index;
     }
 
     bool BitSetAllocator::release(uint32_t index)
@@ -49,7 +51,7 @@ namespace fantasy
             if (_multi_threaded) _mutex.lock();
 
             _allocateds[id] &= ~(1 << bit_index);
-            _next_avaiable = std::min(_next_avaiable, index);            
+            _next_avaiable = std::min(_next_avaiable, index);   
             
             if (_multi_threaded) _mutex.unlock();
         }

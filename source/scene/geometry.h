@@ -11,6 +11,7 @@
 #include "../core/tools/bit_allocator.h"
 #include "image.h"
 #include <basetsd.h>
+#include <vector>
 
 
 namespace fantasy 
@@ -108,7 +109,7 @@ namespace fantasy
     class MeshOptimizer
     {
     public:
-        MeshOptimizer(const std::span<Vector3F>& vertices, const std::span<uint32_t>& indices);
+        MeshOptimizer(std::vector<Vector3F>& vertices, std::vector<uint32_t>& indices);
 
         bool optimize(uint32_t target_triangle_num);
         void lock_position(Vector3F position);
@@ -153,27 +154,27 @@ namespace fantasy
         };
 
     private:
+        std::vector<Vector3F>& _vertices;
+        std::vector<uint32_t>& _indices;
+
         enum
         {
             AdjacencyFlag   = 1,
             LockFlag        = 2
         };
         std::vector<uint8_t> _flags;
-
-        const std::span<Vector3F> _vertices;
-        const std::span<uint32_t> _indices;
         std::vector<uint32_t> _vertex_ref_count;
         std::vector<QuadricSurface> _triangle_surfaces;
 
         BitSetAllocator _triangle_removed_array;
 
-        HashTable _vertex_table;
-        HashTable _index_table;
+        HashTable _vertex_table;    // key: vertex_position; hash value: vertex_index.
+        HashTable _index_table;     // key: vertex_position; hash value: index_index.
 
 
         std::vector<std::pair<Vector3F, Vector3F>> _edges;
-        HashTable _edges_begin_table;
-        HashTable _edges_end_table;
+        HashTable _edges_begin_table;   // key: vertex_position; hash value: edge_index.   
+        HashTable _edges_end_table;     // key: vertex_position; hash value: edge_index.
         BinaryHeap _heap;
 
 
