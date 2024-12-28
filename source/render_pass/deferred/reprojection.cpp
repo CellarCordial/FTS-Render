@@ -88,8 +88,8 @@ namespace fantasy
 		ReturnIfFalse(cmdlist->open());
 
 		Vector2I thread_group_num = {
-			static_cast<uint32_t>((Align(CLIENT_WIDTH, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
-			static_cast<uint32_t>((Align(CLIENT_HEIGHT, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
+			static_cast<uint32_t>((align(CLIENT_WIDTH, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
+			static_cast<uint32_t>((align(CLIENT_HEIGHT, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
 		};
 
 		ReturnIfFalse(cmdlist->set_compute_state(_compute_state));

@@ -14,15 +14,15 @@ namespace fantasy
 	{
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(8);
+			BindingLayoutItemArray binding_layout_items(7);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::RestirTestPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(1);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(2);
 			binding_layout_items[4] = BindingLayoutItem::create_texture_srv(3);
 			binding_layout_items[5] = BindingLayoutItem::create_texture_srv(4);
-			binding_layout_items[6] = BindingLayoutItem::create_texture_srv(5);
-			binding_layout_items[7] = BindingLayoutItem::create_sampler(0);
+			// binding_layout_items[6] = BindingLayoutItem::create_texture_srv(5);
+			binding_layout_items[6] = BindingLayoutItem::create_sampler(0);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -74,15 +74,15 @@ namespace fantasy
 
 		// Binding Set.
 		{
-			BindingSetItemArray binding_set_items(8);
+			BindingSetItemArray binding_set_items(7);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::RestirTestPassConstant));
 			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
 			binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("world_space_normal_texture")));
 			binding_set_items[3] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("base_color_texture")));
 			binding_set_items[4] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("pbr_texture")));
 			binding_set_items[5] = BindingSetItem::create_texture_srv(4, check_cast<TextureInterface>(cache->require("emissive_texture")));
-			binding_set_items[6] = BindingSetItem::create_texture_srv(5, check_cast<TextureInterface>(cache->require("shadow_map_texture")));
-			binding_set_items[7] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_wrap_sampler")));
+			// binding_set_items[6] = BindingSetItem::create_texture_srv(5, check_cast<TextureInterface>(cache->require("shadow_map_texture")));
+			binding_set_items[6] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_wrap_sampler")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
 				_binding_layout.get()
@@ -115,8 +115,6 @@ namespace fantasy
 	{
 		ReturnIfFalse(cmdlist->open());
 
-		clear_color_attachment(cmdlist, _frame_buffer.get(), 0);
-
 		ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
 		ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::RestirTestPassConstant)));
 		ReturnIfFalse(cmdlist->draw(DrawArguments::full_screen_quad()));
@@ -131,11 +129,11 @@ namespace fantasy
 
 		RenderPassInterface* gbuffer_pass = render_graph->add_pass(std::make_shared<GBufferPass>());
 		RenderPassInterface* brdf_lut_pass = render_graph->add_pass(std::make_shared<BrdfLUTPass>());
-		RenderPassInterface* ray_tracing_shadow_map_pass = render_graph->add_pass(std::make_shared<RayTracingShadowMapPass>());
+		// RenderPassInterface* ray_tracing_shadow_map_pass = render_graph->add_pass(std::make_shared<RayTracingShadowMapPass>());
 		RenderPassInterface* test_pass = render_graph->add_pass(std::make_shared<RestirTestPass>());
 
-		gbuffer_pass->precede(ray_tracing_shadow_map_pass);
-		ray_tracing_shadow_map_pass->precede(test_pass);
+		// gbuffer_pass->precede(ray_tracing_shadow_map_pass);
+		// ray_tracing_shadow_map_pass->precede(test_pass);
 
 
 		_last_pass= test_pass;

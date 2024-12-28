@@ -5,12 +5,14 @@
 #include "../core/tools/log.h"
 #include "../core/math/matrix.h"
 #include "../core/math/bounds.h"
-#include "../core/math/sphere.h"
 #include "../core/Math/surface.h"
 #include "../core/tools/hash_table.h"
 #include "../core/tools/bit_allocator.h"
+#include "../core/math/graph.h"
 #include "image.h"
 #include <basetsd.h>
+#include <cstdint>
+#include <utility>
 #include <vector>
 
 
@@ -20,7 +22,7 @@ namespace fantasy
     {
         Vector3F position;
         Vector3F normal;
-        Vector4F tangent;
+        Vector3F tangent;
         Vector2F uv;
     };
 
@@ -28,21 +30,22 @@ namespace fantasy
     {
         enum
         {
-            TextureType_Diffuse,
+            TextureType_BaseColor,
             TextureType_Normal,
+            TextureType_Metallic,
+            TextureType_Roughness,
             TextureType_Emissive,
             TextureType_Occlusion,
-            TextureType_MetallicRoughness,
             TextureType_Num
         };
 
         struct SubMaterial
         {
 			float diffuse_factor[4] = { 0.0f };
-			float roughness_factor = 0.0f;
-			float metallic_factor = 0.0f;
-			float occlusion_factor = 0.0f;
-			float emissive_factor[3] = { 0.0f };
+			float roughness_factor = 1.0f;
+			float metallic_factor = 1.0f;
+			float occlusion_factor = 1.0f;
+			float emissive_factor[4] = { 0.0f };
 
             Image images[TextureType_Num];
 
@@ -104,8 +107,6 @@ namespace fantasy
         bool culling = false;
     };
 
-
-
     class MeshOptimizer
     {
     public:
@@ -114,17 +115,12 @@ namespace fantasy
         bool optimize(uint32_t target_triangle_num);
         void lock_position(Vector3F position);
 
-
         float _max_error;
-        uint32_t _remain_vertex_num;
-        uint32_t _remain_triangle_num;
 
     private:
         bool compact();
-        static uint32_t hash(const Vector3F& v);
         void fix_triangle(uint32_t triangle_index);
 
-        // 评估 p0 和 p1 合并后的误差
         float evaluate(const Vector3F& p0, const Vector3F& p1, bool bMerge);
         void merge_begin(const Vector3F& p);
         void mergen_end();
@@ -156,6 +152,8 @@ namespace fantasy
     private:
         std::vector<Vector3F>& _vertices;
         std::vector<uint32_t>& _indices;
+        uint32_t _remain_vertex_num;
+        uint32_t _remain_triangle_num;
 
         enum
         {
@@ -184,55 +182,54 @@ namespace fantasy
         std::vector<uint32_t> edge_need_reevaluate_indices;
     };
 
-
-    struct Cluster
+    struct MeshCluster
     {
-        static const uint32_t cluster_size=128;
+        static const uint32_t cluster_size = 128;
 
-        std::vector<Vector3F> verts;
-        std::vector<uint32_t> indexes;
-        std::vector<uint32_t> external_edges;
+        std::vector<Vector3F> vertices;
+        std::vector<uint32_t> indices;
+        std::vector<uint32_t> external_edges;   // edge_index essentially corresponds to the vertex_index of the edge's starting point.
 
-        Bounds3F box_bounds;
-        Sphere3F sphere_bounds;
-        Sphere3F lod_bounds;
-        float lod_error;
-        uint32_t mip_level;
-        uint32_t group_id;
+        Bounds3F bounding_box;
+        Sphere bounding_sphere;
+        Sphere lod_bounding_sphere;
+        float lod_error = 0.0f;
+        uint32_t mip_level = 0;
+        uint32_t group_id = 0;
     };
 
-    struct ClusterGroup
+    struct MeshClusterGroup
     {
-        static const uint32_t group_size=32;
+        static const uint32_t group_size = 32;
 
-        Sphere3F bounds;
-        Sphere3F lod_bounds;
-        float min_lod_error;
-        float max_parent_lod_error;
-        uint32_t mip_level;
-        std::vector<uint32_t> clusters;
+        std::vector<uint32_t> cluster_indices;
         std::vector<std::pair<uint32_t,uint32_t>> external_edges;
+        Sphere bounding_sphere;
+        Sphere lod_bounding_sphere;
+        float parent_lod_error = 0.0f;
+        uint32_t mip_level = 0;
     };
 
+    class VirtualGeometry
+    {
+    public:
+        bool build(const Mesh* mesh);
 
-    void create_triangle_cluster(
-        const std::vector<Vector3F>& verts,
-        const std::vector<uint32_t>& indexes,
-        std::vector<Cluster>& clusters
-    );
+    private:
+        bool cluster_triangles();
+        bool build_cluster_groups(uint32_t level_offset, uint32_t level_cluster_count, uint32_t mip_level);
+        bool build_parent_clusters(uint32_t cluster_group_index);
+        void build_adjacency_graph(SimpleGraph& edge_link_graph, SimpleGraph& adjacency_graph);
+        uint32_t edge_hash(const Vector3F& p0, const Vector3F& p1);
 
-    void build_cluster_groups(
-        std::vector<Cluster>& clusters,
-        uint32_t offset,
-        uint32_t num_cluster,
-        std::vector<ClusterGroup>& cluster_groups,
-        uint32_t mip_level
-    );
+    private:
+        std::vector<MeshCluster> _clusters;
+        std::vector<MeshClusterGroup> _cluster_groups;
+        uint32_t _mip_level_num;
 
-    void build_cluster_group_parent_clusters(
-        ClusterGroup& cluster_group,
-        std::vector<Cluster>& clusters
-    );
+		std::vector<uint32_t> _indices;
+        std::vector<Vector3F> _vertex_positons;
+    };
 
     namespace Geometry
     {

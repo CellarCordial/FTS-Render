@@ -4,12 +4,12 @@
 #include "ray_cone.slang"
 #include "../math_helper.slang"
 
-float3 calculate_normal(float3 texture_normal, float3 vertex_normal, float4 vertex_tangent)
+float3 calculate_normal(float3 texture_normal, float3 vertex_normal, float3 vertex_tangent)
 {
     float3 unpacked_normal = texture_normal * 2.0f - 1.0f;
     float3 N = vertex_normal;
     float3 T = normalize(vertex_tangent.xyz - N * dot(vertex_tangent.xyz, N));
-    float3 B = cross(N, T) * vertex_tangent.w;
+    float3 B = cross(N, T);
     float3x3 TBN = float3x3(T, B, N);
     return normalize(mul(unpacked_normal, TBN));
 }

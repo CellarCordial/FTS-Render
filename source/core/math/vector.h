@@ -150,7 +150,7 @@ namespace fantasy
 
 		T LengthSquared() const { return x * x + y * y; }
 
-		float Length() const { return std::sqrt(LengthSquared()); }
+		float length() const { return std::sqrt(LengthSquared()); }
 
 		T x, y;
 	};
@@ -317,7 +317,7 @@ namespace fantasy
 
 		T LengthSquared() const { return x * x + y * y + z * z; }
 
-		float Length() const { return std::sqrt(LengthSquared()); }
+		float length() const { return std::sqrt(LengthSquared()); }
 
 		T x, y, z;
 	};
@@ -489,7 +489,7 @@ namespace fantasy
 
 		T LengthSquared() const { return x * x + y * y + z * z + w * w; }
 
-		float Length() const { return std::sqrt(LengthSquared()); }
+		float length() const { return std::sqrt(LengthSquared()); }
 
 		T x, y, z, w;
 	};
@@ -556,19 +556,19 @@ namespace fantasy
 	template <typename T>
 	inline Vector4<T> normalize(const Vector4<T>& vec)
 	{
-		return vec / vec.Length();
+		return vec / vec.length();
 	}
 
 	template <typename T>
 	inline Vector3<T> normalize(const Vector3<T>& vec)
 	{
-		return vec / vec.Length();
+		return vec / vec.length();
 	}
 	
 	template <typename T>
 	inline Vector2<T> normalize(const Vector2<T>& vec)
 	{
-		return vec / vec.Length();
+		return vec / vec.length();
 	}
 	
 	// 最小坐标值
@@ -651,14 +651,14 @@ namespace fantasy
 	template <typename T>
 	inline float distance(const Vector3<T>& vec1, const Vector3<T>& vec2)
 	{
-		return (vec1 - vec2).Length();
+		return (vec1 - vec2).length();
 	}
 
 	// 两点距离
 	template <typename T>
 	inline float distance(const Vector2<T>& vec1, const Vector2<T>& vec2)
 	{
-		return (vec1 - vec2).Length();
+		return (vec1 - vec2).length();
 	}
 
 	// 两点距离平方

@@ -119,7 +119,6 @@ namespace fantasy
 				return true;
 			}
 		));
-		clear_color_attachment(cmdlist, _frame_buffer.get(), 0);
 		clear_depth_stencil_attachment(cmdlist, _frame_buffer.get());
 
 		ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
@@ -130,5 +129,4 @@ namespace fantasy
 
 		return true;
 	}
-
 }

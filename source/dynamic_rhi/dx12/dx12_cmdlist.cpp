@@ -117,7 +117,7 @@ namespace fantasy
         // Try to allocate from the current chunk first.
         if (_current_chunk != nullptr)
         {
-            uint64_t aligned_offset = Align(_current_chunk->write_end_position, static_cast<uint64_t>(aligment));
+            uint64_t aligned_offset = align(_current_chunk->write_end_position, static_cast<uint64_t>(aligment));
             uint64_t data_end_pos = aligned_offset + size;
 
             if (data_end_pos <= _current_chunk->buffer_size)
@@ -165,7 +165,7 @@ namespace fantasy
 
         if (!_current_chunk)
         {
-            uint64_t size_to_allocate = Align(std::max(size, _default_chunk_size), DX12BufferChunk::size_alignment);
+            uint64_t size_to_allocate = align(std::max(size, _default_chunk_size), DX12BufferChunk::size_alignment);
             if (_max_memory_size > 0 && _allocated_memory_size + size_to_allocate <= _max_memory_size)
             {
                 if (_dxr_scratch)
@@ -253,7 +253,7 @@ namespace fantasy
     std::shared_ptr<DX12BufferChunk> DX12UploadManager::create_bufferChunk(uint64_t size) const
     {
         std::shared_ptr<DX12BufferChunk> ret = std::make_shared<DX12BufferChunk>();
-        size = Align(size, DX12BufferChunk::size_alignment);
+        size = align(size, DX12BufferChunk::size_alignment);
 
         D3D12_HEAP_PROPERTIES d3d12_heap_properties{};
         d3d12_heap_properties.Type = D3D12_HEAP_TYPE_UPLOAD;

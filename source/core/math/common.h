@@ -111,18 +111,18 @@ inline bool operator!=(T a, uint32_t b) { return uint32_t(a) != b; }
 
     
     template<typename T> 
-    T Align(T size, T alignment)
+    T align(T size, T alignment)
     {
         return (size + alignment - 1) & ~(alignment - 1);
     }
 
-    inline uint32_t TriangleIndexCycle3(uint32_t dw)
+    inline uint32_t triangle_index_cycle3(uint32_t dw)
     {
         uint32_t mod3 = dw % 3;
         return dw - mod3 + ((1 << mod3) & 3);
     }
 
-    inline uint32_t TriangleIndexCycle3(uint32_t dw, uint32_t dwOfs)
+    inline uint32_t triangle_index_cycle3(uint32_t dw, uint32_t dwOfs)
     {
         return dw - dw % 3 + (dw + dwOfs) % 3;
     }

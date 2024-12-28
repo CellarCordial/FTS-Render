@@ -38,8 +38,8 @@ namespace fantasy
 			Transform transform;
 		};
 
-		DELCARE_DELEGATE_EVENT(ModelLoaded);
 		DELCARE_DELEGATE_EVENT(UpdateGlobalSdf);
+		DELCARE_MULTI_DELEGATE_EVENT(ModelLoaded);
 		DELCARE_DELEGATE_EVENT(GenerateSdf, Entity*);
 		DELCARE_DELEGATE_EVENT(GenerateSurfaceCache, Entity*);
 	};
@@ -128,7 +128,8 @@ namespace fantasy
 		public EventSubscriber<event::OnComponentAssigned<Mesh>>,
 		public EventSubscriber<event::OnComponentAssigned<Material>>,
 		public EventSubscriber<event::OnComponentAssigned<SurfaceCache>>,
-		public EventSubscriber<event::OnComponentAssigned<DistanceField>>
+		public EventSubscriber<event::OnComponentAssigned<DistanceField>>,
+		public EventSubscriber<event::OnComponentAssigned<VirtualGeometry>>
 	{
 	public:
 		bool initialize(World* world) override;
@@ -142,6 +143,7 @@ namespace fantasy
 		bool publish(World* world, const event::OnComponentAssigned<Material>& event) override;
 		bool publish(World* world, const event::OnComponentAssigned<SurfaceCache>& event) override;
 		bool publish(World* world, const event::OnComponentAssigned<DistanceField>& event) override;
+		bool publish(World* world, const event::OnComponentAssigned<VirtualGeometry>& event) override;
 
 	private:
 		World* _world = nullptr;

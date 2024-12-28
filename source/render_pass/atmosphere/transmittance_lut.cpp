@@ -116,8 +116,8 @@ namespace fantasy
 
 
 		Vector2I thread_group_num = {
-			static_cast<uint32_t>(Align(TRANSMITTANCE_LUT_RES, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X),
-			static_cast<uint32_t>(Align(TRANSMITTANCE_LUT_RES, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y),
+			static_cast<uint32_t>(align(TRANSMITTANCE_LUT_RES, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X),
+			static_cast<uint32_t>(align(TRANSMITTANCE_LUT_RES, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y),
 		};
 
 		ReturnIfFalse(cmdlist->set_compute_state(_compute_state));

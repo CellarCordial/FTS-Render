@@ -513,7 +513,7 @@ namespace fantasy
     {
         if (_desc.is_constant_buffer)
         {
-            _desc.byte_size = Align(_desc.byte_size, static_cast<uint64_t>(CONSTANT_BUFFER_OFFSET_SIZE_ALIGMENT));
+            _desc.byte_size = align(_desc.byte_size, static_cast<uint64_t>(CONSTANT_BUFFER_OFFSET_SIZE_ALIGMENT));
         }
         
         // Do not create any resources for volatile buffers.
@@ -733,7 +733,7 @@ namespace fantasy
 
         D3D12_CONSTANT_BUFFER_VIEW_DESC view_desc;
         view_desc.BufferLocation = _d3d12_resource->GetGPUVirtualAddress() + resolved_range.byte_offset;
-        view_desc.SizeInBytes = Align(static_cast<uint32_t>(resolved_range.byte_size), CONSTANT_BUFFER_OFFSET_SIZE_ALIGMENT);
+        view_desc.SizeInBytes = align(static_cast<uint32_t>(resolved_range.byte_size), CONSTANT_BUFFER_OFFSET_SIZE_ALIGMENT);
 
         _context->device->CreateConstantBufferView(&view_desc, D3D12_CPU_DESCRIPTOR_HANDLE{ descriptor_address });
     }
@@ -1029,7 +1029,7 @@ namespace fantasy
 
             _subresource_offsets[ix] = stBaseOffset;
             stBaseOffset += subresource_size;
-            stBaseOffset = Align(stBaseOffset, static_cast<uint64_t>(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT));
+            stBaseOffset = align(stBaseOffset, static_cast<uint64_t>(D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT));
         }
     }
 

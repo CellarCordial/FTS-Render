@@ -574,7 +574,7 @@ namespace fantasy
 		uint32_t DX12Pipeline::get_shaderTableEntrySize() const
 		{
 			uint32_t required_size = D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + sizeof(uint64_t) * _max_local_root_parameter_count;
-			return Align(required_size, uint32_t(D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
+			return align(required_size, uint32_t(D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT));
 		}
 		
 		uint32_t DX12ShaderTable::get_entry_count() const

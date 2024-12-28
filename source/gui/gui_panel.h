@@ -1,7 +1,7 @@
 #ifndef GUI_PANEL_H
 #define GUI_PANEL_H
 #include <imgui.h>
-#include <glfw3.h>
+#include <GLFW/glfw3.h>
 #include "../dynamic_rhi/device.h"
 
 namespace fantasy::gui 

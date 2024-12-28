@@ -174,9 +174,9 @@ namespace fantasy
 						ReturnIfFalse(cmdlist->set_push_constants(&pass_constants, sizeof(constant::GlobalSdfConstants)));
 
 						Vector3I thread_group_num = {
-							Align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
-							Align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
-							Align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
+							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
+							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
+							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
 						};
 
 						ReturnIfFalse(cmdlist->dispatch(thread_group_num.x, thread_group_num.y, thread_group_num.z));
@@ -226,9 +226,9 @@ namespace fantasy
 						ReturnIfFalse(cmdlist->set_push_constants(&pass_constants, sizeof(constant::GlobalSdfConstants)));
 
 						Vector3I thread_group_num = {
-							Align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
-							Align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
-							Align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
+							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
+							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
+							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
 						};
 
 						ReturnIfFalse(cmdlist->dispatch(thread_group_num.x, thread_group_num.y, thread_group_num.z));

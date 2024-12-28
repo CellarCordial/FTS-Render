@@ -9,11 +9,10 @@
 #include "scene/scene.h"
 #include "scene/camera.h"
 #include <d3d12.h>
-#include <glfw3.h>
 #include <memory>
 
 #define GLFW_EXPOSE_NATIVE_WIN32
-#include <glfw3native.h>
+#include <GLFW/glfw3native.h>
 
 #ifndef ReturnIfFailed
 #define ReturnIfFailed(res)	\

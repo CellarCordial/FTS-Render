@@ -1,13 +1,17 @@
 #include "scene.h"
-#define TINYGLTF_NOEXCEPTION
-#define TINYGLTF_IMPLEMENTATION
-#define TINYGLTF_NO_EXTERNAL_IMAGE
-#include <tiny_gltf.h>
-#include <json.hpp>
-#include "image.h"
+#include "assimp/material.h"
+#include "assimp/mesh.h"
+#include "assimp/types.h"
+#include "geometry.h"
+#include <cstdint>
+#include <cstring>
+
+#include <assimp/Importer.hpp>
+#include <assimp/scene.h>
+#include <assimp/postprocess.h>
+
 #include "camera.h"
 #include "../core/parallel/parallel.h"
-#include "../core/math/quaternion.h"
 #include "../core/tools/file.h"
 #include "../gui/gui_panel.h"
 
@@ -85,18 +89,10 @@ namespace fantasy
 		bvh.build(boxes, global_box);
 	}
 
-	static std::unique_ptr<tinygltf::TinyGLTF> gltf_loader;
-	static std::unique_ptr<tinygltf::Model> gltf_model;
-
-	Matrix4x4 get_matrix_from_gltf_node(const tinygltf::Node& gltf_node);
-	void load_indices_from_gltf_primitive(const tinygltf::Primitive* gltf_primitive, Mesh::Submesh& submesh);
-	void load_vertices_box_from_gltf_primitive(const tinygltf::Primitive* gltf_primitive, Mesh::Submesh& submesh);
-
+	static const aiScene* assimp_scene = nullptr;
 
 	bool SceneSystem::initialize(World* world)
 	{
-		if (!gltf_loader) gltf_loader = std::make_unique<tinygltf::TinyGLTF>();
-
 		_world = world;
 		_world->subscribe<event::OnModelLoad>(this);
 		_world->subscribe<event::OnModelTransform>(this);
@@ -104,6 +100,7 @@ namespace fantasy
 		_world->subscribe<event::OnComponentAssigned<Material>>(this);
 		_world->subscribe<event::OnComponentAssigned<SurfaceCache>>(this);
 		_world->subscribe<event::OnComponentAssigned<DistanceField>>(this);
+		_world->subscribe<event::OnComponentAssigned<VirtualGeometry>>(this);
 
 		_global_entity = world->get_global_entity();
 
@@ -118,8 +115,6 @@ namespace fantasy
 
 	bool SceneSystem::destroy()
 	{
-		if (gltf_loader) gltf_loader.reset();
-
 		_world->unsubscribe_all(this);
 		return true;
 	}
@@ -181,29 +176,25 @@ namespace fantasy
 
 	bool SceneSystem::publish(World* world, const event::OnModelLoad& event)
 	{
-		ReturnIfFalse(gltf_loader != nullptr && event.entity != nullptr);
-
-
-		gltf_model.reset();
-		gltf_model = std::make_unique<tinygltf::Model>();
-
-		std::string error;
-		std::string warn;
 		std::string proj_dir = PROJ_DIR;
 
-		if (!gltf_loader->LoadASCIIFromFile(gltf_model.get(), &error, &warn, proj_dir + event.model_path))
-		{
+		Assimp::Importer assimp_importer;
+
+        assimp_scene = assimp_importer.ReadFile(
+			proj_dir + event.model_path, 
+			aiProcess_Triangulate | 
+			aiProcess_GenSmoothNormals | 
+			aiProcess_CalcTangentSpace
+		);
+
+        if(!assimp_scene || assimp_scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !assimp_scene->mRootNode)
+        {
 			LOG_ERROR("Failed to load model.");
-			if (!error.empty() || !warn.empty())
-			{
-				LOG_ERROR(std::string(error + warn).c_str());
-			}
+			LOG_ERROR(assimp_importer.GetErrorString());
 			return false;
-		}
+        }
 
 		std::string model_name = remove_file_extension(event.model_path.c_str());
-
-		gui::notify_message(gui::ENotifyType::Info, "Loaded " + event.model_path);
 
 		_model_directory = event.model_path.substr(0, event.model_path.find_last_of('/') + 1);
 		_sdf_data_path = proj_dir + "asset/sdf/" + model_name + ".sdf";
@@ -214,14 +205,16 @@ namespace fantasy
 		event.entity->assign<Material>();
 		event.entity->assign<Transform>();
 		event.entity->assign<SurfaceCache>();
+		// event.entity->assign<VirtualGeometry>();
 		event.entity->assign<DistanceField>();
+		// TODO: reverse the order of virtual geometry and distance field.
 
-		gltf_model.reset();
 		_sdf_data_path.clear();
 		_model_directory.clear();
 
 		_loaded_model_names.insert(event.model_path);
 
+		gui::notify_message(gui::ENotifyType::Info, "Loaded " + event.model_path);
 		
 		// Entity* tmp_model_entity = event.entity;
 		// gui::add(
@@ -252,53 +245,96 @@ namespace fantasy
 
 	bool SceneSystem::publish(World* world, const event::OnComponentAssigned<Mesh>& event)
 	{
-		const auto& gltf_scene = gltf_model->scenes[gltf_model->defaultScene];
+		if (!assimp_scene)
+		{
+			LOG_ERROR("You should load a model first.");
+			return false;
+		}
 
 		std::vector<Matrix4x4> world_matrixs;
-		std::vector<const tinygltf::Primitive*> primitives;
+		std::vector<const aiMesh*> assimp_meshes;
 
-		std::function<void(const tinygltf::Node&, const Matrix4x4&)> func;
-		func = [&](const tinygltf::Node& crGLTFNode, const Matrix4x4& crParentMatrix) -> void
-			{
-				Matrix4x4 world_matrix = mul(crParentMatrix, get_matrix_from_gltf_node(crGLTFNode));
-
-				if (crGLTFNode.mesh >= 0)
-				{
-					const auto& mesh_primitives = gltf_model->meshes[crGLTFNode.mesh].primitives;
-					for (const auto& mesh_primitive : mesh_primitives)
-					{
-						primitives.emplace_back(&mesh_primitive);
-						world_matrixs.push_back(world_matrix);
-					}
-				}
-
-				for (int child_node_index : crGLTFNode.children)
-				{
-					func(gltf_model->nodes[child_node_index], world_matrixs.back());
-				}
-			};
-
-		for (uint32_t ix = 0; ix < gltf_scene.nodes.size(); ++ix)
+		std::function<void(aiNode *node, const aiScene *scene, const Matrix4x4&)> func;
+		func = [&](aiNode* node, const aiScene* scene, const Matrix4x4& parent_matrix) -> void
 		{
-			func(gltf_model->nodes[gltf_scene.nodes[ix]], event.component->world_matrix);
-		}
+			const auto& m = node->mTransformation;
+			Matrix4x4 world_matrix = mul(
+				parent_matrix, 
+				Matrix4x4(
+					m.a1, m.a2, m.a3, m.a4, 
+					m.b1, m.b2, m.b3, m.b4, 
+					m.c1, m.c2, m.c3, m.c4, 
+					m.d1, m.d2, m.d3, m.d4
+				)
+			);
+
+			for (uint32_t ix = 0; ix < node->mNumMeshes; ++ix)
+			{
+				assimp_meshes.emplace_back(assimp_scene->mMeshes[node->mMeshes[ix]]);
+				world_matrixs.push_back(world_matrix);
+			}
+
+			for(uint32_t ix = 0; ix < node->mNumChildren; ix++)
+			{
+				func(node->mChildren[ix], scene, world_matrix);
+			}
+		};
+
+		func(assimp_scene->mRootNode, assimp_scene, event.component->world_matrix);
+
 
 		Mesh* mesh = event.component;
 		auto& submeshes = mesh->submeshes;
-		submeshes.resize(primitives.size());
+		submeshes.resize(assimp_meshes.size());
 
 		parallel::parallel_for(
 			[&](uint64_t ix)
 			{
 				auto& submesh = submeshes[ix];
 				submesh.world_matrix = world_matrixs[ix];
-				submesh.material_index = primitives[ix]->material;
+				submesh.material_index = assimp_meshes[ix]->mMaterialIndex;
 
-				load_indices_from_gltf_primitive(primitives[ix], submesh);
-				load_vertices_box_from_gltf_primitive(primitives[ix], submesh);
+				for(uint32_t jx = 0; jx < assimp_meshes[ix]->mNumFaces; jx++)
+				{
+					aiFace face = assimp_meshes[ix]->mFaces[jx];
+					for(uint32_t kx = 0; kx < face.mNumIndices; kx++)
+					{
+						submesh.indices.push_back(face.mIndices[kx]);
+					}
+				}
+
+				for(uint32_t jx = 0; jx < assimp_meshes[ix]->mNumVertices; jx++)
+				{
+					Vertex& vertex = submesh.vertices.emplace_back();
+					
+					vertex.position.x = assimp_meshes[ix]->mVertices[jx].x;
+					vertex.position.y = assimp_meshes[ix]->mVertices[jx].y;
+					vertex.position.z = assimp_meshes[ix]->mVertices[jx].z;
+
+					if (assimp_meshes[ix]->HasNormals())
+					{
+						vertex.normal.x = assimp_meshes[ix]->mNormals[jx].x;
+						vertex.normal.y = assimp_meshes[ix]->mNormals[jx].y;
+						vertex.normal.z = assimp_meshes[ix]->mNormals[jx].z;
+					}
+
+					if (assimp_meshes[ix]->HasTangentsAndBitangents())
+					{
+						vertex.tangent.x = assimp_meshes[ix]->mTangents[jx].x;
+						vertex.tangent.y = assimp_meshes[ix]->mTangents[jx].y;
+						vertex.tangent.z = assimp_meshes[ix]->mTangents[jx].z;
+					}
+
+					if(assimp_meshes[ix]->HasTextureCoords(0))
+					{
+						vertex.uv.x = assimp_meshes[ix]->mTextureCoords[0][jx].x; 
+						vertex.uv.y = assimp_meshes[ix]->mTextureCoords[0][jx].y;
+					}
+				}
 			},
-			primitives.size()
+			submeshes.size()
 		);
+
 		return true;
 	}
 
@@ -308,67 +344,45 @@ namespace fantasy
 		
 		auto& material = event.component;
 
-		if (!gltf_model)
+		if (!assimp_scene)
 		{
 			LOG_ERROR("You should load a model first.");
 			return false;
 		}
 
-		material->submaterials.resize(gltf_model->materials.size());
-
+		material->submaterials.resize(assimp_scene->mNumMaterials);
+		
 		parallel::parallel_for(
 			[&material, &file_path](uint64_t ix)
 			{
 				auto& submaterial = material->submaterials[ix];
+				aiMaterial* assimp_material = assimp_scene->mMaterials[ix];
 
-				const auto& gltf_material = gltf_model->materials[ix];
-				submaterial.diffuse_factor[0] = static_cast<float>(gltf_material.pbrMetallicRoughness.baseColorFactor[0]);
-				submaterial.diffuse_factor[1] = static_cast<float>(gltf_material.pbrMetallicRoughness.baseColorFactor[1]);
-				submaterial.diffuse_factor[2] = static_cast<float>(gltf_material.pbrMetallicRoughness.baseColorFactor[2]);
-				submaterial.diffuse_factor[3] = static_cast<float>(gltf_material.pbrMetallicRoughness.baseColorFactor[3]);
-				submaterial.roughness_factor = static_cast<float>(gltf_material.pbrMetallicRoughness.roughnessFactor);
-				submaterial.metallic_factor = static_cast<float>(gltf_material.pbrMetallicRoughness.metallicFactor);
-				submaterial.occlusion_factor = static_cast<float>(gltf_material.occlusionTexture.strength);
-				submaterial.emissive_factor[0] = static_cast<float>(gltf_material.emissiveFactor[0]);
-				submaterial.emissive_factor[1] = static_cast<float>(gltf_material.emissiveFactor[1]);
-				submaterial.emissive_factor[2] = static_cast<float>(gltf_material.emissiveFactor[2]);
+				aiColor4D ai_color;
+				if (assimp_material->Get(AI_MATKEY_BASE_COLOR, ai_color) == AI_SUCCESS) 
+					memcpy(submaterial.diffuse_factor, &ai_color, sizeof(float) * 4);
+				if (assimp_material->Get(AI_MATKEY_COLOR_EMISSIVE, ai_color) == AI_SUCCESS) 
+					memcpy(submaterial.emissive_factor, &ai_color, sizeof(float) * 4);
+				
+				float ai_float;
+				if (assimp_material->Get(AI_MATKEY_METALLIC_FACTOR, ai_float) == AI_SUCCESS) 
+					submaterial.metallic_factor = ai_float;
+				if (assimp_material->Get(AI_MATKEY_ROUGHNESS_FACTOR, ai_float) == AI_SUCCESS) 
+					submaterial.roughness_factor = ai_float;
 
-
-				if (gltf_material.pbrMetallicRoughness.baseColorTexture.index >= 0)
-				{
-					const auto& gltf_texture = gltf_model->textures[gltf_material.pbrMetallicRoughness.baseColorTexture.index];
-					const auto& gltf_image = gltf_model->images[gltf_texture.source];
-
-					submaterial.images[Material::TextureType_Diffuse] = Image::load_image_from_file((file_path + gltf_image.uri).c_str());
-				}
-				if (gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index >= 0)
-				{
-					const auto& gltf_texture = gltf_model->textures[gltf_material.pbrMetallicRoughness.metallicRoughnessTexture.index];
-					const auto& gltf_image = gltf_model->images[gltf_texture.source];
-
-					submaterial.images[Material::TextureType_MetallicRoughness] = Image::load_image_from_file((file_path + gltf_image.uri).c_str());
-				}
-				if (gltf_material.normalTexture.index >= 0)
-				{
-					const auto& gltf_texture = gltf_model->textures[gltf_material.normalTexture.index];
-					const auto& gltf_image = gltf_model->images[gltf_texture.source];
-
-					submaterial.images[Material::TextureType_Normal] = Image::load_image_from_file((file_path + gltf_image.uri).c_str());
-				}
-				if (gltf_material.occlusionTexture.index >= 0)
-				{
-					const auto& gltf_texture = gltf_model->textures[gltf_material.occlusionTexture.index];
-					const auto& gltf_image = gltf_model->images[gltf_texture.source];
-
-					submaterial.images[Material::TextureType_Occlusion] = Image::load_image_from_file((file_path + gltf_image.uri).c_str());
-				}
-				if (gltf_material.emissiveTexture.index >= 0)
-				{
-					const auto& gltf_texture = gltf_model->textures[gltf_material.emissiveTexture.index];
-					const auto& gltf_image = gltf_model->images[gltf_texture.source];
-
-					submaterial.images[Material::TextureType_Emissive] = Image::load_image_from_file((file_path + gltf_image.uri).c_str());
-				}
+				aiString material_name;
+				if (assimp_material->GetTexture(aiTextureType_BASE_COLOR, 0, &material_name) == aiReturn_SUCCESS)
+					submaterial.images[Material::TextureType_BaseColor] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
+				if (assimp_material->GetTexture(aiTextureType_NORMAL_CAMERA, 0, &material_name) == aiReturn_SUCCESS)
+					submaterial.images[Material::TextureType_BaseColor] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
+				if (assimp_material->GetTexture(aiTextureType_METALNESS, 0, &material_name) == aiReturn_SUCCESS)
+					submaterial.images[Material::TextureType_Metallic] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
+				if (assimp_material->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &material_name) == aiReturn_SUCCESS)
+					submaterial.images[Material::TextureType_Roughness] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
+				if (assimp_material->GetTexture(aiTextureType_EMISSION_COLOR, 0, &material_name) == aiReturn_SUCCESS)
+					submaterial.images[Material::TextureType_Emissive] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
+				if (assimp_material->GetTexture(aiTextureType_AMBIENT_OCCLUSION, 0, &material_name) == aiReturn_SUCCESS)
+					submaterial.images[Material::TextureType_Occlusion] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
 			},
 			material->submaterials.size()
 		);
@@ -527,6 +541,15 @@ namespace fantasy
 		return true;
 	}
 
+	bool SceneSystem::publish(World* world, const event::OnComponentAssigned<VirtualGeometry>& event)
+	{
+		VirtualGeometry* virtual_geometry = event.component;
+		Mesh* mesh = event.entity->get_component<Mesh>();
+
+		return virtual_geometry->build(mesh);
+	}
+
+
 	bool SceneSystem::publish(World* world, const event::OnModelTransform& event)
 	{
 		Transform* transform = event.entity->get_component<Transform>();
@@ -592,141 +615,4 @@ namespace fantasy
 			}
 		);
 	}
-
-	Matrix4x4 get_matrix_from_gltf_node(const tinygltf::Node& gltf_node)
-	{
-		struct WorldTransform
-		{
-			Vector3F translation_vector = { 0.0f, 0.0f, 0.0f };
-			Vector3F scale_vector = { 1.0f, 1.0f, 1.0f };
-			Quaternion rotation_vector;
-			Matrix4x4 world_matrix;
-
-			void create_world_matrix()
-			{
-				world_matrix = mul(mul(translate(translation_vector), scale(scale_vector)), rotation_vector.to_matrix());
-			}
-		};
-
-		WorldTransform transform;
-
-		if (!gltf_node.matrix.empty())
-		{
-			transform.world_matrix = {
-					static_cast<float>(gltf_node.matrix[0]),
-					static_cast<float>(gltf_node.matrix[1]),
-					static_cast<float>(gltf_node.matrix[2]),
-					static_cast<float>(gltf_node.matrix[3]),
-					static_cast<float>(gltf_node.matrix[4]),
-					static_cast<float>(gltf_node.matrix[5]),
-					static_cast<float>(gltf_node.matrix[6]),
-					static_cast<float>(gltf_node.matrix[7]),
-					static_cast<float>(gltf_node.matrix[8]),
-					static_cast<float>(gltf_node.matrix[9]),
-					static_cast<float>(gltf_node.matrix[10]),
-					static_cast<float>(gltf_node.matrix[11]),
-					static_cast<float>(gltf_node.matrix[12]),
-					static_cast<float>(gltf_node.matrix[13]),
-					static_cast<float>(gltf_node.matrix[14]),
-					static_cast<float>(gltf_node.matrix[15])
-			};
-		}
-		else
-		{
-			if (!gltf_node.translation.empty()) transform.translation_vector = { (float)gltf_node.translation[0], (float)gltf_node.translation[1], (float)gltf_node.translation[2] };
-			if (!gltf_node.scale.empty()) transform.scale_vector = { (float)gltf_node.scale[0], (float)gltf_node.scale[1], (float)gltf_node.scale[2] };
-			if (!gltf_node.rotation.empty()) transform.rotation_vector = { (float)gltf_node.rotation[0], (float)gltf_node.rotation[1], (float)gltf_node.rotation[2], (float)gltf_node.rotation[3] };
-
-			transform.create_world_matrix();
-		}
-
-		return transform.world_matrix;
-	}
-
-	void load_indices_from_gltf_primitive(const tinygltf::Primitive* gltf_primitive, Mesh::Submesh& submesh)
-	{
-		const auto& gltf_indices_accessor = gltf_model->accessors[gltf_primitive->indices];
-		const auto& gltf_indices_buffer_view = gltf_model->bufferViews[gltf_indices_accessor.bufferView];
-		const auto& gltf_indices_buffer = gltf_model->buffers[gltf_indices_buffer_view.buffer];
-
-		submesh.indices.reserve(gltf_indices_accessor.count);
-
-		auto AddIndices = [&]<typename T>()
-		{
-			const T* index_data = reinterpret_cast<const T*>(
-				gltf_indices_buffer.data.data() + 
-				gltf_indices_buffer_view.byteOffset + 
-				gltf_indices_accessor.byteOffset
-			);
-			for (uint64_t ix = 0; ix < gltf_indices_accessor.count; ix += 3)
-			{
-				submesh.indices.push_back(index_data[ix + 0]);
-				submesh.indices.push_back(index_data[ix + 1]);
-				submesh.indices.push_back(index_data[ix + 2]);
-			}
-		};
-
-		const uint32_t index_stride = gltf_indices_accessor.ByteStride(gltf_indices_buffer_view);
-		switch (index_stride)
-		{
-		case 1: AddIndices.operator() < uint8_t > (); break;
-		case 2: AddIndices.operator() < uint16_t > (); break;
-		case 4: AddIndices.operator() < uint32_t > (); break;
-		default:
-			assert(!"Doesn't support such stride.");
-		}
-	}
-
-	void load_vertices_box_from_gltf_primitive(const tinygltf::Primitive* gltf_primitive, Mesh::Submesh& rSubmesh)
-	{
-		uint32_t temp_counter = 0;
-		uint64_t vertex_count = 0;
-		uint32_t attribute_stride[4] = { 0 };
-		auto LoadAttribute = [&](const std::string& attribute_name, bool& out_exist)
-			{
-				if (!out_exist) return size_t(0);
-				const auto iterator = gltf_primitive->attributes.find(attribute_name);
-				if (iterator == gltf_primitive->attributes.end())
-				{
-					out_exist = false;
-					return size_t(0);
-				}
-				const auto& gltf_attribute_accessor = gltf_model->accessors[iterator->second];
-				const auto& gltf_attribute_buffer_view = gltf_model->bufferViews[gltf_attribute_accessor.bufferView];
-				const auto& gltf_attribute_buffer = gltf_model->buffers[gltf_attribute_buffer_view.buffer];
-
-				vertex_count = gltf_attribute_accessor.count;
-				attribute_stride[temp_counter++] = gltf_attribute_accessor.ByteStride(gltf_attribute_buffer_view);
-
-				if (temp_counter >= 5)
-				{
-					LOG_ERROR("LoadGLTFNode() calling has a mistake which is Model's attribute is too more.");
-					out_exist = false;
-					return size_t(0);
-				}
-				out_exist = true;
-				return reinterpret_cast<size_t>(
-					gltf_attribute_buffer.data.data() + 
-					gltf_attribute_buffer_view.byteOffset + 
-					gltf_attribute_accessor.byteOffset
-				);
-			};
-
-
-		bool position_exist = true, normal_exist = true, tangent_exist = true, uv_exist = true;
-		size_t position_data = LoadAttribute("POSITION", position_exist);
-		size_t normal_data = LoadAttribute("NORMAL", normal_exist);
-		size_t tangent_data = LoadAttribute("TANGENT", tangent_exist);
-		size_t uv_data = LoadAttribute("TEXCOORD_0", uv_exist);
-
-		rSubmesh.vertices.resize(vertex_count);
-		for (uint32_t ix = 0; ix < vertex_count; ++ix)
-		{
-			if (position_exist) rSubmesh.vertices[ix].position = *reinterpret_cast<Vector3F*>(position_data + ix * attribute_stride[0]);
-			if (normal_exist) rSubmesh.vertices[ix].normal = *reinterpret_cast<Vector3F*>(normal_data + ix * attribute_stride[1]);
-			if (tangent_exist) rSubmesh.vertices[ix].tangent = *reinterpret_cast<Vector4F*>(tangent_data + ix * attribute_stride[2]);
-			if (uv_exist) rSubmesh.vertices[ix].uv = *reinterpret_cast<Vector2F*>(uv_data + ix * attribute_stride[3]);
-		}
-	}
-
 }

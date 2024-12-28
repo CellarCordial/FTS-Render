@@ -181,8 +181,8 @@ namespace fantasy
 			ReturnIfFalse(cmdlist->set_push_constants(&_pass_constants, sizeof(constant::SdfGeneratePassConstants)));
 			ReturnIfFalse(cmdlist->dispatch(
 				1,
-				static_cast<uint32_t>(Align(SDF_RESOLUTION, static_cast<uint32_t>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y),
-				static_cast<uint32_t>(Align(SDF_RESOLUTION, static_cast<uint32_t>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z)
+				static_cast<uint32_t>(align(SDF_RESOLUTION, static_cast<uint32_t>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y),
+				static_cast<uint32_t>(align(SDF_RESOLUTION, static_cast<uint32_t>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z)
 			));
 
 			_begin_x += X_SLICE_SIZE;

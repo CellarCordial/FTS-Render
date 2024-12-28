@@ -4,6 +4,7 @@
 
 #include <span>
 #include <vector>
+#include "../math/vector.h"
 
 namespace fantasy
 {
@@ -65,6 +66,20 @@ namespace fantasy
         hash ^= hash >> 16;
         return hash;
     }
+
+    inline uint32_t hash(const Vector3F& vec)
+	{
+		union 
+		{
+			float f;
+			uint32_t u;
+		} x, y, z;
+
+		x.f = (vec.x == 0.0f ? 0 : vec.x);
+		y.f = (vec.y == 0.0f ? 0 : vec.y);
+		z.f = (vec.z == 0.0f ? 0 : vec.z);
+		return murmur_mix(murmur_add(murmur_add(x.u, y.u), z.u));
+	}
 }
 
 

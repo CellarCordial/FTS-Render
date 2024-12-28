@@ -80,8 +80,8 @@ namespace fantasy
         ReturnIfFalse(cmdlist->open());
 
         Vector2I thread_group_num = {
-            static_cast<uint32_t>((Align(_brdf_lut_resolution.x, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
-            static_cast<uint32_t>((Align(_brdf_lut_resolution.y, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
+            static_cast<uint32_t>((align(_brdf_lut_resolution.x, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
+            static_cast<uint32_t>((align(_brdf_lut_resolution.y, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
         };
 
         ReturnIfFalse(cmdlist->set_compute_state(_compute_state));

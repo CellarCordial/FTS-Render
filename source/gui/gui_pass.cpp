@@ -26,6 +26,7 @@ namespace fantasy
 
 		ReturnIfFalse(cmdlist->bind_frame_buffer(_frame_buffer.get()));
 		ReturnIfFalse(cmdlist->commit_descriptor_heaps());
+		cmdlist->commit_barriers();
 		gui::execution(cmdlist);
 
 		uint32_t* back_buffer_index;
@@ -36,6 +37,8 @@ namespace fantasy
 
 		ReturnIfFalse(cmdlist->copy_texture(back_buffer.get(), TextureSlice{}, _final_texture.get(), TextureSlice{}));
 		ReturnIfFalse(cmdlist->set_texture_state(back_buffer.get(), TextureSubresourceSet{}, ResourceStates::Present));
+
+		ReturnIfFalse(clear_color_attachment(cmdlist, _frame_buffer.get(), 0));
 
 		ReturnIfFalse(cmdlist->close());
 		return true;

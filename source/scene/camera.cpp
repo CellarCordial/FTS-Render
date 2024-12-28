@@ -1,5 +1,4 @@
 #include "camera.h"
-#include "glfw3.h"
 #include <wtypesbase.h>
 
 namespace fantasy 
@@ -102,7 +101,6 @@ namespace fantasy
 
 	void Camera::set_direction(float vert, float horz)
 	{
-        // TODO
 		_vert_radians = radians(vert);
 		_horz_radians = radians(horz);
         direction = Vector3F(

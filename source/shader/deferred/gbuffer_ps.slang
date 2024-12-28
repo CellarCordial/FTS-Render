@@ -43,7 +43,7 @@ struct VertexOutput
     float3 prev_view_space_position : PREV_VIEW_POSITION;
 
     float3 world_space_normal : NORMAL;
-    float4 world_space_tangent : TANGENT;
+    float3 world_space_tangent : TANGENT;
     float2 uv : TEXCOORD;
 };
 

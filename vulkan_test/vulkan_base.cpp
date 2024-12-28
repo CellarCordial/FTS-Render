@@ -1,6 +1,5 @@
 #include "vulkan_base.h"
 #include "../source/core/tools/log.h"
-#include "glfw3.h"
 #include <minwindef.h>
 #include <set>
 #include "vulkan/vulkan_core.h"

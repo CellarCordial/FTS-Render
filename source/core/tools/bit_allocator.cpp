@@ -7,7 +7,7 @@ namespace fantasy
 {
     BitSetAllocator::BitSetAllocator(uint64_t size, bool multi_thread) : _multi_threaded(multi_thread)
     {
-        _allocateds.resize(Align(size, 32ull) / 32ull, 0);
+        _allocateds.resize(align(size, 32ull) / 32ull, 0);
     }
 
     uint32_t BitSetAllocator::allocate()
@@ -66,7 +66,7 @@ namespace fantasy
     void BitSetAllocator::resize(uint64_t size)
     {
         _allocateds.clear();
-        _allocateds.resize(Align(size, 32ull) / 32ull, 0);
+        _allocateds.resize(align(size, 32ull) / 32ull, 0);
     }
 
 

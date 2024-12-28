@@ -3,6 +3,7 @@
 
 #include "vector.h"
 #include "ray.h"
+#include <cstdint>
 #include <vector>
 
 namespace fantasy 
@@ -19,59 +20,76 @@ namespace fantasy
 			T max = std::numeric_limits<T>::max();
 			T min = std::numeric_limits<T>::lowest();
 
-			_min = Vector2<T>(max, max);
-			_max = Vector2<T>(min, min);
+			_lower = Vector2<T>(max, max);
+			_upper = Vector2<T>(min, min);
 		}
 
-		explicit Bounds2(const Vector2<T>& vec) : _min(vec), _max(vec) {}
+		explicit Bounds2(const Vector2<T>& vec) : _lower(vec), _upper(vec) {}
 		
 		Bounds2(const Vector2<T>& vec0, const Vector2<T>& vec1)
 		{
-			_max = max(vec0, vec1);
-			_min = min(vec0, vec1);
+			_upper = max(vec0, vec1);
+			_lower = min(vec0, vec1);
+		}
+
+		explicit Bounds2(const std::vector<Vector2<T>>& vertices)
+		{
+			T min_x = vertices[0].x, min_y = vertices[0].y;
+			T max_x = vertices[0].x, max_y = vertices[0].y;
+			for (const auto& vertex : vertices)
+			{
+				_lower = Vector2<T>(
+					std::min(min_x, vertex.x),
+					std::min(min_y, vertex.y)
+				);
+				_upper = Vector2<T>(
+					std::max(max_x, vertex.x),
+					std::max(max_y, vertex.y)
+				);
+			}
 		}
 
 		const Vector2<T>& operator[](uint32_t index) const
 		{
 			// FCHECK(index <= 1);
-			if (index == 0) return _min;
-			return _max;
+			if (index == 0) return _lower;
+			return _upper;
 		}
 
 		Vector2<T>& operator[](uint32_t index)
 		{
 			// FCHECK(index <= 1);
-			if (index == 0) return _min;
-			return _max;
+			if (index == 0) return _lower;
+			return _upper;
 		}
 
 		bool operator==(const Bounds2<T>& other)
 		{
-			return _max == other._max && _min == other._min;
+			return _upper == other._upper && _lower == other._lower;
 		}
 		
 		bool operator!=(const Bounds2<T>& other)
 		{
-			return _max != other._max || _min != other._min;
+			return _upper != other._upper || _lower != other._lower;
 		}
 
 		template <typename U>
 		explicit operator Bounds2<U>() const
 		{
-			return Bounds2<U>(Vector2<U>(_min), Vector2<U>(_max));
+			return Bounds2<U>(Vector2<U>(_lower), Vector2<U>(_upper));
 		}
 
 		// 返回沿框的对角线从最小点指向最大点的向量
-		Vector2<T> diagonal() const { return _max - _min; }
+		Vector2<T> diagonal() const { return _upper - _lower; }
 
 		T width() const
 		{
-			return _max.x - _min.x;
+			return _upper.x - _lower.x;
 		}
 
 		T height() const
 		{
-			return _max.y - _min.y;
+			return _upper.y - _lower.y;
 		}
 
 		T area() const
@@ -92,27 +110,27 @@ namespace fantasy
 		Vector2<T> lerp(const Vector2<T>& vec)
 		{
 			return Vector2<T>(
-				lerp(vec.x, _min.x, _max.x),
-				lerp(vec.y, _min.y, _max.y)
+				lerp(vec.x, _lower.x, _upper.x),
+				lerp(vec.y, _lower.y, _upper.y)
 			);
 		}
 
 		// 获取点相对包围盒最小顶点的偏移，并归一化
 		Vector2<T> offset(const Vector2<T>& vec)
 		{
-			Vector2<T> o = vec - _min;
-			if (_max.x > _min.x) o.x /= _max.x - _min.x;
-			if (_max.y > _min.y) o.y /= _max.y - _min.y;
+			Vector2<T> o = vec - _lower;
+			if (_upper.x > _lower.x) o.x /= _upper.x - _lower.x;
+			if (_upper.y > _lower.y) o.y /= _upper.y - _lower.y;
 			return o;
 		}
 
 		void bounding_sphere(Vector2<T>* pCenter, float* pfRadius)
 		{
-			*pCenter = (_min + _max) / 2;
-			*pfRadius = inside(*pCenter, *this) ? distance(*pCenter, _max) : 0;
+			*pCenter = (_lower + _upper) / 2;
+			*pfRadius = inside(*pCenter, *this) ? distance(*pCenter, _upper) : 0;
 		}
 		
-		Vector2<T> _min, _max;
+		Vector2<T> _lower, _upper;
 	};
 
 	using Bounds2F = Bounds2<float>;
@@ -147,6 +165,25 @@ namespace fantasy
 		}
 
 		explicit Bounds3(const Vector3<T>& vec) : _lower(vec), _upper(vec) {}
+		
+		explicit Bounds3(const std::vector<Vector3<T>>& vertices)
+		{
+			T min_x = vertices[0].x, min_y = vertices[0].y, min_z = vertices[0].z;
+			T max_x = vertices[0].x, max_y = vertices[0].y, max_z = vertices[0].z;
+			for (const auto& vertex : vertices)
+			{
+				_lower = Vector3<T>(
+					std::min(min_x, vertex.x),
+					std::min(min_y, vertex.y),
+					std::min(min_z, vertex.z)
+				);
+				_upper = Vector3<T>(
+					std::max(max_x, vertex.x),
+					std::max(max_y, vertex.y),
+					std::max(max_z, vertex.z)
+				);
+			}
+		}
 		
 
 		/**
@@ -381,6 +418,41 @@ namespace fantasy
 		Vector3<T> _lower, _upper;
 	};
 
+	
+    struct Circle
+    {
+		Circle() = default;
+		
+		Circle(const Vector2F& in_center, float in_radius) : center(in_center), radius(in_radius) {}
+
+		explicit Circle(const std::vector<Vector2F>& vertices)
+		{
+			Bounds2F bounding_box(vertices);
+			center = (bounding_box._lower + bounding_box._upper) * 0.5f;
+			radius = bounding_box.diagonal().length() * 0.5f;
+		}
+
+        Vector2F center;
+        float radius;
+    };
+
+    struct Sphere
+    {
+		Sphere() = default;
+
+		Sphere(const Vector3F& in_center, float in_radius) : center(in_center), radius(in_radius) {}
+
+		explicit Sphere(const std::vector<Vector3F>& vertices)
+		{
+			Bounds3F bounding_box(vertices);
+			center = (bounding_box._lower + bounding_box._upper) * 0.5f;
+			radius = bounding_box.diagonal().length() * 0.5f;
+		}
+
+        Vector3F center;
+        float radius;
+    };
+
     
 	// 组合包围盒和点
 	template <typename T>
@@ -400,15 +472,18 @@ namespace fantasy
 	template <typename T>
 	Bounds2<T> merge(const Bounds2<T>& bounds, const Vector2<T>& vec)
 	{
-		return Bounds2<T>(min(bounds._min, vec), max(bounds._max, vec));
+		return Bounds2<T>(min(bounds._lower, vec), max(bounds._upper, vec));
 	}
 
 	// 组合两个包围盒
 	template <typename T>
 	Bounds2<T> merge(const Bounds2<T>& bounds1, const Bounds2<T>& bounds2)
 	{
-		return Bounds2<T>(min(bounds1._min, bounds2._min), max(bounds1._max, bounds2._max));
+		return Bounds2<T>(min(bounds1._lower, bounds2._lower), max(bounds1._upper, bounds2._upper));
 	}
+
+	Circle merge(const Circle& circle0, const Circle& circle1);
+	Sphere merge(const Sphere& circle0, const Sphere& circle1);
 
 	// 获取两个包围盒相交处的包围盒
 	template <typename T>
@@ -421,7 +496,7 @@ namespace fantasy
 	template <typename T>
 	Bounds2<T> intersect_box(const Bounds2<T>& bounds1, const Bounds2<T>& bounds2)
 	{
-		return Bounds2<T>(max(bounds1._min, bounds2._min), min(bounds1._max, bounds2._max));
+		return Bounds2<T>(max(bounds1._lower, bounds2._lower), min(bounds1._upper, bounds2._upper));
 	}
 
 	template <typename T>
@@ -454,8 +529,8 @@ namespace fantasy
 	template <typename T>
 	bool overlaps(const Bounds2<T>& bounds1, const Bounds2<T>& bounds2)
 	{
-		const bool x = bounds1._max.x > bounds2._min.x && bounds1._min.x < bounds2._max.x;
-		const bool y = bounds1._max.y > bounds2._min.y && bounds1._min.y < bounds2._max.y;
+		const bool x = bounds1._upper.x > bounds2._lower.x && bounds1._lower.x < bounds2._upper.x;
+		const bool y = bounds1._upper.y > bounds2._lower.y && bounds1._lower.y < bounds2._upper.y;
 		return x && y;
 	}
 
@@ -472,8 +547,8 @@ namespace fantasy
 	template <typename T>
 	bool inside(const Vector2<T>& vec, const Bounds2<T>& bound)
 	{
-		return	vec.x >= bound._min.x && vec.x <= bound.m_mMax.x &&
-				vec.y >= bound._min.y && vec.y <= bound.m_mMax.y;
+		return	vec.x >= bound._lower.x && vec.x <= bound.m_mMax.x &&
+				vec.y >= bound._lower.y && vec.y <= bound.m_mMax.y;
 	}
 	
 	// 判断点是否在包围盒内，不包含上边界
@@ -489,8 +564,8 @@ namespace fantasy
 	template <typename T>
 	bool inside_exclusive(const Vector2<T>& vec, const Bounds2<T>& bound)
 	{
-		return	vec.x >= bound._min.x && vec.x < bound.m_mMax.x &&
-				vec.y >= bound._min.y && vec.y < bound.m_mMax.y;
+		return	vec.x >= bound._lower.x && vec.x < bound.m_mMax.x &&
+				vec.y >= bound._lower.y && vec.y < bound.m_mMax.y;
 	}
 
 	// 扩充包围盒边界框
@@ -508,8 +583,8 @@ namespace fantasy
 	Bounds2<T> expand(const Bounds2<T>& bound, U delta)
 	{
 		return Bounds2<T>(
-			bound._min - Vector2<U>(delta),
-			bound._max + Vector2<U>(delta)
+			bound._lower - Vector2<U>(delta),
+			bound._upper + Vector2<U>(delta)
 		);
 	}
 

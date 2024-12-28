@@ -1,6 +1,10 @@
 #include "geometry.h"
+#include <cmath>
+#include <cstdint>
 #include <cstring>
+#include <unordered_map>
 #include <utility>
+#include <vector>
 
 namespace fantasy
 {
@@ -150,7 +154,7 @@ namespace fantasy
 			_index_table.insert(hash(vertex_position), ix);
 			
 			Vector3F p0 = vertex_position;
-			Vector3F p1 = _vertices[_indices[TriangleIndexCycle3(ix)]];
+			Vector3F p1 = _vertices[_indices[triangle_index_cycle3(ix)]];
 
 			uint32_t key0 = hash(p0);
 			uint32_t key1 = hash(p1);
@@ -184,7 +188,15 @@ namespace fantasy
 	{
 		for (uint32_t ix = 0; ix < _triangle_surfaces.size(); ++ix) fix_triangle(ix);
 
-		if (_remain_triangle_num <= target_triangle_num) return compact();
+		if (_remain_triangle_num <= target_triangle_num)
+		{
+			bool ret = compact();
+
+			_vertices.resize(_remain_vertex_num);
+			_indices.resize(_remain_triangle_num * 3);
+
+			return ret;
+		}
 
 		_heap.resize(_edges.size());
 
@@ -199,6 +211,8 @@ namespace fantasy
 		while (!_heap.empty())
 		{
 			uint32_t edge_index = _heap.top();
+
+			// Excessive error.
 			if (_heap.get_key(edge_index) >= 1e6) break;
 
 			_heap.pop();
@@ -220,7 +234,13 @@ namespace fantasy
 
 			edge_need_reevaluate_indices.clear();
 		}
-		return compact();
+
+		bool ret = compact();
+
+		_vertices.resize(_remain_vertex_num);
+		_indices.resize(_remain_triangle_num * 3);
+
+		return ret;
 	}
 
 	void MeshOptimizer::lock_position(Vector3F position)
@@ -232,20 +252,6 @@ namespace fantasy
 				_flags[ix] |= LockFlag;
 			}
 		}
-	}
-
-	uint32_t MeshOptimizer::hash(const Vector3F& vec)
-	{
-		union 
-		{
-			float f;
-			uint32_t u;
-		} x, y, z;
-
-		x.f = (vec.x == 0.0f ? 0 : vec.x);
-		y.f = (vec.y == 0.0f ? 0 : vec.y);
-		z.f = (vec.z == 0.0f ? 0 : vec.z);
-		return murmur_mix(murmur_add(murmur_add(x.u, y.u), z.u));
 	}
 
 	void MeshOptimizer::fix_triangle(uint32_t triangle_index)
@@ -296,8 +302,8 @@ namespace fantasy
 				if (
 					ix != triangle_index * 3 &&
 					vertex_index0 == _indices[ix] && 
-					vertex_index1 == _indices[TriangleIndexCycle3(ix)] && 
-					vertex_index2 == _indices[TriangleIndexCycle3(ix, 2)] 
+					vertex_index1 == _indices[triangle_index_cycle3(ix)] && 
+					vertex_index2 == _indices[triangle_index_cycle3(ix, 2)] 
 				)
 				{
 					need_removed = true;
@@ -576,76 +582,379 @@ namespace fantasy
 		moved_index_indices.clear();
 	}
 
-
-
-	struct Graph
+	bool VirtualGeometry::build(const Mesh* mesh)
 	{
-		std::vector<std::map<uint32_t,int32_t>> g;
-
-		void init(uint32_t n)
+		for (const auto& submesh : mesh->submeshes)
 		{
-			g.resize(n);
+			_indices.insert(_indices.end(), submesh.indices.begin(), submesh.indices.end());
+			
+			uint32_t start_index = _vertex_positons.size();
+			_vertex_positons.resize(_vertex_positons.size() + submesh.vertices.size());
+
+			for (uint32_t ix = 0; ix < submesh.vertices.size(); ++ix)
+			{
+				_vertex_positons[start_index + ix] = submesh.vertices[ix].position;
+			}
 		}
-		void add_node()
+
+		MeshOptimizer optimizer(_vertex_positons, _indices);
+		ReturnIfFalse(optimizer.optimize(_indices.size()));
+
+		ReturnIfFalse(cluster_triangles());
+		uint32_t level_offset = 0;
+		uint32_t mip_level = 0;
+		while (true)
 		{
-			g.push_back({});
+			uint32_t level_cluster_count = _clusters.size() - level_offset;
+			if(level_cluster_count<=1) break;
+
+			uint32_t old_cluster_num = _clusters.size();
+			uint32_t old_group_num = _cluster_groups.size();
+
+			ReturnIfFalse(build_cluster_groups(level_offset, level_cluster_count, mip_level));
+
+			for(uint32_t ix = old_group_num; ix < _cluster_groups.size(); ix++)
+			{
+				ReturnIfFalse(build_parent_clusters(ix));
+			}
+
+			level_offset = old_cluster_num;
+			mip_level++;
 		}
-		void add_edge(uint32_t from,uint32_t to,int32_t cost)
-		{
-			g[from][to]=cost;
-		}
-		void increase_edge_cost(uint32_t from,uint32_t to,int32_t i_cost)
-		{
-			g[from][to]+=i_cost;
-		}
-	};
-
-	struct MetisGraph;
-
-	class Partitioner
-	{
-	private:
-		uint32_t bisect_graph(MetisGraph* graph_data,MetisGraph* child_graphs[2],uint32_t start,uint32_t end);
-		void recursive_bisect_graph(MetisGraph* graph_data,uint32_t start,uint32_t end);
-	public:
-		void init(uint32_t num_node);
-		void partition(const Graph& graph,uint32_t min_part_size,uint32_t max_part_size);
-
-		std::vector<uint32_t> node_id;
-		std::vector<std::pair<uint32_t,uint32_t>> ranges;
-		std::vector<uint32_t> sort_to;
-		uint32_t min_part_size;
-		uint32_t max_part_size;
-	};
-
-
-	void create_triangle_cluster(
-		const std::vector<Vector3F>& verts,
-		const std::vector<uint32_t>& indexes,
-		std::vector<Cluster>& clusters
-	)
-	{
-
+		_mip_level_num = mip_level + 1;
+		
+		return true;
 	}
 
-	void build_cluster_groups(
-		std::vector<Cluster>& clusters,
-		uint32_t offset,
-		uint32_t num_cluster,
-		std::vector<ClusterGroup>& cluster_groups,
-		uint32_t mip_level
-	)
+	uint32_t VirtualGeometry::edge_hash(const Vector3F& p0, const Vector3F& p1)
 	{
-
+		uint32_t key0 = hash(p0);
+		uint32_t key1 = hash(p1);
+		return murmur_mix(murmur_add(key0, key1));
 	}
 
-	void build_cluster_group_parent_clusters(
-		ClusterGroup& cluster_group,
-		std::vector<Cluster>& clusters
-	)
+ 
+	void VirtualGeometry::build_adjacency_graph(SimpleGraph& edge_link_graph, SimpleGraph& adjacency_graph)
 	{
+		HashTable edge_table(static_cast<uint32_t>(_indices.size()));
+		edge_link_graph.resize(_indices.size());
 
+		for (uint32_t edge_start_index = 0; edge_start_index < _indices.size(); ++edge_start_index)
+		{
+			Vector3F p0 = _vertex_positons[_indices[edge_start_index]];
+			Vector3F p1 = _vertex_positons[_indices[triangle_index_cycle3(edge_start_index)]];
+
+			// Find shared vertices and opposite edges, which represent adjacent triangles.
+			edge_table.insert(edge_hash(p0, p1), edge_start_index);
+			for (uint32_t edge_end_index : edge_table[edge_hash(p1, p0)])
+			{
+				if (
+					p1 == _vertex_positons[_indices[edge_end_index]] && 
+					p0 == _vertex_positons[_indices[triangle_index_cycle3(edge_end_index)]]
+				)
+				{
+					// Increase weight.
+					edge_link_graph[edge_start_index][edge_end_index] += 1;
+					edge_link_graph[edge_end_index][edge_start_index] += 1;
+				}
+			}
+		}
+
+		adjacency_graph.resize(edge_link_graph.size() / 3);
+		uint32_t edge_start_node = 0;
+		for (const auto& edge_end_node_weights : edge_link_graph)
+		{
+			for (const auto& [edge_end_node, weight] : edge_end_node_weights)
+			{
+				adjacency_graph[edge_start_node / 3][edge_end_node / 3] += weight;
+			}
+			edge_start_node++;
+		}
 	}
+
+	bool VirtualGeometry::cluster_triangles()
+	{
+		SimpleGraph edge_link_graph;
+		SimpleGraph triangle_adjacency_graph;
+		build_adjacency_graph(edge_link_graph, triangle_adjacency_graph);
+
+		GraphPartitionar partitionar;
+		partitionar.partition_graph(triangle_adjacency_graph, MeshClusterGroup::group_size - 4, MeshClusterGroup::group_size);
+
+		for (const auto& [left, right] : partitionar._part_ranges)
+		{
+			auto& cluster = _clusters.emplace_back();
+
+			// Map the vertices in _vertices to the _clusters.
+			std::unordered_map<uint32_t, uint32_t> cluster_vertex_index_map;
+			for (uint32_t ix = left; ix < right; ++ix)
+			{
+				uint32_t triangle_index = partitionar._node_indices[ix];
+				for (uint32_t jx = 0; jx < 3; ++jx)
+				{
+					uint32_t edge_start_index = triangle_index * 3 + jx;
+					uint32_t vertex_index = _indices[edge_start_index];
+					if (cluster_vertex_index_map.find(vertex_index) == cluster_vertex_index_map.end())
+					{
+						cluster_vertex_index_map[vertex_index] = static_cast<uint32_t>(cluster.vertices.size());
+						cluster.vertices.push_back(_vertex_positons[vertex_index]);
+					}
+
+					bool is_external = false;
+					for (const auto& [edge_end_index, weight] : edge_link_graph[edge_start_index])
+					{
+						uint32_t remapped_edge_end_index = partitionar._node_map[edge_end_index / 3];
+						
+						// Edge_end_index(remapped) in different partitions indicate a boundary
+						if (remapped_edge_end_index < left || remapped_edge_end_index >= right)
+						{
+							is_external = true;
+							break;
+						}
+					}
+					if (is_external)
+					{
+						cluster.external_edges.push_back(cluster.indices.size());
+					}
+					cluster.indices.push_back(cluster_vertex_index_map[vertex_index]);
+				}
+			}
+			cluster.bounding_box = Bounds3F(cluster.vertices);
+			cluster.bounding_sphere = Sphere(cluster.vertices);
+			cluster.lod_bounding_sphere = cluster.bounding_sphere;
+		}
+
+		return true;
+	}
+
+	bool VirtualGeometry::build_cluster_groups(uint32_t level_offset, uint32_t level_cluster_count, uint32_t mip_level)
+	{
+		const std::span<MeshCluster> clusters_view(_clusters.begin() + level_offset, level_cluster_count);
+
+		// Extract the boundary of each cluster and establish a mapping from edge index to cluster index.
+		std::vector<uint32_t> edge_cluster_map;
+		std::vector<uint32_t> cluster_edge_offset_map;
+		std::vector<std::pair<uint32_t, uint32_t>> cluster_edge_map;
+
+		
+		for (uint32_t cluster_index = 0; cluster_index < clusters_view.size(); ++cluster_index)
+		{
+			const auto& cluster = clusters_view[cluster_index];
+			ReturnIfFalse(cluster.mip_level == mip_level);
+
+			cluster_edge_offset_map.push_back(static_cast<uint32_t>(edge_cluster_map.size()));
+			for (uint32_t edge_start_index : cluster.external_edges)
+			{
+				cluster_edge_map.push_back(std::make_pair(cluster_index, edge_start_index));
+				edge_cluster_map.push_back(cluster_index);
+			}
+			cluster_index++;
+		}
+
+		SimpleGraph edge_link_graph(cluster_edge_map.size());
+
+		HashTable edge_table(static_cast<uint32_t>(cluster_edge_map.size()));
+		for (uint32_t ix = 0; ix < cluster_edge_map.size(); ++ix)
+		{
+			const auto& [cluster_index, edge_start_index] = cluster_edge_map[ix];
+			const auto& vertices = clusters_view[cluster_index].vertices;
+			const auto& indices = clusters_view[cluster_index].indices;
+
+			const auto& p0 = vertices[indices[edge_start_index]];
+			const auto& p1 = vertices[indices[triangle_index_cycle3(edge_start_index)]];
+			edge_table.insert(edge_hash(p0, p1), ix);
+			for (uint32_t jx : edge_table[edge_hash(p1, p0)])
+			{
+				const auto& [another_cluster_index, another_edge_start_index] = cluster_edge_map[jx];
+				const auto& another_vertices = clusters_view[another_cluster_index].vertices;
+				const auto& another_indices = clusters_view[another_cluster_index].indices;
+
+				if (
+					p1 == another_vertices[another_indices[another_edge_start_index]] && 
+					p0 == another_vertices[another_indices[triangle_index_cycle3(another_edge_start_index)]]
+				)
+				{
+					edge_link_graph[ix][jx]++;
+					edge_link_graph[jx][ix]++;
+				}
+			}
+		}
+
+		SimpleGraph cluster_graph(level_cluster_count);
+
+		
+		for (uint32_t edge_start_index = 0; edge_start_index < edge_link_graph.size(); ++edge_start_index)
+		{
+			const auto& edge_end_node_weights = edge_link_graph[edge_start_index];
+			for (const auto& [edge_end_node, weight] : edge_end_node_weights)
+			{
+				cluster_graph[edge_cluster_map[edge_start_index]][edge_cluster_map[edge_end_node]] += weight;
+			}
+		}
+
+
+		GraphPartitionar partitionar;
+		partitionar.partition_graph(cluster_graph, MeshClusterGroup::group_size - 4, MeshClusterGroup::group_size);
+
+		for (auto [left, right] : partitionar._part_ranges)
+		{
+			auto& cluster_group = _cluster_groups.emplace_back();
+			cluster_group.mip_level = mip_level;
+
+			for (uint32_t ix = left; ix < right; ++ix)
+			{
+				uint32_t cluster_index = partitionar._node_indices[ix];
+				_clusters[cluster_index + level_offset].group_id = static_cast<uint32_t>(_cluster_groups.size() - 1);
+            	cluster_group.cluster_indices.push_back(cluster_index + level_offset);
+
+				for (
+					uint32_t edge_start_index = cluster_edge_offset_map[cluster_index]; 
+					edge_start_index < edge_cluster_map.size() && cluster_index == edge_cluster_map[edge_start_index]; 
+					++edge_start_index
+				)
+				{
+					bool is_external = false;
+					for (const auto& [edge_end_index, weight] : edge_link_graph[edge_start_index])
+					{
+						uint32_t remapped_cluster_index = partitionar._node_map[edge_cluster_map[edge_end_index]];
+						
+						// Edge_end_index(remapped) in different partitions indicate a boundary
+						if (remapped_cluster_index < left || remapped_cluster_index >= right)
+						{
+							is_external = true;
+							break;
+						}
+					}
+					if (is_external)
+					{
+						uint32_t edge_end_index = cluster_edge_map[edge_start_index].second;
+						cluster_group.external_edges.push_back(std::make_pair(cluster_index, edge_end_index));
+					}
+				}
+			}
+		}
+
+		return true;
+	}
+
+	bool VirtualGeometry::build_parent_clusters(uint32_t cluster_group_index)
+	{
+		auto& cluster_group = _cluster_groups[cluster_group_index];
+
+		uint32_t index_offset = 0;
+		float parent_lod_error = 0.0f;
+		Sphere parent_lod_bounding_sphere;
+		std::vector<uint32_t> indices;
+		std::vector<Vector3F> vertex_positions;
+		for (auto cluster_index : cluster_group.cluster_indices)
+		{
+			const auto& cluster = _clusters[cluster_index];
+			for (const auto& p : cluster.vertices) vertex_positions.push_back(p);
+			for (const auto& i : cluster.indices) indices.push_back(i + index_offset);
+			index_offset += static_cast<uint32_t>(cluster.vertices.size());
+
+			parent_lod_bounding_sphere = merge(parent_lod_bounding_sphere, cluster.lod_bounding_sphere);
+			parent_lod_error = std::max(parent_lod_error, cluster.lod_error);
+		}
+		
+		cluster_group.lod_bounding_sphere = parent_lod_bounding_sphere;
+		cluster_group.parent_lod_error = parent_lod_error;
+
+		MeshOptimizer optimizer(vertex_positions, indices);
+		HashTable edge_table(static_cast<uint32_t>(cluster_group.external_edges.size()));
+		for (uint32_t ix = 0; ix < cluster_group.external_edges.size(); ++ix)
+		{
+			const auto& [cluster_index, edge_index] = cluster_group.external_edges[ix];
+			auto& positions = _clusters[cluster_index].vertices;
+        	auto& vertex_indices = _clusters[cluster_index].indices;
+			
+			const Vector3F& p0 = positions[vertex_indices[edge_index]];
+			const Vector3F& p1 = positions[vertex_indices[triangle_index_cycle3(edge_index)]];
+			edge_table.insert(edge_hash(p0, p1), ix);
+			optimizer.lock_position(p0);
+			optimizer.lock_position(p1);
+		}
+
+		optimizer.optimize((MeshCluster::cluster_size - 2) * (static_cast<uint32_t>(cluster_group.cluster_indices.size()) / 2));
+		parent_lod_error = std::max(parent_lod_error, std::sqrt(optimizer._max_error));
+
+		SimpleGraph edge_link_graph;
+		SimpleGraph triangle_adjacency_graph;
+		build_adjacency_graph(edge_link_graph, triangle_adjacency_graph);
+
+		GraphPartitionar partitionar;
+		partitionar.partition_graph(triangle_adjacency_graph, MeshClusterGroup::group_size - 4, MeshClusterGroup::group_size);
+
+		for (const auto& [left, right] : partitionar._part_ranges)
+		{
+			auto& cluster = _clusters.emplace_back();
+
+			// Map the vertices in _vertices to the _clusters.
+			std::unordered_map<uint32_t, uint32_t> cluster_vertex_index_map;
+			for (uint32_t ix = left; ix < right; ++ix)
+			{
+				uint32_t triangle_index = partitionar._node_indices[ix];
+				for (uint32_t jx = 0; jx < 3; ++jx)
+				{
+					uint32_t edge_start_index = triangle_index * 3 + jx;
+					uint32_t vertex_index = indices[edge_start_index];
+					if (cluster_vertex_index_map.find(vertex_index) == cluster_vertex_index_map.end())
+					{
+						cluster_vertex_index_map[vertex_index] = static_cast<uint32_t>(cluster.vertices.size());
+						cluster.vertices.push_back(vertex_positions[vertex_index]);
+					}
+
+					bool is_external = false;
+					for (const auto& [edge_end_index, weight] : edge_link_graph[edge_start_index])
+					{
+						uint32_t remapped_triangle_index = partitionar._node_map[edge_end_index / 3];
+						
+						// Edge_end_index(remapped) in different partitions indicate a boundary
+						if (remapped_triangle_index < left || remapped_triangle_index >= right)
+						{
+							is_external = true;
+							break;
+						}
+					}
+					const Vector3F& p0 = vertex_positions[vertex_index];
+					const Vector3F& p1 = vertex_positions[indices[triangle_index_cycle3(edge_start_index)]];
+					if (!is_external)
+					{
+						for (uint32_t jx : edge_table[edge_hash(p0, p1)])
+						{
+							const auto& [cluster_index, edge_index] = cluster_group.external_edges[jx];
+							auto& positions = _clusters[cluster_index].vertices;
+        					auto& vertex_indices = _clusters[cluster_index].indices;
+
+							if (
+								p0 == positions[vertex_indices[edge_index]] && 
+								p1 == positions[vertex_indices[triangle_index_cycle3(edge_index)]]
+							)
+							{
+								is_external = true;
+								break;
+							}
+						}
+					}
+
+					if (is_external)
+					{
+						cluster.external_edges.push_back(cluster.indices.size());
+					}
+					cluster.indices.push_back(cluster_vertex_index_map[vertex_index]);
+				}
+			}
+			cluster.mip_level = cluster_group.mip_level + 1;
+			cluster.bounding_box = Bounds3F(cluster.vertices);
+			cluster.bounding_sphere = Sphere(cluster.vertices);
+
+			// The LOD bounding box of the parent node covers all the LOD bounding boxes of its child nodes.
+			cluster.lod_bounding_sphere = parent_lod_bounding_sphere;
+			cluster.lod_error = parent_lod_error;
+		}
+		return true;
+	}
+
 
 
 	namespace Geometry
@@ -661,30 +970,30 @@ namespace fantasy
 			float h2 = 0.5f * height;
 			float d2 = 0.5f * depth;
 
-			v[0] = Vertex({ -w2, -h2, -d2 }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f });
-			v[1] = Vertex({ -w2, +h2, -d2 }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f });
-			v[2] = Vertex({ +w2, +h2, -d2 }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f });
-			v[3] = Vertex({ +w2, -h2, -d2 }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f });
-			v[4] = Vertex({ -w2, -h2, +d2 }, { 0.0f, 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f });
-			v[5] = Vertex({ +w2, -h2, +d2 }, { 0.0f, 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f });
-			v[6] = Vertex({ +w2, +h2, +d2 }, { 0.0f, 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f });
-			v[7] = Vertex({ -w2, +h2, +d2 }, { 0.0f, 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f });
-			v[8] = Vertex({ -w2, +h2, -d2 }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f });
-			v[9] = Vertex({ -w2, +h2, +d2 }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f });
-			v[10] = Vertex({ +w2, +h2, +d2 }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f });
-			v[11] = Vertex({ +w2, +h2, -d2 }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f });
-			v[12] = Vertex({ -w2, -h2, -d2 }, { 0.0f, -1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f });
-			v[13] = Vertex({ +w2, -h2, -d2 }, { 0.0f, -1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f });
-			v[14] = Vertex({ +w2, -h2, +d2 }, { 0.0f, -1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f });
-			v[15] = Vertex({ -w2, -h2, +d2 }, { 0.0f, -1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f });
-			v[16] = Vertex({ -w2, -h2, +d2 }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f, 1.0f }, { 0.0f, 1.0f });
-			v[17] = Vertex({ -w2, +h2, +d2 }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f, 1.0f }, { 0.0f, 0.0f });
-			v[18] = Vertex({ -w2, +h2, -d2 }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f, 1.0f }, { 1.0f, 0.0f });
-			v[19] = Vertex({ -w2, -h2, -d2 }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f, 1.0f }, { 1.0f, 1.0f });
-			v[20] = Vertex({ +w2, -h2, -d2 }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }, { 0.0f, 1.0f });
-			v[21] = Vertex({ +w2, +h2, -d2 }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }, { 0.0f, 0.0f });
-			v[22] = Vertex({ +w2, +h2, +d2 }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 0.0f });
-			v[23] = Vertex({ +w2, -h2, +d2 }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f, 1.0f }, { 1.0f, 1.0f });
+			v[0] = Vertex({ -w2, -h2, -d2 }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f });
+			v[1] = Vertex({ -w2, +h2, -d2 }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f });
+			v[2] = Vertex({ +w2, +h2, -d2 }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f });
+			v[3] = Vertex({ +w2, -h2, -d2 }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 1.0f });
+			v[4] = Vertex({ -w2, -h2, +d2 }, { 0.0f, 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f }, { 1.0f, 1.0f });
+			v[5] = Vertex({ +w2, -h2, +d2 }, { 0.0f, 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f });
+			v[6] = Vertex({ +w2, +h2, +d2 }, { 0.0f, 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f });
+			v[7] = Vertex({ -w2, +h2, +d2 }, { 0.0f, 0.0f, 1.0f }, { -1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f });
+			v[8] = Vertex({ -w2, +h2, -d2 }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f });
+			v[9] = Vertex({ -w2, +h2, +d2 }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f });
+			v[10] = Vertex({ +w2, +h2, +d2 }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f });
+			v[11] = Vertex({ +w2, +h2, -d2 }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 1.0f, 1.0f });
+			v[12] = Vertex({ -w2, -h2, -d2 }, { 0.0f, -1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f }, { 1.0f, 1.0f });
+			v[13] = Vertex({ +w2, -h2, -d2 }, { 0.0f, -1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f });
+			v[14] = Vertex({ +w2, -h2, +d2 }, { 0.0f, -1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f });
+			v[15] = Vertex({ -w2, -h2, +d2 }, { 0.0f, -1.0f, 0.0f }, { -1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f });
+			v[16] = Vertex({ -w2, -h2, +d2 }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 1.0f });
+			v[17] = Vertex({ -w2, +h2, +d2 }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f }, { 0.0f, 0.0f });
+			v[18] = Vertex({ -w2, +h2, -d2 }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 0.0f });
+			v[19] = Vertex({ -w2, -h2, -d2 }, { -1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, -1.0f }, { 1.0f, 1.0f });
+			v[20] = Vertex({ +w2, -h2, -d2 }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f });
+			v[21] = Vertex({ +w2, +h2, -d2 }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f });
+			v[22] = Vertex({ +w2, +h2, +d2 }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 0.0f });
+			v[23] = Vertex({ +w2, -h2, +d2 }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f, 1.0f }, { 1.0f, 1.0f });
 
 			rSubmesh.vertices.assign(&v[0], &v[24]);
 
@@ -790,7 +1099,7 @@ namespace fantasy
 		{
 			Vector3F pos = 0.5f * (v0.position + v1.position);
 			Vector3F normal = normalize(0.5f * (v0.normal + v1.normal));
-			Vector4F tangent = normalize(0.5f * (v0.tangent + v1.tangent));
+			Vector3F tangent = normalize(0.5f * (v0.tangent + v1.tangent));
 			Vector2F tex = 0.5f * (v0.uv + v1.uv);
 
 			Vertex v;
@@ -814,8 +1123,8 @@ namespace fantasy
 			// Poles: note that there will be texture coordinate distortion as there is
 			// not a unique point on the texture map to assign to the pole when mapping
 			// a rectangular texture onto a sphere.
-			Vertex topVertex({ 0.0f, +radius, 0.0f }, { 0.0f, +1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 0.0f });
-			Vertex bottomVertex({ 0.0f, -radius, 0.0f }, { 0.0f, -1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 0.0f, 1.0f });
+			Vertex topVertex({ 0.0f, +radius, 0.0f }, { 0.0f, +1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f });
+			Vertex bottomVertex({ 0.0f, -radius, 0.0f }, { 0.0f, -1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f });
 
 			submesh.vertices.push_back(topVertex);
 
@@ -1041,7 +1350,7 @@ namespace fantasy
 					//  dz/dv = (r0-r1)*sin(t)
 
 					// This is unit length.
-					vertex.tangent = Vector4F(-s, 0.0f, c, 1.0f);
+					vertex.tangent = Vector3F(-s, 0.0f, c);
 
 					float dr = bottom_radius - top_radius;
 					Vector4F bitangent(dr * c, -height, dr * s, 1.0f);
@@ -1094,11 +1403,11 @@ namespace fantasy
 				float u = x / height + 0.5f;
 				float v = z / height + 0.5f;
 
-				mesh_data.vertices.push_back(Vertex({ x, y, z }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { u, v }));
+				mesh_data.vertices.push_back(Vertex({ x, y, z }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { u, v }));
 			}
 
 			// Cap center vertex.
-			mesh_data.vertices.push_back(Vertex({ 0.0f, y, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 0.5f, 0.5f }));
+			mesh_data.vertices.push_back(Vertex({ 0.0f, y, 0.0f }, { 0.0f, 1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.5f, 0.5f }));
 
 			// Index of center vertex.
 			uint32_t centerIndex = (uint32_t)mesh_data.vertices.size() - 1;
@@ -1132,11 +1441,11 @@ namespace fantasy
 				float u = x / height + 0.5f;
 				float v = z / height + 0.5f;
 
-				mesh_data.vertices.push_back(Vertex({ x, y, z }, { 0.0f, -1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { u, v }));
+				mesh_data.vertices.push_back(Vertex({ x, y, z }, { 0.0f, -1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { u, v }));
 			}
 
 			// Cap center vertex.
-			mesh_data.vertices.push_back(Vertex({ 0.0f, y, 0.0f }, { 0.0f, -1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f, 1.0f }, { 0.5f, 0.5f }));
+			mesh_data.vertices.push_back(Vertex({ 0.0f, y, 0.0f }, { 0.0f, -1.0f, 0.0f }, { 1.0f, 0.0f, 0.0f }, { 0.5f, 0.5f }));
 
 			// Cache the index of center vertex.
 			uint32_t centerIndex = (uint32_t)mesh_data.vertices.size() - 1;
@@ -1180,7 +1489,7 @@ namespace fantasy
 
 					submesh.vertices[i * n + j].position = Vector3F(x, 0.0f, z);
 					submesh.vertices[i * n + j].normal = Vector3F(0.0f, 1.0f, 0.0f);
-					submesh.vertices[i * n + j].tangent = Vector4F(1.0f, 0.0f, 0.0f, 1.0f);
+					submesh.vertices[i * n + j].tangent = Vector3F(1.0f, 0.0f, 0.0f);
 
 					// Stretch texture over grid.
 					submesh.vertices[i * n + j].uv.x = j * du;
@@ -1228,28 +1537,28 @@ namespace fantasy
 			submesh.vertices[0] = Vertex(
 				{ x, y - h, depth },
 				{ 0.0f, 0.0f, -1.0f },
-				{ 1.0f, 0.0f, 0.0f, 1.0f },
+				{ 1.0f, 0.0f, 0.0f },
 				{ 0.0f, 1.0f }
 			);
 
 			submesh.vertices[1] = Vertex(
 				{ x, y, depth },
 				{ 0.0f, 0.0f, -1.0f },
-				{ 1.0f, 0.0f, 0.0f, 1.0f },
+				{ 1.0f, 0.0f, 0.0f },
 				{ 0.0f, 0.0f }
 			);
 
 			submesh.vertices[2] = Vertex(
 				{ x + w, y, depth },
 				{ 0.0f, 0.0f, -1.0f },
-				{ 1.0f, 0.0f, 0.0f, 1.0f },
+				{ 1.0f, 0.0f, 0.0f },
 				{ 1.0f, 0.0f }
 			);
 
 			submesh.vertices[3] = Vertex(
 				{ x + w, y - h, depth },
 				{ 0.0f, 0.0f, -1.0f },
-				{ 1.0f, 0.0f, 0.0f, 1.0f },
+				{ 1.0f, 0.0f, 0.0f },
 				{ 1.0f, 1.0f }
 			);
 

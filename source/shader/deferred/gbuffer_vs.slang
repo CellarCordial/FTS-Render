@@ -29,7 +29,7 @@ struct VertexInput
 {
     float3 local_space_position : POSITION;
     float3 local_space_normal : NORMAL;
-    float4 local_space_tangent  : TANGENT;
+    float3 local_space_tangent  : TANGENT;
     float2 uv : TEXCOORD;
 };
 
@@ -43,7 +43,7 @@ struct VertexOutput
     float3 prev_view_space_position : PREV_VIEW_POSITION;
     
     float3 world_space_normal : NORMAL;
-    float4 world_space_tangent  : TANGENT;
+    float3 world_space_tangent  : TANGENT;
     float2 uv        : TEXCOORD;
 };
 
@@ -63,7 +63,7 @@ VertexOutput vertex_shader(VertexInput input)
     output.prev_view_space_position = mul(world_pos, prev_view_matrix).xyz;
 
     output.world_space_normal = normalize(mul(float4(input.local_space_normal, 1.0f), constant.inv_trans_world)).xyz;
-    output.world_space_tangent = normalize(mul(input.local_space_tangent, constant.inv_trans_world));
+    output.world_space_tangent = normalize(mul(float4(input.local_space_tangent, 1.0f), constant.inv_trans_world)).xyz;
     output.uv = input.uv;
 
     return output;
