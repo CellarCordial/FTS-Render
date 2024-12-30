@@ -25,7 +25,8 @@ namespace fantasy
 
             ImGui_ImplGlfw_InitForOther(window, true);
 
-            ID3D12DescriptorHeap* srv_font_descriptor_heap = reinterpret_cast<ID3D12DescriptorHeap*>(device->get_native_descriptor_heap(DescriptorHeapType::ShaderResourceView));
+            ID3D12DescriptorHeap* srv_font_descriptor_heap = 
+                reinterpret_cast<ID3D12DescriptorHeap*>(device->get_native_descriptor_heap(DescriptorHeapType::ShaderResourceView));
 
             ImGui_ImplDX12_Init(
                 reinterpret_cast<ID3D12Device*>(device->get_native_object()), 
@@ -39,7 +40,6 @@ namespace fantasy
             std::string asset_path = "asset";
             file_brower = new ImGui::FileBrowser(0, PROJ_DIR + asset_path);
             file_brower->SetTitle("File Browser");
-            file_brower->SetTypeFilters({ ".gltf" });
         }
 
         void destroy()

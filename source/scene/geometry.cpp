@@ -142,7 +142,7 @@ namespace fantasy
 		}
 
 		uint64_t edge_num = std::min(std::min(_indices.size(), 3 * _vertices.size() - 6), _triangle_surfaces.size() + _vertices.size());
-		_edges.resize(edge_num);
+		_edges.reserve(edge_num);
 		_edges_begin_table.resize(edge_num);
 		_edges_end_table.resize(edge_num);
 
@@ -165,9 +165,9 @@ namespace fantasy
 			}
 
 			bool already_exist = false;
-			for (uint32_t ix : _edges_begin_table[key0])
+			for (uint32_t jx : _edges_begin_table[key0])
 			{
-				const auto& edge = _edges[ix];
+				const auto& edge = _edges[jx];
 				if (edge.first == p0 && edge.second == p1) 
 				{
 					already_exist = true;
@@ -229,7 +229,7 @@ namespace fantasy
 			{
 				const auto& reevaluate_edge = _edges[ix];
 				float error = evaluate(reevaluate_edge.first, reevaluate_edge.second, false);
-				_heap.insert(error, ix++);
+				_heap.insert(error, ix);
 			}
 
 			edge_need_reevaluate_indices.clear();
@@ -326,6 +326,7 @@ namespace fantasy
 				uint32_t key = hash(vertex_position);
 				_index_table.remove(key, index_index);
 
+				if (vertex_index == INVALID_SIZE_32) continue;
 				assert(_vertex_ref_count[vertex_index] > 0);
 				if (--_vertex_ref_count[vertex_index] == 0)
 				{
@@ -343,16 +344,13 @@ namespace fantasy
 
 	bool MeshOptimizer::compact()
 	{
-		// key: vertex_index_before_compact; value: vertex_index_after_compact.
-		std::vector<uint32_t> indices_map(_vertices.size());	
-		
 		uint32_t count = 0;
 		for (uint32_t ix = 0; ix < _vertices.size(); ++ix)
 		{
 			if (_vertex_ref_count[ix] > 0)
 			{
 				if (ix != count) _vertices[count] = _vertices[ix];
-				indices_map[ix] = count++;
+				_vertex_ref_count[ix] = count++;
 			}
 		}
 		ReturnIfFalse(count == _remain_vertex_num);
@@ -364,7 +362,7 @@ namespace fantasy
 			{
 				for (uint32_t jx = 0; jx < 3; ++jx)
 				{
-					_indices[count * 3 + jx] = indices_map[_indices[ix * 3 + jx]];
+					_indices[count * 3 + jx] = _vertex_ref_count[_indices[ix * 3 + jx]];
 				}
 				count++;
 			}
@@ -402,7 +400,7 @@ namespace fantasy
 		BuildAdjacencyTrianlges(p1, lock1);
 
 		if (adjacency_triangle_indices.empty()) return 0.0f;
-		if (adjacency_triangle_indices.size() > 24) error += 0.5f * (adjacency_triangle_indices.size() - 24);
+		if (adjacency_triangle_indices.size() > 24u) error += 0.5f * (adjacency_triangle_indices.size() - 24u);
 
 		QuadricSurface surface;
 		for (uint32_t ix : adjacency_triangle_indices) surface = merge(surface, _triangle_surfaces[ix]);
@@ -411,13 +409,10 @@ namespace fantasy
 		if (lock0 && lock1) error += 1e8;
 		else if (lock0 && !lock1) p = p0;
 		else if (!lock0 && lock1) p = p1;
-		else if (
-			!surface.get_vertex_position(p) || 
-			distance(p, p0) + distance(p, p1) > 2.0f * distance(p0, p1)	// invalid
-		)
-		{
-			p = (p0 + p1) * 0.5f;
-		}
+		else if (!surface.get_vertex_position(p)) p = (p0 + p1) * 0.5f;
+		
+		if (distance(p, p0) + distance(p, p1) > 2.0f * distance(p0, p1)) p = (p0 + p1) * 0.5f; 
+
 
 		error += surface.distance_to_surface(p);
 
@@ -460,7 +455,10 @@ namespace fantasy
 					adjacency_vertex_indices.push_back(_indices[ix * 3 + jx]);
 				}
 			}
+
 			std::sort(adjacency_vertex_indices.begin(), adjacency_vertex_indices.end());
+
+			// Remove duplicate elements.
 			adjacency_vertex_indices.erase(
 				std::unique(adjacency_vertex_indices.begin(), adjacency_vertex_indices.end()), 
 				adjacency_vertex_indices.end()
@@ -468,19 +466,19 @@ namespace fantasy
 
 			for (uint32_t vertex_index : adjacency_vertex_indices)
 			{
-				const auto& crVertex = _vertices[vertex_index];
-				uint32_t dwHash = hash(crVertex);
-				for (uint32_t ix : _edges_begin_table[dwHash])
+				const auto& vertex_position = _vertices[vertex_index];
+				uint32_t key = hash(vertex_position);
+				for (uint32_t ix : _edges_begin_table[key])
 				{
-					if (_edges[ix].first == crVertex && _heap.is_valid(ix))
+					if (_edges[ix].first == vertex_position && _heap.is_valid(ix))
 					{
 						_heap.remove(ix);
 						edge_need_reevaluate_indices.push_back(ix);
 					}
 				}
-				for (uint32_t ix : _edges_end_table[dwHash])
+				for (uint32_t ix : _edges_end_table[key])
 				{
-					if (_edges[ix].second == crVertex && _heap.is_valid(ix))
+					if (_edges[ix].second == vertex_position && _heap.is_valid(ix))
 					{
 						_heap.remove(ix);
 						edge_need_reevaluate_indices.push_back(ix);
@@ -488,7 +486,7 @@ namespace fantasy
 				}
 			}
 			
-			for (uint32_t dwTriangleIndex : adjacency_triangle_indices) fix_triangle(dwTriangleIndex);
+			for (uint32_t triangle_index : adjacency_triangle_indices) fix_triangle(triangle_index);
 		}	
 
 		for (uint32_t triangle_index : adjacency_triangle_indices) _flags[triangle_index * 3] &= ~AdjacencyFlag;
@@ -520,6 +518,7 @@ namespace fantasy
 			if (_edges[ix].first == p)
 			{
 				_edges_begin_table.remove(key, ix);
+				_edges_end_table.remove(hash(_edges[ix].second), ix);
 				moved_edge_indices.push_back(ix);
 			}
 		}
@@ -527,6 +526,7 @@ namespace fantasy
 		{
 			if (_edges[ix].second == p)
 			{
+				_edges_begin_table.remove(hash(_edges[ix].first), ix);
 				_edges_end_table.remove(key, ix);
 				moved_edge_indices.push_back(ix);
 			}
@@ -559,7 +559,7 @@ namespace fantasy
 			for (uint32_t ix : _edges_begin_table[h0])
 			{
 				const auto& edge_copy = _edges[ix];
-				if (edge_copy.first == edge_copy.first && edge_copy.second == edge_copy.second) 
+				if (edge_copy.first == edge.first && edge_copy.second == edge.second) 
 				{
 					alread_exist = true;
 					break;
@@ -567,8 +567,8 @@ namespace fantasy
 			}
 			if (!alread_exist)
 			{
-				_edges_begin_table.insert(h0, static_cast<uint32_t>(_edges.size()));
-				_edges_end_table.insert(h1, static_cast<uint32_t>(_edges.size()));
+				_edges_begin_table.insert(h0, ix);
+				_edges_end_table.insert(h1, ix);
 			}
 
 			if (edge.first == edge.second && alread_exist)

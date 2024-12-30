@@ -49,7 +49,7 @@ namespace fantasy
         
         const float* sur0 = reinterpret_cast<const float*>(&surface0);
         const float* sur1 = reinterpret_cast<const float*>(&surface1);
-
+        
         QuadricSurface ret;
         float* ret_ptr = reinterpret_cast<float*>(&ret);
         for (uint32_t ix = 0; ix < 10; ++ix)

@@ -161,7 +161,7 @@ namespace fantasy
 
 			if (model_entity && parallel::thread_finished(thread_id) && parallel::thread_success(thread_id))
 			{
-				ReturnIfFalse(_global_entity->get_component<event::ModelLoaded>()->broadcast());
+				// ReturnIfFalse(_global_entity->get_component<event::ModelLoaded>()->broadcast());
 				// ReturnIfFalse(_global_entity->get_component<event::GenerateSdf>()->broadcast(model_entity));
 				// ReturnIfFalse(_global_entity->get_component<event::GenerateSurfaceCache>()->Broadcast(pModelEntity));
 
@@ -205,8 +205,8 @@ namespace fantasy
 		event.entity->assign<Material>();
 		event.entity->assign<Transform>();
 		event.entity->assign<SurfaceCache>();
-		// event.entity->assign<VirtualGeometry>();
-		event.entity->assign<DistanceField>();
+		// event.entity->assign<DistanceField>();
+		event.entity->assign<VirtualGeometry>();
 		// TODO: reverse the order of virtual geometry and distance field.
 
 		_sdf_data_path.clear();

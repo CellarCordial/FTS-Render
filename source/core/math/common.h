@@ -78,7 +78,7 @@ inline bool operator!=(T a, uint32_t b) { return uint32_t(a) != b; }
 
     inline bool is_power_of_2(uint32_t v)
     {
-        return v & (v - 1);
+        return (v & (v - 1)) == 0;
     }
 
     inline uint32_t next_power_of_2(uint32_t v)
