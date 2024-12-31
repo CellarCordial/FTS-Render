@@ -78,7 +78,9 @@ namespace fantasy
 		x.f = (vec.x == 0.0f ? 0 : vec.x);
 		y.f = (vec.y == 0.0f ? 0 : vec.y);
 		z.f = (vec.z == 0.0f ? 0 : vec.z);
-		return murmur_mix(murmur_add(murmur_add(x.u, y.u), z.u));
+        uint32_t a = murmur_add(x.u, y.u);
+        uint32_t b = murmur_add(a, z.u);
+		return murmur_mix(b);
 	}
 }
 

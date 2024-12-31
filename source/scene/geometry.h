@@ -113,7 +113,7 @@ namespace fantasy
         MeshOptimizer(std::vector<Vector3F>& vertices, std::vector<uint32_t>& indices);
 
         bool optimize(uint32_t target_triangle_num);
-        void lock_position(Vector3F position);
+        void lock_position(const Vector3F& position);
 
         float _max_error;
 
@@ -145,7 +145,7 @@ namespace fantasy
             uint32_t _current_size;
             uint32_t _index_count;
             std::vector<uint32_t> _heap;
-            std::vector<uint32_t> _keys;
+            std::vector<float> _keys;
             std::vector<uint32_t> _heap_indices;
         };
 
@@ -219,7 +219,12 @@ namespace fantasy
         bool cluster_triangles();
         bool build_cluster_groups(uint32_t level_offset, uint32_t level_cluster_count, uint32_t mip_level);
         bool build_parent_clusters(uint32_t cluster_group_index);
-        void build_adjacency_graph(SimpleGraph& edge_link_graph, SimpleGraph& adjacency_graph);
+        void build_adjacency_graph(
+            const std::vector<Vector3F>& vertices, 
+            const std::vector<uint32_t>& indices, 
+            SimpleGraph& edge_link_graph, 
+            SimpleGraph& adjacency_graph
+        );
         uint32_t edge_hash(const Vector3F& p0, const Vector3F& p1);
 
     private:

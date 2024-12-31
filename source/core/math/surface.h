@@ -7,16 +7,16 @@ namespace fantasy
 {
     struct QuadricSurface
 	{
-        float a2 = 0.0f, b2 = 0.0f, c2 = 0.0f, d2 = 0.0f;
-        float ab = 0.0f, ac = 0.0f, ad = 0.0f;
-        float bc = 0.0f, bd = 0.0f; 
-        float cd = 0.0f;
+        double a2 = 0.0, b2 = 0.0, c2 = 0.0, d2 = 0.0;
+        double ab = 0.0, ac = 0.0, ad = 0.0;
+        double bc = 0.0, bd = 0.0; 
+        double cd = 0.0;
 
         QuadricSurface() = default;
-        QuadricSurface(Vector3F p0, Vector3F p1, Vector3F p2);
+        QuadricSurface(const Vector3<double>& p0, const Vector3<double>& p1, const Vector3<double>& p2);
 
         bool get_vertex_position(Vector3F& vertex);
-        float distance_to_surface(Vector3F p);
+        float distance_to_surface(const Vector3F& p);
 
 	};
 

@@ -5,7 +5,6 @@
 #include <vector>
 #include <metis.h>
 #include "../tools/log.h"
-#include "common.h"
 
 
 namespace fantasy 
@@ -34,7 +33,7 @@ namespace fantasy
 				metis_graph->adjandency_node_weights.push_back(weight);
 			}
 		}
-		metis_graph->node_adjacency_start_index.push_back(metis_graph->adjandency_nodes.size());
+		metis_graph->node_adjacency_start_index.push_back(static_cast<int32_t>(metis_graph->adjandency_nodes.size()));
 
         ReturnIfFalse(bisect_graph_resursive(metis_graph, 0, metis_graph->node_count));
         std::sort(_part_ranges.begin(), _part_ranges.end());
@@ -54,8 +53,8 @@ namespace fantasy
 
         if (child_metis_graphs[0] && child_metis_graphs[1])
         {
-            ReturnIfFalse(bisect_graph_resursive(child_metis_graphs[0], range_start, range_end));
-            ReturnIfFalse(bisect_graph_resursive(child_metis_graphs[1], range_start, range_end));
+            ReturnIfFalse(bisect_graph_resursive(child_metis_graphs[0], range_start, split_pos));
+            ReturnIfFalse(bisect_graph_resursive(child_metis_graphs[1], split_pos, range_end));
         }
         else 
         {
@@ -71,20 +70,22 @@ namespace fantasy
 		uint32_t range_end
 	)
 	{
+        assert(range_end - range_start == metis_graph->node_count);
+
         if (metis_graph->node_count <= _max_part_size)
         {
             _part_ranges.push_back(std::make_pair(range_start, range_end));
             return range_end;
         }
 
-        uint32_t part_size_expectation = (_min_part_size + _max_part_size) * 0.5f;
-        uint32_t part_count_expectation = std::max(2u, align(static_cast<uint32_t>(metis_graph->node_count), part_size_expectation));
+        uint32_t part_size_expectation = (_min_part_size + _max_part_size) / 2u;
+        uint32_t part_count_expectation = std::max(2u, (metis_graph->node_count + part_size_expectation - 1) / part_size_expectation);
 
         std::vector<int32_t> partition_result(metis_graph->node_count);
         int32_t node_weight_dimension = 1, part_num = 2, edge_cut_num = 0;
         double part_weight[]={
-            double(part_count_expectation >> 1) / part_count_expectation,
-            1.0 - double(part_count_expectation >> 1) / part_count_expectation
+            float(part_count_expectation >> 1) / part_count_expectation,
+            1.0 - float(part_count_expectation >> 1) / part_count_expectation
         };
         ReturnIfFalse(
             METIS_PartGraphRecursive(
@@ -92,7 +93,8 @@ namespace fantasy
                 &node_weight_dimension, 
                 metis_graph->node_adjacency_start_index.data(), 
                 metis_graph->adjandency_nodes.data(), 
-                nullptr, nullptr, 
+                nullptr, 
+                nullptr, 
                 metis_graph->adjandency_node_weights.data(), 
                 &part_num, 
                 part_weight, 
@@ -122,7 +124,7 @@ namespace fantasy
 
             if (left < right)
             {
-                std::swap(_node_indices[left], _node_indices[right]);
+                std::swap(_node_indices[range_start + left], _node_indices[range_start + right]);
                 swap_node_map[left] = right;
                 swap_node_map[right] = left;
                 left++;
@@ -166,7 +168,7 @@ namespace fantasy
                 {
                     uint32_t adjancency_node_weight = metis_graph->adjandency_node_weights[jx];
                     uint32_t adjancency_node_index = metis_graph->adjandency_nodes[jx];
-                    adjancency_node_index = swap_node_map[adjancency_node_index] - current_child_graph_index == 1 ? child_graph_size[0] : 0;
+                    adjancency_node_index = swap_node_map[adjancency_node_index] - (current_child_graph_index == 1 ? child_graph_size[0] : 0);
                     if (adjancency_node_index >= 0 && adjancency_node_index < child_graph_size[current_child_graph_index])
                     {
                         current_child_graph->adjandency_nodes.push_back(adjancency_node_index);

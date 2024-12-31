@@ -92,17 +92,17 @@ namespace fantasy
 
 		bool operator>(const Vector2<T>& vec) const
 		{
-			return LengthSquared() > vec.LengthSquared();
+			return length_squared() > vec.length_squared();
 		}
 
 		bool operator<(const Vector2<T>& vec) const
 		{
-			return LengthSquared() < vec.LengthSquared();
+			return length_squared() < vec.length_squared();
 		}
 
 		bool operator<=>(const Vector2<T>& vec)
 		{
-			return LengthSquared() <=> vec.LengthSquared();
+			return length_squared() <=> vec.length_squared();
 		}
 
 		template <typename U>
@@ -148,9 +148,9 @@ namespace fantasy
 			return y;
 		}
 
-		T LengthSquared() const { return x * x + y * y; }
+		T length_squared() const { return x * x + y * y; }
 
-		float length() const { return std::sqrt(LengthSquared()); }
+		T length() const { return std::sqrt(length_squared()); }
 
 		T x, y;
 	};
@@ -245,17 +245,17 @@ namespace fantasy
 
 		bool operator>(const Vector3<T>& vec) const
 		{
-			return LengthSquared() > vec.LengthSquared();
+			return length_squared() > vec.length_squared();
 		}
 
 		bool operator<(const Vector3<T>& vec) const
 		{
-			return LengthSquared() < vec.LengthSquared();
+			return length_squared() < vec.length_squared();
 		}
 
 		bool operator<=>(const Vector3<T>& vec) const
 		{
-			return LengthSquared() <=> vec.LengthSquared();
+			return length_squared() <=> vec.length_squared();
 		}
 
 		Vector3<T> operator*(const Vector3<T>& vec) const
@@ -315,9 +315,9 @@ namespace fantasy
 			return z;
 		}
 
-		T LengthSquared() const { return x * x + y * y + z * z; }
+		T length_squared() const { return x * x + y * y + z * z; }
 
-		float length() const { return std::sqrt(LengthSquared()); }
+		T length() const { return std::sqrt(length_squared()); }
 
 		T x, y, z;
 	};
@@ -424,17 +424,17 @@ namespace fantasy
 
 		bool operator>(const Vector4<T>& vec) const
 		{
-			return LengthSquared() > vec.LengthSquared();
+			return length_squared() > vec.length_squared();
 		}
 
 		bool operator<(const Vector4<T>& vec) const
 		{
-			return LengthSquared() < vec.LengthSquared();
+			return length_squared() < vec.length_squared();
 		}
 
 		bool operator<=>(const Vector4<T>& vec) const
 		{
-			return LengthSquared() <=> vec.LengthSquared();
+			return length_squared() <=> vec.length_squared();
 		}
 
 		template <typename U>
@@ -487,9 +487,9 @@ namespace fantasy
 			return w;
 		}
 
-		T LengthSquared() const { return x * x + y * y + z * z + w * w; }
+		T length_squared() const { return x * x + y * y + z * z + w * w; }
 
-		float length() const { return std::sqrt(LengthSquared()); }
+		T length() const { return std::sqrt(length_squared()); }
 
 		T x, y, z, w;
 	};
@@ -544,12 +544,12 @@ namespace fantasy
 	inline Vector3<T> cross(const Vector3<T>& vec1, const Vector3<T>& vec2)
 	{
 		// 使用 double 可以防止两个值非常接近的浮点数相减造成的误差
-		const double dVec1X = vec1.x, dVec1Y = vec1.y, dVec1Z = vec1.z;
-		const double dVec2X = vec2.x, dVec2Y = vec2.y, dVec2Z = vec2.z;
+		const double vec1_x = vec1.x, vec1_y = vec1.y, vec1_z = vec1.z;
+		const double vec2_x = vec2.x, vec2_y = vec2.y, vec2_z = vec2.z;
 		return Vector3<T>{
-			static_cast<T>(dVec1Y * dVec2Z - dVec1Z * dVec2Y),
-			static_cast<T>(dVec1Z * dVec2X - dVec1X * dVec2Z),
-			static_cast<T>(dVec1X * dVec2Y - dVec1Y * dVec2X)
+			static_cast<T>(vec1_y * vec2_z - vec1_z * vec2_y),
+			static_cast<T>(vec1_z * vec2_x - vec1_x * vec2_z),
+			static_cast<T>(vec1_x * vec2_y - vec1_y * vec2_x)
 		};
 	}
 	
@@ -665,14 +665,14 @@ namespace fantasy
 	template <typename T>
 	inline float DistanceSquared(const Vector3<T>& vec1, const Vector3<T>& vec2)
 	{
-		return (vec1 - vec2).LengthSquared();
+		return (vec1 - vec2).length_squared();
 	}
 
 	// 两点距离平方
 	template <typename T>
 	inline float DistanceSquared(const Vector2<T>& vec1, const Vector2<T>& vec2)
 	{
-		return (vec1 - vec2).LengthSquared();
+		return (vec1 - vec2).length_squared();
 	}
 
 	// 点的插值

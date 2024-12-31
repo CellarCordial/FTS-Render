@@ -69,7 +69,7 @@ namespace shader_compile
     }
 
     ShaderData compile_shader(const ShaderCompileDesc& desc)
-    {
+    { 
         if (global_session == nullptr)
         {
             LOG_ERROR("Please call fantasy::StaticShaderCompiler::initialize() first.");

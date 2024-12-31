@@ -3,6 +3,7 @@
 
 #include "vector.h"
 #include "ray.h"
+#include <cassert>
 #include <cstdint>
 #include <vector>
 
@@ -172,17 +173,15 @@ namespace fantasy
 			T max_x = vertices[0].x, max_y = vertices[0].y, max_z = vertices[0].z;
 			for (const auto& vertex : vertices)
 			{
-				_lower = Vector3<T>(
-					std::min(min_x, vertex.x),
-					std::min(min_y, vertex.y),
-					std::min(min_z, vertex.z)
-				);
-				_upper = Vector3<T>(
-					std::max(max_x, vertex.x),
-					std::max(max_y, vertex.y),
-					std::max(max_z, vertex.z)
-				);
+				min_x = std::min(min_x, vertex.x);
+				min_y = std::min(min_y, vertex.y);
+				min_z = std::min(min_z, vertex.z);
+				max_x = std::max(max_x, vertex.x);
+				max_y = std::max(max_y, vertex.y);
+				max_z = std::max(max_z, vertex.z);
 			}
+			_lower = Vector3<T>(min_x, min_y, min_z);
+			_upper = Vector3<T>(max_x, max_y, max_z);
 		}
 		
 
@@ -444,9 +443,52 @@ namespace fantasy
 
 		explicit Sphere(const std::vector<Vector3F>& vertices)
 		{
-			Bounds3F bounding_box(vertices);
-			center = (bounding_box._lower + bounding_box._upper) * 0.5f;
-			radius = bounding_box.diagonal().length() * 0.5f;
+			uint32_t min_idx[3] = {};
+			uint32_t max_idx[3] = {};
+			for (uint32_t i = 0; i < vertices.size(); i++) 
+			{
+				for (int k = 0; k < 3; k++) 
+				{
+					if (vertices[i][k] < vertices[min_idx[k]][k]) min_idx[k] = i;
+					if (vertices[i][k] > vertices[max_idx[k]][k]) max_idx[k] = i;
+				}
+			}
+
+			float max_len = 0;
+			uint32_t max_axis = 0;
+			for (uint32_t k = 0; k < 3; k++) 
+			{
+				Vector3F pmin = vertices[min_idx[k]];
+				Vector3F pmax = vertices[max_idx[k]];
+				float tlen = Vector3F(pmax - pmin).length_squared();
+				if (tlen > max_len) max_len = tlen, max_axis = k;
+			}
+
+			Vector3F pmin = vertices[min_idx[max_axis]];
+			Vector3F pmax = vertices[max_idx[max_axis]];
+
+			center = (pmin + pmax) * 0.5f;
+			radius = float(0.5 * sqrt(max_len));
+			max_len = radius * radius;
+
+			for (uint32_t i = 0; i < vertices.size(); i++) 
+			{
+				float len = Vector3F(vertices[i] - center).length_squared();
+				if (len > max_len) 
+				{
+					len = sqrt(len);
+					float t = 0.5 - 0.5 * (radius / len);
+					center = center + (vertices[i] - center) * t;
+					radius = (radius + len) * 0.5;
+					max_len = radius * radius;
+				}
+			}
+
+			for (uint32_t i = 0; i < vertices.size(); i++) 
+			{
+				float len = Vector3F(vertices[i] - center).length();
+				assert(len - 1e-6 <= radius);
+			}
 		}
 
         Vector3F center;
@@ -483,7 +525,8 @@ namespace fantasy
 	}
 
 	Circle merge(const Circle& circle0, const Circle& circle1);
-	Sphere merge(const Sphere& circle0, const Sphere& circle1);
+	Sphere merge(const Sphere& sphere0, const Sphere& sphere1);
+	Sphere merge(const std::vector<Sphere>& spheres);
 
 	// 获取两个包围盒相交处的包围盒
 	template <typename T>

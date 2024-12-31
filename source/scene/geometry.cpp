@@ -8,15 +8,15 @@
 
 namespace fantasy
 {
-	void MeshOptimizer::BinaryHeap::resize(uint32_t dwIndexNum)
+	void MeshOptimizer::BinaryHeap::resize(uint32_t index_count)
 	{
 		_current_size = 0;
-		_index_count = dwIndexNum;
-		_heap.clear(); _heap.resize(dwIndexNum);
-		_keys.clear(); _keys.resize(dwIndexNum);
-		_heap_indices.clear(); _heap_indices.resize(dwIndexNum);
+		_index_count = index_count;
+		_heap.clear(); _heap.resize(index_count);
+		_keys.clear(); _keys.resize(index_count);
+		_heap_indices.clear(); _heap_indices.resize(index_count);
 
-		memset(_heap_indices.data(), 0xff, dwIndexNum * sizeof(uint32_t));
+		memset(_heap_indices.data(), 0xff, index_count * sizeof(uint32_t));
 	}
 	
 	float MeshOptimizer::BinaryHeap::get_key(uint32_t index)
@@ -52,52 +52,52 @@ namespace fantasy
 	
 	void MeshOptimizer::BinaryHeap::remove(uint32_t index)
 	{
-		assert(Is_valid(index));
+		assert(is_valid(index));
 
 		float key = _keys[index];
-		uint32_t& rdwIndex = _heap_indices[index];
-		if (rdwIndex == _current_size - 1)
+		uint32_t curr_index = _heap_indices[index];
+		if (curr_index == _current_size - 1)
 		{
 			_current_size--;
-			rdwIndex = INVALID_SIZE_32;
+			_heap_indices[index] = INVALID_SIZE_32;
 			return;
 		}
 
-		_heap[rdwIndex] = _heap[--_current_size];
-		_heap_indices[_heap[rdwIndex]] = rdwIndex;
+		_heap[curr_index] = _heap[--_current_size];
+		_heap_indices[_heap[curr_index]] = curr_index;
 		_heap_indices[index] = INVALID_SIZE_32;
 
-		if (key < _keys[_heap[rdwIndex]]) push_down(rdwIndex);
-		else push_up(rdwIndex);
+		if (key < _keys[_heap[curr_index]]) push_down(curr_index);
+		else push_up(curr_index);
 	}
 	
 	void MeshOptimizer::BinaryHeap::insert(float key,uint32_t index)
 	{
-		assert(Is_valid(index));
+		assert(is_valid(index));
 
-		_current_size++;
-		_heap[_current_size] = index;
+		uint32_t old_size = _current_size++;
+		_heap[old_size] = index;
 		_keys[index] = key;
-		_heap_indices[index] = _current_size;
-		push_up(_current_size);
+		_heap_indices[index] = old_size;
+		push_up(old_size);
 	}
 
-	void MeshOptimizer::BinaryHeap::push_down(uint32_t index)
+	void MeshOptimizer::BinaryHeap::push_up(uint32_t index)
 	{
 		uint32_t ix=_heap[index];
-		uint32_t dwFatherIndex=(index-1)>>1;
-		while (index > 0 && _keys[ix] < _keys[_heap[dwFatherIndex]])
+		uint32_t father_index=(index-1)>>1;
+		while (index > 0 && _keys[ix] < _keys[_heap[father_index]])
 		{
-			_heap[index] = _heap[dwFatherIndex];
+			_heap[index] = _heap[father_index];
 			_heap_indices[_heap[index]] = index;
-			index = dwFatherIndex;
-			dwFatherIndex = (index-1) >> 1;
+			index = father_index;
+			father_index = (index-1) >> 1;
 		}
 		_heap[index] = ix;
 		_heap_indices[_heap[index]] = index;
 	}
 
-	void MeshOptimizer::BinaryHeap::push_up(uint32_t index)
+	void MeshOptimizer::BinaryHeap::push_down(uint32_t index)
 	{
 		uint32_t ix = _heap[index];
 		uint32_t left_index = (index << 1) + 1;
@@ -243,7 +243,7 @@ namespace fantasy
 		return ret;
 	}
 
-	void MeshOptimizer::lock_position(Vector3F position)
+	void MeshOptimizer::lock_position(const Vector3F& position)
 	{
 		for (uint32_t ix : _index_table[hash(position)])
 		{
@@ -338,7 +338,11 @@ namespace fantasy
 		}
 		else 
 		{
-			_triangle_surfaces[triangle_index] = QuadricSurface(p0, p1, p2);
+			_triangle_surfaces[triangle_index] = QuadricSurface(
+				Vector3<double>(p0), 
+				Vector3<double>(p1), 
+				Vector3<double>(p2)
+			);
 		}
 	}
 
@@ -374,7 +378,7 @@ namespace fantasy
 	{
 		if (p0 == p1) return 0.0f;
 
-		float error;
+		float error = 0.0f;
 
 		std::vector<uint32_t> adjacency_triangle_indices;
 		auto BuildAdjacencyTrianlges = [this, &adjacency_triangle_indices](const Vector3F& vertex, bool& lock)
@@ -407,7 +411,7 @@ namespace fantasy
 
 		Vector3F p = (p0 + p1) * 0.5f;
 		if (lock0 && lock1) error += 1e8;
-		else if (lock0 && !lock1) p = p0;
+		if (lock0 && !lock1) p = p0;
 		else if (!lock0 && lock1) p = p1;
 		else if (!surface.get_vertex_position(p)) p = (p0 + p1) * 0.5f;
 		
@@ -555,6 +559,12 @@ namespace fantasy
 				std::swap(edge.first, edge.second);
 			}
 
+			if (edge.first == edge.second)
+			{
+				_heap.remove(ix);
+				continue;
+			}
+
 			bool alread_exist = false;
 			for (uint32_t ix : _edges_begin_table[h0])
 			{
@@ -570,11 +580,11 @@ namespace fantasy
 				_edges_begin_table.insert(h0, ix);
 				_edges_end_table.insert(h1, ix);
 			}
-
-			if (edge.first == edge.second && alread_exist)
+			else 
 			{
 				_heap.remove(ix);
 			}
+
 		}
 		
 		moved_edge_indices.clear();
@@ -634,28 +644,33 @@ namespace fantasy
 	}
 
  
-	void VirtualGeometry::build_adjacency_graph(SimpleGraph& edge_link_graph, SimpleGraph& adjacency_graph)
+	void VirtualGeometry::build_adjacency_graph(
+		const std::vector<Vector3F>& vertices, 
+		const std::vector<uint32_t>& indices, 
+		SimpleGraph& edge_link_graph, 
+		SimpleGraph& adjacency_graph
+	)
 	{
-		HashTable edge_table(static_cast<uint32_t>(_indices.size()));
-		edge_link_graph.resize(_indices.size());
+		HashTable edge_table(static_cast<uint32_t>(indices.size()));
+		edge_link_graph.resize(indices.size());
 
-		for (uint32_t edge_start_index = 0; edge_start_index < _indices.size(); ++edge_start_index)
+		for (uint32_t edge_start_index = 0; edge_start_index < indices.size(); ++edge_start_index)
 		{
-			Vector3F p0 = _vertex_positons[_indices[edge_start_index]];
-			Vector3F p1 = _vertex_positons[_indices[triangle_index_cycle3(edge_start_index)]];
+			const Vector3F& p0 = vertices[indices[edge_start_index]];
+			const Vector3F& p1 = vertices[indices[triangle_index_cycle3(edge_start_index)]];
 
 			// Find shared vertices and opposite edges, which represent adjacent triangles.
 			edge_table.insert(edge_hash(p0, p1), edge_start_index);
 			for (uint32_t edge_end_index : edge_table[edge_hash(p1, p0)])
 			{
 				if (
-					p1 == _vertex_positons[_indices[edge_end_index]] && 
-					p0 == _vertex_positons[_indices[triangle_index_cycle3(edge_end_index)]]
+					p1 == vertices[indices[edge_end_index]] && 
+					p0 == vertices[indices[triangle_index_cycle3(edge_end_index)]]
 				)
 				{
 					// Increase weight.
-					edge_link_graph[edge_start_index][edge_end_index] += 1;
-					edge_link_graph[edge_end_index][edge_start_index] += 1;
+					edge_link_graph[edge_start_index][edge_end_index]++;
+					edge_link_graph[edge_end_index][edge_start_index]++;
 				}
 			}
 		}
@@ -666,7 +681,7 @@ namespace fantasy
 		{
 			for (const auto& [edge_end_node, weight] : edge_end_node_weights)
 			{
-				adjacency_graph[edge_start_node / 3][edge_end_node / 3] += weight;
+				adjacency_graph[edge_start_node / 3][edge_end_node / 3] += 1;
 			}
 			edge_start_node++;
 		}
@@ -676,10 +691,10 @@ namespace fantasy
 	{
 		SimpleGraph edge_link_graph;
 		SimpleGraph triangle_adjacency_graph;
-		build_adjacency_graph(edge_link_graph, triangle_adjacency_graph);
+		build_adjacency_graph(_vertex_positons, _indices, edge_link_graph, triangle_adjacency_graph);
 
 		GraphPartitionar partitionar;
-		partitionar.partition_graph(triangle_adjacency_graph, MeshClusterGroup::group_size - 4, MeshClusterGroup::group_size);
+		partitionar.partition_graph(triangle_adjacency_graph, MeshCluster::cluster_size - 4, MeshCluster::cluster_size);
 
 		for (const auto& [left, right] : partitionar._part_ranges)
 		{
@@ -748,7 +763,6 @@ namespace fantasy
 				cluster_edge_map.push_back(std::make_pair(cluster_index, edge_start_index));
 				edge_cluster_map.push_back(cluster_index);
 			}
-			cluster_index++;
 		}
 
 		SimpleGraph edge_link_graph(cluster_edge_map.size());
@@ -781,7 +795,6 @@ namespace fantasy
 		}
 
 		SimpleGraph cluster_graph(level_cluster_count);
-
 		
 		for (uint32_t edge_start_index = 0; edge_start_index < edge_link_graph.size(); ++edge_start_index)
 		{
@@ -828,7 +841,7 @@ namespace fantasy
 					if (is_external)
 					{
 						uint32_t edge_end_index = cluster_edge_map[edge_start_index].second;
-						cluster_group.external_edges.push_back(std::make_pair(cluster_index, edge_end_index));
+						cluster_group.external_edges.push_back(std::make_pair(cluster_index + level_offset, edge_end_index));
 					}
 				}
 			}
@@ -843,7 +856,7 @@ namespace fantasy
 
 		uint32_t index_offset = 0;
 		float parent_lod_error = 0.0f;
-		Sphere parent_lod_bounding_sphere;
+		std::vector<Sphere> parent_lod_bounding_spheres;
 		std::vector<uint32_t> indices;
 		std::vector<Vector3F> vertex_positions;
 		for (auto cluster_index : cluster_group.cluster_indices)
@@ -853,11 +866,11 @@ namespace fantasy
 			for (const auto& i : cluster.indices) indices.push_back(i + index_offset);
 			index_offset += static_cast<uint32_t>(cluster.vertices.size());
 
-			parent_lod_bounding_sphere = merge(parent_lod_bounding_sphere, cluster.lod_bounding_sphere);
+			parent_lod_bounding_spheres.push_back(cluster.lod_bounding_sphere);
 			parent_lod_error = std::max(parent_lod_error, cluster.lod_error);
 		}
 		
-		cluster_group.lod_bounding_sphere = parent_lod_bounding_sphere;
+		cluster_group.lod_bounding_sphere = merge(parent_lod_bounding_spheres);
 		cluster_group.parent_lod_error = parent_lod_error;
 
 		MeshOptimizer optimizer(vertex_positions, indices);
@@ -875,15 +888,22 @@ namespace fantasy
 			optimizer.lock_position(p1);
 		}
 
-		optimizer.optimize((MeshCluster::cluster_size - 2) * (static_cast<uint32_t>(cluster_group.cluster_indices.size()) / 2));
+		ReturnIfFalse(optimizer.optimize(
+			(MeshCluster::cluster_size - 2) * (static_cast<uint32_t>(cluster_group.cluster_indices.size()) / 2)
+		));
 		parent_lod_error = std::max(parent_lod_error, std::sqrt(optimizer._max_error));
 
 		SimpleGraph edge_link_graph;
 		SimpleGraph triangle_adjacency_graph;
-		build_adjacency_graph(edge_link_graph, triangle_adjacency_graph);
+		build_adjacency_graph(
+			vertex_positions,
+			indices,
+			edge_link_graph, 
+			triangle_adjacency_graph
+		);
 
 		GraphPartitionar partitionar;
-		partitionar.partition_graph(triangle_adjacency_graph, MeshClusterGroup::group_size - 4, MeshClusterGroup::group_size);
+		partitionar.partition_graph(triangle_adjacency_graph, MeshCluster::cluster_size - 4, MeshCluster::cluster_size);
 
 		for (const auto& [left, right] : partitionar._part_ranges)
 		{
@@ -949,7 +969,7 @@ namespace fantasy
 			cluster.bounding_sphere = Sphere(cluster.vertices);
 
 			// The LOD bounding box of the parent node covers all the LOD bounding boxes of its child nodes.
-			cluster.lod_bounding_sphere = parent_lod_bounding_sphere;
+			cluster.lod_bounding_sphere = cluster_group.lod_bounding_sphere;
 			cluster.lod_error = parent_lod_error;
 		}
 		return true;

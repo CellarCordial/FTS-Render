@@ -68,8 +68,46 @@ namespace fantasy
         if (sphere1.radius - sphere0.radius >= center_distance) return sphere1;
 
         float radius = (center_distance + sphere0.radius + sphere1.radius) * 0.5f;
-        Vector3F center = sphere0.center + (center0_to_1 / center_distance) * (radius - sphere0.radius);
+        Vector3F center = sphere0.center + (-center0_to_1 / center_distance) * (radius - sphere0.radius);
 		return Sphere(center, radius);
 	}
 
+	Sphere merge(const std::vector<Sphere>& spheres)
+    {
+        uint32_t min_idx[3] = {};
+        uint32_t max_idx[3] = {};
+        for (uint32_t i = 0; i < spheres.size(); i++) 
+        {
+            for (uint32_t k = 0; k < 3; k++) 
+            {
+                if (spheres[i].center[k] - spheres[i].radius < spheres[min_idx[k]].center[k] - spheres[min_idx[k]].radius) min_idx[k] = i;
+                if (spheres[i].center[k] + spheres[i].radius < spheres[max_idx[k]].center[k] + spheres[max_idx[k]].radius) max_idx[k] = i;
+            }
+        }
+
+        float max_len = 0;
+        uint32_t max_axis = 0;
+        for (uint32_t k = 0; k < 3; k++) 
+        {
+            Sphere spmin = spheres[min_idx[k]];
+            Sphere spmax = spheres[max_idx[k]];
+            float tlen = Vector3F(spmax.center - spmin.center).length() + spmax.radius + spmin.radius;
+            if (tlen > max_len) max_len = tlen, max_axis = k;
+        }
+
+        Sphere sphere = spheres[min_idx[max_axis]];
+        sphere = merge(sphere, spheres[max_idx[max_axis]]);
+        for (uint32_t i = 0; i < spheres.size(); i++) 
+        {
+            sphere = merge(sphere, spheres[i]);
+        }
+        for (uint32_t i = 0; i < spheres.size(); i++) 
+        {
+            float radius_diff = sphere.radius - spheres[i].radius;
+            float t1 = radius_diff * radius_diff;
+            float t2 = Vector3F(sphere.center - spheres[i].center).length_squared();
+            assert(t1 + 1e-6 >= t2);
+        }
+        return sphere;
+    }
 }

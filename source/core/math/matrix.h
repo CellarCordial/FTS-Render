@@ -116,6 +116,35 @@ namespace fantasy
     bool invertible(const Matrix4x4& matrix, Matrix4x4& rInvMatrix);
 
 
+    struct Matrix4x4D
+    {
+        Matrix4x4D() = default;
+        Matrix4x4D(
+            double f00, double f01, double f02, double f03,
+            double f10, double f11, double f12, double f13,
+            double f20, double f21, double f22, double f23,
+            double f30, double f31, double f32, double f33
+        )    
+        {
+            _data[0][0] = f00; _data[0][1] = f01; _data[0][2] = f02; _data[0][3] = f03;
+            _data[1][0] = f10; _data[1][1] = f11; _data[1][2] = f12; _data[1][3] = f13;
+            _data[2][0] = f20; _data[2][1] = f21; _data[2][2] = f22; _data[2][3] = f23;
+            _data[3][0] = f30; _data[3][1] = f31; _data[3][2] = f32; _data[3][3] = f33;
+        }
+
+        explicit Matrix4x4D(const double f[4][4])
+        {
+            memcpy(_data, f, sizeof(double) * 16);
+        }
+
+
+        double* operator[](uint32_t ix) { return _data[ix]; }
+        const double* operator[](uint32_t ix) const { return _data[ix]; }
+
+        double _data[4][4];
+    };
+
+    bool invertible(const Matrix4x4D& matrix, Matrix4x4D& rInvMatrix);
     
     struct Matrix3x4
     {

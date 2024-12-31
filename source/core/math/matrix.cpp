@@ -242,6 +242,88 @@ namespace fantasy
         return ret;
     }
 
+    bool invertible(const Matrix4x4D& matrix, Matrix4x4D& out_inv_matrix)
+    {
+        uint32_t index_column[4], index_raw[4];
+		uint32_t ipiv[4] = { 0, 0, 0, 0 };
+		double inv_matrix[4][4];
+		memcpy(inv_matrix, matrix._data, 16 * sizeof(double));
+
+		for (uint32_t i = 0; i < 4; ++i)
+		{
+			uint32_t column_index = 0, raw_index = 0;
+			double big = 0.0f;
+			for (uint32_t j = 0; j < 4; ++j)
+			{
+				if (ipiv[j] != 1)
+				{
+					for (uint32_t k = 0; k < 4; ++k)
+					{
+						if (ipiv[k] == 0)
+						{
+							if (std::abs(inv_matrix[j][k]) >= big)
+							{
+								big = std::abs(inv_matrix[j][k]);
+								raw_index = j;
+								column_index = k;
+							}
+						}
+						else if (ipiv[k] > 1)
+						{
+							return false;
+						}
+					}
+				}
+			}
+			ipiv[column_index]++;
+
+			if (column_index != raw_index)
+			{
+				for (uint32_t k = 0; k < 4; ++k)
+				{
+					std::swap(inv_matrix[raw_index][k], inv_matrix[column_index][k]);
+				}
+			}
+			index_column[i] = column_index;
+			index_raw[i] = raw_index;
+
+			if (inv_matrix[column_index][column_index] == 0.0f) return false;
+            
+			const double inv_piv = 1.0f / inv_matrix[column_index][column_index];
+			inv_matrix[column_index][column_index] = 1.0f;
+
+			for (uint32_t j = 0; j < 4; j++)
+			{
+				inv_matrix[column_index][j] *= inv_piv;
+			}
+
+			for (uint32_t j = 0; j < 4; j++)
+			{
+				if (j != column_index)
+				{
+					const double save = inv_matrix[j][column_index];
+					inv_matrix[j][column_index] = 0;
+					for (int k = 0; k < 4; k++)
+					{
+						inv_matrix[j][k] -= inv_matrix[column_index][k] * save;
+					}
+				}
+			}
+		}
+
+		for (int j = 3; j >= 0; j--)
+		{
+			if (index_raw[j] != index_column[j])
+			{
+				for (int k = 0; k < 4; k++)
+					std::swap(inv_matrix[k][index_raw[j]], inv_matrix[k][index_column[j]]);
+			}
+		}
+
+        out_inv_matrix = Matrix4x4D(inv_matrix);
+        return true;
+    }
+
     bool invertible(const Matrix4x4& matrix, Matrix4x4& out_inv_matrix)
     {
         uint32_t index_column[4], index_raw[4];
@@ -301,11 +383,11 @@ namespace fantasy
 			{
 				if (j != column_index)
 				{
-					const float fSave = inv_matrix[j][column_index];
+					const float save = inv_matrix[j][column_index];
 					inv_matrix[j][column_index] = 0;
 					for (int k = 0; k < 4; k++)
 					{
-						inv_matrix[j][k] -= inv_matrix[column_index][k] * fSave;
+						inv_matrix[j][k] -= inv_matrix[column_index][k] * save;
 					}
 				}
 			}
@@ -648,7 +730,4 @@ namespace fantasy
             crPos.x, crPos.y, crPos.z, 1.0f
         ));
     }
-
-
-
 }
