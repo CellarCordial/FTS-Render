@@ -12,13 +12,13 @@ namespace fantasy
     {
         struct ShadowMapPassConstant
         {
-            Matrix4x4 world_matrix = {
+            float4x4 world_matrix = {
                 1.0f, 0.0f, 0.0f, 0.0f,
                 0.0f, 1.0f, 0.0f, 0.0f,
                 0.0f, 0.0f, 1.0f, 0.0f,
                 0.0f, 0.0f, 0.0f, 1.0f
             };
-            Matrix4x4 directional_light_view_proj;
+            float4x4 directional_light_view_proj;
         };
     }
 

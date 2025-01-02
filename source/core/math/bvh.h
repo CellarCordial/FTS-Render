@@ -25,8 +25,8 @@ namespace fantasy
 
         struct Vertex
         {
-            Vector3F position;
-            Vector3F normal;
+            float3 position;
+            float3 normal;
         };
 
 		void build(std::span<Bounds3F> boxes, const Bounds3F& global_box);
@@ -57,10 +57,10 @@ namespace fantasy
 
     struct FTrianglePrimitive
     {
-        Vector3F a, b, c;
+        float3 a, b, c;
         Bounds3F box;
 
-        FTrianglePrimitive(Vector3F A, Vector3F B, Vector3F C) :
+        FTrianglePrimitive(float3 A, float3 B, float3 C) :
             a(A), b(B), c(C)
         {
             box = create_aabb({ a, b, c });
@@ -70,12 +70,12 @@ namespace fantasy
 
         bool intersect(const Ray& ray) const
         {
-            Vector3F ac = c - a;
-            Vector3F ab = b - a;
+            float3 ac = c - a;
+            float3 ab = b - a;
 
-            Vector3F S = ray.ori - a;
-            Vector3F S1 = cross(ray.dir, ac);
-            Vector3F S2 = cross(S, ab);
+            float3 S = ray.ori - a;
+            float3 S1 = cross(ray.dir, ac);
+            float3 S2 = cross(S, ab);
             float fInvDenom = 1.0f / dot(S1, ab);
             
             float t = dot(S2, ac) * fInvDenom;

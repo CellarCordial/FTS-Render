@@ -1798,7 +1798,7 @@ namespace fantasy
             {
                 uint8_t* cpu_address = nullptr;
                 ReturnIfFalse(!_upload_manager.suballocate_buffer(
-                    sizeof(Matrix3x4), 
+                    sizeof(float3x4), 
                     nullptr, 
                     nullptr, 
                     &cpu_address, 
@@ -1807,7 +1807,7 @@ namespace fantasy
                     D3D12_RAYTRACING_TRANSFORM3X4_BYTE_ALIGNMENT
                 ));
 
-                memcpy(cpu_address, &geometry_desc.affine_matrix, sizeof(Matrix3x4));
+                memcpy(cpu_address, &geometry_desc.affine_matrix, sizeof(float3x4));
             }
 
             dx12_build_inputs.GeometryDescs[ix] = ray_tracing::DX12AccelStruct::convert_geometry_desc(geometry_desc, gpu_address);

@@ -12,10 +12,10 @@ namespace fantasy
 	{
 		struct SkyPassConstant
 		{
-			Vector3F frustum_a; float pad0 = 0.0f;
-			Vector3F frustum_b; float pad1 = 0.0f;
-			Vector3F frustum_c; float pad2 = 0.0f;
-			Vector3F frustum_d; float pad3 = 0.0f;
+			float3 frustum_a; float pad0 = 0.0f;
+			float3 frustum_b; float pad1 = 0.0f;
+			float3 frustum_c; float pad2 = 0.0f;
+			float3 frustum_d; float pad3 = 0.0f;
 		};
 	}
 

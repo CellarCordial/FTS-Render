@@ -1,7 +1,7 @@
 #ifndef RENDER_PASS_SUN_DISK_H
 #define RENDER_PASS_SUN_DISK_H
 
-#include "../../render_graph/render_graph.h"
+#include "../../render_graph/render_pass.h"
 #include "../../core/math/matrix.h"
 #include <memory>
 
@@ -12,13 +12,13 @@ namespace fantasy
 	{
 		struct SunDiskPassConstant
 		{
-			Matrix4x4 world_view_proj;
+			float4x4 world_view_proj;
 
-			Vector3F sun_radius;
+			float3 sun_radius;
 			float sun_theta = 0.0f;
 
 			float camera_height = 0.0f;
-			Vector3F pad;
+			float3 pad;
 		};
 	}
 
@@ -40,7 +40,7 @@ namespace fantasy
 	private:
 		struct Vertex
 		{
-			Vector2F position;
+			float2 position;
 		};
 
 		bool _resource_writed = false;

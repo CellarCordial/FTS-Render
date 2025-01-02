@@ -17,9 +17,9 @@ namespace fantasy
 			const float cfPhiBegin = lerp(0.0f, 2.0f * PI, static_cast<float>(ix) / SUN_DISK_SEGMENT_NUM);
 			const float cfPhiEnd = lerp(0.0f, 2.0f * PI, static_cast<float>(ix + 1) / SUN_DISK_SEGMENT_NUM);
 
-			const Vector2F A = {};
-			const Vector2F B = { std::cos(cfPhiBegin), std::sin(cfPhiBegin) };
-			const Vector2F C = { std::cos(cfPhiEnd), std::sin(cfPhiEnd) };
+			const float2 A = {};
+			const float2 B = { std::cos(cfPhiBegin), std::sin(cfPhiBegin) };
+			const float2 C = { std::cos(cfPhiEnd), std::sin(cfPhiEnd) };
 
 			_sun_disk_vertices.push_back(Vertex{ .position = A });
 			_sun_disk_vertices.push_back(Vertex{ .position = B });
@@ -157,12 +157,12 @@ namespace fantasy
 			float* world_scale;
 			ReturnIfFalse(cache->require_constants("WorldScale", reinterpret_cast<void**>(&world_scale)));
 
-			Vector3F LightDirection;
+			float3 LightDirection;
 			ReturnIfFalse(cache->get_world()->each<DirectionalLight>(
 				[this, &LightDirection](Entity* entity, DirectionalLight* light) -> bool
 				{
 					_pass_constant.sun_theta = std::asin(-light->direction.y);
-					_pass_constant.sun_radius = Vector3F(light->intensity * light->color);
+					_pass_constant.sun_radius = float3(light->intensity * light->color);
 
 					LightDirection = light->direction;
 					return true;
@@ -174,11 +174,11 @@ namespace fantasy
 				{
 					_pass_constant.camera_height = camera->position.y * (*world_scale);
 
-					Matrix3x3 OrthogonalBasis = create_orthogonal_basis_from_z(LightDirection);
-					Matrix4x4 world_matrix = mul(
-						scale(Vector3F(_sun_disk_size)),
+					float3x3 OrthogonalBasis = create_orthogonal_basis_from_z(LightDirection);
+					float4x4 world_matrix = mul(
+						scale(float3(_sun_disk_size)),
 						mul(
-							Matrix4x4(OrthogonalBasis),
+							float4x4(OrthogonalBasis),
 							mul(translate(camera->position), translate(-LightDirection))
 						)
 					);

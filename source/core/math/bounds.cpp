@@ -5,7 +5,7 @@
 
 namespace fantasy 
 {
-    Bounds3F create_aabb(const std::vector<Vector3F>& position)
+    Bounds3F create_aabb(const std::vector<float3>& position)
     {
         const auto XMinMax = std::minmax_element(
             position.begin(),
@@ -32,14 +32,14 @@ namespace fantasy
             }
         );
         
-        const Vector3F min(
+        const float3 min(
             XMinMax.first->x,
             YMinMax.first->y,
             ZMinMax.first->z
         );
         
         // max - Center相当于(min + max) / 2
-        const Vector3F max(
+        const float3 max(
             XMinMax.second->x,
             YMinMax.second->y,
             ZMinMax.second->z
@@ -50,25 +50,25 @@ namespace fantasy
 
     Circle merge(const Circle& circle0, const Circle& circle1)
 	{
-        Vector2F center0_to_1 = circle0.center - circle1.center;
+        float2 center0_to_1 = circle0.center - circle1.center;
         float center_distance = center0_to_1.length();
         if (circle0.radius - circle1.radius >= center_distance) return circle0;
         if (circle1.radius - circle0.radius >= center_distance) return circle1;
 
         float radius = (center_distance + circle0.radius + circle1.radius) * 0.5f;
-        Vector2F center = circle0.center + (center0_to_1 / center_distance) * (radius - circle0.radius);
+        float2 center = circle0.center + (center0_to_1 / center_distance) * (radius - circle0.radius);
 		return Circle(center, radius);
 	}
 	
 	Sphere merge(const Sphere& sphere0, const Sphere& sphere1)
 	{
-        Vector3F center0_to_1 = sphere0.center - sphere1.center;
+        float3 center0_to_1 = sphere0.center - sphere1.center;
         float center_distance = center0_to_1.length();
         if (sphere0.radius - sphere1.radius >= center_distance) return sphere0;
         if (sphere1.radius - sphere0.radius >= center_distance) return sphere1;
 
         float radius = (center_distance + sphere0.radius + sphere1.radius) * 0.5f;
-        Vector3F center = sphere0.center + (-center0_to_1 / center_distance) * (radius - sphere0.radius);
+        float3 center = sphere0.center + (-center0_to_1 / center_distance) * (radius - sphere0.radius);
 		return Sphere(center, radius);
 	}
 
@@ -91,7 +91,7 @@ namespace fantasy
         {
             Sphere spmin = spheres[min_idx[k]];
             Sphere spmax = spheres[max_idx[k]];
-            float tlen = Vector3F(spmax.center - spmin.center).length() + spmax.radius + spmin.radius;
+            float tlen = float3(spmax.center - spmin.center).length() + spmax.radius + spmin.radius;
             if (tlen > max_len) max_len = tlen, max_axis = k;
         }
 
@@ -105,7 +105,7 @@ namespace fantasy
         {
             float radius_diff = sphere.radius - spheres[i].radius;
             float t1 = radius_diff * radius_diff;
-            float t2 = Vector3F(sphere.center - spheres[i].center).length_squared();
+            float t2 = float3(sphere.center - spheres[i].center).length_squared();
             assert(t1 + 1e-6 >= t2);
         }
         return sphere;

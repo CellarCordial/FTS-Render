@@ -20,10 +20,10 @@ namespace fantasy
 {
     struct Vertex
     {
-        Vector3F position;
-        Vector3F normal;
-        Vector3F tangent;
-        Vector2F uv;
+        float3 position;
+        float3 normal;
+        float3 tangent;
+        float2 uv;
     };
 
     struct Material
@@ -97,12 +97,12 @@ namespace fantasy
             std::vector<Vertex> vertices;
             std::vector<uint32_t> indices;
             
-            Matrix4x4 world_matrix;
+            float4x4 world_matrix;
             uint32_t material_index;
         };
 
         std::vector<Submesh> submeshes;
-        Matrix4x4 world_matrix;
+        float4x4 world_matrix;
         bool moved = false;
         bool culling = false;
     };
@@ -110,10 +110,10 @@ namespace fantasy
     class MeshOptimizer
     {
     public:
-        MeshOptimizer(std::vector<Vector3F>& vertices, std::vector<uint32_t>& indices);
+        MeshOptimizer(std::vector<float3>& vertices, std::vector<uint32_t>& indices);
 
         bool optimize(uint32_t target_triangle_num);
-        void lock_position(const Vector3F& position);
+        void lock_position(const float3& position);
 
         float _max_error;
 
@@ -121,8 +121,8 @@ namespace fantasy
         bool compact();
         void fix_triangle(uint32_t triangle_index);
 
-        float evaluate(const Vector3F& p0, const Vector3F& p1, bool bMerge);
-        void merge_begin(const Vector3F& p);
+        float evaluate(const float3& p0, const float3& p1, bool bMerge);
+        void merge_begin(const float3& p);
         void mergen_end();
 
         class BinaryHeap
@@ -150,7 +150,7 @@ namespace fantasy
         };
 
     private:
-        std::vector<Vector3F>& _vertices;
+        std::vector<float3>& _vertices;
         std::vector<uint32_t>& _indices;
         uint32_t _remain_vertex_num;
         uint32_t _remain_triangle_num;
@@ -170,7 +170,7 @@ namespace fantasy
         HashTable _index_table;     // key: vertex_position; hash value: index_index.
 
 
-        std::vector<std::pair<Vector3F, Vector3F>> _edges;
+        std::vector<std::pair<float3, float3>> _edges;
         HashTable _edges_begin_table;   // key: vertex_position; hash value: edge_index.   
         HashTable _edges_end_table;     // key: vertex_position; hash value: edge_index.
         BinaryHeap _heap;
@@ -186,7 +186,7 @@ namespace fantasy
     {
         static const uint32_t cluster_size = 128;
 
-        std::vector<Vector3F> vertices;
+        std::vector<float3> vertices;
         std::vector<uint32_t> indices;
         std::vector<uint32_t> external_edges;   // edge_index essentially corresponds to the vertex_index of the edge's starting point.
 
@@ -220,12 +220,12 @@ namespace fantasy
         bool build_cluster_groups(uint32_t level_offset, uint32_t level_cluster_count, uint32_t mip_level);
         bool build_parent_clusters(uint32_t cluster_group_index);
         void build_adjacency_graph(
-            const std::vector<Vector3F>& vertices, 
+            const std::vector<float3>& vertices, 
             const std::vector<uint32_t>& indices, 
             SimpleGraph& edge_link_graph, 
             SimpleGraph& adjacency_graph
         );
-        uint32_t edge_hash(const Vector3F& p0, const Vector3F& p1);
+        uint32_t edge_hash(const float3& p0, const float3& p1);
 
     private:
         std::vector<MeshCluster> _clusters;
@@ -233,7 +233,7 @@ namespace fantasy
         uint32_t _mip_level_num;
 
 		std::vector<uint32_t> _indices;
-        std::vector<Vector3F> _vertex_positons;
+        std::vector<float3> _vertex_positons;
     };
 
     namespace Geometry

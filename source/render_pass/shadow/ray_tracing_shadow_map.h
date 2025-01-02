@@ -12,11 +12,11 @@ namespace fantasy
 	{
 		struct RayTracingShadowMapPassConstant
 		{
-            Vector3F sun_direction;
+            float3 sun_direction;
             float sun_angular_radius;
             
             uint32_t frame_index;
-            Vector3I pad;
+            uint3 pad;
 		};
 	}
 

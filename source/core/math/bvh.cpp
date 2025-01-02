@@ -6,7 +6,7 @@
 
 namespace fantasy 
 {
-    bvh::Vector3<float> ConvertVector(Vector3F vec)
+    bvh::Vector3<float> ConvertVector(float3 vec)
     {
         return { vec.x, vec.y, vec.z };
     }
@@ -144,7 +144,7 @@ namespace fantasy
     {
         uint64_t stPrimitiveIndex;
         Bounds3F Bounds;
-        Vector3F Centroid;
+        float3 Centroid;
 
         BvhPrimitiveInfo() = default;
         BvhPrimitiveInfo(uint64_t stPrimIndex, const Bounds3F& bounds) :
@@ -256,7 +256,7 @@ namespace fantasy
     {
         if (!_nodes.empty()) return false;
 
-        Vector3F InvDirection(1.0f / ray.dir.x, 1.0f / ray.dir.y, 1.0f / ray.dir.z);
+        float3 InvDirection(1.0f / ray.dir.x, 1.0f / ray.dir.y, 1.0f / ray.dir.z);
         uint32_t dwDirIsNeg[3] = { InvDirection.x < 0, InvDirection.y < 0, InvDirection.z < 0 };
 
         // Depth-first preorder to check if intersect. 
@@ -550,7 +550,7 @@ namespace fantasy
         return dwVal;
     }
 
-    inline uint32_t EncodeMorton3(const Vector3F& crVec)
+    inline uint32_t EncodeMorton3(const float3& crVec)
     {
         // GE(crVec.x, 0);
         // GE(crVec.y, 0);
@@ -637,7 +637,7 @@ namespace fantasy
                 constexpr uint32_t dwMortonScale = 1 << MORTON_BITS_NUM;
 
                 MortonPrimitives[ix].child_index = rPrimitiveInfos[ix].stPrimitiveIndex;
-                Vector3F CentroidOffset = CentroidBounds.offset(rPrimitiveInfos[ix].Centroid);
+                float3 CentroidOffset = CentroidBounds.offset(rPrimitiveInfos[ix].Centroid);
 
                 MortonPrimitives[ix].dwMortonCode = EncodeMorton3(CentroidOffset * dwMortonScale);
             },
@@ -838,7 +838,7 @@ namespace fantasy
         Bounds3F CentroidBounds;
         for (uint32_t ix = dwStart; ix < dwEnd; ++ix)
         {
-            Vector3F Centroid((rpTreeletRoots[ix]->Bounds._lower + rpTreeletRoots[ix]->Bounds._upper) * 0.5f);
+            float3 Centroid((rpTreeletRoots[ix]->Bounds._lower + rpTreeletRoots[ix]->Bounds._upper) * 0.5f);
             CentroidBounds = merge(CentroidBounds, Centroid);
         }
 

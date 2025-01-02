@@ -132,7 +132,7 @@ namespace fantasy
 				[this](Entity* entity, DirectionalLight* pLight) -> bool
 				{
 					_pass_constant.sun_direction = pLight->direction;
-					_pass_constant.sun_intensity = Vector3F(pLight->intensity * pLight->color);
+					_pass_constant.sun_intensity = float3(pLight->intensity * pLight->color);
 					return true;
 				}
 			));

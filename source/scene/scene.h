@@ -14,13 +14,13 @@ namespace fantasy
 
 	struct Transform
 	{
-		Vector3F position = { 0.0f, 0.0f, 0.0f };
-		Vector3F rotation = { 0.0f, 0.0f, 0.0f };
-		Vector3F scale = { 1.0f, 1.0f, 1.0f };
+		float3 position = { 0.0f, 0.0f, 0.0f };
+		float3 rotation = { 0.0f, 0.0f, 0.0f };
+		float3 scale = { 1.0f, 1.0f, 1.0f };
 
-		Matrix4x4 world_matrix() const
+		float4x4 world_matrix() const
 		{
-			return Matrix4x4(mul(translate(position), mul(rotate(rotation), ::fantasy::scale(scale))));
+			return float4x4(mul(translate(position), mul(rotate(rotation), ::fantasy::scale(scale))));
 		}
 	};
 
@@ -48,7 +48,7 @@ namespace fantasy
 	{
 		struct TransformData
 		{
-			Matrix4x4 coord_matrix;
+			float4x4 coord_matrix;
 			Bounds3F sdf_box;
 		};
 

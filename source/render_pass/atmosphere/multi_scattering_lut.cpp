@@ -87,7 +87,7 @@ namespace fantasy
                 BufferDesc::create_constant(sizeof(constant::MultiScatteringPassConstant))
 			)));
 			ReturnIfFalse(_dir_sample_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-                BufferDesc::create_structured(sizeof(Vector2I) * DIRECTION_SAMPLE_COUNT, sizeof(Vector2I), true)
+                BufferDesc::create_structured(sizeof(uint2) * DIRECTION_SAMPLE_COUNT, sizeof(uint2), true)
 			)));
 
 		}
@@ -138,11 +138,11 @@ namespace fantasy
 			ReturnIfFalse(cache->get_world()->each<DirectionalLight>(
 				[this](Entity* entity, DirectionalLight* light) -> bool
 				{
-					_pass_constants.sun_intensity = Vector3F(light->intensity * light->color);
+					_pass_constants.sun_intensity = float3(light->intensity * light->color);
 					return true;
 				}
 			));
-			Vector3F* groud_albedo;
+			float3* groud_albedo;
 			ReturnIfFalse(cache->require_constants("ground_albedo", reinterpret_cast<void**>(&groud_albedo)));
 			_pass_constants.ground_albedo = *groud_albedo;
 
@@ -151,11 +151,11 @@ namespace fantasy
 		
 		if (!_resource_writed)
 		{
-			ReturnIfFalse(cmdlist->write_buffer(_dir_sample_buffer.get(), _dir_samples.data(), _dir_samples.size() * sizeof(Vector2F)));
+			ReturnIfFalse(cmdlist->write_buffer(_dir_sample_buffer.get(), _dir_samples.data(), _dir_samples.size() * sizeof(float2)));
 			_resource_writed = true;
 		}
 
-		Vector2I thread_group_num = {
+		uint2 thread_group_num = {
 			static_cast<uint32_t>(align(MULTI_SCATTERING_LUT_RES, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X),
 			static_cast<uint32_t>(align(MULTI_SCATTERING_LUT_RES, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y),
 		};

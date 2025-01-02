@@ -170,7 +170,7 @@ namespace fantasy
 		// Update constant.
 		{
 			float* pworld_scale;
-			Vector3F* pGroundAlbedo;
+			float3* pGroundAlbedo;
 			ReturnIfFalse(cache->require_constants("WorldScale", reinterpret_cast<void**>(&pworld_scale)));
 			ReturnIfFalse(cache->require_constants("ground_albedo", reinterpret_cast<void**>(&pGroundAlbedo)));
 			_pass_constant1.world_scale = *pworld_scale;
@@ -191,7 +191,7 @@ namespace fantasy
 				{
 					_pass_constant1.sun_direction = pLight->direction;
 					_pass_constant1.sun_theta = std::asin(-pLight->direction.y);
-					_pass_constant1.sun_radiance = Vector3F(pLight->intensity * pLight->color);
+					_pass_constant1.sun_radiance = float3(pLight->intensity * pLight->color);
 					_pass_constant1.shadow_view_proj = pLight->view_proj;
 					return true;
 				}
@@ -295,14 +295,14 @@ namespace fantasy
 		DirectionalLight light;
 		float X = radians(light.angle.x);
 		float Y = radians(-light.angle.y);
-		light.direction = normalize(Vector3F(
+		light.direction = normalize(float3(
 			std::cos(X) * std::cos(Y),
 			std::sin(Y),
 			std::sin(X) * std::cos(Y)
 		));
 
 		light.view_proj = mul(
-			look_at_left_hand(-light.direction * 20.0f, Vector3F{}, Vector3F(0.0f, 1.0f, 0.0f)),
+			look_at_left_hand(-light.direction * 20.0f, float3{}, float3(0.0f, 1.0f, 0.0f)),
 			orthographic_left_hand(20.0f, 20.0f, 0.1f, 80.0f)
 		);
 
@@ -397,14 +397,14 @@ namespace fantasy
 						{
 							float X = radians(light_ptr->angle.x);
 							float Y = radians(-light_ptr->angle.y);
-							light_ptr->direction = normalize(Vector3F(
+							light_ptr->direction = normalize(float3(
 								std::cos(X) * std::cos(Y),
 								std::sin(Y),
 								std::sin(X) * std::cos(Y)
 							));
 
 							light_ptr->view_proj = mul(
-								look_at_left_hand(-light_ptr->direction * 20.0f, Vector3F{}, Vector3F(0.0f, 1.0f, 0.0f)),
+								look_at_left_hand(-light_ptr->direction * 20.0f, float3{}, float3(0.0f, 1.0f, 0.0f)),
 								orthographic_left_hand(20.0f, 20.0f, 0.1f, 80.0f)
 							);
 						}
@@ -417,14 +417,14 @@ namespace fantasy
 
 							float X = radians(light_ptr->angle.x);
 							float Y = radians(-light_ptr->angle.y);
-							light_ptr->direction = normalize(Vector3F(
+							light_ptr->direction = normalize(float3(
 								std::cos(X) * std::cos(Y),
 								std::sin(Y),
 								std::sin(X) * std::cos(Y)
 							));
 
 							light_ptr->view_proj = mul(
-								look_at_left_hand(-light_ptr->direction * 20.0f, Vector3F{}, Vector3F(0.0f, 1.0f, 0.0f)),
+								look_at_left_hand(-light_ptr->direction * 20.0f, float3{}, float3(0.0f, 1.0f, 0.0f)),
 								orthographic_left_hand(20.0f, 20.0f, 0.1f, 80.0f)
 							);
 						}

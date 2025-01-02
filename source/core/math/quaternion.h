@@ -11,7 +11,7 @@ namespace fantasy
 
         Quaternion(float v0, float v1, float v2, float w) : m_v{ v0, v1, v2 }, m_w(w) {}
 
-        Quaternion(const Matrix4x4& crTrans);
+        Quaternion(const float4x4& crTrans);
         
         friend Quaternion operator+(const Quaternion& quat1, const Quaternion& quat2)
         {
@@ -35,10 +35,10 @@ namespace fantasy
         Quaternion operator*=(float f);
         Quaternion operator/=(float f);
 
-        Matrix4x4 to_matrix() const;
+        float4x4 to_matrix() const;
 
         float m_w;
-        Vector3F m_v;
+        float3 m_v;
     };
 
     // 四元数点乘

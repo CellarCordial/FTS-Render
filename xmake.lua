@@ -71,14 +71,14 @@ target("FTS-Render")
         "spdlog.lib",
         "minizip.lib",
         "glfw3dll.lib",
-        "dxcompiler.lib",
         "assimp-vc143-mt.lib"
     )
 
     after_build(
         function (target)
             local DllFiles = {
-                "$(projectdir)/external/glfw-3.4.bin.WIN64/lib-static-ucrt/glfw3.dll"
+                "$(projectdir)/external/glfw-3.4.bin.WIN64/lib-static-ucrt/glfw3.dll",
+                "$(projectdir)/external/slang/bin/slang.dll"
             }
 
             for _, File in ipairs(DllFiles) do

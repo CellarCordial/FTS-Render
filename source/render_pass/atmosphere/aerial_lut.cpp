@@ -142,7 +142,7 @@ namespace fantasy
 		}
 
 
-		Vector2I thread_group_num = {
+		uint2 thread_group_num = {
 			static_cast<uint32_t>(align(AERIAL_LUT_RES_X, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X),
 			static_cast<uint32_t>(align(AERIAL_LUT_RES_Y, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y),
 		};

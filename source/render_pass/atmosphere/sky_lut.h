@@ -12,13 +12,13 @@ namespace fantasy
 	{
 		struct SkyLUTPassConstant
 		{
-			Vector3F camera_position;
+			float3 camera_position;
 			int32_t march_step_count = 40;
 
-			Vector3F sun_direction;
+			float3 sun_direction;
 			uint32_t enable_multi_scattering = 1;
 
-			Vector3F sun_intensity;
+			float3 sun_intensity;
 			float pad = 0.0f;
 		};
 	}

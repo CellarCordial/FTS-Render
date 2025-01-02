@@ -12,9 +12,9 @@ namespace fantasy
 	{
 		struct GlobalSdfConstants
 		{
-			Matrix4x4 voxel_world_matrix;
+			float4x4 voxel_world_matrix;
 			
-			Vector3I voxel_offset;  
+			uint3 voxel_offset;  
 			float gi_max_distance = 500;
 			
 			uint32_t mesh_sdf_begin = 0;
@@ -23,10 +23,10 @@ namespace fantasy
 		
 		struct ModelSdfData
 		{
-			Matrix4x4 coord_matrix;
+			float4x4 coord_matrix;
 
-			Vector3F sdf_lower;
-			Vector3F sdf_upper;
+			float3 sdf_lower;
+			float3 sdf_upper;
 
 			uint32_t mesh_sdf_index = 0;
 		};

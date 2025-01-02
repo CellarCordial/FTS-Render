@@ -3,7 +3,7 @@
 namespace fantasy
 {
     
-    Quaternion::Quaternion(const Matrix4x4& m)
+    Quaternion::Quaternion(const float4x4& m)
     {
         const float trace = m._data[0][0] + m._data[1][1] + m._data[2][2];
 
@@ -94,13 +94,13 @@ namespace fantasy
         return *this;
     }
 
-    Matrix4x4 Quaternion::to_matrix() const
+    float4x4 Quaternion::to_matrix() const
     {
         const float xx = m_v.x * m_v.x, yy = m_v.y * m_v.y, zz = m_v.z * m_v.z;
         const float xy = m_v.x * m_v.y, xz = m_v.x * m_v.z, yz = m_v.y * m_v.z;
         const float wx = m_v.x * m_w, wy = m_v.y * m_w, wz = m_v.z * m_w;
 
-        Matrix4x4 m;
+        float4x4 m;
         m._data[0][0] = 1 - 2 * (yy + zz);
         m._data[0][1] = 2 * (xy + wz);
         m._data[0][2] = 2 * (xz - wy);

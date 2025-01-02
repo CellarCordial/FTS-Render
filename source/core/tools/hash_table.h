@@ -67,7 +67,7 @@ namespace fantasy
         return hash;
     }
 
-    inline uint32_t hash(const Vector3F& vec)
+    inline uint32_t hash(const float3& vec)
 	{
 		union 
 		{

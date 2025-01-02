@@ -13,21 +13,21 @@ namespace fantasy
     {
         struct GBufferPassConstant
         {
-            Matrix4x4 view_proj;
-            Matrix4x4 view_matrix;
-            Matrix4x4 prev_view_matrix;
+            float4x4 view_proj;
+            float4x4 view_matrix;
+            float4x4 prev_view_matrix;
 
             uint32_t geometry_constant_index;
-            Vector3F pad;
+            float3 pad;
         };
 
         struct GeometryConstant
         {
-            Matrix4x4 world_matrix;
-            Matrix4x4 inv_trans_world;
+            float4x4 world_matrix;
+            float4x4 inv_trans_world;
 
-            Vector4F diffuse;   
-            Vector4F emissive;
+            float4 diffuse;   
+            float4 emissive;
             float roughness = 0.0f;
             float metallic = 0.0f;
             float occlusion = 0.0f;

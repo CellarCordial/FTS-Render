@@ -23,37 +23,37 @@ namespace fantasy
 		TransformData ret;
 		ret.sdf_box = sdf_box;
 
-		Matrix4x4 S = scale(transform->scale);
-		ret.sdf_box._lower = Vector3F(mul(Vector4F(ret.sdf_box._lower, 1.0f), S));
-		ret.sdf_box._upper = Vector3F(mul(Vector4F(ret.sdf_box._upper, 1.0f), S));
+		float4x4 S = scale(transform->scale);
+		ret.sdf_box._lower = float3(mul(float4(ret.sdf_box._lower, 1.0f), S));
+		ret.sdf_box._upper = float3(mul(float4(ret.sdf_box._upper, 1.0f), S));
 
-		Matrix4x4 R = rotate(transform->rotation);
-		std::array<Vector3F, 8> box_vertices;
+		float4x4 R = rotate(transform->rotation);
+		std::array<float3, 8> box_vertices;
 		box_vertices[0] = ret.sdf_box._lower;
-		box_vertices[1] = Vector3F(ret.sdf_box._lower.x, ret.sdf_box._upper.y, ret.sdf_box._lower.z);
-		box_vertices[2] = Vector3F(ret.sdf_box._upper.x, ret.sdf_box._upper.y, ret.sdf_box._lower.z);
-		box_vertices[3] = Vector3F(ret.sdf_box._upper.x, ret.sdf_box._lower.y, ret.sdf_box._lower.z);
+		box_vertices[1] = float3(ret.sdf_box._lower.x, ret.sdf_box._upper.y, ret.sdf_box._lower.z);
+		box_vertices[2] = float3(ret.sdf_box._upper.x, ret.sdf_box._upper.y, ret.sdf_box._lower.z);
+		box_vertices[3] = float3(ret.sdf_box._upper.x, ret.sdf_box._lower.y, ret.sdf_box._lower.z);
 		box_vertices[4] = ret.sdf_box._upper;
-		box_vertices[7] = Vector3F(ret.sdf_box._upper.x, ret.sdf_box._lower.y, ret.sdf_box._upper.z);
-		box_vertices[5] = Vector3F(ret.sdf_box._lower.x, ret.sdf_box._lower.y, ret.sdf_box._upper.z);
-		box_vertices[6] = Vector3F(ret.sdf_box._lower.x, ret.sdf_box._upper.y, ret.sdf_box._upper.z);
+		box_vertices[7] = float3(ret.sdf_box._upper.x, ret.sdf_box._lower.y, ret.sdf_box._upper.z);
+		box_vertices[5] = float3(ret.sdf_box._lower.x, ret.sdf_box._lower.y, ret.sdf_box._upper.z);
+		box_vertices[6] = float3(ret.sdf_box._lower.x, ret.sdf_box._upper.y, ret.sdf_box._upper.z);
 
 		Bounds3F blank_box(0.0f, 0.0f);
 		for (const auto& crVertex : box_vertices)
 		{
-			blank_box = merge(blank_box, Vector3F(mul(Vector4F(crVertex, 1.0f), R)));
+			blank_box = merge(blank_box, float3(mul(float4(crVertex, 1.0f), R)));
 		}
 
 		ret.sdf_box = blank_box;
 
-		Matrix4x4 T = translate(transform->position);
-		ret.sdf_box._lower = Vector3F(mul(Vector4F(ret.sdf_box._lower, 1.0f), T));
-		ret.sdf_box._upper = Vector3F(mul(Vector4F(ret.sdf_box._upper, 1.0f), T));
+		float4x4 T = translate(transform->position);
+		ret.sdf_box._lower = float3(mul(float4(ret.sdf_box._lower, 1.0f), T));
+		ret.sdf_box._upper = float3(mul(float4(ret.sdf_box._upper, 1.0f), T));
 
-		Vector3F sdf_extent = sdf_box._upper - sdf_box._lower;
+		float3 sdf_extent = sdf_box._upper - sdf_box._lower;
 		ret.coord_matrix = mul(
 			inverse(mul(mul(S, R), T)),		// Local Matrix.
-			Matrix4x4(
+			float4x4(
 				1.0f / sdf_extent.x, 0.0f, 0.0f, 0.0f,
 				0.0f, -1.0f / sdf_extent.y, 0.0f, 0.0f,
 				0.0f, 0.0f, 1.0f / sdf_extent.z, 0.0f,
@@ -78,14 +78,14 @@ namespace fantasy
 			for (uint32_t y = 0; y < chunk_num_per_axis; ++y)
 				for (uint32_t x = 0; x < chunk_num_per_axis; ++x)
 				{
-					Vector3F Lower = {
+					float3 Lower = {
 						-SCENE_GRID_SIZE * 0.5f + x * chunk_size,
 						-SCENE_GRID_SIZE * 0.5f + y * chunk_size,
 						-SCENE_GRID_SIZE * 0.5f + z * chunk_size
 					};
 					boxes[x + y * chunk_num_per_axis + z * chunk_num_per_axis * chunk_num_per_axis] = Bounds3F(Lower, Lower + chunk_size);
 				}
-		Bounds3F global_box(Vector3F(-SCENE_GRID_SIZE * 0.5f), Vector3F(SCENE_GRID_SIZE * 0.5f));
+		Bounds3F global_box(float3(-SCENE_GRID_SIZE * 0.5f), float3(SCENE_GRID_SIZE * 0.5f));
 		bvh.build(boxes, global_box);
 	}
 
@@ -251,16 +251,16 @@ namespace fantasy
 			return false;
 		}
 
-		std::vector<Matrix4x4> world_matrixs;
+		std::vector<float4x4> world_matrixs;
 		std::vector<const aiMesh*> assimp_meshes;
 
-		std::function<void(aiNode *node, const aiScene *scene, const Matrix4x4&)> func;
-		func = [&](aiNode* node, const aiScene* scene, const Matrix4x4& parent_matrix) -> void
+		std::function<void(aiNode *node, const aiScene *scene, const float4x4&)> func;
+		func = [&](aiNode* node, const aiScene* scene, const float4x4& parent_matrix) -> void
 		{
 			const auto& m = node->mTransformation;
-			Matrix4x4 world_matrix = mul(
+			float4x4 world_matrix = mul(
 				parent_matrix, 
-				Matrix4x4(
+				float4x4(
 					m.a1, m.a2, m.a3, m.a4, 
 					m.b1, m.b2, m.b3, m.b4, 
 					m.c1, m.c2, m.c3, m.c4, 
@@ -495,8 +495,8 @@ namespace fantasy
 				for (auto VertexIndex : submesh.indices)
 				{
 					BvhVertices[jx++] = {
-						Vector3F(mul(Vector4F(submesh.vertices[VertexIndex].position, 1.0f), submesh.world_matrix)),
-						Vector3F(mul(Vector4F(submesh.vertices[VertexIndex].normal, 1.0f), transpose(inverse(submesh.world_matrix))))
+						float3(mul(float4(submesh.vertices[VertexIndex].position, 1.0f), submesh.world_matrix)),
+						float3(mul(float4(submesh.vertices[VertexIndex].normal, 1.0f), transpose(inverse(submesh.world_matrix))))
 					};
 				}
 
@@ -515,8 +515,8 @@ namespace fantasy
 			float chunk_size = VOXEL_NUM_PER_CHUNK * voxel_size;
 			float grid_size = chunk_size * chunk_num_per_axis;
 
-			Vector3I uniform_lower = Vector3I((data.sdf_box._lower + grid_size / 2.0f) / chunk_size);
-			Vector3I uniform_upper = Vector3I((data.sdf_box._upper + grid_size / 2.0f) / chunk_size);
+			uint3 uniform_lower = uint3((data.sdf_box._lower + grid_size / 2.0f) / chunk_size);
+			uint3 uniform_upper = uint3((data.sdf_box._upper + grid_size / 2.0f) / chunk_size);
 
 			for (uint32_t ix = 0; ix < 3; ++ix)
 			{
@@ -563,8 +563,8 @@ namespace fantasy
 
 		auto func_mark = [&](const Bounds3F& box, bool insert_or_erase)
 		{
-			Vector3I uniform_lower = Vector3I((box._lower + SCENE_GRID_SIZE / 2.0f) / chunk_size);
-			Vector3I uniform_upper = Vector3I((box._upper + SCENE_GRID_SIZE / 2.0f) / chunk_size);
+			uint3 uniform_lower = uint3((box._lower + SCENE_GRID_SIZE / 2.0f) / chunk_size);
+			uint3 uniform_upper = uint3((box._upper + SCENE_GRID_SIZE / 2.0f) / chunk_size);
 
 			for (uint32_t ix = 0; ix < 3; ++ix)
 			{
@@ -602,9 +602,9 @@ namespace fantasy
 		*transform = event.transform;
 
 		Mesh* mesh = event.entity->get_component<Mesh>();
-		Matrix4x4 S = scale(transform->scale);
-		Matrix4x4 R = rotate(transform->rotation);
-		Matrix4x4 T = translate(transform->position);
+		float4x4 S = scale(transform->scale);
+		float4x4 R = rotate(transform->rotation);
+		float4x4 T = translate(transform->position);
 		mesh->world_matrix = mul(mul(T, R), S);
 		mesh->moved = true;
 

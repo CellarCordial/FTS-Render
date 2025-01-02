@@ -16,7 +16,7 @@ namespace fantasy
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
 	private:
-        Vector2I _brdf_lut_resolution = { 64, 64 };
+        uint2 _brdf_lut_resolution = { 64, 64 };
 		std::shared_ptr<TextureInterface> _brdf_lut_texture;
 
 		std::unique_ptr<BindingLayoutInterface> _binding_layout;

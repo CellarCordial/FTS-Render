@@ -663,7 +663,7 @@ namespace fantasy
             };
 
             bool use_transform = false;
-            Matrix3x4 affine_matrix;
+            float3x4 affine_matrix;
 
 
 
@@ -733,7 +733,7 @@ namespace fantasy
 
         struct InstanceDesc
         {
-            Matrix3x4 affine_matrix;
+            float3x4 affine_matrix;
 
             uint32_t instance_id : 24 = 0;
             uint32_t instance_mask : 8 = 0;

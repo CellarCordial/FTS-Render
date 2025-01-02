@@ -286,7 +286,7 @@ namespace fantasy
 			return 2;
 		}
 
-		Vector3F extent() const
+		float3 extent() const
 		{
 			return _upper - _lower;
 		}
@@ -376,7 +376,7 @@ namespace fantasy
 		// 检查光线 ray 是否与该包围盒相交，与上面的 intersect() 方法相比，该方法能带来很大的性能提升
 		// crRayInvDir: 预计算的光线方向三个分量的倒数
 		// dwDirIsNeg: 光线三个分量是否是原本方向的负，0 代表与原本方向一致，1 代表与原本方向相反
-		bool intersect(const Ray& ray, const Vector3F& inv_ray_dir, const uint32_t dir_is_neg[3]) const
+		bool intersect(const Ray& ray, const float3& inv_ray_dir, const uint32_t dir_is_neg[3]) const
 		{
 			const Bounds3F& bounds = *this;
 
@@ -422,16 +422,16 @@ namespace fantasy
     {
 		Circle() = default;
 		
-		Circle(const Vector2F& in_center, float in_radius) : center(in_center), radius(in_radius) {}
+		Circle(const float2& in_center, float in_radius) : center(in_center), radius(in_radius) {}
 
-		explicit Circle(const std::vector<Vector2F>& vertices)
+		explicit Circle(const std::vector<float2>& vertices)
 		{
 			Bounds2F bounding_box(vertices);
 			center = (bounding_box._lower + bounding_box._upper) * 0.5f;
 			radius = bounding_box.diagonal().length() * 0.5f;
 		}
 
-        Vector2F center;
+        float2 center;
         float radius;
     };
 
@@ -439,9 +439,9 @@ namespace fantasy
     {
 		Sphere() = default;
 
-		Sphere(const Vector3F& in_center, float in_radius) : center(in_center), radius(in_radius) {}
+		Sphere(const float3& in_center, float in_radius) : center(in_center), radius(in_radius) {}
 
-		explicit Sphere(const std::vector<Vector3F>& vertices)
+		explicit Sphere(const std::vector<float3>& vertices)
 		{
 			uint32_t min_idx[3] = {};
 			uint32_t max_idx[3] = {};
@@ -458,14 +458,14 @@ namespace fantasy
 			uint32_t max_axis = 0;
 			for (uint32_t k = 0; k < 3; k++) 
 			{
-				Vector3F pmin = vertices[min_idx[k]];
-				Vector3F pmax = vertices[max_idx[k]];
-				float tlen = Vector3F(pmax - pmin).length_squared();
+				float3 pmin = vertices[min_idx[k]];
+				float3 pmax = vertices[max_idx[k]];
+				float tlen = float3(pmax - pmin).length_squared();
 				if (tlen > max_len) max_len = tlen, max_axis = k;
 			}
 
-			Vector3F pmin = vertices[min_idx[max_axis]];
-			Vector3F pmax = vertices[max_idx[max_axis]];
+			float3 pmin = vertices[min_idx[max_axis]];
+			float3 pmax = vertices[max_idx[max_axis]];
 
 			center = (pmin + pmax) * 0.5f;
 			radius = float(0.5 * sqrt(max_len));
@@ -473,7 +473,7 @@ namespace fantasy
 
 			for (uint32_t i = 0; i < vertices.size(); i++) 
 			{
-				float len = Vector3F(vertices[i] - center).length_squared();
+				float len = float3(vertices[i] - center).length_squared();
 				if (len > max_len) 
 				{
 					len = sqrt(len);
@@ -486,12 +486,12 @@ namespace fantasy
 
 			for (uint32_t i = 0; i < vertices.size(); i++) 
 			{
-				float len = Vector3F(vertices[i] - center).length();
+				float len = float3(vertices[i] - center).length();
 				assert(len - 1e-6 <= radius);
 			}
 		}
 
-        Vector3F center;
+        float3 center;
         float radius;
     };
 
@@ -631,7 +631,7 @@ namespace fantasy
 		);
 	}
 
-    Bounds3F create_aabb(const std::vector<Vector3F>& position);
+    Bounds3F create_aabb(const std::vector<float3>& position);
 
 }
 

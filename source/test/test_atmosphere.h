@@ -18,27 +18,27 @@ namespace fantasy
 	{
 		struct AtmosphereDebugPassConstant0
 		{
-			Matrix4x4 view_proj;
-			Matrix4x4 world_matrix;
+			float4x4 view_proj;
+			float4x4 world_matrix;
 		};
 
 		struct AtmosphereDebugPassConstant1
 		{
-			Vector3F sun_direction;
+			float3 sun_direction;
 			float sun_theta = 0.0f;
 
-			Vector3F sun_radiance;
+			float3 sun_radiance;
 			float max_aerial_distance = 2000.0f;
 
-			Vector3F camera_position;
+			float3 camera_position;
 			float world_scale = 0.0f;
 
-			Matrix4x4 shadow_view_proj;
+			float4x4 shadow_view_proj;
 
-			Vector2F jitter_factor;
-			Vector2F blue_noise_uv_factor;
+			float2 jitter_factor;
+			float2 blue_noise_uv_factor;
 
-			Vector3F ground_albedo;
+			float3 ground_albedo;
 			float pad = 0.0f;
 		};
 	}
@@ -94,7 +94,7 @@ namespace fantasy
 
 	private:
 		float _world_scale = 200.0f;
-		Vector3F _ground_albedo = { 0.3f, 0.3f, 0.3f };
+		float3 _ground_albedo = { 0.3f, 0.3f, 0.3f };
 
 		std::shared_ptr<TransmittanceLUTPass> _transmittance_lut_pass;		
 		std::shared_ptr<MultiScatteringLUTPass> _multi_scattering_lut_pass;

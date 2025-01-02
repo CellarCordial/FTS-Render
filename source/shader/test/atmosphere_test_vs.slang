@@ -11,7 +11,7 @@ struct VertexInput
 {
     float3 local_space_position : POSITION;
     float3 local_space_normal   : NORMAL;
-    float4 local_space_tangent  : TANGENT;
+    float3 local_space_tangent  : TANGENT;
     float2 uv        : TEXCOORD;
 };
 

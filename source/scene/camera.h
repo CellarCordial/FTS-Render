@@ -19,7 +19,7 @@ namespace fantasy
         void handle_keyboard_input(float delta_time);
 
         void set_lens(float fov, float aspect, float near_z, float far_z);
-        void set_position(const Vector3F& position);
+        void set_position(const float3& position);
         void set_direction(float vert, float horz);
         
         void strafe(float size);      // 前后移动
@@ -37,26 +37,26 @@ namespace fantasy
         float get_frustum_near_width() const;
         float get_frustum_far_width() const;
 
-        Matrix4x4 get_view_proj() const { return mul(view_matrix, proj_matrix); }
-        Vector2F get_project_constants_ab() const;
-        Vector2F cursor_cycle(float x, float y);
+        float4x4 get_view_proj() const { return mul(view_matrix, proj_matrix); }
+        float2 get_project_constants_ab() const;
+        float2 cursor_cycle(float x, float y);
 
 
         struct FrustumDirections
         {
             // 左上, 右上, 左下, 右下.
-            Vector3F A, B, C, D;
+            float3 A, B, C, D;
         };  
 
         Camera::FrustumDirections get_frustum_directions();
 
 
-        Matrix4x4 view_matrix;
-        Matrix4x4 proj_matrix;
-        Matrix4x4 prev_view_matrix;
-        Vector3F position = { 0.0f, 0.0f, -2.0f };
-        Vector3F direction = { 0.0f, 0.0f, 1.0f };
-        Vector3F up = { 0.0f, 1.0f, 0.0f };
+        float4x4 view_matrix;
+        float4x4 proj_matrix;
+        float4x4 prev_view_matrix;
+        float3 position = { 0.0f, 0.0f, -2.0f };
+        float3 direction = { 0.0f, 0.0f, 1.0f };
+        float3 up = { 0.0f, 1.0f, 0.0f };
 
     private:
 		float _vert_radians = 0.0f;
@@ -73,7 +73,7 @@ namespace fantasy
 
         bool _view_need_update = true;
 
-        Vector2F _mouse_position;
+        float2 _mouse_position;
 
         GLFWwindow* _window;
     };

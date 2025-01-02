@@ -15,7 +15,7 @@ namespace fantasy
     {
         double new_x, new_y;
         glfwGetCursorPos(_window, &new_x, &new_y);
-        Vector2F new_pos(new_x, new_y);
+        float2 new_pos(new_x, new_y);
         auto cusor_state = glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_LEFT);
         if (cusor_state == GLFW_PRESS)
         {
@@ -48,24 +48,24 @@ namespace fantasy
 
     Camera::FrustumDirections Camera::get_frustum_directions()
     {
-        Matrix4x4 inv_view_proj = inverse(mul(view_matrix, proj_matrix));
-        const Vector4F A0 = mul(Vector4F(-1, 1, 0.2f, 1.0f), inv_view_proj);
-        const Vector4F A1 = mul(Vector4F(-1, 1, 0.5f, 1.0f), inv_view_proj);
+        float4x4 inv_view_proj = inverse(mul(view_matrix, proj_matrix));
+        const float4 A0 = mul(float4(-1, 1, 0.2f, 1.0f), inv_view_proj);
+        const float4 A1 = mul(float4(-1, 1, 0.5f, 1.0f), inv_view_proj);
 
-        const Vector4F B0 = mul(Vector4F(1, 1, 0.2f, 1.0f), inv_view_proj);
-        const Vector4F B1 = mul(Vector4F(1, 1, 0.5f, 1.0f), inv_view_proj);
+        const float4 B0 = mul(float4(1, 1, 0.2f, 1.0f), inv_view_proj);
+        const float4 B1 = mul(float4(1, 1, 0.5f, 1.0f), inv_view_proj);
 
-        const Vector4F C0 = mul(Vector4F(-1, -1, 0.2f, 1.0f), inv_view_proj);
-        const Vector4F C1 = mul(Vector4F(-1, -1, 0.5f, 1.0f), inv_view_proj);
+        const float4 C0 = mul(float4(-1, -1, 0.2f, 1.0f), inv_view_proj);
+        const float4 C1 = mul(float4(-1, -1, 0.5f, 1.0f), inv_view_proj);
         
-        const Vector4F D0 = mul(Vector4F(1, -1, 0.2f, 1.0f), inv_view_proj);
-        const Vector4F D1 = mul(Vector4F(1, -1, 0.5f, 1.0f), inv_view_proj);
+        const float4 D0 = mul(float4(1, -1, 0.2f, 1.0f), inv_view_proj);
+        const float4 D1 = mul(float4(1, -1, 0.5f, 1.0f), inv_view_proj);
 
         FrustumDirections directions;
-        directions.A = normalize(Vector3F(A1) / A1.w - Vector3F(A0) / A0.w);
-        directions.B = normalize(Vector3F(B1) / B1.w - Vector3F(B0) / B0.w);
-        directions.C = normalize(Vector3F(C1) / C1.w - Vector3F(C0) / C0.w);
-        directions.D = normalize(Vector3F(D1) / D1.w - Vector3F(D0) / D0.w);
+        directions.A = normalize(float3(A1) / A1.w - float3(A0) / A0.w);
+        directions.B = normalize(float3(B1) / B1.w - float3(B0) / B0.w);
+        directions.C = normalize(float3(C1) / C1.w - float3(C0) / C0.w);
+        directions.D = normalize(float3(D1) / D1.w - float3(D0) / D0.w);
 
         return directions;
     }
@@ -93,7 +93,7 @@ namespace fantasy
         proj_matrix = perspective_left_hand(_fov_y, _aspect, _near_z, _far_z);    // LH is left hand
     }
 
-    void Camera::set_position(const Vector3F& pos)
+    void Camera::set_position(const float3& pos)
     {
         position = pos;
         _view_need_update = true;
@@ -103,7 +103,7 @@ namespace fantasy
 	{
 		_vert_radians = radians(vert);
 		_horz_radians = radians(horz);
-        direction = Vector3F(
+        direction = float3(
             std::cos(_vert_radians) * std::cos(_horz_radians),
             std::sin(_vert_radians),
             std::cos(_vert_radians) * std::sin(_horz_radians)
@@ -120,7 +120,7 @@ namespace fantasy
 
     void Camera::strafe(float size)
     {
-        Vector3F right = cross(up, direction);
+        float3 right = cross(up, direction);
         position = size * right + position;
 
         _view_need_update = true;
@@ -136,7 +136,7 @@ namespace fantasy
     void Camera::pitch(float angle)
     {
         _vert_radians -= radians(angle);
-		direction = Vector3F(
+		direction = float3(
 			std::cos(_vert_radians) * std::cos(_horz_radians),
 			std::sin(_vert_radians),
 			std::cos(_vert_radians) * std::sin(_horz_radians)
@@ -153,7 +153,7 @@ namespace fantasy
     void Camera::yall(float angle)
     {
         _horz_radians -= radians(angle);
-		direction = Vector3F(
+		direction = float3(
 			std::cos(_vert_radians) * std::cos(_horz_radians),
 			std::sin(_vert_radians),
 			std::cos(_vert_radians) * std::sin(_horz_radians)
@@ -182,7 +182,7 @@ namespace fantasy
         return _aspect * _far_window_height;
     }
 
-    Vector2F Camera::cursor_cycle(float x, float y)
+    float2 Camera::cursor_cycle(float x, float y)
     {
         if (x > CLIENT_WIDTH)     x = 0.0f;
         if (x < 0.0f)               x = static_cast<float>(CLIENT_WIDTH);
@@ -190,12 +190,12 @@ namespace fantasy
         if (y < 0.0f)               y = static_cast<float>(CLIENT_HEIGHT);
         glfwSetCursorPos(_window, static_cast<double>(x), static_cast<double>(y));
 
-        return Vector2F(x, y);
+        return float2(x, y);
     }
 
-    Vector2F Camera::get_project_constants_ab() const
+    float2 Camera::get_project_constants_ab() const
     {
-        Vector2F constants;
+        float2 constants;
         constants.x = _far_z / (_far_z - _near_z);
         constants.y = -(_near_z * _far_z) / (_far_z - _near_z);
         return constants;

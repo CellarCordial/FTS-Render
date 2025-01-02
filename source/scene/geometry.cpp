@@ -123,7 +123,7 @@ namespace fantasy
 		_heap_indices[_heap[index]] = index;
 	}
 
-	MeshOptimizer::MeshOptimizer(std::vector<Vector3F>& vertices, std::vector<uint32_t>& indices) :
+	MeshOptimizer::MeshOptimizer(std::vector<float3>& vertices, std::vector<uint32_t>& indices) :
 		_vertices(vertices), 
 		_indices(indices),
 		_vertex_ref_count(vertices.size()),
@@ -153,8 +153,8 @@ namespace fantasy
 
 			_index_table.insert(hash(vertex_position), ix);
 			
-			Vector3F p0 = vertex_position;
-			Vector3F p1 = _vertices[_indices[triangle_index_cycle3(ix)]];
+			float3 p0 = vertex_position;
+			float3 p1 = _vertices[_indices[triangle_index_cycle3(ix)]];
 
 			uint32_t key0 = hash(p0);
 			uint32_t key1 = hash(p1);
@@ -243,7 +243,7 @@ namespace fantasy
 		return ret;
 	}
 
-	void MeshOptimizer::lock_position(const Vector3F& position)
+	void MeshOptimizer::lock_position(const float3& position)
 	{
 		for (uint32_t ix : _index_table[hash(position)])
 		{
@@ -262,9 +262,9 @@ namespace fantasy
 		uint32_t vertex_index1 = _indices[triangle_index * 3 + 1];
 		uint32_t vertex_index2 = _indices[triangle_index * 3 + 2];
 
-		const Vector3F& p0 = _vertices[vertex_index0];	
-		const Vector3F& p1 = _vertices[vertex_index1];	
-		const Vector3F& p2 = _vertices[vertex_index2];
+		const float3& p0 = _vertices[vertex_index0];	
+		const float3& p1 = _vertices[vertex_index1];	
+		const float3& p2 = _vertices[vertex_index2];
 
 		bool need_removed = p0 == p1 || p1 == p2 || p2 == p0;
 		if (!need_removed)
@@ -374,14 +374,14 @@ namespace fantasy
 		return count == _remain_triangle_num;
 	}
 
-	float MeshOptimizer::evaluate(const Vector3F& p0, const Vector3F& p1, bool if_merge)
+	float MeshOptimizer::evaluate(const float3& p0, const float3& p1, bool if_merge)
 	{
 		if (p0 == p1) return 0.0f;
 
 		float error = 0.0f;
 
 		std::vector<uint32_t> adjacency_triangle_indices;
-		auto BuildAdjacencyTrianlges = [this, &adjacency_triangle_indices](const Vector3F& vertex, bool& lock)
+		auto BuildAdjacencyTrianlges = [this, &adjacency_triangle_indices](const float3& vertex, bool& lock)
 		{
 			for (uint32_t ix : _index_table[hash(vertex)])
 			{
@@ -409,7 +409,7 @@ namespace fantasy
 		QuadricSurface surface;
 		for (uint32_t ix : adjacency_triangle_indices) surface = merge(surface, _triangle_surfaces[ix]);
 
-		Vector3F p = (p0 + p1) * 0.5f;
+		float3 p = (p0 + p1) * 0.5f;
 		if (lock0 && lock1) error += 1e8;
 		if (lock0 && !lock1) p = p0;
 		else if (!lock0 && lock1) p = p1;
@@ -430,7 +430,7 @@ namespace fantasy
 				for (uint32_t jx = 0; jx < 3; ++jx)
 				{
 					uint32_t vertex_index = ix * 3 + jx;
-					Vector3F& vertex_position = _vertices[_indices[vertex_index]];
+					float3& vertex_position = _vertices[_indices[vertex_index]];
 					if (vertex_position == p0 || vertex_position == p1)
 					{
 						vertex_position = p;
@@ -498,7 +498,7 @@ namespace fantasy
 		return error;
 	}
 
-	void MeshOptimizer::merge_begin(const Vector3F& p)
+	void MeshOptimizer::merge_begin(const float3& p)
 	{
 		uint32_t key = hash(p);
 		for (uint32_t ix : _vertex_table[key])
@@ -636,7 +636,7 @@ namespace fantasy
 		return true;
 	}
 
-	uint32_t VirtualGeometry::edge_hash(const Vector3F& p0, const Vector3F& p1)
+	uint32_t VirtualGeometry::edge_hash(const float3& p0, const float3& p1)
 	{
 		uint32_t key0 = hash(p0);
 		uint32_t key1 = hash(p1);
@@ -645,7 +645,7 @@ namespace fantasy
 
  
 	void VirtualGeometry::build_adjacency_graph(
-		const std::vector<Vector3F>& vertices, 
+		const std::vector<float3>& vertices, 
 		const std::vector<uint32_t>& indices, 
 		SimpleGraph& edge_link_graph, 
 		SimpleGraph& adjacency_graph
@@ -656,8 +656,8 @@ namespace fantasy
 
 		for (uint32_t edge_start_index = 0; edge_start_index < indices.size(); ++edge_start_index)
 		{
-			const Vector3F& p0 = vertices[indices[edge_start_index]];
-			const Vector3F& p1 = vertices[indices[triangle_index_cycle3(edge_start_index)]];
+			const float3& p0 = vertices[indices[edge_start_index]];
+			const float3& p1 = vertices[indices[triangle_index_cycle3(edge_start_index)]];
 
 			// Find shared vertices and opposite edges, which represent adjacent triangles.
 			edge_table.insert(edge_hash(p0, p1), edge_start_index);
@@ -858,7 +858,7 @@ namespace fantasy
 		float parent_lod_error = 0.0f;
 		std::vector<Sphere> parent_lod_bounding_spheres;
 		std::vector<uint32_t> indices;
-		std::vector<Vector3F> vertex_positions;
+		std::vector<float3> vertex_positions;
 		for (auto cluster_index : cluster_group.cluster_indices)
 		{
 			const auto& cluster = _clusters[cluster_index];
@@ -881,8 +881,8 @@ namespace fantasy
 			auto& positions = _clusters[cluster_index].vertices;
         	auto& vertex_indices = _clusters[cluster_index].indices;
 			
-			const Vector3F& p0 = positions[vertex_indices[edge_index]];
-			const Vector3F& p1 = positions[vertex_indices[triangle_index_cycle3(edge_index)]];
+			const float3& p0 = positions[vertex_indices[edge_index]];
+			const float3& p1 = positions[vertex_indices[triangle_index_cycle3(edge_index)]];
 			edge_table.insert(edge_hash(p0, p1), ix);
 			optimizer.lock_position(p0);
 			optimizer.lock_position(p1);
@@ -936,8 +936,8 @@ namespace fantasy
 							break;
 						}
 					}
-					const Vector3F& p0 = vertex_positions[vertex_index];
-					const Vector3F& p1 = vertex_positions[indices[triangle_index_cycle3(edge_start_index)]];
+					const float3& p0 = vertex_positions[vertex_index];
+					const float3& p1 = vertex_positions[indices[triangle_index_cycle3(edge_start_index)]];
 					if (!is_external)
 					{
 						for (uint32_t jx : edge_table[edge_hash(p0, p1)])
@@ -1117,10 +1117,10 @@ namespace fantasy
 
 		Vertex get_mid_point(const Vertex& v0, const Vertex& v1)
 		{
-			Vector3F pos = 0.5f * (v0.position + v1.position);
-			Vector3F normal = normalize(0.5f * (v0.normal + v1.normal));
-			Vector3F tangent = normalize(0.5f * (v0.tangent + v1.tangent));
-			Vector2F tex = 0.5f * (v0.uv + v1.uv);
+			float3 pos = 0.5f * (v0.position + v1.position);
+			float3 normal = normalize(0.5f * (v0.normal + v1.normal));
+			float3 tangent = normalize(0.5f * (v0.tangent + v1.tangent));
+			float2 tex = 0.5f * (v0.uv + v1.uv);
 
 			Vertex v;
 			v.position = pos;
@@ -1254,14 +1254,14 @@ namespace fantasy
 			const float X = 0.525731f;
 			const float Z = 0.850651f;
 
-			Vector3F pos[12] =
+			float3 pos[12] =
 			{
-				Vector3F(-X, 0.0f, Z),  Vector3F(X, 0.0f, Z),
-				Vector3F(-X, 0.0f, -Z), Vector3F(X, 0.0f, -Z),
-				Vector3F(0.0f, Z, X),   Vector3F(0.0f, Z, -X),
-				Vector3F(0.0f, -Z, X),  Vector3F(0.0f, -Z, -X),
-				Vector3F(Z, X, 0.0f),   Vector3F(-Z, X, 0.0f),
-				Vector3F(Z, -X, 0.0f),  Vector3F(-Z, -X, 0.0f)
+				float3(-X, 0.0f, Z),  float3(X, 0.0f, Z),
+				float3(-X, 0.0f, -Z), float3(X, 0.0f, -Z),
+				float3(0.0f, Z, X),   float3(0.0f, Z, -X),
+				float3(0.0f, -Z, X),  float3(0.0f, -Z, -X),
+				float3(Z, X, 0.0f),   float3(-Z, X, 0.0f),
+				float3(Z, -X, 0.0f),  float3(-Z, -X, 0.0f)
 			};
 
 			uint32_t k[60] =
@@ -1345,7 +1345,7 @@ namespace fantasy
 					float c = cosf(j * dTheta);
 					float s = sinf(j * dTheta);
 
-					vertex.position = Vector3F(r * c, y, r * s);
+					vertex.position = float3(r * c, y, r * s);
 
 					vertex.uv.x = (float)j / slice_count;
 					vertex.uv.y = 1.0f - (float)i / stack_count;
@@ -1370,12 +1370,12 @@ namespace fantasy
 					//  dz/dv = (r0-r1)*sin(t)
 
 					// This is unit length.
-					vertex.tangent = Vector3F(-s, 0.0f, c);
+					vertex.tangent = float3(-s, 0.0f, c);
 
 					float dr = bottom_radius - top_radius;
-					Vector4F bitangent(dr * c, -height, dr * s, 1.0f);
+					float4 bitangent(dr * c, -height, dr * s, 1.0f);
 
-					vertex.normal = normalize(cross(Vector3F(vertex.tangent), Vector3F(bitangent)));
+					vertex.normal = normalize(cross(float3(vertex.tangent), float3(bitangent)));
 					submesh.vertices.push_back(vertex);
 				}
 			}
@@ -1507,9 +1507,9 @@ namespace fantasy
 				{
 					float x = -halfWidth + j * dx;
 
-					submesh.vertices[i * n + j].position = Vector3F(x, 0.0f, z);
-					submesh.vertices[i * n + j].normal = Vector3F(0.0f, 1.0f, 0.0f);
-					submesh.vertices[i * n + j].tangent = Vector3F(1.0f, 0.0f, 0.0f);
+					submesh.vertices[i * n + j].position = float3(x, 0.0f, z);
+					submesh.vertices[i * n + j].normal = float3(0.0f, 1.0f, 0.0f);
+					submesh.vertices[i * n + j].tangent = float3(1.0f, 0.0f, 0.0f);
 
 					// Stretch texture over grid.
 					submesh.vertices[i * n + j].uv.x = j * du;

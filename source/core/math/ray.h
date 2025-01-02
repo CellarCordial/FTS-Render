@@ -7,18 +7,18 @@ namespace fantasy
 {
     struct Ray
 	{
-		Vector3F	ori;
-		Vector3F	dir;
+		float3	ori;
+		float3	dir;
 		mutable float max;
 		
 		Ray() : max(INFINITY) {}
 		
-		Ray(const Vector3F& _o, const Vector3F& _d, float max = INFINITY, float time = 0.0f) :
+		Ray(const float3& _o, const float3& _d, float max = INFINITY, float time = 0.0f) :
             ori(_o), dir(_d), max(max)
         {
         }
 
-		Vector3F operator()(float _t) const
+		float3 operator()(float _t) const
         {
             return ori + dir * _t;
         }

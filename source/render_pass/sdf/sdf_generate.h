@@ -12,17 +12,17 @@ namespace fantasy
     {
 		struct SdfGeneratePassConstants
 		{
-			Vector3F sdf_lower;
+			float3 sdf_lower;
 			uint32_t triangle_num = 0;
 
-			Vector3F sdf_upper;
+			float3 sdf_upper;
 			uint32_t dwSignRayNum = 3;
 
-			Vector3F sdf_extent;
+			float3 sdf_extent;
 			uint32_t x_begin = 0;
 
 			uint32_t x_end = 0;
-			Vector3I pad;
+			uint3 pad;
 		};
     }
 

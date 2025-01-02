@@ -7,7 +7,7 @@ namespace fantasy::constant
 {
 	struct AtmosphereProperties
 	{
-		Vector3F raylegh_scatter = { 5.802f, 13.558f, 33.1f };     // (um^-1)
+		float3 raylegh_scatter = { 5.802f, 13.558f, 33.1f };     // (um^-1)
 		float raylegh_density = 8.0f;   // (km)
 
 		float mie_scatter = 3.996f; // (um^-1)
@@ -15,7 +15,7 @@ namespace fantasy::constant
 		float mie_absorb = 4.4f;    // (um^-1)
 		float mie_asymmetry = 0.8f;
 
-		Vector3F ozone_absorb = { 0.65f, 1.881f, 0.085f };  // (um^-1)
+		float3 ozone_absorb = { 0.65f, 1.881f, 0.085f };  // (um^-1)
 		float ozone_center_height = 25.0f;   // (km)
 
 		float ozone_thickness = 30.0f;      // (km)

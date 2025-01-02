@@ -155,8 +155,10 @@ namespace fantasy
 		T x, y;
 	};
 	
-	using Vector2F = Vector2<float>;
-	using Vector2I = Vector2<uint32_t>;
+	using int2 = Vector2<int32_t>;
+	using uint2 = Vector2<uint32_t>;
+	using float2 = Vector2<float>;
+	using double2 = Vector2<double>;
 
 	template <typename T>
 	requires std::is_arithmetic_v<T>
@@ -322,8 +324,11 @@ namespace fantasy
 		T x, y, z;
 	};
 
-	using Vector3F = Vector3<float>;
-	using Vector3I = Vector3<uint32_t>;
+	using int3 = Vector3<int32_t>;
+	using uint3 = Vector3<uint32_t>;
+	using float3 = Vector3<float>;
+	using double3 = Vector3<double>;
+
 
 	// w 分量初始化为 1
 	template <typename T>
@@ -494,8 +499,10 @@ namespace fantasy
 		T x, y, z, w;
 	};
 
-	using Vector4F = Vector4<float>;
-	using Vector4I = Vector4<int32_t>;
+	using int4 = Vector4<int32_t>;
+	using uint4 = Vector4<uint32_t>;
+	using float4 = Vector4<float>;
+	using double4 = Vector4<double>;
 
     
 	template <typename U, typename T>
@@ -757,19 +764,19 @@ namespace fantasy
 	}
 
     	// 给定单位球面坐标系中点的仰角和方位角，使用默认基向量，返回对应的三位向量
-	inline Vector3F SphericalDirection(float sin_theta, float cos_theta, float phi)
+	inline float3 SphericalDirection(float sin_theta, float cos_theta, float phi)
 	{
-		return Vector3F(sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta);
+		return float3(sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta);
 	}
 
 	// 给定单位球面坐标系中点的仰角和方位角，以及基向量，返回对应的三位向量
-	inline Vector3F SphericalDirection(
+	inline float3 SphericalDirection(
 		float sin_theta, 
 		float cos_theta, 
 		float phi, 
-		const Vector3F& x, 
-		const Vector3F& y, 
-		const Vector3F& z
+		const float3& x, 
+		const float3& y, 
+		const float3& z
 	)
 	{
 		// z = r * cos(theta)
@@ -780,13 +787,13 @@ namespace fantasy
 	}
 
 	// 计算向量 vec 与 z 轴的夹角（仰角），即球面坐标系中的 theta 角
-	inline float SphericalTheta(const Vector3F& vec)
+	inline float SphericalTheta(const float3& vec)
 	{
 		return std::acos(Clamp(vec.z, -1, 1));
 	}
 
 	// 计算向量 vec 在 xy 平面上的投影的方位角，即球面坐标系中的 phi 角
-	inline float SphericalPhi(const Vector3F& vec)
+	inline float SphericalPhi(const float3& vec)
 	{
 		// std::atan2 的值域为 [-π，π]
 		float p = std::atan2(vec.y, vec.x);

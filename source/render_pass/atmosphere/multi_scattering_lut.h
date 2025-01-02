@@ -11,10 +11,10 @@ namespace fantasy
     {
         struct MultiScatteringPassConstant
         {
-            Vector3F sun_intensity = Vector3F(1.0f, 1.0f, 1.0f);
+            float3 sun_intensity = float3(1.0f, 1.0f, 1.0f);
             int32_t ray_march_step_count = 256;
 
-            Vector3F ground_albedo;
+            float3 ground_albedo;
             float pad = 0.0f;
         };
     };
@@ -41,7 +41,7 @@ namespace fantasy
 
     private:
         bool _resource_writed = false;
-        std::vector<Vector2F> _dir_samples;
+        std::vector<float2> _dir_samples;
         constant::MultiScatteringPassConstant _pass_constants;
 
         std::shared_ptr<BufferInterface> _pass_constant_buffer;

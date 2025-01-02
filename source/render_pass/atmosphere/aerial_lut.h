@@ -12,14 +12,14 @@ namespace fantasy
 	{
 		struct AerialLUTPassConstant
 		{
-			Vector3F sun_direction;		float sun_theta = 0.0f;
-			Vector3F frustum_a;			float max_aerial_distance = 2000.0f;
-			Vector3F frustum_b;			int32_t per_slice_march_step_count = 1;
-			Vector3F frustum_c;			float camera_height = 0.0f;
-			Vector3F frustum_d;			uint32_t enable_multi_scattering = true;
-			Vector3F camera_position;	uint32_t enable_shadow = true;
-			float world_scale = 0.0f;	Vector3F pad;
-			Matrix4x4 shadow_view_proj;
+			float3 sun_direction;		float sun_theta = 0.0f;
+			float3 frustum_a;			float max_aerial_distance = 2000.0f;
+			float3 frustum_b;			int32_t per_slice_march_step_count = 1;
+			float3 frustum_c;			float camera_height = 0.0f;
+			float3 frustum_d;			uint32_t enable_multi_scattering = true;
+			float3 camera_position;	uint32_t enable_shadow = true;
+			float world_scale = 0.0f;	float3 pad;
+			float4x4 shadow_view_proj;
 		};
 	}
 

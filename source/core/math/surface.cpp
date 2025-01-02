@@ -20,16 +20,16 @@ namespace fantasy
         cd = c * distance;
     }
 
-    bool QuadricSurface::get_vertex_position(Vector3F& vertex)
+    bool QuadricSurface::get_vertex_position(float3& vertex)
     {
-        Matrix4x4D m(
+        double4x4 m(
             a2,   ab,   ac,   0.0f,
             ab,   b2,   bc,   0.0f,
             ac,   bc,   c2,   0.0f,
             ad,   bd,   cd,   1.0f
         );
 
-        Matrix4x4D inv;
+        double4x4 inv;
         ReturnIfFalse(invertible(m, inv));
         vertex = { 
             static_cast<float>(inv[3][0]), 
@@ -39,7 +39,7 @@ namespace fantasy
         return true;
     }
 
-    float QuadricSurface::distance_to_surface(const Vector3F& p)
+    float QuadricSurface::distance_to_surface(const float3& p)
     {
         float ret = 
             a2 * p.x * p.x + 2 * ab * p.x * p.y + 2 * ac * p.x * p.z + 2 * ad * p.x +

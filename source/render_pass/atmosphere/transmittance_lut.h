@@ -1,7 +1,7 @@
 #ifndef RENDER_PASS_ATOMSPHERE_TRANSMITTANCE_LUT_H
 #define RENDER_PASS_ATOMSPHERE_TRANSMITTANCE_LUT_H
 
-#include "../../render_graph/render_graph.h"
+#include "../../render_graph/render_pass.h"
 #include "atmosphere_properties.h"
 #include <memory>
 

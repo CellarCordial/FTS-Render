@@ -15,7 +15,7 @@ namespace fantasy
         struct GlobalSdfData
         {
             float scene_grid_size = 0.0f;
-            Vector3F scene_grid_origin; 
+            float3 scene_grid_origin; 
 
             uint32_t max_trace_steps = 1024;
             float abs_threshold = 0.01f;
@@ -24,11 +24,11 @@ namespace fantasy
 
 		struct SdfDebugPassConstants
 		{
-			Vector3F frustum_a;     float pad0 = 0.0f;      
-			Vector3F frustum_b;     float pad1 = 0.0f;      
-			Vector3F frustum_c;     float pad2 = 0.0f;      
-            Vector3F frustum_d;     float pad3 = 0.0f;
-            Vector3F camera_position; float pad4 = 0.0f;
+			float3 frustum_a;     float pad0 = 0.0f;      
+			float3 frustum_b;     float pad1 = 0.0f;      
+			float3 frustum_c;     float pad2 = 0.0f;      
+            float3 frustum_d;     float pad3 = 0.0f;
+            float3 camera_position; float pad4 = 0.0f;
 
             GlobalSdfData sdf_data;         
             float pad5;

@@ -91,7 +91,7 @@ namespace fantasy
 		float chunk_size = (SCENE_GRID_SIZE / GLOBAL_SDF_RESOLUTION) * VOXEL_NUM_PER_CHUNK;
 		_global_sdf_data.default_march = chunk_size;
 		_global_sdf_data.scene_grid_size = SCENE_GRID_SIZE;
-		_global_sdf_data.scene_grid_origin = Vector3F(-SCENE_GRID_SIZE * 0.5f);
+		_global_sdf_data.scene_grid_origin = float3(-SCENE_GRID_SIZE * 0.5f);
 
 		ReturnIfFalse(cache->collect_constants("GlobalSdfData", &_global_sdf_data));
 

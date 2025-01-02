@@ -173,7 +173,7 @@ namespace fantasy
 						ReturnIfFalse(cmdlist->set_compute_state(_clear_pass_compute_state));
 						ReturnIfFalse(cmdlist->set_push_constants(&pass_constants, sizeof(constant::GlobalSdfConstants)));
 
-						Vector3I thread_group_num = {
+						uint3 thread_group_num = {
 							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
 							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
 							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
@@ -225,7 +225,7 @@ namespace fantasy
 						ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
 						ReturnIfFalse(cmdlist->set_push_constants(&pass_constants, sizeof(constant::GlobalSdfConstants)));
 
-						Vector3I thread_group_num = {
+						uint3 thread_group_num = {
 							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
 							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
 							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
