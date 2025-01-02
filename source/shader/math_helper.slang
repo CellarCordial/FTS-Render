@@ -15,7 +15,7 @@ float3 get_world_pos_from_depth_ndc(float2 uv, float fDepthNDC, float4x4 InvView
     return WorldPos.xyz;
 }
 
-float3 spherical_fibonacci(uint ix, uint dwTotalNum)
+float3 spherical_fibonacci(uint32_t ix, uint32_t dwTotalNum)
 {
     // Theta 是方向与 z 轴的夹角.
     // Phi 是方向在 x-y 平面的投影与 x 轴的夹角.
@@ -39,7 +39,7 @@ float3 calcute_normal(float3 TextureNormal, float3 VertexNormal, float4 VertexTa
     return normalize(mul(UnpackedNormal, TBN));
 }
 
-float radical_inverse_vdc(uint bits) 
+float radical_inverse_vdc(uint32_t bits) 
 {
     bits = (bits << 16u) | (bits >> 16u);
     bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
@@ -50,7 +50,7 @@ float radical_inverse_vdc(uint bits)
 }
 
 // 低差异序列.
-float2 hammersley(uint i, uint N)
+float2 hammersley(uint32_t i, uint32_t N)
 {
     return float2(float(i) / float(N), radical_inverse_vdc(i));
 }
@@ -61,7 +61,7 @@ T max4(T x, T y, T z, T w) where T : __BuiltinFloatingPointType
     return max(max(x, y), max(z, w));
 }
 
-float3 decompress_unit_direction(uint dir)
+float3 decompress_unit_direction(uint32_t dir)
 {
     return float3(
         float(dir & ((1u << 11u) - 1u)) * (2.0f / float((1u << 11u) - 1u)) - 1.0f,
@@ -70,7 +70,7 @@ float3 decompress_unit_direction(uint dir)
     );
 }
 
-float2 generate_random2(uint ix)
+float2 generate_random2(uint32_t ix)
 {
     const float r1 = 1.0 / RANDOM_SEED;
     const float r2 = 1.0 / (RANDOM_SEED * RANDOM_SEED);
@@ -78,10 +78,10 @@ float2 generate_random2(uint ix)
     return frac(float2(r1, r2) * ix + 0.5);
 }
 
-float4 sample_from_blue_noise(uint2 pixel_id, uint random, Texture2D<float4> blue_noise_texture)
+float4 sample_from_blue_noise(uint2 pixel_id, uint32_t random, Texture2D<float4> blue_noise_texture)
 {
-    uint blue_noise_texture_width;
-    uint blue_noise_texture_height;
+    uint32_t blue_noise_texture_width;
+    uint32_t blue_noise_texture_height;
     blue_noise_texture.GetDimensions(blue_noise_texture_width, blue_noise_texture_height);
 
     uint2 resolution = uint2(blue_noise_texture_width, blue_noise_texture_height);
@@ -127,7 +127,7 @@ float3x3 create_orthonormal_basis(float3 n)
 }
 
 // Jenkins hash.
-uint hash(uint x)
+uint32_t hash(uint32_t x)
 {
     x += (x << 10u);
     x ^= (x >> 6u);

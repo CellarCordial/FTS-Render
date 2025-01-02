@@ -20,7 +20,7 @@ RWTexture2D<float4> transmittance_texture : register(u0);
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_X, 1)]
 void compute_shader(uint3 ThreadIndex : SV_DispatchThreadID)
 {
-    uint dwWidth, dwHeight;
+    uint32_t dwWidth, dwHeight;
     transmittance_texture.GetDimensions(dwWidth, dwHeight);
 
     if (ThreadIndex.x >= dwWidth || ThreadIndex.y >= dwHeight) return;
@@ -39,7 +39,7 @@ void compute_shader(uint3 ThreadIndex : SV_DispatchThreadID)
     float2 RayEnd = RayOri + RayDir * fDistance;
 
     float3 TransmittanceSum = float3(0.0f, 0.0f, 0.0f);
-    for (uint ix = 0; ix < STEP_COUNT; ++ix)
+    for (uint32_t ix = 0; ix < STEP_COUNT; ++ix)
     {
         float2 p = lerp(RayOri, RayEnd, (ix + 0.5f) / STEP_COUNT);
         float h = length(p) - AP.planet_radius;

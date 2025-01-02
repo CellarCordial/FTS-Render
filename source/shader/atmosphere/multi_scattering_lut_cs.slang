@@ -16,7 +16,7 @@ cbuffer gAtomsphereProperties : register(b0)
 cbuffer gPassConstant : register(b1)
 {
     float3 SunIntensity;
-    int dwRayMarchStepCount;
+    int32_t dwRayMarchStepCount;
 
     float3 GroundAlbedo;
     float pad;
@@ -35,7 +35,7 @@ void LightIntegate(float3 WorldOri, float3 WorldDir, float SunTheta, float3 SunD
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
 void compute_shader(uint3 ThreadIndex : SV_DispatchThreadID)
 {
-    uint dwWidth, dwHeight;
+    uint32_t dwWidth, dwHeight;
     gMultiScatterTexture.GetDimensions(dwWidth, dwHeight);
 
     if (ThreadIndex.x >= dwWidth || ThreadIndex.y >= dwHeight) return;
@@ -53,7 +53,7 @@ float3 EstimateMultiScatter(float theta, float height)
 
     float3 L2Sum = float3(0.0f, 0.0f, 0.0f);
     float3 FSum = float3(0.0f, 0.0f, 0.0f);
-    for (uint ix = 0; ix < DIRECTION_SAMPLE_COUNT; ++ix)
+    for (uint32_t ix = 0; ix < DIRECTION_SAMPLE_COUNT; ++ix)
     {
         float2 DirSample = gDirSamples[ix];
         float3 WorldDir = UnitSphereDir(DirSample.x, DirSample.y);
@@ -99,7 +99,7 @@ void LightIntegate(float3 WorldOri, float3 WorldDir, float sun_theta, float3 Sun
 
     float theta = dot(WorldDir, SunDir);
     float t = 0.0f;
-    for (uint ix = 0; ix < dwRayMarchStepCount; ++ix)
+    for (uint32_t ix = 0; ix < dwRayMarchStepCount; ++ix)
     {
         float fMidT = t + 0.5f * dt;
         t += dt;

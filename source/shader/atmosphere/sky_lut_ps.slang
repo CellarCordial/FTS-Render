@@ -9,10 +9,10 @@ cbuffer gAtomsphereProperties : register(b0)
 cbuffer gPassConstant : register(b1)
 {
     float3 CameraPosition;  
-    int dwMarchStepCount;
+    int32_t dwMarchStepCount;
 
     float3 SunDir;
-    uint bEnableMultiScattering;
+    uint32_t bEnableMultiScattering;
 
     float3 SunIntensity;
     float pad;
@@ -90,7 +90,7 @@ float4 pixel_shader(VertexOutput In) : SV_Target0
     float3 InScatterSum = float3(0.0f, 0.0f, 0.0f);
 
     float dt = fDistance / dwMarchStepCount;
-    for (uint ix = 0; ix < dwMarchStepCount; ++ix)
+    for (uint32_t ix = 0; ix < dwMarchStepCount; ++ix)
     {
         RayMarching(fPhaseU, Ori, Dir, t, dt, TransmittanceSum, InScatterSum);
         t += dt;

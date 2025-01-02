@@ -12,8 +12,8 @@ cbuffer pass_consstant : register(b0)
     uint3 voxel_offset;  
     float gi_max_distance;
     
-    uint model_sdf_begin; 
-    uint model_sdf_end;
+    uint32_t model_sdf_begin; 
+    uint32_t model_sdf_end;
 };
 
 RWTexture3D<float> global_sdf_texture : register(u0);

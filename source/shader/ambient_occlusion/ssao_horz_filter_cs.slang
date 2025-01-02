@@ -57,12 +57,12 @@ void compute_shader(uint3 ThreadID: SV_ThreadID, uint3 GroupThreadID : SV_GroupT
 
     if (GroupThreadID.x < BLUR_RADIUS)
     {
-        uint x = max(ThreadID.x - BLUR_RADIUS, 0);
+        uint32_t x = max(ThreadID.x - BLUR_RADIUS, 0);
         gOcclusionCache[GroupThreadID.x] = gSSAOTexture[uint2(x, ThreadID.y)];
     }
     if (GroupThreadID.x >= THREAD_GROUP_NUM_X - BLUR_RADIUS)
     {
-        uint x = min(ThreadID.x + BLUR_RADIUS, SSAOTextureRes.x - 1);
+        uint32_t x = min(ThreadID.x + BLUR_RADIUS, SSAOTextureRes.x - 1);
         gOcclusionCache[GroupThreadID.x + 2 * BLUR_RADIUS] = gSSAOTexture[uint2(x, ThreadID.y)];
     }
 
@@ -81,9 +81,9 @@ void compute_shader(uint3 ThreadID: SV_ThreadID, uint3 GroupThreadID : SV_GroupT
     float fDepthNormalWeightSum = 0.0f;
 #endif
 
-    for (int i = -BLUR_RADIUS; i <= BLUR_RADIUS; ++i)
+    for (int32_t i = -BLUR_RADIUS; i <= BLUR_RADIUS; ++i)
     {
-        uint k = GroupThreadID.x + BLUR_RADIUS + i;
+        uint32_t k = GroupThreadID.x + BLUR_RADIUS + i;
 
 #ifdef TEMPORAL
         float fNormalizationWeight = fWeights[i + BLUR_RADIUS] * gOcclusionCache[k].y;

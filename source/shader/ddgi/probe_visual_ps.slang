@@ -14,7 +14,7 @@ struct VertexOutput
 {
     float4 sv_position : SV_Position;
     float3 normal : NORMAL;
-    uint dwProbeIndex : PROBE_INDEX;
+    uint32_t dwProbeIndex : PROBE_INDEX;
 };
 
 [shader("pixel")]

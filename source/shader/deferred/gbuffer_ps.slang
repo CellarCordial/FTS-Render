@@ -8,7 +8,7 @@ cbuffer pass_constants : register(b0)
     float4x4 view_matrix;
     float4x4 PrevViewMatrix;
 
-    uint geometry_constant_index;
+    uint32_t geometry_constant_index;
     uint3 pad;
 };
 

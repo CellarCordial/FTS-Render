@@ -31,7 +31,7 @@ struct VertexOutput
 };
 
 
-VertexOutput vertex_shader(VertexInput In, uint instance_id : SV_InstanceID)
+VertexOutput vertex_shader(VertexInput In, uint32_t instance_id : SV_InstanceID)
 {
     float4 PosW = mul(float4(In.local_space_position, 1.0f),  WorldMatrices[instance_id]);
 

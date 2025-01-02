@@ -20,7 +20,7 @@ namespace restir
 
         float _M = 0.0f;
         float _W = 0.0f;
-        uint _payload = 0;
+        uint32_t _payload = 0;
         float _w_sum = 0.0f;
     };
 }

@@ -4,7 +4,7 @@
 cbuffer pass_constants : register(b0)
 {
     float3 sun_direction;
-    uint frame_index;
+    uint32_t frame_index;
 
     float sun_angular_radius;
 };

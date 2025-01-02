@@ -5,12 +5,12 @@
 
 cbuffer pass_constants : register(b0)
 {
-    uint dwIrradianceTextureRes;
-    uint dwRayNumPerProbe;
+    uint32_t dwIrradianceTextureRes;
+    uint32_t dwRayNumPerProbe;
     float fHistoryAlpha;
     float fHistoryGamma;
 
-    uint bFirstFrame;
+    uint32_t bFirstFrame;
     float fDepthSharpness;
 };
 
@@ -25,16 +25,16 @@ RWTexture2D<float3> gOutputIrradianceTexture : register(u0);
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
-void compute_shader(uint3 ThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID, uint dwGroupIndex : SV_GroupIndex)
+void compute_shader(uint3 ThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID, uint32_t dwGroupIndex : SV_GroupIndex)
 {
     if (any(ThreadID.xy >= dwIrradianceTextureRes)) return;
     uint2 StandaloneIrradianceUV = ThreadID.xy + 1;
     uint2 IrradianceUV = GroupID.xy * (dwIrradianceTextureRes + 2) + StandaloneIrradianceUV; 
 
-    uint dwProbeIndex = dwGroupIndex;
+    uint32_t dwProbeIndex = dwGroupIndex;
     float fWeightSum = 0.0f;
     float3 IrradianceSum = float3(0.0f, 0.0f, 0.0f);
-    for (uint ix = 0; ix < dwRayNumPerProbe; ++ix)
+    for (uint32_t ix = 0; ix < dwRayNumPerProbe; ++ix)
     {
         uint2 uv = uint2(ix, dwProbeIndex);
         float3 Radiance = gRadianceTexture[uv];

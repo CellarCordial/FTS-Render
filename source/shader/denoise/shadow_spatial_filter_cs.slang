@@ -11,12 +11,12 @@ cbuffer pass_constants : register(b0)
 
     uint2 shadow_meta_texture_resolution;
     float depth_similarity_sigma;
-    uint step_size;
+    uint32_t step_size;
 };
 
 Texture2D<float> depth_texture : register(t0);
 Texture2D<float> view_space_normal_texture : register(t1);
-Texture2D<uint> shadow_meta_texture : register(t2);
+Texture2D<uint32_t> shadow_meta_texture : register(t2);
 Texture2D<float2> shadow_temporal_filter_texture : register(t3);
 
 RWTexture2D<float2> denoised_shadow_texture : register(u0);
@@ -32,7 +32,7 @@ float3 FFX_DNSR_Shadows_ReadNormals(uint2 pixel_id) { return view_space_normal_t
 
 float16_t2 FFX_DNSR_Shadows_ReadInput(uint2 pixel_id) { return float16_t2(shadow_temporal_filter_texture[pixel_id]);}
 
-uint FFX_DNSR_Shadows_ReadTileMetaData(uint tile_index)
+uint32_t FFX_DNSR_Shadows_ReadTileMetaData(uint32_t tile_index)
 {
     uint2 tile_id = uint2(
         tile_index % shadow_meta_texture_resolution.x,

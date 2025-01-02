@@ -26,7 +26,7 @@ float3 calculate_normal(float3 texture_normal, float3 vertex_normal, float3 vert
 
 //     struct GBufferRayPayload
 //     {
-//         __init(float hit_time, uint path_length, RayCone ray_cone)
+//         __init(float hit_time, uint32_t path_length, RayCone ray_cone)
 //         {
 //             _hit_time = hit_time;
 //             _path_length = path_length;
@@ -40,7 +40,7 @@ float3 calculate_normal(float3 texture_normal, float3 vertex_normal, float3 vert
 //         }
 
 //         float _hit_time = MAX_FLOAT;
-//         uint _path_length = 0;
+//         uint32_t _path_length = 0;
 //         RayCone _ray_cone = RayCone(0.0f);
 //         GBufferData _data;
 //     };
@@ -59,7 +59,7 @@ float3 calculate_normal(float3 texture_normal, float3 vertex_normal, float3 vert
 //         {
 //             GBufferRayPayload payload = GBufferRayPayload(MAX_FLOAT, _path_length, _ray_cone);
 
-//             uint trace_flags = 0;
+//             uint32_t trace_flags = 0;
 //             if (_cull_back_face) trace_flags |= RAY_FLAG_CULL_BACK_FACING_TRIANGLES;
 
 //             TraceRay(accel_struct, trace_flags, 0xff, 0, 0, 0, _ray_desc, payload);
@@ -82,7 +82,7 @@ float3 calculate_normal(float3 texture_normal, float3 vertex_normal, float3 vert
 
 //         RayCone _ray_cone;
 //         RayDesc _ray_desc;
-//         uint _path_length;
+//         uint32_t _path_length;
 //         bool _cull_back_face;
 //     };
 // }

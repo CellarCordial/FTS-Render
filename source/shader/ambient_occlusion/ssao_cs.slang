@@ -10,10 +10,10 @@ cbuffer pass_constants : register(b0)
     float sample_radius;
     float sample_bias;
 
-    uint tangent_noise_texture_res;
-    uint sample_num;
-    uint max_sample_num;
-    uint pad;
+    uint32_t tangent_noise_texture_res;
+    uint32_t sample_num;
+    uint32_t max_sample_num;
+    uint32_t pad;
 };
 
 Texture2D<float3> view_space_position_texture : register(t0);
@@ -54,7 +54,7 @@ void compute_shader(uint3 thread_id: SV_Dispatchthread_id)
     float3x3 TBN = float3x3(tangent, bitangent, view_space_normal);
 
     float occlusion_sum = 0.0f;
-    for (uint ix = 0; ix < sample_num; ++ix)
+    for (uint32_t ix = 0; ix < sample_num; ++ix)
     {
         float3 view_space_sample_dir = mul(_tangent_space_sample_dirs_buffer[ix], TBN);
         float3 view_space_sample_position = view_space_position + view_space_sample_dir * sample_radius;

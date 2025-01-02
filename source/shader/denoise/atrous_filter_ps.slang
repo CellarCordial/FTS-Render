@@ -53,7 +53,7 @@ float4 pixel_shader(VertexOutput input) : SV_Target0
     float4 color_sum = float4(0, 0, 0, 0);
     float weight_sum = 0.0f;
 
-    for (uint ix = 0; ix < KERNEL_SIZE; ++ix)
+    for (uint32_t ix = 0; ix < KERNEL_SIZE; ++ix)
     {
         uint2 pixel_id = uint2(ori_pixel_id + offset[ix] * step_size);
 

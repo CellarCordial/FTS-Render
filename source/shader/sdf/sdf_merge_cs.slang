@@ -9,7 +9,7 @@ struct ModelSdfData
     float3 sdf_lower;
     float3 sdf_upper;
 
-    uint mesh_sdf_index;
+    uint32_t mesh_sdf_index;
 };
 
 #if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y) && defined(THREAD_GROUP_SIZE_Z)
@@ -21,8 +21,8 @@ cbuffer pass_constant : register(b0)
     uint3 voxel_offset;  
     float gi_max_distance;
 
-    uint mesh_sdf_begin; 
-    uint mesh_sdf_end;
+    uint32_t mesh_sdf_begin; 
+    uint32_t mesh_sdf_end;
 };
 
 
@@ -32,7 +32,7 @@ SamplerState sampler : register(s0);
 
 RWTexture3D<float> global_sdf_texture : register(u0);
 
-float calculate_sdf(float min_sdf, uint sdf_index, float3 voxel_world_pos);
+float calculate_sdf(float min_sdf, uint32_t sdf_index, float3 voxel_world_pos);
 float read_sdf(uint3 thread_id, uint3 voxel_id, float min_sdf);
 
 [shader("compute")]
@@ -44,7 +44,7 @@ void compute_shader(uint3 thread_id : SV_DispatchThreadID)
 
     float min_sdf = gi_max_distance;
 
-    for (uint ix = mesh_sdf_begin; ix < mesh_sdf_end; ++ix)
+    for (uint32_t ix = mesh_sdf_begin; ix < mesh_sdf_end; ++ix)
     {
         min_sdf = calculate_sdf(min_sdf, ix, voxel_world_pos);
     }
@@ -52,7 +52,7 @@ void compute_shader(uint3 thread_id : SV_DispatchThreadID)
     global_sdf_texture[voxel_id] = min_sdf;
 }
 
-float calculate_sdf(float min_sdf, uint sdf_index, float3 voxel_world_pos)
+float calculate_sdf(float min_sdf, uint32_t sdf_index, float3 voxel_world_pos)
 {
     ModelSdfData sdf_data = model_sdf_data_buffer[sdf_index];
 

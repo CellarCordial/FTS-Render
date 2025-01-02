@@ -2,8 +2,8 @@
 
 #include "../vxgi_helper.slang"
 
-RWStructuredBuffer<uint> ircache_pool_buffer : register(u0);
-RWStructuredBuffer<uint> ircache_life_buffer : register(u1);
+RWStructuredBuffer<uint32_t> ircache_pool_buffer : register(u0);
+RWStructuredBuffer<uint32_t> ircache_life_buffer : register(u1);
 
 #if defined(THREAD_GROUP_NUM_X)
 

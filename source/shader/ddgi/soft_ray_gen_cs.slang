@@ -15,8 +15,8 @@ cbuffer pass_constants : register(b0)
     float scene_grid_size;
     float fMaxGIDistance;
 
-    uint dwSurfaceTextureRes;
-    uint dwSurfaceAtlasRes;
+    uint32_t dwSurfaceTextureRes;
+    uint32_t dwSurfaceAtlasRes;
     
     FDDGIVolumeData VolumeData;
     GlobalSdfData sdf_data;    
@@ -24,8 +24,8 @@ cbuffer pass_constants : register(b0)
 
 struct FSdfChunkData
 {
-    int dwModelIndexBegin;
-    int dwModelIndexEnd;
+    int32_t dwModelIndexBegin;
+    int32_t dwModelIndexEnd;
 };
 
 struct FCardData
@@ -68,10 +68,10 @@ SamplerState gSurfaceSampler : register(s2);
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
 void compute_shader(uint3 ThreadID : SV_DispatchThreadID)
 {
-    uint dwRayIndex = ThreadID.x;
-    uint dwProbeIndex = ThreadID.y;
+    uint32_t dwRayIndex = ThreadID.x;
+    uint32_t dwProbeIndex = ThreadID.y;
 
-    uint dwTotalProbesNum = VolumeData.ProbesNum.x * VolumeData.ProbesNum.y * VolumeData.ProbesNum.z;
+    uint32_t dwTotalProbesNum = VolumeData.ProbesNum.x * VolumeData.ProbesNum.y * VolumeData.ProbesNum.z;
     if (dwRayIndex >= VolumeData.dwRaysNum || dwProbeIndex >= dwTotalProbesNum) return;
 
     uint3 ProbeID = uint3(
@@ -102,17 +102,17 @@ void compute_shader(uint3 ThreadID : SV_DispatchThreadID)
         {
             float3 HitPos = RayOri + RayDir * HitData.step_size;
 
-            uint dwChunkNumPerAxis = scene_grid_size / fSdfChunkSize;
+            uint32_t dwChunkNumPerAxis = scene_grid_size / fSdfChunkSize;
             float3 scene_grid_origin = -scene_grid_size * 0.5f;
             uint3 ChunkID = (HitPos - scene_grid_origin) / fSdfChunkSize;
-            uint dwChunkIndex = ChunkID.x + ChunkID.y * dwChunkNumPerAxis + ChunkID.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
+            uint32_t dwChunkIndex = ChunkID.x + ChunkID.y * dwChunkNumPerAxis + ChunkID.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
             FSdfChunkData ChunkData = gSdfChunkDatas[dwChunkIndex];
             
             // Chunk 不为空.
             if (ChunkData.dwModelIndexBegin != -1)
             {
                 float fWeightSum = 0.0f;
-                for (int ix = ChunkData.dwModelIndexBegin; ix < ChunkData.dwModelIndexEnd; ++ix)
+                for (int32_t ix = ChunkData.dwModelIndexBegin; ix < ChunkData.dwModelIndexEnd; ++ix)
                 {
                     FModelSurfaceData SurfaceData = gModelSurfaceDatas[ix];
 
@@ -123,7 +123,7 @@ void compute_shader(uint3 ThreadID : SV_DispatchThreadID)
                     if (any(abs(ClampHitPos - HitPos) > fSdfVoxelSize)) continue;
                     
                     [unroll]
-                    for (uint jx = 0; jx < 6; ++jx)
+                    for (uint32_t jx = 0; jx < 6; ++jx)
                     {
                         FCardData Card = SurfaceData.Cards[jx];
                         float3 LocalHitPos = mul(float4(HitPos, 1.0f), Card.LocalMatrix).xyz;
@@ -145,7 +145,7 @@ void compute_shader(uint3 ThreadID : SV_DispatchThreadID)
                         float4 SurfaceDepth = gSurfaceDepthTexture.Gather(gSurfaceSampler, uv) * Card.extent.z;
                         float4 DepthWeight;
                         [unroll]
-                        for (uint kx = 0; kx < 4; ++kx)
+                        for (uint32_t kx = 0; kx < 4; ++kx)
                         {
                             if (SurfaceDepth[kx] >= 1.0f) 
                             {

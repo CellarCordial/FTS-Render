@@ -8,7 +8,7 @@ struct GlobalSdfData
     float scene_grid_size;
     float3 scene_grid_origin;
 
-    uint max_trace_steps;
+    uint32_t max_trace_steps;
     float abs_threshold;
     float default_march;
     float pad;
@@ -16,7 +16,7 @@ struct GlobalSdfData
 
 struct SdfHitData
 {
-    uint step_count;
+    uint32_t step_count;
     float step_size;
     float sdf;
 };
@@ -33,7 +33,7 @@ SdfHitData trace_global_sdf(float3 o, float3 d, GlobalSdfData sdf_data, Texture3
         p += d * init_step;
     }
 
-    uint ix = 0;
+    uint32_t ix = 0;
     float sdf = 0.0f;
     for (; ix < sdf_data.max_trace_steps; ++ix)
     {

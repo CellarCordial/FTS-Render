@@ -10,32 +10,32 @@ struct FDDGIVolumeData
     float fProbeIntervalSize;
     
     uint3 ProbesNum;
-    uint dwRaysNum;
+    uint32_t dwRaysNum;
 
-    uint dwIrradianceTexturesWidth;
-    uint dwIrradianceTexturesHeight;
-    uint dwDepthTexturesWidth;
-    uint dwDepthTexturesHeight;
+    uint32_t dwIrradianceTexturesWidth;
+    uint32_t dwIrradianceTexturesHeight;
+    uint32_t dwDepthTexturesWidth;
+    uint32_t dwDepthTexturesHeight;
 
-    uint dwSingleIrradianceTextureSize;
-    uint dwSingleDepthTextureSize;
+    uint32_t dwSingleIrradianceTextureSize;
+    uint32_t dwSingleDepthTextureSize;
     float fNormalBias;
     float fProbeGamma;
 };
 
 float2 GetProbeTextureUV(
     float3 UnitProbeToPixel, 
-    uint dwProbeIndex, 
-    uint dwProbeTexturesWidth, 
-    uint dwProbeTexturesHeight, 
-    uint dwSingleProbeTextureSize
+    uint32_t dwProbeIndex, 
+    uint32_t dwProbeTexturesWidth, 
+    uint32_t dwProbeTexturesHeight, 
+    uint32_t dwSingleProbeTextureSize
 )
 {
     float2 DstTextureOctUV = (UnitVectorToOctahedron(UnitProbeToPixel) + 1.0f) * 0.5f;
     float2 UVOffset = (DstTextureOctUV * dwSingleProbeTextureSize) / float2(dwProbeTexturesWidth, dwProbeTexturesHeight);
 
-    uint dwSingleProbeTextureSizeWithBorder = dwSingleProbeTextureSize + 2;
-    uint dwRowProbesNum = dwProbeTexturesWidth / dwSingleProbeTextureSizeWithBorder;
+    uint32_t dwSingleProbeTextureSizeWithBorder = dwSingleProbeTextureSize + 2;
+    uint32_t dwRowProbesNum = dwProbeTexturesWidth / dwSingleProbeTextureSizeWithBorder;
 
     uint2 DstTextureStartPos = uint2(
         (dwProbeIndex % dwRowProbesNum) * dwSingleProbeTextureSizeWithBorder,
@@ -62,7 +62,7 @@ float3 SampleProbeIrradiance(
     float3 IrradianceSum = 0.0f;
     float fWeightSum = 0.0f;
 
-    for (uint ix = 0; ix < 8; ++ix)
+    for (uint32_t ix = 0; ix < 8; ++ix)
     {
         uint3 offset = uint3(ix, ix >> 1, ix >> 2) & uint3(1, 1, 1);
         uint3 ProbeID = uint3(clamp(
@@ -80,7 +80,7 @@ float3 SampleProbeIrradiance(
         fWeight *= theta * theta + 0.2f;
 
         // 切比雪夫权重.
-        uint dwProbeIndex = ProbeID.x + ProbeID.y * VolumeData.ProbesNum.x + ProbeID.z * VolumeData.ProbesNum.y * VolumeData.ProbesNum.x;
+        uint32_t dwProbeIndex = ProbeID.x + ProbeID.y * VolumeData.ProbesNum.x + ProbeID.z * VolumeData.ProbesNum.y * VolumeData.ProbesNum.x;
 
         float3 Bias = (normal + 3.0f * PixelToCamera) * VolumeData.fNormalBias;
         float3 ProbeToPixelWithBias = normalize(position - ProbePos + Bias);

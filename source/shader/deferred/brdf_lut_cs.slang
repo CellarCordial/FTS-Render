@@ -14,7 +14,7 @@ float3 integrate_brdf(float n_dot_v, float roughness);
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
 void compute_shader(uint3 thread_id : SV_DispatchThreadID)
 {
-    uint width, height;
+    uint32_t width, height;
     brdf_lut_texture.GetDimensions(width, height);
 
     float n_dot_v = ((thread_id.x + 0.5f) / width) * (1.0 - 1e-3) + 1e-3;
@@ -38,8 +38,8 @@ float3 integrate_brdf(float n_dot_v, float roughness)
     SpecularBrdf specular_a = SpecularBrdf(roughness, float3(1.0f, 1.0f, 1.0f));
     SpecularBrdf specular_b = SpecularBrdf(roughness, float3(0.0f, 0.0f, 0.0f));
 
-    const uint SAMPLE_COUNT = 1024u;
-    for(uint ix = 0; ix < SAMPLE_COUNT; ++ix)
+    const uint32_t SAMPLE_COUNT = 1024u;
+    for(uint32_t ix = 0; ix < SAMPLE_COUNT; ++ix)
     {
         float2 random = hammersley(ix, SAMPLE_COUNT);
         BrdfSample sample_a = specular_a.sample(view_direction, random);

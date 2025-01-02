@@ -177,8 +177,8 @@ namespace shader_compile
         }
         diagnostics.setNull();
 
-        int entryPointIndex = 0;
-        int targetIndex = 0;
+        int32_t entryPointIndex = 0;
+        int32_t targetIndex = 0;
         Slang::ComPtr<slang::IBlob> pKernelBlob;
         if (SLANG_FAILED(linked_program->getEntryPointCode(0, 0, pKernelBlob.writeRef(), diagnostics.writeRef())) || diagnostics)
         {

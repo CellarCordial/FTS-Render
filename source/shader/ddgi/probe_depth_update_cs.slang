@@ -5,12 +5,12 @@
 
 cbuffer pass_constants : register(b0)
 {
-    uint dwDepthTextureRes;
-    uint dwRayNumPerProbe;
+    uint32_t dwDepthTextureRes;
+    uint32_t dwRayNumPerProbe;
     float fHistoryAlpha;
     float fHistoryGamma;
 
-    uint bFirstFrame;
+    uint32_t bFirstFrame;
     float fDepthSharpness;
 };
 
@@ -25,16 +25,16 @@ RWTexture2D<float2> gOutputDepthTexture : register(u0);
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
-void compute_shader(uint3 ThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID, uint dwGroupIndex : SV_GroupIndex)
+void compute_shader(uint3 ThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID, uint32_t dwGroupIndex : SV_GroupIndex)
 {
     if (any(ThreadID.xy >= dwDepthTextureRes)) return;
     uint2 StandaloneDepthUV = ThreadID.xy + 1;
     uint2 DepthUV = GroupID.xy * (dwDepthTextureRes + 2) + StandaloneDepthUV; 
 
-    uint dwProbeIndex = dwGroupIndex;
+    uint32_t dwProbeIndex = dwGroupIndex;
     float fWeightSum = 0.0f;
     float2 DepthSum = float2(0.0f, 0.0f);
-    for (uint ix = 0; ix < dwRayNumPerProbe; ++ix)
+    for (uint32_t ix = 0; ix < dwRayNumPerProbe; ++ix)
     {
         uint2 uv = uint2(ix, dwProbeIndex);
         float4 RayDirectionDistance = gDirectionDistanceTexture[uv];

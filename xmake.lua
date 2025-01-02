@@ -58,9 +58,9 @@ target("FTS-Render")
         "$(projectdir)/external/slang/lib",
         "$(projectdir)/external/gklib/lib",
         "$(projectdir)/external/metis/lib",
+        "$(projectdir)/external/spdlog/lib",
         "$(projectdir)/external/assimp/lib",
         "$(projectdir)/external/minizip/lib",
-        "$(projectdir)/external/spdlog/build/Release",
         "$(projectdir)/external/glfw-3.4.bin.WIN64/lib-static-ucrt"
     )
     add_links(

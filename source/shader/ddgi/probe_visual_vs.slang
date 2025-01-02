@@ -18,11 +18,11 @@ struct VertexOutput
 {
     float4 sv_position  : SV_Position;
     float3 normal     : NORMAL;
-    uint dwProbeIndex : PROBE_INDEX;
+    uint32_t dwProbeIndex : PROBE_INDEX;
 };
 
 [shader("vertex")]
-VertexOutput vertex_shader(VertexInput In, uint dwProbeIndex : SV_InstanceID)
+VertexOutput vertex_shader(VertexInput In, uint32_t dwProbeIndex : SV_InstanceID)
 {
     VertexOutput Out;
 

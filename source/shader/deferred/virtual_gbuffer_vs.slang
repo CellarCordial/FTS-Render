@@ -7,8 +7,8 @@ cbuffer pass_constants : register(b0)
     float4x4 view_matrix;
     float4x4 prev_view_matrix;
 
-    uint geometry_constant_index;
-    uint3 pad;
+    uint32_t view_mode;
+    uint32_t mip_level;
 };
 
 struct GeometryConstant
@@ -35,7 +35,7 @@ struct Cluster
 
     uint32_t mip_level;
     uint32_t group_id;
-    uint geometry_constant_index;
+    uint32_t geometry_constant_index;
 };
 
 struct Vertex
@@ -54,6 +54,7 @@ StructuredBuffer<uint32_t> index_buffer : register(t8);
 
 struct VertexOutput
 {
+    float3 color : COLOR;
     float4 sv_position : SV_Position;
 
     float3 world_space_position : WORLD_POSITION;
@@ -67,11 +68,14 @@ struct VertexOutput
 };
 
 [shader("vertex")]
-VertexOutput vertex_shader(uint instance_id : SV_InstanceID, uint vertex_id : SV_VertexID)
+VertexOutput vertex_shader(uint32_t instance_id: SV_InstanceID, uint32_t vertex_index : SV_VertexID)
 {
-    GeometryConstant constant = geometry_constant_buffer[geometry_constant_index];
-
     VertexOutput output;
+
+    Cluster cluster = cluster_buffer[instance_id];
+    uint32_t triangle_index = vertex_index / 3;
+    
+    // GeometryConstant constant = geometry_constant_buffer[geometry_constant_index];
     // float4 world_pos = mul(float4(input.local_space_position, 1.0f), constant.world_matrix);
 
     // output.sv_position = mul(world_pos, view_proj);

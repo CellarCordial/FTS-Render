@@ -14,10 +14,10 @@ cbuffer gPassConstant : register(b1)
 {
     float3 sun_dir;          float sun_theta;
     float3 frustum_A;        float max_distance;
-    float3 frustum_B;        int per_slice_march_step_count;
+    float3 frustum_B;        int32_t per_slice_march_step_count;
     float3 frustum_C;        float atmos_eye_height;
-    float3 frustum_D;        uint enable_multi_scattering;
-    float3 camera_position;  uint enable_shadow;
+    float3 frustum_D;        uint32_t enable_multi_scattering;
+    float3 camera_position;  uint32_t enable_shadow;
     float world_scale;      float3 pad;
     float4x4 shadow_view_proj;
 };
@@ -44,7 +44,7 @@ float RelativeLuminance(float3 c)
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
 void compute_shader(uint3 thread_id : SV_DispatchThreadID)
 {
-    uint width, height, depth;
+    uint32_t width, height, depth;
     aerial_perspective_lut_texture.GetDimensions(width, height, depth);
 
     if (thread_id.x >= width || thread_id.y >= height) return;
@@ -76,11 +76,11 @@ void compute_shader(uint3 thread_id : SV_DispatchThreadID)
 
     float fRandom = frac(sin(dot(float2(u, v), float2(12.9898f, 78.233f) * 2.0f)) * 43758.5453f);
 
-    for (uint z = 0; z < depth; ++z)
+    for (uint32_t z = 0; z < depth; ++z)
     {
         float dt = (fEnd - fBegin) / per_slice_march_step_count;
         float t = fBegin;
-        for (uint ix = 0; ix < per_slice_march_step_count; ++ix)
+        for (uint32_t ix = 0; ix < per_slice_march_step_count; ++ix)
         {
             float fNextT = t + dt;
             float fMidT = lerp(t, fNextT, fRandom);
