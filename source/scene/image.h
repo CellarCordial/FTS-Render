@@ -33,8 +33,6 @@ namespace fantasy
         
         static Image load_image_from_file(const char* file_name);
     };
-
-
 }
 
 

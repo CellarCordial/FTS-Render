@@ -137,4 +137,15 @@ uint32_t hash(uint32_t x)
     return x;
 }
 
+uint32_t murmur_mix(uint32_t hash)
+{
+    hash ^= hash >> 16;
+    hash *= 0x85ebca6b;
+    hash ^= hash >> 13;
+    hash *= 0xc2b2ae35;
+    hash ^= hash >> 16;
+    return hash;
+}
+
+
 #endif

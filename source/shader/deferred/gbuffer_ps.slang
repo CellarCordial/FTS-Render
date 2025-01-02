@@ -1,5 +1,6 @@
-#include "../octahedral.slang"
 #include "../gbuffer.slang"
+#include "../octahedral.slang"
+
 
 cbuffer pass_constants : register(b0)
 {
@@ -10,18 +11,6 @@ cbuffer pass_constants : register(b0)
 
     uint32_t geometry_constant_index;
     uint3 pad;
-};
-
-struct GeometryConstant
-{
-    float4x4 world_matrix;
-    float4x4 inv_trans_world;
-
-    float4 diffuse;
-    float4 emissive;
-    float roughness;
-    float metallic;
-    float occlusion;
 };
 
 SamplerState sampler0 : register(s0);

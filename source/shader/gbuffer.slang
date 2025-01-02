@@ -4,6 +4,18 @@
 #include "ray_cone.slang"
 #include "../math_helper.slang"
 
+struct GeometryConstant
+{
+    float4x4 world_matrix;
+    float4x4 inv_trans_world;
+
+    float4 diffuse;
+    float4 emissive;
+    float roughness;
+    float metallic;
+    float occlusion;
+};
+
 float3 calculate_normal(float3 texture_normal, float3 vertex_normal, float3 vertex_tangent)
 {
     float3 unpacked_normal = texture_normal * 2.0f - 1.0f;
