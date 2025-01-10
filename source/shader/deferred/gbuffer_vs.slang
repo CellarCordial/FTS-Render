@@ -1,4 +1,5 @@
 #include "../octahedral.slang"
+#include "../gbuffer.slang"
 
 cbuffer pass_constants : register(b0)
 {
@@ -11,19 +12,9 @@ cbuffer pass_constants : register(b0)
     uint3 pad;
 };
 
-struct GeometryConstant
-{
-    float4x4 world_matrix;
-    float4x4 inv_trans_world;
 
-    float4 diffuse;
-    float4 emissive;
-    float roughness;
-    float metallic;
-    float occlusion;
-};
 
-StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t5);
+StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t6);
 
 struct VertexInput
 {

@@ -164,7 +164,7 @@ namespace fantasy
 
     bool DX12BindingLayout::initialize()
     {
-        ResourceViewType current_resource_type = ResourceViewType(-1);
+        ResourceViewType current_resource_type = ResourceViewType::None;
         uint32_t current_slot = ~0u;
 
         D3D12_ROOT_CONSTANTS d3d12_root_constants = {};    // 只允许一个 PushConstants

@@ -66,7 +66,7 @@ namespace fantasy
 			BindingSetItemArray binding_set_items(4);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::ReprojectionPassConstant));
 			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("view_space_velocity_texture")));
-			binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("world_space_position_texture")));
+			binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
 			binding_set_items[3] = BindingSetItem::create_texture_uav(0, _reprojection_texture);
             ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
                 BindingSetDesc{ .binding_items = binding_set_items },

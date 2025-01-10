@@ -3,7 +3,7 @@
 
 struct ShadowRayPayload
 {
-    bool shadowed = true;
+    uint32_t shadowed = 1;
 };
 
 bool ray_tracing_if_shadowed(RaytracingAccelerationStructure accel_struct, RayDesc ray)
@@ -20,7 +20,7 @@ bool ray_tracing_if_shadowed(RaytracingAccelerationStructure accel_struct, RayDe
         payload
     );
 
-    return payload.shadowed;
+    return payload.shadowed == 1;
 }
 
 #endif 

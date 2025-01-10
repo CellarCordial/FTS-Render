@@ -4,7 +4,7 @@
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
 #include "../../scene/light.h"
-#include "../../scene/scene.h"
+#include "../../scene/geometry.h"
 #include <cstdint>
 #include <memory>
 
@@ -55,6 +55,7 @@ namespace fantasy
 			miss_desc.entry = "miss_shader";
 			ReturnIfFalse(_miss_shader = std::unique_ptr<Shader>(create_shader(miss_desc, miss_data.data(), miss_data.size())));
 		}
+		
 		// Texture.
 		{
 			ReturnIfFalse(_shadow_map_texture = std::shared_ptr<TextureInterface>(device->create_texture(
@@ -66,12 +67,22 @@ namespace fantasy
 				)
 			)));
 			cache->collect(_shadow_map_texture, ResourceType::Texture);
+
+			std::string image_path = std::string(PROJ_DIR) + "asset/image/BlueNoise.png";
+			_blue_noise_image = Image::load_image_from_file(image_path.c_str());
+			ReturnIfFalse(_blue_noise_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_shader_resource(
+					_blue_noise_image.width,
+					_blue_noise_image.height,
+					_blue_noise_image.format
+				)
+			)));
 		}
 
 		// Pipeline & Shader Table.
 		{
             ray_tracing::PipelineDesc pipeline_desc;
-            pipeline_desc.max_payload_size = sizeof(bool);
+            pipeline_desc.max_payload_size = sizeof(uint32_t);
             pipeline_desc.global_binding_layouts.push_back(_binding_layout.get());
             pipeline_desc.shader_descs.push_back(ray_tracing::ShaderDesc{ .shader = _ray_gen_shader.get() });
             pipeline_desc.shader_descs.push_back(ray_tracing::ShaderDesc{ .shader = _miss_shader.get() });
@@ -83,18 +94,13 @@ namespace fantasy
 
 		// Binding Set.
 		{
-			BindingSetItemArray binding_set_items(7);
-			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::RayTracingShadowMapPassConstant));
-			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("depth_texture")));
-			binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("blue_noise_texture")));
-			binding_set_items[3] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("world_space_normal_texture")));
-			binding_set_items[4] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("world_space_position_texture")));
-			binding_set_items[5] = BindingSetItem::create_accel_struct(4, _top_level_accel_struct);
-			binding_set_items[6] = BindingSetItem::create_texture_uav(0, _shadow_map_texture);
-			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
-				BindingSetDesc{ .binding_items = binding_set_items },
-				_binding_layout.get()
-			)));
+			_binding_set_items.resize(7);
+			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::RayTracingShadowMapPassConstant));
+			_binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("depth_texture")));
+			_binding_set_items[2] = BindingSetItem::create_texture_srv(1, _blue_noise_texture);
+			_binding_set_items[3] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("world_space_normal_texture")));
+			_binding_set_items[4] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
+			_binding_set_items[6] = BindingSetItem::create_texture_uav(0, _shadow_map_texture);
 		}
 
 		// Ray Tracing State.
@@ -112,6 +118,18 @@ namespace fantasy
 	bool RayTracingShadowMapPass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
         ReturnIfFalse(cmdlist->open());
+
+		if (!_writed_resource)
+		{
+			ReturnIfFalse(cmdlist->write_texture(
+				_blue_noise_texture.get(), 
+				0, 
+				0, 
+				_blue_noise_image.data.get(), 
+				_blue_noise_image.size / _blue_noise_image.height
+			));
+			_writed_resource = true;
+		}
 
         if (_update_vertex_buffer)
         {
@@ -138,11 +156,11 @@ namespace fantasy
             _top_level_accel_struct = std::shared_ptr<ray_tracing::AccelStructInterface>(device->create_accel_struct(tlas_desc));
             ReturnIfFalse(_top_level_accel_struct != nullptr);
             
-            cmdlist->build_bottom_level_accel_struct(
+            ReturnIfFalse(cmdlist->build_bottom_level_accel_struct(
                 _bottom_level_accel_struct.get(), 
                 _ray_tracing_geometry_descs.data(), 
                 _ray_tracing_geometry_descs.size()
-            );
+            ));
 
             _ray_tracing_instance_descs.emplace_back(ray_tracing::InstanceDesc{ .bottom_level_accel_struct = _bottom_level_accel_struct.get() });
 
@@ -151,6 +169,13 @@ namespace fantasy
                 _ray_tracing_instance_descs.data(), 
                 _ray_tracing_instance_descs.size()
             );
+
+			_binding_set.reset();
+			_binding_set_items[5] = BindingSetItem::create_accel_struct(4, _top_level_accel_struct);
+			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
+				BindingSetDesc{ .binding_items = _binding_set_items },
+				_binding_layout.get()
+			)));
         }
 
         _pass_constant.frame_index = static_cast<uint32_t>(cache->frame_index);

@@ -2,7 +2,6 @@
 #include "gbuffer.h"
 #include "../../shader/shader_compiler.h"
 #include "../../scene/camera.h"
-#include "../../scene/scene.h"
 #include "../../core/tools/check_cast.h"
 #include <cstdint>
 #include <memory>
@@ -21,15 +20,16 @@ namespace fantasy
 
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(8);
+			BindingLayoutItemArray binding_layout_items(9);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::GBufferPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(1);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(2);
 			binding_layout_items[4] = BindingLayoutItem::create_texture_srv(3);
 			binding_layout_items[5] = BindingLayoutItem::create_texture_srv(4);
-			binding_layout_items[6] = BindingLayoutItem::create_structured_buffer_srv(5);
-			binding_layout_items[7] = BindingLayoutItem::create_sampler(0);
+			binding_layout_items[6] = BindingLayoutItem::create_texture_srv(5);
+			binding_layout_items[7] = BindingLayoutItem::create_structured_buffer_srv(6);
+			binding_layout_items[8] = BindingLayoutItem::create_sampler(0);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -380,12 +380,16 @@ namespace fantasy
 					"geometry_vertex_buffer"
 				)
 			)));
+			cache->collect(_vertex_buffer, ResourceType::Buffer);
+
             ReturnIfFalse(_index_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
                 BufferDesc::create_index(
                     sizeof(uint32_t) * _indices.size(),
                     "geometry_index_buffer"
                 )
             )));
+			cache->collect(_index_buffer, ResourceType::Buffer);
+
 			ReturnIfFalse(_geometry_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_structured(
 					_geometry_constants.size() * sizeof(constant::GeometryConstant), 
@@ -413,7 +417,7 @@ namespace fantasy
 			{
 				auto& binding_set_item_array = binding_set_item_arrays[ix];
 				binding_set_item_array[Material::TextureType_Num + 1] = 
-					BindingSetItem::create_structured_buffer_srv(5, _geometry_constant_buffer);
+					BindingSetItem::create_structured_buffer_srv(6, _geometry_constant_buffer);
 				binding_set_item_array[Material::TextureType_Num + 2] = 
 					BindingSetItem::create_sampler(0, _anisotropic_warp_sampler);
 				ReturnIfFalse(_binding_sets[ix] = std::unique_ptr<BindingSetInterface>(device->create_binding_set(

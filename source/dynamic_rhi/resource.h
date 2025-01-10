@@ -392,7 +392,6 @@ namespace fantasy
         bool is_shader_binding_table = false;
         bool is_accel_struct_storage = false;
 
-
         bool is_virtual = false;
         
         ResourceStates initial_state = ResourceStates::Common;
@@ -417,6 +416,7 @@ namespace fantasy
             BufferDesc ret;
             ret.is_vertex_buffer = true;
             ret.byte_size = byte_size;
+            ret.format = Format::RGB32_FLOAT;
             ret.initial_state = ResourceStates::VertexBuffer;
             ret.name = name;
             return ret;
@@ -427,6 +427,7 @@ namespace fantasy
             BufferDesc ret;
             ret.is_index_buffer = true;
             ret.byte_size = byte_size;
+            ret.format = Format::R32_UINT;
             ret.initial_state = ResourceStates::IndexBuffer;
             ret.name = name;
             return ret;

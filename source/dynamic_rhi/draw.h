@@ -78,7 +78,7 @@ namespace fantasy
             return ret;
         } 
     };
-
+    
     using PipelineStateBindingSetArray = StackArray<BindingSetInterface*, MAX_BINDING_LAYOUTS>;
 
     struct GraphicsState

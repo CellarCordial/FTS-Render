@@ -165,9 +165,14 @@ namespace fantasy
     {
         _context.device = _desc.d3d12_device;
 
-        bool option5 = false;
-        ReturnIfFalse(_context.device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS5, &option5, sizeof(bool)));
-        if (option5) _desc.d3d12_device->QueryInterface(_context.device5.GetAddressOf());
+        D3D12_FEATURE_DATA_D3D12_OPTIONS5 feature_support_data{};
+        _context.device->CheckFeatureSupport(
+            D3D12_FEATURE_D3D12_OPTIONS5, 
+            &feature_support_data, 
+            sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS5)
+        );
+        if (feature_support_data.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED) 
+            _desc.d3d12_device->QueryInterface(_context.device5.GetAddressOf());
 
         if (_desc.d3d12_graphics_cmd_queue) _cmd_queues[static_cast<uint8_t>(CommandQueueType::Graphics)] = std::make_unique<DX12CommandQueue>(_context, _desc.d3d12_graphics_cmd_queue);
         if (_desc.d3d12_compute_cmd_queue) _cmd_queues[static_cast<uint8_t>(CommandQueueType::Compute)] = std::make_unique<DX12CommandQueue>(_context, _desc.d3d12_compute_cmd_queue);

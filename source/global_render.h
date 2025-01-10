@@ -24,7 +24,7 @@ namespace fantasy
 		bool run();
 
 	private:
-		bool D3D12Init();
+		bool d3d12_init();
 
 		bool create_samplers();
 

@@ -127,13 +127,14 @@ namespace fantasy
     {
         ReturnIfFalse(render_graph != nullptr);
 
-		RenderPassInterface* gbuffer_pass = render_graph->add_pass(std::make_shared<GBufferPass>());
 		RenderPassInterface* brdf_lut_pass = render_graph->add_pass(std::make_shared<BrdfLUTPass>());
-		// RenderPassInterface* ray_tracing_shadow_map_pass = render_graph->add_pass(std::make_shared<RayTracingShadowMapPass>());
+
+		RenderPassInterface* gbuffer_pass = render_graph->add_pass(std::make_shared<GBufferPass>());
+		RenderPassInterface* ray_tracing_shadow_map_pass = render_graph->add_pass(std::make_shared<RayTracingShadowMapPass>());
 		RenderPassInterface* test_pass = render_graph->add_pass(std::make_shared<RestirTestPass>());
 
-		// gbuffer_pass->precede(ray_tracing_shadow_map_pass);
-		// ray_tracing_shadow_map_pass->precede(test_pass);
+		gbuffer_pass->precede(ray_tracing_shadow_map_pass);
+		ray_tracing_shadow_map_pass->precede(test_pass);
 
 
 		_last_pass= test_pass;

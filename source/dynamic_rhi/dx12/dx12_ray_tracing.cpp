@@ -24,7 +24,7 @@ namespace fantasy
 		DX12GeometryDesc DX12AccelStruct::convert_geometry_desc(const GeometryDesc& geometry_desc, D3D12_GPU_VIRTUAL_ADDRESS gpu_address)
 		{
 			DX12GeometryDesc ret;
-			ret.Flags = convert_geometry_flags(geometry_desc.flags);
+			ret.flags = convert_geometry_flags(geometry_desc.flags);
 			if (geometry_desc.type == GeometryType::Triangle)
 			{
 				ret.type = D3D12_RAYTRACING_GEOMETRY_TYPE_TRIANGLES;
@@ -95,30 +95,30 @@ namespace fantasy
 		D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO DX12AccelStruct::get_accel_struct_prebuild_info()
 		{
 			DX12AccelStructBuildInputs dx12_accle_struct_bulid_inputs;
-			dx12_accle_struct_bulid_inputs.Flags = convert_accel_struct_build_flags(_desc.flags);
+			dx12_accle_struct_bulid_inputs.flags = convert_accel_struct_build_flags(_desc.flags);
 			if (_desc.is_top_level)
 			{
 				dx12_accle_struct_bulid_inputs.type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-				dx12_accle_struct_bulid_inputs.InstanceAddress = D3D12_GPU_VIRTUAL_ADDRESS{0};
-				dx12_accle_struct_bulid_inputs.dwDescNum = _desc.top_level_max_instance_num;
-				dx12_accle_struct_bulid_inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+				dx12_accle_struct_bulid_inputs.instance_address = D3D12_GPU_VIRTUAL_ADDRESS{0};
+				dx12_accle_struct_bulid_inputs.desc_num = _desc.top_level_max_instance_num;
+				dx12_accle_struct_bulid_inputs.descs_layout = D3D12_ELEMENTS_LAYOUT_ARRAY;
 			}
 			else
 			{
 				dx12_accle_struct_bulid_inputs.type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-				dx12_accle_struct_bulid_inputs.dwDescNum = static_cast<uint32_t>(_desc.bottom_level_geometry_descs.size());
-				dx12_accle_struct_bulid_inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS;
-				dx12_accle_struct_bulid_inputs.GeometryDescs.resize(_desc.bottom_level_geometry_descs.size());
+				dx12_accle_struct_bulid_inputs.desc_num = static_cast<uint32_t>(_desc.bottom_level_geometry_descs.size());
+				dx12_accle_struct_bulid_inputs.descs_layout = D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS;
 				dx12_accle_struct_bulid_inputs.geometry_descs.resize(_desc.bottom_level_geometry_descs.size());
-				for (uint32_t ix = 0; ix < static_cast<uint32_t>(dx12_accle_struct_bulid_inputs.GeometryDescs.size()); ++ix)
+				dx12_accle_struct_bulid_inputs.geometry_desc_ptrs.resize(_desc.bottom_level_geometry_descs.size());
+				for (uint32_t ix = 0; ix < static_cast<uint32_t>(dx12_accle_struct_bulid_inputs.geometry_descs.size()); ++ix)
 				{
-					dx12_accle_struct_bulid_inputs.geometry_descs[ix] = dx12_accle_struct_bulid_inputs.GeometryDescs.data() + ix;
+					dx12_accle_struct_bulid_inputs.geometry_desc_ptrs[ix] = dx12_accle_struct_bulid_inputs.geometry_descs.data() + ix;
 				}
-				dx12_accle_struct_bulid_inputs.cpcpGeometryDesc = dx12_accle_struct_bulid_inputs.geometry_descs.data();
+				dx12_accle_struct_bulid_inputs.cpcpGeometryDesc = dx12_accle_struct_bulid_inputs.geometry_desc_ptrs.data();
 
 				for (uint32_t ix = 0; ix < static_cast<uint32_t>(_desc.bottom_level_geometry_descs.size()); ++ix)
 				{
-					auto& dst_geometry_desc = dx12_accle_struct_bulid_inputs.GeometryDescs[ix];
+					auto& dst_geometry_desc = dx12_accle_struct_bulid_inputs.geometry_descs[ix];
 					const auto& geometry_desc = _desc.bottom_level_geometry_descs[ix];
 
 					dst_geometry_desc = convert_geometry_desc(

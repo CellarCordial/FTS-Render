@@ -5,5 +5,5 @@
 [shader("miss")]
 void miss_shader(inout ShadowRayPayload payload: SV_RayPayload)
 {
-    payload.shadowed = false;
+    payload.shadowed = 0;
 }

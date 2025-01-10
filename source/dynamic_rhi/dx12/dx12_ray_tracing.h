@@ -31,7 +31,7 @@ namespace fantasy
 		struct DX12GeometryDesc
 		{
             D3D12_RAYTRACING_GEOMETRY_TYPE type;
-            D3D12_RAYTRACING_GEOMETRY_FLAGS Flags;
+            D3D12_RAYTRACING_GEOMETRY_FLAGS flags;
             union
             {
                 D3D12_RAYTRACING_GEOMETRY_TRIANGLES_DESC triangles;
@@ -42,27 +42,27 @@ namespace fantasy
 		struct DX12AccelStructBuildInputs
 		{
 			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE type;
-			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS Flags;
-			uint32_t dwDescNum;
-			D3D12_ELEMENTS_LAYOUT DescsLayout;
+			D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAGS flags;
+			uint32_t desc_num;
+			D3D12_ELEMENTS_LAYOUT descs_layout;
 
 			union 
 			{
-				D3D12_GPU_VIRTUAL_ADDRESS InstanceAddress;
+				D3D12_GPU_VIRTUAL_ADDRESS instance_address;
 				const DX12GeometryDesc* const* cpcpGeometryDesc;
 			};
 
-			std::vector<DX12GeometryDesc> GeometryDescs;
-			std::vector<DX12GeometryDesc*> geometry_descs;
+			std::vector<DX12GeometryDesc> geometry_descs;
+			std::vector<DX12GeometryDesc*> geometry_desc_ptrs;
 
 			D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS Convert() const
 			{
 				return D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS{
 					.Type = type,
-					.Flags = Flags,
-					.NumDescs = dwDescNum,
-					.DescsLayout = DescsLayout,
-					.InstanceDescs = InstanceAddress
+					.Flags = flags,
+					.NumDescs = desc_num,
+					.DescsLayout = descs_layout,
+					.InstanceDescs = instance_address
 				};
 			}
 		};

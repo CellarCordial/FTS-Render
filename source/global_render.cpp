@@ -25,7 +25,7 @@ namespace fantasy
 	{
 		// _atmosphere_test.setup(_render_graph.get()); _atmosphere_test.get_last_pass()->precede(_gui_pass.get());
 		// _sdf_test.setup(_render_graph.get()); _sdf_test.get_last_pass()->precede(_gui_pass.get());
-		// _restir_test.setup(_render_graph.get()); _restir_test.get_last_pass()->precede(_gui_pass.get());
+		_restir_test.setup(_render_graph.get()); _restir_test.get_last_pass()->precede(_gui_pass.get());
 
 		ReturnIfFalse(_render_graph->compile());
 		while (!glfwWindowShouldClose(_window))
@@ -59,9 +59,16 @@ namespace fantasy
 		parallel::initialize();
 
 		_world.register_system(new SceneSystem());
-		_world.create_entity()->assign<Camera>(_window);
+		auto* camera = _world.create_entity()->assign<Camera>(_window);
+        gui::add(
+            [camera]()
+            {
+				ImGui::SliderInt("Camera Speed", &camera->speed, 1, 10);
+                ImGui::Separator();
+            }
+        );
 
-		ReturnIfFalse(D3D12Init());
+		ReturnIfFalse(d3d12_init());
 		ReturnIfFalse(create_samplers());
 
 		_gui_pass = std::make_shared<GuiPass>();
@@ -71,7 +78,7 @@ namespace fantasy
 		return true;
 	}
 
-	bool GlobalRender::D3D12Init()
+	bool GlobalRender::d3d12_init()
 	{
 #ifdef DEBUG
 		{

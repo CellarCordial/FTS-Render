@@ -1,6 +1,5 @@
 #include "surface.h"
 #include "matrix.h"
-#include "../tools/log.h"
 #include "vector.h"
 
 namespace fantasy 
@@ -30,7 +29,7 @@ namespace fantasy
         );
 
         double4x4 inv;
-        ReturnIfFalse(invertible(m, inv));
+        if (!invertible(m, inv)) return false;
         vertex = { 
             static_cast<float>(inv[3][0]), 
             static_cast<float>(inv[3][1]), 

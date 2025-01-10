@@ -1,5 +1,6 @@
-#include "../octahedral.slang"
 #include "../gbuffer.slang"
+#include "../octahedral.slang"
+
 
 cbuffer pass_constants : register(b0)
 {
@@ -12,26 +13,17 @@ cbuffer pass_constants : register(b0)
     uint3 pad;
 };
 
-struct GeometryConstant
-{
-    float4x4 world_matrix;
-    float4x4 inv_trans_world;
-
-    float4 diffuse;
-    float4 emissive;
-    float roughness;
-    float metallic;
-    float occlusion;
-};
-
 SamplerState sampler0 : register(s0);
 
-Texture2D diffuse_texture           : register(t0);
-Texture2D normal_texture            : register(t1);
-Texture2D emissive_texture          : register(t2);
-Texture2D occlusion_texture         : register(t3);
-Texture2D metallic_roughness_texture : register(t4);
-StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t5);
+Texture2D<float4> base_color_texture : register(t0);
+Texture2D<float3> normal_texture : register(t1);
+Texture2D<float> metallic_texture : register(t2);
+Texture2D<float> roughness_texture : register(t3);
+Texture2D<float4> emissive_texture : register(t4);
+Texture2D<float> occlusion_texture : register(t5);
+
+StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t6);
+
 
 struct VertexOutput
 {
@@ -72,13 +64,12 @@ PixelOutput pixel_shader(VertexOutput input)
     );
     output.world_space_normal = float4(normal, 1.0f);
 
-    output.base_color = diffuse_texture.Sample(sampler0, input.uv) * constant.diffuse;
+    output.base_color = base_color_texture.Sample(sampler0, input.uv) * constant.diffuse;
 
-    float4 metallic_roughness = metallic_roughness_texture.Sample(sampler0, input.uv);
-    metallic_roughness.r *= constant.metallic;
-    metallic_roughness.g *= constant.roughness;
-    float fOcclusion = occlusion_texture.Sample(sampler0, input.uv).r * constant.occlusion;
-    output.pbr = float4(metallic_roughness.rg, fOcclusion, 1.0f);
+    float metallic = metallic_texture.Sample(sampler0, input.uv);
+    float roughness = roughness_texture.Sample(sampler0, input.uv);
+    float occlusion = occlusion_texture.Sample(sampler0, input.uv).r * constant.occlusion;
+    output.pbr = float4(metallic, roughness, occlusion, 1.0f);
 
     output.emmisive = emissive_texture.Sample(sampler0, input.uv) * constant.emissive;
 

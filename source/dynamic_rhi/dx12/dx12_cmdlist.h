@@ -179,13 +179,27 @@ namespace fantasy
         bool clear_buffer_uint(BufferInterface* buffer, uint32_t clear_value) override;
         bool copy_buffer(BufferInterface* dst, uint64_t dst_byte_offset, BufferInterface* src, uint64_t src_byte_offset, uint64_t data_byte_size) override;
         
+		bool build_bottom_level_accel_struct(
+            ray_tracing::AccelStructInterface* accel_struct,
+            const ray_tracing::GeometryDesc* geometry_descs,
+            uint32_t geometry_desc_count
+        ) override;
+		bool build_top_level_accel_struct(
+            ray_tracing::AccelStructInterface* accel_struct, 
+            const ray_tracing::InstanceDesc* instance_descs, 
+            uint32_t instance_count
+        ) override;
+        
         bool set_push_constants(const void* data, uint64_t byte_size) override;
+		bool set_accel_struct_state(ray_tracing::AccelStructInterface* accel_struct, ResourceStates state) override;
         bool set_graphics_state(const GraphicsState& state) override;
         bool set_compute_state(const ComputeState& state) override;
+        bool set_ray_tracing_state(const ray_tracing::PipelineState& state) override;
         
         bool draw(const DrawArguments& arguments) override;
         bool draw_indexed(const DrawArguments& arguments) override;
         bool dispatch(uint32_t thread_group_num_x, uint32_t thread_group_num_y = 1, uint32_t thread_group_num_z = 1) override;
+		bool dispatch_rays(const ray_tracing::DispatchRaysArguments& arguments) override;
         
         bool begin_timer_query(TimerQueryInterface* query) override;
         bool end_timer_query(TimerQueryInterface* query) override;
@@ -207,23 +221,6 @@ namespace fantasy
 		DeviceInterface* get_deivce() override;
 		CommandListDesc get_desc() override;
         void* get_native_object() override;
-
-        bool set_ray_tracing_state(const ray_tracing::PipelineState& state) override;
-		bool dispatch_rays(const ray_tracing::DispatchRaysArguments& arguments) override;
-
-		bool build_bottom_level_accel_struct(
-            ray_tracing::AccelStructInterface* accel_struct,
-            const ray_tracing::GeometryDesc* geometry_descs,
-            uint32_t geometry_desc_count
-        ) override;
-		bool build_top_level_accel_struct(
-            ray_tracing::AccelStructInterface* accel_struct, 
-            const ray_tracing::InstanceDesc* instance_descs, 
-            uint32_t instance_count
-        ) override;
-
-		bool set_accel_struct_state(ray_tracing::AccelStructInterface* accel_struct, ResourceStates state) override;
-
 
         ray_tracing::DX12ShaderTableState* get_shaderTableState(ray_tracing::ShaderTableInterface* shader_table);
 
@@ -275,8 +272,10 @@ namespace fantasy
         DeviceInterface* _device;
         DX12CommandQueue* _cmd_queue;
         DX12UploadManager _upload_manager;
+        DX12UploadManager _dx12_scratch_manager;
 
         inline static ResourceStateTracker _resource_state_tracker;
+        std::unordered_map<ray_tracing::ShaderTableInterface*, std::unique_ptr<ray_tracing::DX12ShaderTableState>> _shader_table_states;
 
         CommandListDesc _desc;
 
@@ -287,17 +286,12 @@ namespace fantasy
 
     
         // Cache
-
         GraphicsState _current_graphics_state;
         ComputeState _current_compute_state;
+        ray_tracing::PipelineState _current_ray_tracing_state;
         bool _current_graphics_state_valid = false;
         bool _current_compute_state_valid = false;
-
-        // Ray tracing
-        DX12UploadManager _dx12_scratch_manager;
-        ray_tracing::PipelineState _current_ray_tracing_state;
         bool _current_ray_tracing_state_valid = false;
-        std::unordered_map<ray_tracing::ShaderTableInterface*, std::unique_ptr<ray_tracing::DX12ShaderTableState>> _shader_table_states;
 
 
         ID3D12DescriptorHeap* _current_srv_etc_heap = nullptr;

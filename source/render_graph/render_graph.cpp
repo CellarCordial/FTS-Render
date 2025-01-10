@@ -1,5 +1,7 @@
 #include "render_graph.h"
+#include "render_pass.h"
 #include "render_resource_cache.h"
+#include <cstdint>
 #include <imgui.h>
 
 #include <d3d12.h>
@@ -227,6 +229,8 @@ namespace fantasy
 
         for (uint32_t ix = 0; ix < _cmdlists.size(); ++ix)
         {
+			bool is_feedback_pass = (_passes[ix]->type & RenderPassType::Feedback) == RenderPassType::Feedback;
+
 			if ((_passes[ix]->type & RenderPassType::Graphics) == RenderPassType::Graphics)
 			{
 				if ((_pass_async_types[ix] & PassAsyncType::Wait) == PassAsyncType::Wait)
@@ -240,15 +244,33 @@ namespace fantasy
 
 				graphics_cmdlists.emplace_back(_cmdlists[ix].get());
 
-				if ((_pass_async_types[ix] & PassAsyncType::Signal) == PassAsyncType::Signal)
+				if ((_pass_async_types[ix] & PassAsyncType::Signal) == PassAsyncType::Signal || is_feedback_pass)
 				{
 					_compute_wait_value = _device->execute_command_lists(
 						graphics_cmdlists.data(),
 						graphics_cmdlists.size(),
 						CommandQueueType::Graphics
 					);
-					ReturnIfFalse(_graphics_wait_value != INVALID_SIZE_64);
+					ReturnIfFalse(_compute_wait_value != INVALID_SIZE_64);
 					graphics_cmdlists.clear();
+
+					if (is_feedback_pass)
+					{
+						_device->wait_for_idle();
+            			ReturnIfFalse(_passes[ix]->feedback(_cmdlists[ix].get()));
+
+						graphics_cmdlists.emplace_back(_cmdlists[ix].get());
+						_compute_wait_value = _device->execute_command_lists(
+							graphics_cmdlists.data(),
+							graphics_cmdlists.size(),
+							CommandQueueType::Graphics
+						);
+
+						ReturnIfFalse(_compute_wait_value != INVALID_SIZE_64);
+						graphics_cmdlists.clear();
+						
+						_device->wait_for_idle();
+					}
 				}
 			}
 			else if ((_passes[ix]->type & RenderPassType::Compute) == RenderPassType::Compute)
@@ -264,7 +286,7 @@ namespace fantasy
 
 				compute_cmdlists.emplace_back(_cmdlists[ix].get());
 
-				if ((_pass_async_types[ix] & PassAsyncType::Signal) == PassAsyncType::Signal)
+				if ((_pass_async_types[ix] & PassAsyncType::Signal) == PassAsyncType::Signal || is_feedback_pass)
 				{
 					_graphics_wait_value = _device->execute_command_lists(
 						compute_cmdlists.data(),
@@ -273,6 +295,24 @@ namespace fantasy
 					);
 					ReturnIfFalse(_graphics_wait_value != INVALID_SIZE_64);
 					compute_cmdlists.clear();
+
+					if (is_feedback_pass)
+					{
+						_device->wait_for_idle();
+            			ReturnIfFalse(_passes[ix]->feedback(_cmdlists[ix].get()));
+
+						compute_cmdlists.emplace_back(_cmdlists[ix].get());
+						_graphics_wait_value = _device->execute_command_lists(
+							compute_cmdlists.data(),
+							compute_cmdlists.size(),
+							CommandQueueType::Compute
+						);
+
+						ReturnIfFalse(_graphics_wait_value != INVALID_SIZE_64);
+						compute_cmdlists.clear();
+
+						_device->wait_for_idle();
+					}
 				}
 			}
 		}

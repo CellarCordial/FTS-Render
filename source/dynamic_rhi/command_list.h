@@ -104,10 +104,23 @@ namespace fantasy
             uint64_t src_byte_offset,
             uint64_t data_byte_size
         ) = 0;
+        
+		virtual bool build_bottom_level_accel_struct(
+            ray_tracing::AccelStructInterface* accel_struct,
+            const ray_tracing::GeometryDesc* geometry_descs,
+            uint32_t geometry_desc_count
+        ) = 0;
+		virtual bool build_top_level_accel_struct(
+            ray_tracing::AccelStructInterface* accel_struct, 
+            const ray_tracing::InstanceDesc* instance_descs, 
+            uint32_t instance_count
+        ) = 0;
 
         virtual bool set_push_constants(const void* data, uint64_t byte_size) = 0;
+		virtual bool set_accel_struct_state(ray_tracing::AccelStructInterface* accel_struct, ResourceStates state) = 0;
         virtual bool set_graphics_state(const GraphicsState& state) = 0;
         virtual bool set_compute_state(const ComputeState& state) = 0;
+		virtual bool set_ray_tracing_state(const ray_tracing::PipelineState& state) = 0;
         
         virtual bool draw(const DrawArguments& arguments) = 0;
         virtual bool draw_indexed(const DrawArguments& arguments) = 0;
@@ -116,6 +129,7 @@ namespace fantasy
             uint32_t thread_group_num_y = 1, 
             uint32_t thread_group_num_z = 1
         ) = 0;
+		virtual bool dispatch_rays(const ray_tracing::DispatchRaysArguments& arguments) = 0;
         
         virtual bool begin_timer_query(TimerQueryInterface* query) = 0;
         virtual bool end_timer_query(TimerQueryInterface* query) = 0;
@@ -139,22 +153,6 @@ namespace fantasy
             uint32_t array_slice,
             uint32_t mip_level
         ) = 0;
-
-		virtual bool set_ray_tracing_state(const ray_tracing::PipelineState& state) = 0;
-		virtual bool dispatch_rays(const ray_tracing::DispatchRaysArguments& arguments) = 0;
-
-		virtual bool build_bottom_level_accel_struct(
-            ray_tracing::AccelStructInterface* accel_struct,
-            const ray_tracing::GeometryDesc* geometry_descs,
-            uint32_t geometry_desc_count
-        ) = 0;
-		virtual bool build_top_level_accel_struct(
-            ray_tracing::AccelStructInterface* accel_struct, 
-            const ray_tracing::InstanceDesc* instance_descs, 
-            uint32_t instance_count
-        ) = 0;
-
-		virtual bool set_accel_struct_state(ray_tracing::AccelStructInterface* accel_struct, ResourceStates state) = 0;
 
         virtual DeviceInterface* get_deivce() = 0;
         virtual CommandListDesc get_desc() = 0;

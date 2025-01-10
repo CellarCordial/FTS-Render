@@ -18,6 +18,7 @@
 #include "dx12_ray_tracing.h"
 #include "dx12_resource.h"
 
+
 namespace fantasy 
 {
     constexpr uint64_t version_submitted_flag = 0x8000000000000000;
@@ -166,24 +167,24 @@ namespace fantasy
         if (!_current_chunk)
         {
             uint64_t size_to_allocate = align(std::max(size, _default_chunk_size), DX12BufferChunk::size_alignment);
-            if (_max_memory_size > 0 && _allocated_memory_size + size_to_allocate <= _max_memory_size)
+            if (_max_memory_size > 0 && _allocated_memory_size + size_to_allocate > _max_memory_size)
             {
                 if (_dxr_scratch)
                 {
                     std::shared_ptr<DX12BufferChunk> best_chunk;
-                    for (const auto& crChunk : _chunk_pool)
+                    for (const auto& chunk : _chunk_pool)
                     {
-                        if (crChunk->buffer_size >= size_to_allocate)
+                        if (chunk->buffer_size >= size_to_allocate)
                         {
                             if (!best_chunk)
                             {
-                                best_chunk = crChunk;
+                                best_chunk = chunk;
                                 continue;
                             }
 
-                            bool chunk_submitted = version_get_submitted(crChunk->version);
+                            bool chunk_submitted = version_get_submitted(chunk->version);
                             bool best_chunk_submitted = version_get_submitted(best_chunk->version);
-                            uint64_t chunk_instance = version_get_instance(crChunk->version);
+                            uint64_t chunk_instance = version_get_instance(chunk->version);
                             uint64_t best_chunk_instance = version_get_instance(best_chunk->version);
 
                             if (
@@ -192,10 +193,10 @@ namespace fantasy
                                 chunk_instance < best_chunk_instance ||
                                 chunk_submitted == best_chunk_submitted && 
                                 chunk_instance == best_chunk_instance && 
-                                crChunk->buffer_size > best_chunk->buffer_size
+                                chunk->buffer_size > best_chunk->buffer_size
                             )
                             {
-                                best_chunk = crChunk;
+                                best_chunk = chunk;
                             }
                         }
                     }
@@ -256,7 +257,7 @@ namespace fantasy
         size = align(size, DX12BufferChunk::size_alignment);
 
         D3D12_HEAP_PROPERTIES d3d12_heap_properties{};
-        d3d12_heap_properties.Type = D3D12_HEAP_TYPE_UPLOAD;
+        d3d12_heap_properties.Type = _dxr_scratch ? D3D12_HEAP_TYPE_DEFAULT : D3D12_HEAP_TYPE_UPLOAD;
 
         D3D12_RESOURCE_DESC desc = {};
         desc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
@@ -266,19 +267,23 @@ namespace fantasy
         desc.MipLevels = 1;
         desc.SampleDesc.Count = 1;
         desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+        desc.Flags = _dxr_scratch ? D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS : D3D12_RESOURCE_FLAG_NONE;
 
         HRESULT res = _context->device->CreateCommittedResource(
             &d3d12_heap_properties,
             D3D12_HEAP_FLAG_NONE,
             &desc,
-            D3D12_RESOURCE_STATE_GENERIC_READ,
+            _dxr_scratch ? D3D12_RESOURCE_STATE_UNORDERED_ACCESS : D3D12_RESOURCE_STATE_GENERIC_READ,
             nullptr,
             IID_PPV_ARGS(ret->d3d12_buffer.GetAddressOf())
         );
         if (FAILED(res)) return nullptr;
 
-        res = ret->d3d12_buffer->Map(0, nullptr, &ret->cpu_address);
-        if (FAILED(res)) return nullptr;
+        if (!_dxr_scratch)
+        {
+            res = ret->d3d12_buffer->Map(0, nullptr, &ret->cpu_address);
+            if (FAILED(res)) return nullptr;
+        }
 
         ret->buffer_size = size;
         ret->gpu_address = ret->d3d12_buffer->GetGPUVirtualAddress();
@@ -973,6 +978,221 @@ namespace fantasy
         return true;
     }
     
+    bool DX12CommandList::build_bottom_level_accel_struct(
+        ray_tracing::AccelStructInterface* accel_struct,
+        const ray_tracing::GeometryDesc* geometry_descs,
+        uint32_t geometry_desc_count
+    )
+    {
+        auto& desc = check_cast<ray_tracing::DX12AccelStruct*>(accel_struct)->_desc;
+        ReturnIfFalse(!desc.is_top_level);
+
+        bool preform_update = (desc.flags & ray_tracing::AccelStructBuildFlags::PerformUpdate) != 0;
+
+        desc.bottom_level_geometry_descs.clear();
+        desc.bottom_level_geometry_descs.reserve(geometry_desc_count);
+        for (uint32_t ix = 0; ix < geometry_desc_count; ++ix)
+        {
+            const auto& geometry_desc = geometry_descs[ix];
+            desc.bottom_level_geometry_descs[ix] = geometry_desc;
+
+            if (geometry_desc.type == ray_tracing::GeometryType::Triangle)
+            {
+                ReturnIfFalse(set_buffer_state(geometry_desc.triangles.vertex_buffer.get(), ResourceStates::AccelStructBuildInput));
+                ReturnIfFalse(set_buffer_state(geometry_desc.triangles.index_buffer.get(), ResourceStates::AccelStructBuildInput));
+
+                _cmdlist_ref_instances->ref_resources.push_back(geometry_desc.triangles.vertex_buffer.get());
+                _cmdlist_ref_instances->ref_resources.push_back(geometry_desc.triangles.index_buffer.get());
+            }
+            else 
+            {
+                ReturnIfFalse(set_buffer_state(geometry_desc.aabbs.buffer.get(), ResourceStates::AccelStructBuildInput));
+                _cmdlist_ref_instances->ref_resources.push_back(geometry_desc.aabbs.buffer.get());
+            }
+
+        }
+
+        commit_barriers();
+
+        ray_tracing::DX12AccelStructBuildInputs dx12_build_inputs;
+        dx12_build_inputs.type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
+        dx12_build_inputs.flags = ray_tracing::convert_accel_struct_build_flags(desc.flags);
+        dx12_build_inputs.desc_num = static_cast<uint32_t>(desc.bottom_level_geometry_descs.size());
+        dx12_build_inputs.descs_layout = D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS;
+        dx12_build_inputs.geometry_descs.resize(desc.bottom_level_geometry_descs.size());
+        dx12_build_inputs.geometry_desc_ptrs.resize(desc.bottom_level_geometry_descs.size());
+        for (uint32_t ix = 0; ix < static_cast<uint32_t>(dx12_build_inputs.geometry_descs.size()); ++ix)
+        {
+            dx12_build_inputs.geometry_desc_ptrs[ix] = dx12_build_inputs.geometry_descs.data() + ix;
+        }
+        dx12_build_inputs.cpcpGeometryDesc = dx12_build_inputs.geometry_desc_ptrs.data();
+
+
+        dx12_build_inputs.geometry_descs.resize(geometry_desc_count);
+        for (uint32_t ix = 0; ix < static_cast<uint32_t>(desc.bottom_level_geometry_descs.size()); ++ix)
+        {
+            const auto& geometry_desc = desc.bottom_level_geometry_descs[ix];
+            D3D12_GPU_VIRTUAL_ADDRESS gpu_address = 0;
+            if (geometry_desc.use_transform)
+            {
+                uint8_t* cpu_address = nullptr;
+                ReturnIfFalse(!_upload_manager.suballocate_buffer(
+                    sizeof(float3x4), 
+                    nullptr, 
+                    nullptr, 
+                    &cpu_address, 
+                    &gpu_address, 
+                    _recording_version, 
+                    D3D12_RAYTRACING_TRANSFORM3X4_BYTE_ALIGNMENT
+                ));
+
+                memcpy(cpu_address, &geometry_desc.affine_matrix, sizeof(float3x4));
+            }
+
+            dx12_build_inputs.geometry_descs[ix] = ray_tracing::DX12AccelStruct::convert_geometry_desc(geometry_desc, gpu_address);
+        }
+
+        ray_tracing::DX12AccelStruct* dx12_accel_struct = check_cast<ray_tracing::DX12AccelStruct*>(accel_struct);
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO accel_struct_prebuild_info = dx12_accel_struct->get_accel_struct_prebuild_info();
+
+        ReturnIfFalse(accel_struct_prebuild_info.ResultDataMaxSizeInBytes <= dx12_accel_struct->get_buffer()->get_desc().byte_size);
+
+        uint64_t scratch_size = preform_update ? 
+            accel_struct_prebuild_info.UpdateScratchDataSizeInBytes :
+            accel_struct_prebuild_info.ScratchDataSizeInBytes;
+
+        D3D12_GPU_VIRTUAL_ADDRESS scratch_gpu_address{};
+        ReturnIfFalse(_dx12_scratch_manager.suballocate_buffer(
+            scratch_size, 
+            nullptr, 
+            nullptr, 
+            nullptr, 
+            &scratch_gpu_address, 
+            _recording_version, 
+            D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT,
+            active_cmdlist->d3d12_cmdlist.Get()
+        ));
+
+        set_buffer_state(dx12_accel_struct->get_buffer(), ResourceStates::AccelStructWrite);
+        commit_barriers();
+
+        D3D12_GPU_VIRTUAL_ADDRESS accel_struct_data_address = 
+            reinterpret_cast<ID3D12Resource*>(dx12_accel_struct->get_buffer()->get_native_object())->GetGPUVirtualAddress();
+
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC accel_struct_build_desc = {};
+        accel_struct_build_desc.Inputs = dx12_build_inputs.Convert();
+        accel_struct_build_desc.ScratchAccelerationStructureData = scratch_gpu_address;
+        accel_struct_build_desc.DestAccelerationStructureData = accel_struct_data_address;
+        accel_struct_build_desc.SourceAccelerationStructureData = preform_update ? accel_struct_data_address : 0;
+        active_cmdlist->d3d12_cmdlist4->BuildRaytracingAccelerationStructure(&accel_struct_build_desc, 0, nullptr);
+        _cmdlist_ref_instances->ref_resources.push_back(accel_struct);
+
+        return true;
+    }
+
+    bool DX12CommandList::build_top_level_accel_struct(
+        ray_tracing::AccelStructInterface* accel_struct, 
+        const ray_tracing::InstanceDesc* instance_descs, 
+        uint32_t instance_count
+    )
+    {
+        ray_tracing::DX12AccelStruct* dx12_accel_struct = check_cast<ray_tracing::DX12AccelStruct*>(accel_struct);
+        const auto& desc = dx12_accel_struct->get_desc();
+        ReturnIfFalse(desc.is_top_level);
+
+        BufferInterface* accel_struct_buffer = dx12_accel_struct->get_buffer();
+
+        dx12_accel_struct->d3d12_ray_tracing_instance_descs.resize(instance_count);
+        dx12_accel_struct->bottom_level_accel_structs.clear();
+        
+        for (uint32_t ix = 0; ix < instance_count; ++ix)
+        {
+            const auto& instance_desc = instance_descs[ix];
+            auto& d3d12_instance_desc = dx12_accel_struct->d3d12_ray_tracing_instance_descs[ix];
+
+            if (instance_desc.bottom_level_accel_struct)
+            {
+                dx12_accel_struct->bottom_level_accel_structs.emplace_back(instance_desc.bottom_level_accel_struct);
+                ray_tracing::DX12AccelStruct* dx12_blas = check_cast<ray_tracing::DX12AccelStruct*>(instance_desc.bottom_level_accel_struct);
+                BufferInterface* blas_buffer = dx12_blas->get_buffer();
+
+                d3d12_instance_desc = ray_tracing::convert_instance_desc(instance_desc);
+                d3d12_instance_desc.AccelerationStructure = 
+                    reinterpret_cast<ID3D12Resource*>(blas_buffer->get_native_object())->GetGPUVirtualAddress();
+                ReturnIfFalse(set_buffer_state(blas_buffer, ResourceStates::AccelStructBuildBlas));
+            }
+            else 
+            {
+                d3d12_instance_desc.AccelerationStructure = D3D12_GPU_VIRTUAL_ADDRESS{0};
+            }
+        }
+
+        uint64_t upload_size = sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * dx12_accel_struct->d3d12_ray_tracing_instance_descs.size();
+        D3D12_GPU_VIRTUAL_ADDRESS gpu_address{};
+        uint8_t* cpu_address = nullptr;
+        ReturnIfFalse(_upload_manager.suballocate_buffer(
+            upload_size, 
+            nullptr, 
+            nullptr, 
+            &cpu_address, 
+            &gpu_address, 
+            _recording_version, 
+            D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT
+        ));
+
+        memcpy(cpu_address, dx12_accel_struct->d3d12_ray_tracing_instance_descs.data(), upload_size);
+
+        ReturnIfFalse(set_buffer_state(accel_struct_buffer, ResourceStates::AccelStructWrite));
+        commit_barriers();
+
+        bool perform_update = (desc.flags & ray_tracing::AccelStructBuildFlags::AllowUpdate) != 0;
+
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS d3d12_accel_struct_inputs;
+        d3d12_accel_struct_inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
+        d3d12_accel_struct_inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
+        d3d12_accel_struct_inputs.InstanceDescs = gpu_address;
+        d3d12_accel_struct_inputs.NumDescs = instance_count;
+        d3d12_accel_struct_inputs.Flags = ray_tracing::convert_accel_struct_build_flags(desc.flags);
+        if (perform_update) d3d12_accel_struct_inputs.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
+
+        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO ASPreBuildInfo = {};
+        _context->device5->GetRaytracingAccelerationStructurePrebuildInfo(&d3d12_accel_struct_inputs, &ASPreBuildInfo);
+
+        ReturnIfFalse(ASPreBuildInfo.ResultDataMaxSizeInBytes <= accel_struct_buffer->get_desc().byte_size);
+
+        uint64_t stScratchSize = perform_update ? 
+            ASPreBuildInfo.UpdateScratchDataSizeInBytes :
+            ASPreBuildInfo.ScratchDataSizeInBytes;
+
+        D3D12_GPU_VIRTUAL_ADDRESS d3d12_scratch_gpu_address{};
+        ReturnIfFalse(_dx12_scratch_manager.suballocate_buffer(
+            stScratchSize, 
+            nullptr, 
+            nullptr, 
+            nullptr, 
+            &d3d12_scratch_gpu_address, 
+            _recording_version, 
+            D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT,
+            active_cmdlist->d3d12_cmdlist.Get()
+        ));
+
+
+        D3D12_GPU_VIRTUAL_ADDRESS d3d12_accel_struct_data_address = 
+            reinterpret_cast<ID3D12Resource*>(accel_struct_buffer->get_native_object())->GetGPUVirtualAddress();
+
+        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC d3d12_build_as_desc = {};
+        d3d12_build_as_desc.Inputs = d3d12_accel_struct_inputs;
+        d3d12_build_as_desc.ScratchAccelerationStructureData = d3d12_scratch_gpu_address;
+        d3d12_build_as_desc.DestAccelerationStructureData = d3d12_accel_struct_data_address;
+        d3d12_build_as_desc.SourceAccelerationStructureData = perform_update ? d3d12_accel_struct_data_address : 0;
+
+        active_cmdlist->d3d12_cmdlist4->BuildRaytracingAccelerationStructure(&d3d12_build_as_desc, 0, nullptr);
+        _cmdlist_ref_instances->ref_resources.push_back(accel_struct);
+
+        return true;
+    }
+
+    
     bool DX12CommandList::set_push_constants(const void* data, uint64_t byte_size)
     {
         DX12RootSignature* dx12_root_signature = nullptr;
@@ -1018,6 +1238,17 @@ namespace fantasy
             );
         }
 
+        return true;
+    }
+
+    bool DX12CommandList::set_accel_struct_state(ray_tracing::AccelStructInterface* accel_struct, ResourceStates state)
+    {
+        ReturnIfFalse(_resource_state_tracker.set_buffer_state(check_cast<ray_tracing::DX12AccelStruct*>(accel_struct)->get_buffer(), state));
+        
+        if (_cmdlist_ref_instances != nullptr)
+        {
+            _cmdlist_ref_instances->ref_resources.emplace_back(accel_struct);
+        }
         return true;
     }
 
@@ -1243,6 +1474,158 @@ namespace fantasy
         return true;
     }
 
+
+    bool DX12CommandList::set_ray_tracing_state(const ray_tracing::PipelineState& state)
+    {
+        ray_tracing::DX12ShaderTable* shader_table = check_cast<ray_tracing::DX12ShaderTable*>(state.shader_table);
+        ray_tracing::DX12Pipeline* pipeline = check_cast<ray_tracing::DX12Pipeline*>(shader_table->get_pipeline());
+        ray_tracing::DX12ShaderTableState* shader_table_state = get_shaderTableState(shader_table);
+
+        bool rebuild_shader_table = shader_table_state->committed_version != shader_table->_version ||
+            shader_table_state->d3d12_descriptor_heap_srv != _descriptor_heaps->shader_resource_heap.get_shader_visible_heap() ||
+            shader_table_state->d3d12_descriptor_heap_samplers != _descriptor_heaps->sampler_heap.get_shader_visible_heap();
+
+        if (rebuild_shader_table)
+        {
+            uint32_t entry_size = pipeline->get_shaderTableEntrySize();
+            uint8_t* cpu_address;
+            D3D12_GPU_VIRTUAL_ADDRESS gpu_address;
+            ReturnIfFalse(_upload_manager.suballocate_buffer(
+                entry_size * shader_table->get_entry_count(), 
+                nullptr, 
+                nullptr, 
+                &cpu_address, 
+                &gpu_address, 
+                _recording_version, 
+                D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT
+            ));
+
+            uint32_t entry_index = 0;
+
+            auto WriteEntry = [&](const ray_tracing::DX12ShaderTable::ShaderEntry& entry) 
+            {
+                memcpy(cpu_address, entry.shader_identifier, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
+
+                if (entry.binding_set)
+                {
+                    DX12BindingSet* bindingSet = check_cast<DX12BindingSet*>(entry.binding_set);
+                    DX12BindingLayout* layout = check_cast<DX12BindingLayout*>(bindingSet->get_layout());
+
+                    if (layout->descriptor_table_sampler_size > 0)
+                    {
+                        auto table = reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(
+                            cpu_address + 
+                            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 
+                            layout->root_param_sampler_index * sizeof(D3D12_GPU_DESCRIPTOR_HANDLE)
+                        );
+                        *table = _descriptor_heaps->sampler_heap.get_gpu_handle(bindingSet->descriptor_table_sampler_base_index);
+                    }
+
+                    if (layout->descriptor_table_srv_etc_size > 0)
+                    {
+                        auto table = reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(
+                            cpu_address + 
+                            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 
+                            layout->root_param_srv_etc_index * sizeof(D3D12_GPU_DESCRIPTOR_HANDLE)
+                        );
+                        *table = _descriptor_heaps->shader_resource_heap.get_gpu_handle(bindingSet->descriptor_table_srv_etc_base_index);
+                    }
+
+                    ReturnIfFalse(layout->descriptor_volatile_constant_buffers.empty());
+                }
+
+                cpu_address += entry_size;
+                gpu_address += entry_size;
+                entry_index += 1;
+
+                return true;
+            };
+
+            D3D12_DISPATCH_RAYS_DESC& d3d12_dispatch_rays_desc = shader_table_state->d3d12_dispatch_rays_desc;
+            memset(&d3d12_dispatch_rays_desc, 0, sizeof(D3D12_DISPATCH_RAYS_DESC));
+
+            d3d12_dispatch_rays_desc.RayGenerationShaderRecord.StartAddress = gpu_address;
+            d3d12_dispatch_rays_desc.RayGenerationShaderRecord.SizeInBytes = entry_size;
+            WriteEntry(shader_table->_raygen_shader);
+
+            if (!shader_table->_miss_shaders.empty())
+            {
+                d3d12_dispatch_rays_desc.MissShaderTable.StartAddress = gpu_address;
+                d3d12_dispatch_rays_desc.MissShaderTable.SizeInBytes = entry_size * static_cast<uint32_t>(shader_table->_miss_shaders.size());
+                d3d12_dispatch_rays_desc.MissShaderTable.StrideInBytes = shader_table->_miss_shaders.size() == 1 ? 0 : entry_size;
+                for (const auto& entry : shader_table->_miss_shaders) WriteEntry(entry);
+            }
+            if (!shader_table->_hit_groups.empty())
+            {
+                d3d12_dispatch_rays_desc.HitGroupTable.StartAddress = gpu_address;
+                d3d12_dispatch_rays_desc.HitGroupTable.SizeInBytes = entry_size * static_cast<uint32_t>(shader_table->_hit_groups.size());
+                d3d12_dispatch_rays_desc.HitGroupTable.StrideInBytes = shader_table->_hit_groups.size() == 1 ? 0 : entry_size;
+                for (const auto& entry : shader_table->_miss_shaders) WriteEntry(entry);
+            }
+            if (!shader_table->_callable_shaders.empty())
+            {
+                d3d12_dispatch_rays_desc.CallableShaderTable.StartAddress = gpu_address;
+                d3d12_dispatch_rays_desc.CallableShaderTable.SizeInBytes = entry_size * static_cast<uint32_t>(shader_table->_callable_shaders.size());
+                d3d12_dispatch_rays_desc.CallableShaderTable.StrideInBytes = shader_table->_callable_shaders.size() == 1 ? 0 : entry_size;
+                for (const auto& entry : shader_table->_miss_shaders) WriteEntry(entry);
+            }
+
+            shader_table_state->committed_version = shader_table->_version;
+            shader_table_state->d3d12_descriptor_heap_srv = _descriptor_heaps->shader_resource_heap.get_shader_visible_heap();
+            shader_table_state->d3d12_descriptor_heap_samplers = _descriptor_heaps->sampler_heap.get_shader_visible_heap();
+            
+            _cmdlist_ref_instances->ref_resources.push_back(shader_table);
+        }
+
+        
+        ray_tracing::DX12Pipeline* current_pipeline = 
+            _current_ray_tracing_state.shader_table ?
+            check_cast<ray_tracing::DX12Pipeline*>(_current_ray_tracing_state.shader_table->get_pipeline()) : nullptr;
+            
+        const bool update_root_signature = 
+            !_current_ray_tracing_state_valid || 
+            _current_ray_tracing_state.shader_table == nullptr ||
+            current_pipeline->_global_root_signature != pipeline->_global_root_signature;
+
+        
+        uint32_t binding_update_mask = 0;     // 按位判断 bindingset 数组中哪一个 bindingset 需要更新绑定
+
+        if (!update_root_signature) binding_update_mask = ~0u;
+
+        if (commit_descriptor_heaps()) binding_update_mask = ~0u;
+
+        if (binding_update_mask == 0)
+        {
+            binding_update_mask = find_array_different_bits(
+                _current_graphics_state.binding_sets, 
+                _current_graphics_state.binding_sets.size(), 
+                state.binding_sets, 
+                state.binding_sets.size()
+            );
+        } 
+
+        if (update_root_signature) 
+        {
+            active_cmdlist->d3d12_cmdlist4->SetComputeRootSignature(pipeline->_global_root_signature->d3d12_root_signature.Get());
+        }
+
+        bool update_pipeline = !_current_ray_tracing_state_valid || current_pipeline != pipeline;
+
+        if (update_pipeline)
+        {
+            active_cmdlist->d3d12_cmdlist4->SetPipelineState1(reinterpret_cast<ID3D12StateObject*>(pipeline->get_native_object()));
+            _cmdlist_ref_instances->ref_resources.push_back(pipeline);
+        }
+
+        set_compute_bindings(state.binding_sets, binding_update_mask, pipeline->_global_root_signature.get());
+
+        _current_graphics_state_valid = false;
+        _current_compute_state_valid = false;
+        _current_ray_tracing_state_valid = true;
+        _current_ray_tracing_state = state;
+        return true;
+    }
+
     bool DX12CommandList::draw(const DrawArguments& arguments)
     {
         update_graphics_volatile_buffers();
@@ -1278,6 +1661,19 @@ namespace fantasy
 
         active_cmdlist->d3d12_cmdlist->Dispatch(thread_group_num_x, thread_group_num_y, thread_group_num_z);
     
+        return true;
+    }
+
+    bool DX12CommandList::dispatch_rays(const ray_tracing::DispatchRaysArguments& arguments)
+    {
+        ReturnIfFalse(_current_ray_tracing_state_valid && update_compute_volatile_buffers());
+
+        D3D12_DISPATCH_RAYS_DESC desc = get_shaderTableState(_current_ray_tracing_state.shader_table)->d3d12_dispatch_rays_desc;
+        desc.Width = arguments.width;
+        desc.Height = arguments.height;
+        desc.Depth = arguments.depth;
+
+        active_cmdlist->d3d12_cmdlist4->DispatchRays(&desc);
         return true;
     }
 
@@ -1576,390 +1972,6 @@ namespace fantasy
     void* DX12CommandList::get_native_object()
     {
         return static_cast<void*>(active_cmdlist->d3d12_cmdlist.Get());
-    }
-
-
-    bool DX12CommandList::set_ray_tracing_state(const ray_tracing::PipelineState& state)
-    {
-        ray_tracing::DX12ShaderTable* shader_table = check_cast<ray_tracing::DX12ShaderTable*>(state.shader_table);
-        ray_tracing::DX12Pipeline* pipeline = check_cast<ray_tracing::DX12Pipeline*>(shader_table->get_pipeline());
-        ray_tracing::DX12ShaderTableState* shader_table_state = get_shaderTableState(shader_table);
-
-        bool rebuild_shader_table = shader_table_state->committed_version != shader_table->_version ||
-            shader_table_state->d3d12_descriptor_heap_srv != _descriptor_heaps->shader_resource_heap.get_shader_visible_heap() ||
-            shader_table_state->d3d12_descriptor_heap_samplers != _descriptor_heaps->sampler_heap.get_shader_visible_heap();
-
-        if (rebuild_shader_table)
-        {
-            uint32_t entry_size = pipeline->get_shaderTableEntrySize();
-            uint8_t* cpu_address;
-            D3D12_GPU_VIRTUAL_ADDRESS gpu_address;
-            ReturnIfFalse(_upload_manager.suballocate_buffer(
-                entry_size * shader_table->get_entry_count(), 
-                nullptr, 
-                nullptr, 
-                &cpu_address, 
-                &gpu_address, 
-                _recording_version, 
-                D3D12_RAYTRACING_SHADER_TABLE_BYTE_ALIGNMENT
-            ));
-
-            uint32_t entry_index = 0;
-
-            auto WriteEntry = [&](const ray_tracing::DX12ShaderTable::ShaderEntry& entry) 
-            {
-                memcpy(cpu_address, entry.shader_identifier, D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES);
-
-                if (entry.binding_set)
-                {
-                    DX12BindingSet* bindingSet = check_cast<DX12BindingSet*>(entry.binding_set);
-                    DX12BindingLayout* layout = check_cast<DX12BindingLayout*>(bindingSet->get_layout());
-
-                    if (layout->descriptor_table_sampler_size > 0)
-                    {
-                        auto table = reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(
-                            cpu_address + 
-                            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 
-                            layout->root_param_sampler_index * sizeof(D3D12_GPU_DESCRIPTOR_HANDLE)
-                        );
-                        *table = _descriptor_heaps->sampler_heap.get_gpu_handle(bindingSet->descriptor_table_sampler_base_index);
-                    }
-
-                    if (layout->descriptor_table_srv_etc_size > 0)
-                    {
-                        auto table = reinterpret_cast<D3D12_GPU_DESCRIPTOR_HANDLE*>(
-                            cpu_address + 
-                            D3D12_SHADER_IDENTIFIER_SIZE_IN_BYTES + 
-                            layout->root_param_srv_etc_index * sizeof(D3D12_GPU_DESCRIPTOR_HANDLE)
-                        );
-                        *table = _descriptor_heaps->shader_resource_heap.get_gpu_handle(bindingSet->descriptor_table_srv_etc_base_index);
-                    }
-
-                    ReturnIfFalse(layout->descriptor_volatile_constant_buffers.empty());
-                }
-
-                cpu_address += entry_size;
-                gpu_address += entry_size;
-                entry_index += 1;
-
-                return true;
-            };
-
-            D3D12_DISPATCH_RAYS_DESC& d3d12_dispatch_rays_desc = shader_table_state->d3d12_dispatch_rays_desc;
-            memset(&d3d12_dispatch_rays_desc, 0, sizeof(D3D12_DISPATCH_RAYS_DESC));
-
-            d3d12_dispatch_rays_desc.RayGenerationShaderRecord.StartAddress = gpu_address;
-            d3d12_dispatch_rays_desc.RayGenerationShaderRecord.SizeInBytes = entry_size;
-            WriteEntry(shader_table->_raygen_shader);
-
-            if (!shader_table->_miss_shaders.empty())
-            {
-                d3d12_dispatch_rays_desc.MissShaderTable.StartAddress = gpu_address;
-                d3d12_dispatch_rays_desc.MissShaderTable.SizeInBytes = entry_size * static_cast<uint32_t>(shader_table->_miss_shaders.size());
-                d3d12_dispatch_rays_desc.MissShaderTable.StrideInBytes = shader_table->_miss_shaders.size() == 1 ? 0 : entry_size;
-                for (const auto& entry : shader_table->_miss_shaders) WriteEntry(entry);
-            }
-            if (!shader_table->_hit_groups.empty())
-            {
-                d3d12_dispatch_rays_desc.HitGroupTable.StartAddress = gpu_address;
-                d3d12_dispatch_rays_desc.HitGroupTable.SizeInBytes = entry_size * static_cast<uint32_t>(shader_table->_hit_groups.size());
-                d3d12_dispatch_rays_desc.HitGroupTable.StrideInBytes = shader_table->_hit_groups.size() == 1 ? 0 : entry_size;
-                for (const auto& entry : shader_table->_miss_shaders) WriteEntry(entry);
-            }
-            if (!shader_table->_callable_shaders.empty())
-            {
-                d3d12_dispatch_rays_desc.CallableShaderTable.StartAddress = gpu_address;
-                d3d12_dispatch_rays_desc.CallableShaderTable.SizeInBytes = entry_size * static_cast<uint32_t>(shader_table->_callable_shaders.size());
-                d3d12_dispatch_rays_desc.CallableShaderTable.StrideInBytes = shader_table->_callable_shaders.size() == 1 ? 0 : entry_size;
-                for (const auto& entry : shader_table->_miss_shaders) WriteEntry(entry);
-            }
-
-            shader_table_state->committed_version = shader_table->_version;
-            shader_table_state->d3d12_descriptor_heap_srv = _descriptor_heaps->shader_resource_heap.get_shader_visible_heap();
-            shader_table_state->d3d12_descriptor_heap_samplers = _descriptor_heaps->sampler_heap.get_shader_visible_heap();
-            
-            _cmdlist_ref_instances->ref_resources.push_back(shader_table);
-        }
-
-        
-        ray_tracing::DX12Pipeline* current_pipeline = check_cast<ray_tracing::DX12Pipeline*>(_current_ray_tracing_state.shader_table->get_pipeline());
-        const bool update_root_signature = 
-            !_current_ray_tracing_state_valid || 
-            _current_ray_tracing_state.shader_table == nullptr ||
-            current_pipeline->_global_root_signature != pipeline->_global_root_signature;
-
-        
-        uint32_t binding_update_mask = 0;     // 按位判断 bindingset 数组中哪一个 bindingset 需要更新绑定
-
-        if (!update_root_signature) binding_update_mask = ~0u;
-
-        if (commit_descriptor_heaps()) binding_update_mask = ~0u;
-
-        if (binding_update_mask == 0)
-        {
-            binding_update_mask = find_array_different_bits(
-                _current_graphics_state.binding_sets, 
-                _current_graphics_state.binding_sets.size(), 
-                state.binding_sets, 
-                state.binding_sets.size()
-            );
-        } 
-
-        if (update_root_signature) 
-        {
-            active_cmdlist->d3d12_cmdlist4->SetComputeRootSignature(pipeline->_global_root_signature->d3d12_root_signature.Get());
-        }
-
-        bool update_pipeline = !_current_ray_tracing_state_valid || _current_ray_tracing_state.shader_table->get_pipeline() != pipeline;
-
-        if (update_pipeline)
-        {
-            active_cmdlist->d3d12_cmdlist4->SetPipelineState1(reinterpret_cast<ID3D12StateObject*>(pipeline->get_native_object()));
-            _cmdlist_ref_instances->ref_resources.push_back(pipeline);
-        }
-
-        set_compute_bindings(state.binding_sets, binding_update_mask, pipeline->_global_root_signature.get());
-
-        _current_graphics_state_valid = false;
-        _current_compute_state_valid = false;
-        _current_ray_tracing_state_valid = true;
-        _current_ray_tracing_state = state;
-        return false;
-    }
-
-    bool DX12CommandList::dispatch_rays(const ray_tracing::DispatchRaysArguments& arguments)
-    {
-        ReturnIfFalse(_current_ray_tracing_state_valid && update_compute_volatile_buffers());
-
-        D3D12_DISPATCH_RAYS_DESC desc = get_shaderTableState(_current_ray_tracing_state.shader_table)->d3d12_dispatch_rays_desc;
-        desc.Width = arguments.width;
-        desc.Height = arguments.height;
-        desc.Depth = arguments.depth;
-
-        active_cmdlist->d3d12_cmdlist4->DispatchRays(&desc);
-        return true;
-    }
-    
-    bool DX12CommandList::build_bottom_level_accel_struct(
-        ray_tracing::AccelStructInterface* accel_struct,
-        const ray_tracing::GeometryDesc* geometry_descs,
-        uint32_t geometry_desc_count
-    )
-    {
-        auto& desc = check_cast<ray_tracing::DX12AccelStruct*>(accel_struct)->_desc;
-        ReturnIfFalse(!desc.is_top_level);
-
-        bool preform_update = (desc.flags & ray_tracing::AccelStructBuildFlags::PerformUpdate) != 0;
-
-        desc.bottom_level_geometry_descs.clear();
-        desc.bottom_level_geometry_descs.reserve(geometry_desc_count);
-        for (uint32_t ix = 0; ix < geometry_desc_count; ++ix)
-        {
-            const auto& geometry_desc = geometry_descs[ix];
-            desc.bottom_level_geometry_descs[ix] = geometry_desc;
-
-            if (geometry_desc.type == ray_tracing::GeometryType::Triangle)
-            {
-                ReturnIfFalse(set_buffer_state(geometry_desc.triangles.vertex_buffer.get(), ResourceStates::AccelStructBuildInput));
-                ReturnIfFalse(set_buffer_state(geometry_desc.triangles.index_buffer.get(), ResourceStates::AccelStructBuildInput));
-
-                _cmdlist_ref_instances->ref_resources.push_back(geometry_desc.triangles.vertex_buffer.get());
-                _cmdlist_ref_instances->ref_resources.push_back(geometry_desc.triangles.index_buffer.get());
-            }
-            else 
-            {
-                ReturnIfFalse(set_buffer_state(geometry_desc.aabbs.buffer.get(), ResourceStates::AccelStructBuildInput));
-                _cmdlist_ref_instances->ref_resources.push_back(geometry_desc.aabbs.buffer.get());
-            }
-
-        }
-
-        commit_barriers();
-
-        ray_tracing::DX12AccelStructBuildInputs dx12_build_inputs;
-        dx12_build_inputs.type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL;
-        dx12_build_inputs.dwDescNum = static_cast<uint32_t>(desc.bottom_level_geometry_descs.size());
-        dx12_build_inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY_OF_POINTERS;
-        dx12_build_inputs.GeometryDescs.resize(desc.bottom_level_geometry_descs.size());
-        dx12_build_inputs.geometry_descs.resize(desc.bottom_level_geometry_descs.size());
-        for (uint32_t ix = 0; ix < static_cast<uint32_t>(dx12_build_inputs.GeometryDescs.size()); ++ix)
-        {
-            dx12_build_inputs.geometry_descs[ix] = dx12_build_inputs.GeometryDescs.data() + ix;
-        }
-        dx12_build_inputs.cpcpGeometryDesc = dx12_build_inputs.geometry_descs.data();
-
-
-        dx12_build_inputs.GeometryDescs.resize(geometry_desc_count);
-        for (uint32_t ix = 0; ix < static_cast<uint32_t>(desc.bottom_level_geometry_descs.size()); ++ix)
-        {
-            const auto& geometry_desc = desc.bottom_level_geometry_descs[ix];
-            D3D12_GPU_VIRTUAL_ADDRESS gpu_address = 0;
-            if (geometry_desc.use_transform)
-            {
-                uint8_t* cpu_address = nullptr;
-                ReturnIfFalse(!_upload_manager.suballocate_buffer(
-                    sizeof(float3x4), 
-                    nullptr, 
-                    nullptr, 
-                    &cpu_address, 
-                    &gpu_address, 
-                    _recording_version, 
-                    D3D12_RAYTRACING_TRANSFORM3X4_BYTE_ALIGNMENT
-                ));
-
-                memcpy(cpu_address, &geometry_desc.affine_matrix, sizeof(float3x4));
-            }
-
-            dx12_build_inputs.GeometryDescs[ix] = ray_tracing::DX12AccelStruct::convert_geometry_desc(geometry_desc, gpu_address);
-        }
-
-        ray_tracing::DX12AccelStruct* dx12_accel_struct = check_cast<ray_tracing::DX12AccelStruct*>(accel_struct);
-        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO accel_struct_prebuild_info = dx12_accel_struct->get_accel_struct_prebuild_info();
-
-        ReturnIfFalse(accel_struct_prebuild_info.ResultDataMaxSizeInBytes <= dx12_accel_struct->get_buffer()->get_desc().byte_size);
-
-        uint64_t scratch_size = preform_update ? 
-            accel_struct_prebuild_info.UpdateScratchDataSizeInBytes :
-            accel_struct_prebuild_info.ScratchDataSizeInBytes;
-
-        D3D12_GPU_VIRTUAL_ADDRESS scratch_gpu_address{};
-        ReturnIfFalse(_dx12_scratch_manager.suballocate_buffer(
-            scratch_size, 
-            nullptr, 
-            nullptr, 
-            nullptr, 
-            &scratch_gpu_address, 
-            _recording_version, 
-            D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT
-        ));
-
-        set_buffer_state(dx12_accel_struct->get_buffer(), ResourceStates::AccelStructWrite);
-        commit_barriers();
-
-        D3D12_GPU_VIRTUAL_ADDRESS accel_struct_data_address = 
-            reinterpret_cast<ID3D12Resource*>(dx12_accel_struct->get_buffer()->get_native_object())->GetGPUVirtualAddress();
-
-        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC accel_struct_build_desc = {};
-        accel_struct_build_desc.Inputs = dx12_build_inputs.Convert();
-        accel_struct_build_desc.ScratchAccelerationStructureData = scratch_gpu_address;
-        accel_struct_build_desc.DestAccelerationStructureData = accel_struct_data_address;
-        accel_struct_build_desc.SourceAccelerationStructureData = preform_update ? accel_struct_data_address : 0;
-        active_cmdlist->d3d12_cmdlist4->BuildRaytracingAccelerationStructure(&accel_struct_build_desc, 0, nullptr);
-        _cmdlist_ref_instances->ref_resources.push_back(accel_struct);
-
-        return true;
-    }
-
-    bool DX12CommandList::build_top_level_accel_struct(
-        ray_tracing::AccelStructInterface* accel_struct, 
-        const ray_tracing::InstanceDesc* instance_descs, 
-        uint32_t instance_count
-    )
-    {
-        ray_tracing::DX12AccelStruct* dx12_accel_struct = check_cast<ray_tracing::DX12AccelStruct*>(accel_struct);
-        const auto& desc = dx12_accel_struct->get_desc();
-        ReturnIfFalse(desc.is_top_level);
-
-        BufferInterface* accel_struct_buffer = dx12_accel_struct->get_buffer();
-
-        dx12_accel_struct->d3d12_ray_tracing_instance_descs.resize(instance_count);
-        dx12_accel_struct->bottom_level_accel_structs.clear();
-        
-        for (uint32_t ix = 0; ix < instance_count; ++ix)
-        {
-            const auto& instance_desc = instance_descs[ix];
-            auto& d3d12_instance_desc = dx12_accel_struct->d3d12_ray_tracing_instance_descs[ix];
-
-            if (instance_desc.bottom_level_accel_struct)
-            {
-                dx12_accel_struct->bottom_level_accel_structs.emplace_back(instance_desc.bottom_level_accel_struct);
-                ray_tracing::DX12AccelStruct* dx12_blas = check_cast<ray_tracing::DX12AccelStruct*>(instance_desc.bottom_level_accel_struct);
-                BufferInterface* blas_buffer = dx12_blas->get_buffer();
-
-                d3d12_instance_desc = ray_tracing::convert_instance_desc(instance_desc);
-                d3d12_instance_desc.AccelerationStructure = 
-                    reinterpret_cast<ID3D12Resource*>(blas_buffer->get_native_object())->GetGPUVirtualAddress();
-                ReturnIfFalse(set_buffer_state(blas_buffer, ResourceStates::AccelStructBuildBlas));
-            }
-            else 
-            {
-                d3d12_instance_desc.AccelerationStructure = D3D12_GPU_VIRTUAL_ADDRESS{0};
-            }
-        }
-
-        uint64_t upload_size = sizeof(D3D12_RAYTRACING_INSTANCE_DESC) * dx12_accel_struct->d3d12_ray_tracing_instance_descs.size();
-        D3D12_GPU_VIRTUAL_ADDRESS gpu_address{};
-        uint8_t* cpu_address = nullptr;
-        ReturnIfFalse(_upload_manager.suballocate_buffer(
-            upload_size, 
-            nullptr, 
-            nullptr, 
-            &cpu_address, 
-            &gpu_address, 
-            _recording_version, 
-            D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT
-        ));
-
-        memcpy(cpu_address, dx12_accel_struct->d3d12_ray_tracing_instance_descs.data(), upload_size);
-
-        ReturnIfFalse(set_buffer_state(accel_struct_buffer, ResourceStates::AccelStructWrite));
-        commit_barriers();
-
-        bool perform_update = (desc.flags & ray_tracing::AccelStructBuildFlags::AllowUpdate) != 0;
-
-        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_INPUTS d3d12_accel_struct_inputs;
-        d3d12_accel_struct_inputs.Type = D3D12_RAYTRACING_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL;
-        d3d12_accel_struct_inputs.DescsLayout = D3D12_ELEMENTS_LAYOUT_ARRAY;
-        d3d12_accel_struct_inputs.InstanceDescs = gpu_address;
-        d3d12_accel_struct_inputs.NumDescs = instance_count;
-        d3d12_accel_struct_inputs.Flags = ray_tracing::convert_accel_struct_build_flags(desc.flags);
-        if (perform_update) d3d12_accel_struct_inputs.Flags |= D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BUILD_FLAG_ALLOW_UPDATE;
-
-        D3D12_RAYTRACING_ACCELERATION_STRUCTURE_PREBUILD_INFO ASPreBuildInfo = {};
-        _context->device5->GetRaytracingAccelerationStructurePrebuildInfo(&d3d12_accel_struct_inputs, &ASPreBuildInfo);
-
-        ReturnIfFalse(ASPreBuildInfo.ResultDataMaxSizeInBytes <= accel_struct_buffer->get_desc().byte_size);
-
-        uint64_t stScratchSize = perform_update ? 
-            ASPreBuildInfo.UpdateScratchDataSizeInBytes :
-            ASPreBuildInfo.ScratchDataSizeInBytes;
-
-        D3D12_GPU_VIRTUAL_ADDRESS d3d12_scratch_gpu_address{};
-        ReturnIfFalse(_dx12_scratch_manager.suballocate_buffer(
-            stScratchSize, 
-            nullptr, 
-            nullptr, 
-            nullptr, 
-            &d3d12_scratch_gpu_address, 
-            _recording_version, 
-            D3D12_RAYTRACING_ACCELERATION_STRUCTURE_BYTE_ALIGNMENT
-        ));
-
-
-        D3D12_GPU_VIRTUAL_ADDRESS d3d12_accel_struct_data_address = 
-            reinterpret_cast<ID3D12Resource*>(accel_struct_buffer->get_native_object())->GetGPUVirtualAddress();
-
-        D3D12_BUILD_RAYTRACING_ACCELERATION_STRUCTURE_DESC d3d12_build_as_desc = {};
-        d3d12_build_as_desc.Inputs = d3d12_accel_struct_inputs;
-        d3d12_build_as_desc.ScratchAccelerationStructureData = d3d12_scratch_gpu_address;
-        d3d12_build_as_desc.DestAccelerationStructureData = d3d12_accel_struct_data_address;
-        d3d12_build_as_desc.SourceAccelerationStructureData = perform_update ? d3d12_accel_struct_data_address : 0;
-
-        active_cmdlist->d3d12_cmdlist4->BuildRaytracingAccelerationStructure(&d3d12_build_as_desc, 0, nullptr);
-        _cmdlist_ref_instances->ref_resources.push_back(accel_struct);
-
-        return true;
-    }
-
-    bool DX12CommandList::set_accel_struct_state(ray_tracing::AccelStructInterface* accel_struct, ResourceStates state)
-    {
-        ReturnIfFalse(_resource_state_tracker.set_buffer_state(check_cast<ray_tracing::DX12AccelStruct*>(accel_struct)->get_buffer(), state));
-        
-        if (_cmdlist_ref_instances != nullptr)
-        {
-            _cmdlist_ref_instances->ref_resources.emplace_back(accel_struct);
-        }
-        return true;
     }
 
     ray_tracing::DX12ShaderTableState* DX12CommandList::get_shaderTableState(ray_tracing::ShaderTableInterface* shader_table)
@@ -2389,6 +2401,7 @@ namespace fantasy
         _any_volatile_constant_buffer_writes = false;
         _current_graphics_state_valid = false;
         _current_compute_state_valid = false;
+        _current_ray_tracing_state_valid = false;
         _current_srv_etc_heap = nullptr;
         _current_sampler_heap = nullptr;
         _current_graphics_volatile_constant_buffers.clear();

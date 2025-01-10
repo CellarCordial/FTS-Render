@@ -1,3 +1,4 @@
+#include "../gbuffer.slang"
 
 struct VertexOutput
 {
@@ -14,3 +15,17 @@ struct VertexOutput
     float2 uv        : TEXCOORD;
 };
 
+struct PixelOutput
+{
+    float4 world_position_view_depth : SV_TARGET0;
+    float4 view_space_velocity : SV_TARGET1;
+};
+
+StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
+
+struct VTIndirectTable
+{
+    
+};
+
+RWStructuredBuffer<VTIndirectTable> vt_indirect_table_buffer : register(u0);
