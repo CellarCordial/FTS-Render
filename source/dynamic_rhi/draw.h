@@ -78,13 +78,30 @@ namespace fantasy
             return ret;
         } 
     };
+
+    struct DrawIndirectArguments
+    {
+        uint32_t vertex_count = 0;
+        uint32_t instance_count = 1;
+        uint32_t start_vertex_location = 0;
+        uint32_t start_instance_location = 0;
+    };
+
+    struct DrawIndexedIndirectArguments
+    {
+        uint32_t index_count = 0;
+        uint32_t instance_count = 1;
+        uint32_t start_index_location = 0;
+        uint32_t start_vertex_location = 0;
+        uint32_t start_instance_location = 0;
+    };
     
     using PipelineStateBindingSetArray = StackArray<BindingSetInterface*, MAX_BINDING_LAYOUTS>;
 
     struct GraphicsState
     {
         GraphicsPipelineInterface* pipeline = nullptr;
-        PipelineStateBindingSetArray binding_sets; // 需要与 BindingLaouts 数组的顺序相对应.
+        PipelineStateBindingSetArray binding_sets;
         Color blend_constant_color;
         
         FrameBufferInterface* frame_buffer = nullptr;
@@ -94,12 +111,16 @@ namespace fantasy
         IndexBufferBinding index_buffer_binding;
 
         uint8_t dynamic_stencil_ref_value = 0;
+
+        BufferInterface* indirect_buffer;
     };
 
     struct ComputeState
     {
         ComputePipelineInterface* pipeline = nullptr;
         PipelineStateBindingSetArray binding_sets;
+
+        BufferInterface* indirect_buffer;
     };
 
     namespace ray_tracing 

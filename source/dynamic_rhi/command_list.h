@@ -129,7 +129,12 @@ namespace fantasy
             uint32_t thread_group_num_y = 1, 
             uint32_t thread_group_num_z = 1
         ) = 0;
-		virtual bool dispatch_rays(const ray_tracing::DispatchRaysArguments& arguments) = 0;
+
+        virtual bool draw_indirect(uint32_t offset_bytes, uint32_t draw_count = 1) = 0;
+        virtual bool draw_indexed_indirect(uint32_t offset_bytes, uint32_t draw_count = 1) = 0;
+        virtual bool dispatch_indirect(uint32_t offset_bytes) = 0;
+		
+        virtual bool dispatch_rays(const ray_tracing::DispatchRaysArguments& arguments) = 0;
         
         virtual bool begin_timer_query(TimerQueryInterface* query) = 0;
         virtual bool end_timer_query(TimerQueryInterface* query) = 0;

@@ -199,7 +199,12 @@ namespace fantasy
         bool draw(const DrawArguments& arguments) override;
         bool draw_indexed(const DrawArguments& arguments) override;
         bool dispatch(uint32_t thread_group_num_x, uint32_t thread_group_num_y = 1, uint32_t thread_group_num_z = 1) override;
-		bool dispatch_rays(const ray_tracing::DispatchRaysArguments& arguments) override;
+		
+        bool draw_indirect(uint32_t offset_bytes, uint32_t draw_count = 1) override;         
+        bool draw_indexed_indirect(uint32_t offset_bytes, uint32_t draw_count = 1) override;
+        bool dispatch_indirect(uint32_t offset_bytes) override;
+
+        bool dispatch_rays(const ray_tracing::DispatchRaysArguments& arguments) override;
         
         bool begin_timer_query(TimerQueryInterface* query) override;
         bool end_timer_query(TimerQueryInterface* query) override;
@@ -239,12 +244,16 @@ namespace fantasy
 
         bool set_graphics_bindings(
             const PipelineStateBindingSetArray& binding_sets, 
-            uint32_t binding_update_mask, 
+            uint32_t binding_update_mask,  
+            BufferInterface* indirect_buffer, 
+            bool update_indirect_buffer, 
             DX12RootSignature* root_signature
         );
         bool set_compute_bindings(
             const PipelineStateBindingSetArray& binding_sets, 
             uint32_t binding_update_mask, 
+            BufferInterface* indirect_buffer, 
+            bool update_indirect_buffer, 
             DX12RootSignature* root_signature
         );
         

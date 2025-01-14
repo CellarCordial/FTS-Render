@@ -178,6 +178,35 @@ namespace fantasy
         if (_desc.d3d12_compute_cmd_queue) _cmd_queues[static_cast<uint8_t>(CommandQueueType::Compute)] = std::make_unique<DX12CommandQueue>(_context, _desc.d3d12_compute_cmd_queue);
         if (_desc.d3d12_copy_cmd_queue) _cmd_queues[static_cast<uint8_t>(CommandQueueType::Copy)] = std::make_unique<DX12CommandQueue>(_context, _desc.d3d12_copy_cmd_queue);
 
+        D3D12_INDIRECT_ARGUMENT_DESC d3d12_indirect_argument_desc{};
+        D3D12_COMMAND_SIGNATURE_DESC d3d12_command_signature_desc{};
+        d3d12_command_signature_desc.NumArgumentDescs = 1;
+        d3d12_command_signature_desc.pArgumentDescs = &d3d12_indirect_argument_desc;
+
+        d3d12_command_signature_desc.ByteStride = 16;
+        d3d12_indirect_argument_desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
+        _context.device->CreateCommandSignature(
+            &d3d12_command_signature_desc, 
+            nullptr, 
+            IID_PPV_ARGS(&_context.draw_indirect_signature)
+        );
+
+        d3d12_command_signature_desc.ByteStride = 20;
+        d3d12_indirect_argument_desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
+        _context.device->CreateCommandSignature(
+            &d3d12_command_signature_desc, 
+            nullptr, 
+            IID_PPV_ARGS(&_context.draw_indexed_indirect_signature)
+        );
+
+        d3d12_command_signature_desc.ByteStride = 12;
+        d3d12_indirect_argument_desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
+        _context.device->CreateCommandSignature(
+            &d3d12_command_signature_desc, 
+            nullptr, 
+            IID_PPV_ARGS(&_context.dispatch_indirect_signature)
+        );
+
         _descriptor_heaps = std::make_unique<DX12DescriptorHeaps>(_context, _desc.max_timer_queries);
         _descriptor_heaps->render_target_heap.initialize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV, _desc.rtv_heap_size, false);
         _descriptor_heaps->depth_stencil_heap.initialize(D3D12_DESCRIPTOR_HEAP_TYPE_DSV, _desc.dsv_heap_size, false);

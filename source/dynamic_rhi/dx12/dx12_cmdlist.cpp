@@ -1313,9 +1313,15 @@ namespace fantasy
 			_cmdlist_ref_instances->ref_resources.emplace_back(state.frame_buffer);
 		}
 
+        const bool update_indirect_buffer = 
+            !_current_graphics_state_valid || 
+            _current_graphics_state.indirect_buffer != state.indirect_buffer;
+
         ReturnIfFalse(set_graphics_bindings(
             state.binding_sets,
             binding_update_mask, 
+            state.indirect_buffer,
+            update_indirect_buffer,
             dx12_graphics_pipeline->dx12_root_signature.get()
         ));
 
@@ -1415,9 +1421,6 @@ namespace fantasy
         _current_graphics_state = state;
         _current_graphics_state.dynamic_stencil_ref_value = btEffectiveStencilRefValue;
 
-        
-
-
         return true;
     }
 
@@ -1459,9 +1462,15 @@ namespace fantasy
             _cmdlist_ref_instances->ref_resources.emplace_back(state.pipeline);
         }
 
+        bool update_indirect_buffer = 
+            !_current_compute_state_valid || 
+            _current_compute_state.indirect_buffer != state.indirect_buffer;
+
         set_compute_bindings(
             state.binding_sets, 
             binding_update_mask, 
+            state.indirect_buffer,
+            update_indirect_buffer,
             dx12_compute_pipeline->dx12_root_signature.get()
         );
         
@@ -1617,7 +1626,7 @@ namespace fantasy
             _cmdlist_ref_instances->ref_resources.push_back(pipeline);
         }
 
-        set_compute_bindings(state.binding_sets, binding_update_mask, pipeline->_global_root_signature.get());
+        set_compute_bindings(state.binding_sets, binding_update_mask, nullptr, false, pipeline->_global_root_signature.get());
 
         _current_graphics_state_valid = false;
         _current_compute_state_valid = false;
@@ -1663,6 +1672,68 @@ namespace fantasy
     
         return true;
     }
+
+    bool DX12CommandList::draw_indirect(uint32_t offset_bytes, uint32_t draw_count)
+    {
+        ID3D12Resource* d3d12_indirect_buffer = 
+            reinterpret_cast<ID3D12Resource*>(_current_graphics_state.indirect_buffer->get_native_object());
+
+        ReturnIfFalse(d3d12_indirect_buffer != nullptr);
+
+        update_graphics_volatile_buffers();
+
+        active_cmdlist->d3d12_cmdlist->ExecuteIndirect(
+            _context->draw_indirect_signature.Get(), 
+            draw_count, 
+            d3d12_indirect_buffer, 
+            offset_bytes, 
+            nullptr, 
+            0
+        );
+    
+        return true;
+    }         
+
+    bool DX12CommandList::draw_indexed_indirect(uint32_t offset_bytes, uint32_t draw_count)
+    {
+        ID3D12Resource* d3d12_indirect_buffer = 
+            reinterpret_cast<ID3D12Resource*>(_current_graphics_state.indirect_buffer->get_native_object());
+
+        ReturnIfFalse(d3d12_indirect_buffer != nullptr);
+
+        update_graphics_volatile_buffers();
+
+        active_cmdlist->d3d12_cmdlist->ExecuteIndirect(
+            _context->draw_indexed_indirect_signature.Get(), 
+            draw_count, 
+            d3d12_indirect_buffer, 
+            offset_bytes, 
+            nullptr, 
+            0
+        );
+        return true;
+    }
+
+    bool DX12CommandList::dispatch_indirect(uint32_t offset_bytes)
+    {
+        ID3D12Resource* d3d12_indirect_buffer = 
+            reinterpret_cast<ID3D12Resource*>(_current_compute_state.indirect_buffer->get_native_object());
+
+        ReturnIfFalse(d3d12_indirect_buffer != nullptr);
+
+        update_compute_volatile_buffers();
+
+        active_cmdlist->d3d12_cmdlist->ExecuteIndirect(
+            _context->draw_indexed_indirect_signature.Get(), 
+            1, 
+            d3d12_indirect_buffer, 
+            offset_bytes, 
+            nullptr, 
+            0
+        );
+        return true;
+    }
+
 
     bool DX12CommandList::dispatch_rays(const ray_tracing::DispatchRaysArguments& arguments)
     {
@@ -2123,6 +2194,8 @@ namespace fantasy
     bool DX12CommandList::set_graphics_bindings(
         const PipelineStateBindingSetArray& binding_sets,  
         uint32_t binding_update_mask, 
+        BufferInterface* indirect_buffer, 
+        bool update_indirect_buffer, 
         DX12RootSignature* dx12_root_signature
     )
     {
@@ -2256,6 +2329,12 @@ namespace fantasy
             // Only reset this flag when this function has gone over all the binging sets. 
             _any_volatile_constant_buffer_writes = false;
         }
+
+        if (indirect_buffer && update_indirect_buffer)
+        {
+            ReturnIfFalse(set_buffer_state(indirect_buffer, ResourceStates::IndirectArgument));
+            _cmdlist_ref_instances->ref_resources.push_back(indirect_buffer);
+        }
         
         return true;
     }
@@ -2263,6 +2342,8 @@ namespace fantasy
     bool DX12CommandList::set_compute_bindings(
         const PipelineStateBindingSetArray& binding_sets, 
         uint32_t binding_update_mask, 
+        BufferInterface* indirect_buffer, 
+        bool update_indirect_buffer, 
         DX12RootSignature* dx12_root_signature
     )
     {
@@ -2391,6 +2472,12 @@ namespace fantasy
         {
             // Only reset this flag when this function has gone over all the binging sets. 
             _any_volatile_constant_buffer_writes = false;
+        }
+
+        if (indirect_buffer && update_indirect_buffer)
+        {
+            ReturnIfFalse(set_buffer_state(indirect_buffer, ResourceStates::IndirectArgument));
+            _cmdlist_ref_instances->ref_resources.push_back(indirect_buffer);
         }
         
         return true;

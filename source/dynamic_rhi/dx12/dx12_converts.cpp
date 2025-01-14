@@ -165,6 +165,7 @@ namespace fantasy
         if ((states & ResourceStates::AccelStructWrite) != 0) ret |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
         if ((states & ResourceStates::AccelStructBuildBlas) != 0) ret |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
         if ((states & ResourceStates::AccelStructBuildInput) != 0) ret |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
+        if ((states & ResourceStates::IndirectArgument) != 0) ret |= D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
 
         return ret;
     }

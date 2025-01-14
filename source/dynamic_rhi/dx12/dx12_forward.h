@@ -32,6 +32,10 @@ namespace fantasy
         Microsoft::WRL::ComPtr<ID3D12Device> device;
         Microsoft::WRL::ComPtr<ID3D12Device5> device5;
 
+        Microsoft::WRL::ComPtr<ID3D12CommandSignature> draw_indirect_signature;
+        Microsoft::WRL::ComPtr<ID3D12CommandSignature> draw_indexed_indirect_signature;
+        Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatch_indirect_signature;
+
         Microsoft::WRL::ComPtr<ID3D12QueryHeap> timer_query_heap;
         std::unique_ptr<BufferInterface> timer_query_resolve_buffer;
     };

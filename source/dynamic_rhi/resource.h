@@ -74,7 +74,8 @@ namespace fantasy
         AccelStructRead         = 1 << 16,
         AccelStructWrite        = 1 << 17,
         AccelStructBuildInput   = 1 << 18,
-        AccelStructBuildBlas    = 1 << 19
+        AccelStructBuildBlas    = 1 << 19,
+        IndirectArgument        = 1 << 20
     };
     ENUM_CLASS_FLAG_OPERATORS(ResourceStates)
 
@@ -386,9 +387,10 @@ namespace fantasy
         bool is_volatile = false;
 
         bool can_have_uavs = false;
-        bool is_vertex_buffer = false;
         bool is_index_buffer = false;
+        bool is_vertex_buffer = false;
         bool is_constant_buffer = false;
+        bool is_indirect_argument = false;
         bool is_shader_binding_table = false;
         bool is_accel_struct_storage = false;
 
