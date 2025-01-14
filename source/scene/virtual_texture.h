@@ -10,6 +10,8 @@
 
 namespace fantasy 
 {
+    const static uint32_t page_size = 64u;
+
     struct VTPage
     {
         enum class LoadFlag : uint8_t
@@ -59,7 +61,6 @@ namespace fantasy
             VTPage* cache_page;
         };
 
-
     private:
         uint32_t _real_width;
         uint32_t _real_height;
@@ -69,7 +70,6 @@ namespace fantasy
         
         LruCache<Tile> _tiles;
         std::vector<std::shared_ptr<TextureInterface>> _textures;
-
     };
 }
 

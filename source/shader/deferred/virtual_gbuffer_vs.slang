@@ -13,22 +13,6 @@ cbuffer pass_constants : register(b0)
     uint32_t mip_level;
 };
 
-
-struct Cluster
-{
-    float3 bounding_sphere_center;
-    float bounding_sphere_radius;
-
-    uint32_t vertex_count;
-    uint32_t index_count;
-    uint32_t vertex_offset;
-    uint32_t index_offset;
-
-    uint32_t mip_level;
-    uint32_t group_id;
-    uint32_t geometry_constant_index;
-};
-
 struct Vertex
 {
     float3 position;
@@ -39,15 +23,14 @@ struct Vertex
 
 StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
 
-StructuredBuffer<Cluster> cluster_buffer : register(t1);
+StructuredBuffer<MeshCluster> cluster_buffer : register(t1);
 StructuredBuffer<Vertex> vertex_buffer : register(t2);
-StructuredBuffer<uint32_t> index_buffer : register(t3);
 
 struct VertexOutput
 {
-    float3 color : COLOR;
     float4 sv_position : SV_Position;
-
+    
+    float3 color : COLOR;
     float3 world_space_position : WORLD_POSITION;
 
     float3 view_space_position : VIEW_POSITION;
@@ -77,10 +60,9 @@ VertexOutput vertex_shader(uint32_t instance_id: SV_InstanceID, uint32_t vertex_
 
     uint32_t cluster_index = instance_id;
 
-    Cluster cluster = cluster_buffer[cluster_index];
-    uint32_t triangle_num = cluster.index_count / 3;
+    MeshCluster cluster = cluster_buffer[cluster_index];
     uint32_t triangle_index = vertex_index / 3;
-    if (triangle_index >= triangle_num)
+    if (triangle_index >= cluster.triangle_count)
     {
         output.sv_position.z = 0 / 0;
         return output;
@@ -93,20 +75,21 @@ VertexOutput vertex_shader(uint32_t instance_id: SV_InstanceID, uint32_t vertex_
     case 2: output.color = color_hash(cluster.group_id);
     case 3: output.color = color_hash(cluster.mip_level);
     };
-    
-    // GeometryConstant constant = geometry_constant_buffer[geometry_constant_index];
-    // float4 world_pos = mul(float4(input.local_space_position, 1.0f), constant.world_matrix);
 
-    // output.sv_position = mul(world_pos, view_proj);
+    GeometryConstant geometry = geometry_constant_buffer[cluster.geometry_id];
+    Vertex vertex = vertex_buffer[cluster.vertex_offset + vertex_index];
+    float4 world_pos = mul(float4(vertex.position, 1.0f), geometry.world_matrix);
 
-    // output.world_space_position = world_pos.xyz;
+    output.sv_position = mul(world_pos, view_proj);
 
-    // output.view_space_position = mul(world_pos, view_matrix).xyz;
-    // output.prev_view_space_position = mul(world_pos, prev_view_matrix).xyz;
+    output.world_space_position = world_pos.xyz;
 
-    // output.world_space_normal = normalize(mul(float4(input.local_space_normal, 1.0f), constant.inv_trans_world)).xyz;
-    // output.world_space_tangent = normalize(mul(float4(input.local_space_tangent, 1.0f), constant.inv_trans_world)).xyz;
-    // output.uv = input.uv;
+    output.view_space_position = mul(world_pos, view_matrix).xyz;
+    output.prev_view_space_position = mul(world_pos, prev_view_matrix).xyz;
+
+    output.world_space_normal = normalize(mul(float4(vertex.normal, 1.0f), geometry.inv_trans_world)).xyz;
+    output.world_space_tangent = normalize(mul(float4(vertex.tangent, 1.0f), geometry.inv_trans_world)).xyz;
+    output.uv = vertex.uv;
 
     return output;
 }

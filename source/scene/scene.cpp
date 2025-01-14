@@ -24,7 +24,7 @@ namespace fantasy
 
 		_global_entity->assign<SceneGrid>();
 		_global_entity->assign<event::GenerateSdf>();
-		// _global_entity->assign<event::ModelLoaded>();
+		_global_entity->assign<event::ModelLoaded>();
 		_global_entity->assign<event::UpdateGlobalSdf>();
 		_global_entity->assign<event::GenerateSurfaceCache>();
 

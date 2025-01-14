@@ -26,6 +26,29 @@ float3 calculate_normal(float3 texture_normal, float3 vertex_normal, float3 vert
     return normalize(mul(unpacked_normal, TBN));
 }
 
+struct MeshCluster
+{
+    float3 bounding_sphere_center;
+    float bounding_sphere_radius;
+
+    uint32_t vertex_offset;
+    uint32_t triangle_count;
+
+    uint32_t mip_level;
+    uint32_t group_id;
+    uint32_t geometry_id;
+};
+
+struct MeshClusterGroup
+{
+    float3 lod_bounding_sphere_center;
+    float lod_bounding_sphere_radius;
+
+    uint32_t cluster_count;
+    uint32_t cluster_index_offset;
+    float max_parent_lod_error;
+};
+
 // namespace ray_tracing
 // {
 //     struct GBufferData

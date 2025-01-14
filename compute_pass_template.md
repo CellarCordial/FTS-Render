@@ -154,9 +154,9 @@ namespace fantasy
 	{
 		ReturnIfFalse(cmdlist->open());
 
-		Vector2I thread_group_num = {
-			static_cast<uint32_t>((Align(_texture_resolution.x, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
-			static_cast<uint32_t>((Align(_texture_resolution.y, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
+		uint2 thread_group_num = {
+			static_cast<uint32_t>((align(_texture_resolution.x, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
+			static_cast<uint32_t>((align(_texture_resolution.y, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
 		};
 
 		ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
