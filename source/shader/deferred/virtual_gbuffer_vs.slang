@@ -41,7 +41,7 @@ struct VertexOutput
     float3 world_space_tangent  : TANGENT;
     float2 uv : TEXCOORD;
 
-    uint2 geometry_id : GEOMETRY_ID;
+    uint32_t geometry_id : GEOMETRY_ID;
 };
 
 float3 color_hash(uint32_t index)

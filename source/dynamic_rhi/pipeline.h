@@ -248,8 +248,6 @@ namespace fantasy
 
         InputLayoutInterface* input_layout = nullptr;
         BindingLayoutInterfaceArray binding_layouts;
-
-        BufferInterface* indirect_buffer;
     };
 
 
@@ -267,8 +265,6 @@ namespace fantasy
     {
         Shader* compute_shader = nullptr;
         BindingLayoutInterfaceArray binding_layouts;
-        
-        BufferInterface* indirect_buffer;
     };
 
 
