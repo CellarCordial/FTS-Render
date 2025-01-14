@@ -12,7 +12,9 @@ struct VertexOutput
     
     float3 world_space_normal : NORMAL;
     float3 world_space_tangent  : TANGENT;
-    float2 uv        : TEXCOORD;
+    float2 uv : TEXCOORD;
+
+    uint32_t geometry_id : GEOMETRY_ID;
 };
 
 struct PixelOutput
@@ -23,9 +25,18 @@ struct PixelOutput
 
 StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
 
-struct VTIndirectTable
+struct VirtualPageInfo
 {
-    
+    uint32_t geometry_id;
+    uint2 page_id;
+    uint32_t mip_level;
 };
 
-RWStructuredBuffer<VTIndirectTable> vt_indirect_table_buffer : register(u0);
+RWStructuredBuffer<VirtualPageInfo> virtual_page_info_buffer : register(u0);
+
+
+[shader("pixel")]
+PixelOutput pixel_shader(VertexOutput input)
+{
+
+}

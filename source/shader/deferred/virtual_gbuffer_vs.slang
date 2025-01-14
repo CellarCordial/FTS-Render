@@ -23,8 +23,9 @@ struct Vertex
 
 StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
 
-StructuredBuffer<MeshCluster> cluster_buffer : register(t1);
-StructuredBuffer<Vertex> vertex_buffer : register(t2);
+RWStructuredBuffer<uint32_t> visible_cluster_id_buffer : register(t1);
+StructuredBuffer<MeshCluster> cluster_buffer : register(t2);
+StructuredBuffer<Vertex> vertex_buffer : register(t3);
 
 struct VertexOutput
 {
@@ -38,7 +39,9 @@ struct VertexOutput
     
     float3 world_space_normal : NORMAL;
     float3 world_space_tangent  : TANGENT;
-    float2 uv        : TEXCOORD;
+    float2 uv : TEXCOORD;
+
+    uint2 geometry_id : GEOMETRY_ID;
 };
 
 float3 color_hash(uint32_t index)
@@ -58,7 +61,7 @@ VertexOutput vertex_shader(uint32_t instance_id: SV_InstanceID, uint32_t vertex_
 {
     VertexOutput output;
 
-    uint32_t cluster_index = instance_id;
+    uint32_t cluster_index = visible_cluster_id_buffer[instance_id];
 
     MeshCluster cluster = cluster_buffer[cluster_index];
     uint32_t triangle_index = vertex_index / 3;

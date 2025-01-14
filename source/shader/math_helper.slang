@@ -61,6 +61,12 @@ T max4(T x, T y, T z, T w) where T : __BuiltinFloatingPointType
     return max(max(x, y), max(z, w));
 }
 
+__generic<typename T>
+T min4(T x, T y, T z, T w) where T : __BuiltinFloatingPointType
+{
+    return min(min(x, y), min(z, w));
+}
+
 float3 decompress_unit_direction(uint32_t dir)
 {
     return float3(
