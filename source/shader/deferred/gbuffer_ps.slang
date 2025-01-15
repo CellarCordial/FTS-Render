@@ -64,7 +64,7 @@ PixelOutput pixel_shader(VertexOutput input)
     );
     output.world_space_normal = float4(normal, 1.0f);
 
-    output.base_color = base_color_texture.Sample(sampler0, input.uv) * constant.diffuse;
+    output.base_color = base_color_texture.Sample(sampler0, input.uv) * constant.base_color;
 
     float metallic = metallic_texture.Sample(sampler0, input.uv);
     float roughness = roughness_texture.Sample(sampler0, input.uv);

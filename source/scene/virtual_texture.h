@@ -10,7 +10,7 @@
 
 namespace fantasy 
 {
-    const static uint32_t page_size = 64u;
+    const static uint32_t page_size = 1024u;
 
     struct VTPage
     {
@@ -31,6 +31,14 @@ namespace fantasy
         LoadFlag flag = LoadFlag::None;
         bool always_in_cache = false;
     };
+
+    struct VTPageInfo
+    {
+        uint32_t geometry_id;
+        uint2 page_id;
+        uint32_t mip_level;
+    };
+
 
     class Mipmap
     {

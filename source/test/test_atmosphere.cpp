@@ -1,7 +1,6 @@
 #include "test_atmosphere.h"
 #include "../shader/shader_compiler.h"
 #include "../core/tools/check_cast.h"
-#include "../scene/scene.h"
 #include "../gui/gui_panel.h"
 #include "../scene/camera.h"
 #include "../scene/light.h"

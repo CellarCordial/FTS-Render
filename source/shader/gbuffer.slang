@@ -14,6 +14,8 @@ struct GeometryConstant
     float roughness;
     float metallic;
     float occlusion;
+
+    uint2 texture_resolution;
 };
 
 float3 calculate_normal(float3 texture_normal, float3 vertex_normal, float3 vertex_tangent)
@@ -38,7 +40,7 @@ struct MeshCluster
     uint32_t vertex_offset;
     uint32_t triangle_count;
 
-    uint2 geometry_id; // x: mesh_index; y: submesh_index.
+    uint32_t geometry_id;
 };
 
 struct MeshClusterGroup
