@@ -172,6 +172,7 @@ namespace fantasy
 		std::vector<uint32_t> _indices;
         std::vector<float3> _vertex_positons;
     };
+    
 
     inline MeshClusterGpu convert_mesh_cluster(
         const MeshCluster& cluster,

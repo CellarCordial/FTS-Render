@@ -150,16 +150,19 @@ namespace fantasy
                         for (const auto& group : submesh.cluster_groups)
                         {
                             _mesh_cluster_groups.emplace_back(convert_mesh_cluster_group(group, cluster_index_offset));
+
+                            for (auto ix : group.cluster_indices)
+                            {
+                                const auto& cluster = submesh.clusters[ix];
+                                _mesh_clusters.emplace_back(convert_mesh_cluster(cluster, vertex_offset, triangle_offset));
+
+                                vertex_offset += static_cast<uint32_t>(cluster.vertices.size());
+                                triangle_offset += static_cast<uint32_t>(cluster.indices.size() / 3);
+                            }
                             
                             cluster_index_offset += static_cast<uint32_t>(group.cluster_indices.size());
                         }
-                        for (const auto& cluster : submesh.clusters)
-                        {
-                            _mesh_clusters.emplace_back(convert_mesh_cluster(cluster, vertex_offset, triangle_offset));
 
-                            vertex_offset += static_cast<uint32_t>(cluster.vertices.size());
-                            triangle_offset += static_cast<uint32_t>(cluster.indices.size() / 3);
-                        }
                     }  
                     return true;
                 }
