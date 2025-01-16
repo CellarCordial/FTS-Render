@@ -11,6 +11,8 @@ cbuffer pass_constants : register(b0)
 
     uint32_t view_mode;
     uint32_t mip_level;
+    uint32_t vt_page_size;
+    uint32_t client_width;
 };
 
 struct Vertex
@@ -22,8 +24,7 @@ struct Vertex
 };
 
 StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
-
-RWStructuredBuffer<uint32_t> visible_cluster_id_buffer : register(t1);
+StructuredBuffer<uint32_t> visible_cluster_id_buffer : register(t1);
 StructuredBuffer<MeshCluster> cluster_buffer : register(t2);
 StructuredBuffer<Vertex> vertex_buffer : register(t3);
 

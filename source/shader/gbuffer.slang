@@ -9,7 +9,7 @@ struct GeometryConstant
     float4x4 world_matrix;
     float4x4 inv_trans_world;
 
-    float4 diffuse;
+    float4 base_color;
     float4 emissive;
     float roughness;
     float metallic;

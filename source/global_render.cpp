@@ -59,7 +59,7 @@ namespace fantasy
 		parallel::initialize();
 
 		_world.register_system(new SceneSystem());
-		auto* camera = _world.create_entity()->assign<Camera>(_window);
+		auto* camera = _world.get_global_entity()->assign<Camera>(_window);
         gui::add(
             [camera]()
             {

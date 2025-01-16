@@ -10,7 +10,7 @@
 
 namespace fantasy 
 {
-    const static uint32_t page_size = 1024u;
+    const static uint32_t page_size = 128u;
 
     struct VTPage
     {

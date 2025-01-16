@@ -49,8 +49,8 @@ namespace fantasy
 
 namespace fantasy
 {
-#define THREAD_GROUP_SIZE_X 16 
-#define THREAD_GROUP_SIZE_Y 16 
+#define THREAD_GROUP_SIZE_X 16u
+#define THREAD_GROUP_SIZE_Y 16u
  
 	bool Pass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{

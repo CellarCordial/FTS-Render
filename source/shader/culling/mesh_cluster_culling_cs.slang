@@ -1,5 +1,5 @@
-#define THREAD_GROUP_SIZE_X 1
-#define THREAD_GROUP_SIZE_Y 1
+// #define THREAD_GROUP_SIZE_X 1
+// #define THREAD_GROUP_SIZE_Y 1
 
 #include "../gbuffer.slang"
 #include "../math_helper.slang"
@@ -21,9 +21,11 @@ cbuffer pass_constants : register(b0)
 
 RWStructuredBuffer<DrawIndexedIndirectArguments> draw_indexed_indirect_arguments_buffer : register(u0);
 RWStructuredBuffer<uint32_t> visible_cluster_id_buffer : register(u1);
-StructuredBuffer<MeshClusterGroup> mesh_cluster_groups_buffer : register(t0);
-StructuredBuffer<MeshCluster> mesh_clusters_buffer : register(t1);
+
+StructuredBuffer<MeshClusterGroup> mesh_cluster_group_buffer : register(t0);
+StructuredBuffer<MeshCluster> mesh_cluster_buffer : register(t1);
 Texture2D hierarchical_zbuffer : register(t2);
+
 SamplerState linear_clamp_sampler : register(s0);
 
 bool hierarchical_zbuffer_cull(float3 view_space_position, float radius, float4x4 proj_matrix);
@@ -39,14 +41,14 @@ void compute_shader(uint3 thread_id: SV_DispatchThreadID)
     uint32_t group_index = thread_id.x;
     if (group_index >= group_count) return;
 
-    MeshClusterGroup group = mesh_cluster_groups_buffer[group_index];
+    MeshClusterGroup group = mesh_cluster_group_buffer[group_index];
     float3 group_view_space_position = mul(float4(group.lod_bounding_sphere.xyz, 1.0f), view_matrix).xyz;
     if (!check_lod(group_view_space_position, group.lod_bounding_sphere.w, group.max_parent_lod_error))
     {
         for (uint32_t ix = 0; ix < group.cluster_count; ++ix)
         {
             uint32_t cluster_id = group.cluster_index_offset + ix;
-            MeshCluster cluster = mesh_clusters_buffer[cluster_id];
+            MeshCluster cluster = mesh_cluster_buffer[cluster_id];
             bool visible = check_lod(
                 mul(float4(cluster.lod_bounding_sphere.xyz, 1.0f), view_matrix).xyz,
                 cluster.lod_bounding_sphere.w,

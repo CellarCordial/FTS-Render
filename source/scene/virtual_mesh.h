@@ -120,7 +120,7 @@ namespace fantasy
     public:
         bool build(const Mesh* mesh);
 
-    private:
+        
         struct VirtualSubmesh
         {
             std::vector<MeshCluster> clusters;
@@ -128,6 +128,9 @@ namespace fantasy
             uint32_t mip_level_num;
         };
 
+        std::vector<VirtualSubmesh> _submeshes;
+
+    private:
         bool cluster_triangles(VirtualSubmesh& submesh);
         bool build_cluster_groups(VirtualSubmesh& submesh, uint32_t level_offset, uint32_t level_cluster_count, uint32_t mip_level);
         bool build_parent_clusters(VirtualSubmesh& submesh, uint32_t cluster_group_index);
@@ -140,8 +143,6 @@ namespace fantasy
         uint32_t edge_hash(const float3& p0, const float3& p1);
 
     private:
-        std::vector<VirtualSubmesh> _submeshes;
-
 		std::vector<uint32_t> _indices;
         std::vector<float3> _vertex_positons;
     };

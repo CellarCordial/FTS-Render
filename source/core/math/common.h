@@ -127,6 +127,18 @@ inline bool operator!=(T a, uint32_t b) { return uint32_t(a) != b; }
         return dw - dw % 3 + (dw + dwOfs) % 3;
     }
 
+    inline uint32_t search_most_significant_bit(uint32_t x)
+    {
+        // 折半查找.
+        uint32_t res = 0, t = 16, y = 0;
+        y = -((x >> t) != 0 ? 1 : 0), res += y & t, x >>= y & t, t >>= 1;
+        y = -((x >> t) != 0 ? 1 : 0), res += y & t, x >>= y & t, t >>= 1;
+        y = -((x >> t) != 0 ? 1 : 0), res += y & t, x >>= y & t, t >>= 1;
+        y = -((x >> t) != 0 ? 1 : 0), res += y & t, x >>= y & t, t >>= 1;
+        y = (x >> t) != 0 ? 1 : 0, res += y;
+        return res;
+    }
+
 }
 
 
