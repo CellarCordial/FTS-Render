@@ -34,6 +34,20 @@ namespace fantasy
         float3 normal;
         float3 tangent;
         float2 uv;
+
+
+        bool operator==(const Vertex& other) const 
+        {
+            return position == other.position &&
+                   normal == other.normal &&
+                   tangent == other.tangent &&
+                   uv == other.uv;
+        }
+
+        bool operator!=(const Vertex& other) const
+        {
+            return !((*this) == other);
+        }
     };
 
     struct Material

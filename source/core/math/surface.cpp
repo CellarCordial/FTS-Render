@@ -19,8 +19,31 @@ namespace fantasy
         cd = c * distance;
     }
 
-    bool QuadricSurface::get_vertex_position(float3& vertex)
+    float3 QuadricSurface::calculate_normal(float3 p) 
     {
+        float x = p.x, y = p.y, z = p.z;      
+
+        float3 ret = float3(
+            2.0 * x * a2 + 2.0 * y * ab + 2.0 * z * ac + 2.0 * ad,
+            2.0 * x * ab + 2.0 * y * b2 + 2.0 * z * bc + 2.0 * bd,
+            2.0 * x * ac + 2.0 * y * bc + 2.0 * z * c2 + 2.0 * cd
+        );
+        
+        return normalize(ret);
+    }
+
+    float3 QuadricSurface::calculate_tangent(float3 p) 
+    {
+        float3 tangent;
+        tangent.x = 2 * a2 * p.x + ab * p.y + ac * p.z + ad;
+        tangent.y = ab * p.x + 2 * b2 * p.y + bc * p.z + bd;
+        tangent.z = ac * p.x + bc * p.y + 2 * c2 * p.z + cd;
+        return normalize(tangent);
+    }
+
+    bool QuadricSurface::get_vertex(float3& position, float3& normal, float3& tangent)
+    {
+        // TODO: is it right?
         double4x4 m(
             a2,   ab,   ac,   0.0f,
             ab,   b2,   bc,   0.0f,
@@ -30,11 +53,13 @@ namespace fantasy
 
         double4x4 inv;
         if (!invertible(m, inv)) return false;
-        vertex = { 
+        position = { 
             static_cast<float>(inv[3][0]), 
             static_cast<float>(inv[3][1]), 
             static_cast<float>(inv[3][2]) 
         };
+        normal = calculate_normal(position);
+        tangent = calculate_tangent(position);
         return true;
     }
 

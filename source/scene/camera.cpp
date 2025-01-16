@@ -178,6 +178,11 @@ namespace fantasy
         return 2.0f * static_cast<float>(std::atan((0.5f * get_frustum_near_width()) / _near_z));
     }
 
+    float Camera::get_fov_y() const
+    {
+        return _fov_y;
+    }
+
     float Camera::get_frustum_near_width() const
     {
         return _aspect * _near_window_height;
