@@ -2,6 +2,7 @@
 #define RENDER_VIRTUAL_GBUFFER_PASS_H
  
 #include "../../render_graph/render_pass.h"
+#include "../../scene/virtual_texture.h"
 #include "../../core/math/matrix.h"
 #include "../../scene/geometry.h"
 #include <vector>
@@ -52,6 +53,9 @@ namespace fantasy
 	private:
 		bool _resource_writed = false;
 		constant::VirtualGBufferPassConstant _pass_constant;
+
+		VTPhysicalTexture _vt_physical_texture;
+
 		std::vector<Vertex> _cluster_vertices;
 		std::vector<uint32_t> _cluster_triangles;
 		std::vector<GeometryConstantGpu> _geometry_constants;
@@ -59,7 +63,7 @@ namespace fantasy
 		std::shared_ptr<BufferInterface> _geometry_constant_buffer;
 		std::shared_ptr<BufferInterface> _cluster_vertex_buffer;
 		std::shared_ptr<BufferInterface> _cluster_triangle_buffer;
-		std::shared_ptr<BufferInterface> _virtual_page_info_buffer;
+		std::shared_ptr<BufferInterface> _vt_page_info_buffer;
 		std::shared_ptr<BufferInterface> _draw_indexed_indirect_arguments_buffer;
 
 		std::shared_ptr<TextureInterface> _world_position_view_depth_texture;

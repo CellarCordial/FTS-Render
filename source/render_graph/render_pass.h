@@ -29,6 +29,7 @@ namespace fantasy
         
         virtual bool feedback(CommandListInterface* cmdlist) { return true; }
         virtual bool finish_pass() { return true; }
+        virtual void window_resize() {}
 
         void precede(RenderPassInterface* pass) 
         {

@@ -607,6 +607,8 @@ namespace fantasy
 
 	bool VirtualMesh::build(const Mesh* mesh)
 	{
+		_current_geometry_id = mesh->mesh_id << 16;
+
 		for (const auto& submesh : mesh->submeshes)
 		{
 			_indices.insert(_indices.end(), submesh.indices.begin(), submesh.indices.end());
@@ -618,7 +620,6 @@ namespace fantasy
 			{
 				_vertices[start_index + ix] = submesh.vertices[ix];
 			}
-
 
 			auto& virtual_submesh = _submeshes.emplace_back();
 			

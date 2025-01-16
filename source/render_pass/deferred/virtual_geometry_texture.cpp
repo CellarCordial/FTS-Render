@@ -1,4 +1,4 @@
-#include "virtual_gbuffer_feed_back.h"
+#include "virtual_geometry_texture.h"
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
 #include "../../gui/gui_panel.h"

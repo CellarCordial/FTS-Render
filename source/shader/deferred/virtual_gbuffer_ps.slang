@@ -51,7 +51,7 @@ struct VTPageInfo
     uint32_t page_id_mip_level;
 };
 
-RWStructuredBuffer<VTPageInfo> virtual_page_info_buffer : register(u0);
+RWStructuredBuffer<VTPageInfo> vt_page_info_buffer : register(u0);
 
 uint32_t estimate_mip_level(float2 texture_coordinate);
 
@@ -78,7 +78,7 @@ PixelOutput pixel_shader(VertexOutput input)
 
     uint2 pixel_id = (uint2)input.sv_position.xy;
     uint32_t pixel_index = pixel_id.x + pixel_id.y * client_width;
-    virtual_page_info_buffer[pixel_index];
+    vt_page_info_buffer[pixel_index] = info;
 
     PixelOutput output;
     output.world_position_view_depth = float4(input.world_space_position, input.view_space_position.z);

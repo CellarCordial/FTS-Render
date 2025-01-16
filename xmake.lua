@@ -20,18 +20,7 @@ target("FTS-Render")
         "CLIENT_HEIGHT=768",
         "PROJ_DIR=\"" .. normalized_proj_dir .. "/\""
     )
-    add_files(
-		"$(projectdir)/source/gui/**.cpp",
-		"$(projectdir)/source/core/**.cpp",
-		"$(projectdir)/source/test/**.cpp",
-		"$(projectdir)/source/scene/**.cpp",
-		"$(projectdir)/source/shader/*.cpp",
-		"$(projectdir)/source/global_render.cpp",
-		"$(projectdir)/source/dynamic_rhi/**.cpp",
-        "$(projectdir)/source/render_pass/**.cpp",
-		"$(projectdir)/source/render_graph/**.cpp",
-		"$(projectdir)/source/main.cpp"
-    )
+    add_files("$(projectdir)/source/**.cpp")
     add_files(
 		"$(projectdir)/external/imgui/*.cpp", 
         "$(projectdir)/external/imgui/backends/imgui_impl_dx12.cpp", 

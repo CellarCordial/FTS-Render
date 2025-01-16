@@ -56,10 +56,8 @@ namespace fantasy
         {
             TextureType_BaseColor,
             TextureType_Normal,
-            TextureType_Metallic,
-            TextureType_Roughness,
+            TextureType_PBR,    // Metallic, Roughness, Occlusion.
             TextureType_Emissive,
-            TextureType_Occlusion,
             TextureType_Num
         };
 
@@ -128,7 +126,8 @@ namespace fantasy
         std::vector<Submesh> submeshes;
         float4x4 world_matrix;
         bool moved = false;
-        bool culling = false;
+        
+        uint32_t mesh_id = 0;
     };
 
     struct GeometryConstantGpu

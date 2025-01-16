@@ -11,7 +11,7 @@ namespace fantasy
     class LruCache 
     {
     public:
-        explicit LruCache(uint32_t capacity) : _capacity(capacity) {}
+        explicit LruCache(uint32_t capacity = 0) : _capacity(capacity) {}
         
         T* get(uint32_t key) 
         {

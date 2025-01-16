@@ -1,9 +1,9 @@
 #ifndef RENDER_PASS_SDF_GENERATE_H
 #define RENDER_PASS_SDF_GENERATE_H
 #include "../../render_graph/render_pass.h"
+#include "../../scene/distance_field.h"
 #include "../../core/tools/file.h"
 #include "../../core/math/vector.h"
-#include "../../scene/scene.h"
 #include <memory>
 
 namespace fantasy 

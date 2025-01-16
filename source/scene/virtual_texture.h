@@ -2,15 +2,17 @@
 #define SCENE_VIRTUAL_Table_H
 
 #include <cstdint>
-#include <memory>
 #include <vector>
+#include <string>
 #include "../core/math/rectangle.h"
 #include "../core/tools/lru_cache.h"
-#include "../dynamic_rhi/resource.h"
+#include "geometry.h"
 
 namespace fantasy 
 {
     const static uint32_t page_size = 128u;
+    static const uint32_t physical_texture_slice_size = 1024u;
+    static const uint32_t physical_texture_resolution = 4096u;
 
     struct VTPage
     {
@@ -35,8 +37,7 @@ namespace fantasy
     struct VTPageInfo
     {
         uint32_t geometry_id;
-        uint2 page_id;
-        uint32_t mip_level;
+        uint32_t page_id_mip_level;
     };
 
 
@@ -77,7 +78,8 @@ namespace fantasy
         uint32_t _tile_count_y;
         
         LruCache<Tile> _tiles;
-        std::vector<std::shared_ptr<TextureInterface>> _textures;
+
+        std::array<std::string, Material::TextureType_Num> _physical_textures;
     };
 }
 

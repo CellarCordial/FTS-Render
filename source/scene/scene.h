@@ -2,12 +2,13 @@
 #define SCENE_H
 #include "geometry.h"
 #include <unordered_set>
-#include "distance_filed.h"
+#include "distance_field.h"
 #include "surface_cache.h"
 #include "virtual_mesh.h"
 
 namespace fantasy
 {
+	static const uint32_t max_mesh_num = sizeof(uint16_t);
 
 	class SceneSystem :
 		public EntitySystemInterface,
@@ -39,6 +40,7 @@ namespace fantasy
 		std::string _model_directory;
 		std::string _sdf_data_path;
 		std::string _surface_cache_path;
+		uint32_t _current_mesh_count = 0;
 
 		std::unordered_set<std::string> _loaded_model_names;
 	};

@@ -64,6 +64,8 @@ namespace fantasy
 		_loaded_model_names.insert(event.model_path);
 
 		gui::notify_message(gui::ENotifyType::Info, "Loaded " + event.model_path);
+
+		ReturnIfFalse(_current_mesh_count++ < max_mesh_num);
 		
 		// Entity* tmp_model_entity = event.entity;
 		// gui::add(
@@ -133,6 +135,8 @@ namespace fantasy
 
 
 		Mesh* mesh = event.component;
+		mesh->mesh_id = _current_mesh_count;
+		
 		auto& submeshes = mesh->submeshes;
 		submeshes.resize(assimp_meshes.size());
 
@@ -225,13 +229,9 @@ namespace fantasy
 				if (assimp_material->GetTexture(aiTextureType_NORMAL_CAMERA, 0, &material_name) == aiReturn_SUCCESS)
 					submaterial.images[Material::TextureType_BaseColor] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
 				if (assimp_material->GetTexture(aiTextureType_METALNESS, 0, &material_name) == aiReturn_SUCCESS)
-					submaterial.images[Material::TextureType_Metallic] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
-				if (assimp_material->GetTexture(aiTextureType_DIFFUSE_ROUGHNESS, 0, &material_name) == aiReturn_SUCCESS)
-					submaterial.images[Material::TextureType_Roughness] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
+					submaterial.images[Material::TextureType_PBR] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
 				if (assimp_material->GetTexture(aiTextureType_EMISSION_COLOR, 0, &material_name) == aiReturn_SUCCESS)
 					submaterial.images[Material::TextureType_Emissive] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
-				if (assimp_material->GetTexture(aiTextureType_AMBIENT_OCCLUSION, 0, &material_name) == aiReturn_SUCCESS)
-					submaterial.images[Material::TextureType_Occlusion] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
 			},
 			material->submaterials.size()
 		);

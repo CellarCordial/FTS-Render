@@ -1,7 +1,7 @@
 #include "virtual_gbuffer.h"
 #include "../../shader/shader_compiler.h"
+#include "../../core/parallel/parallel.h"
 #include "../../core/tools/check_cast.h"
-#include "../../scene/virtual_texture.h"
 #include "../../scene/virtual_mesh.h"
 #include <cstdint>
 #include <memory>
@@ -10,6 +10,14 @@ namespace fantasy
 {
 	bool VirtualGBufferPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
+		ReturnIfFalse(cache->get_world()->each<event::ModelLoaded>(
+			[this](Entity* entity, event::ModelLoaded* event) -> bool
+			{
+				_resource_writed = false;		
+				return true;
+			}
+		));
+
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(7);
@@ -50,14 +58,14 @@ namespace fantasy
 
 		// Buffer
 		{
-			ReturnIfFalse(_virtual_page_info_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+			ReturnIfFalse(_vt_page_info_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_rwstructured(
 					sizeof(VTPageInfo) * CLIENT_WIDTH * CLIENT_HEIGHT, 
 					sizeof(VTPageInfo),
-					"virtual_page_info_buffer"
+					"vt_page_info_buffer"
 				)
 			)));
-			cache->collect(_virtual_page_info_buffer, ResourceType::Buffer);
+			cache->collect(_vt_page_info_buffer, ResourceType::Buffer);
 		}
 
 		// Texture.
@@ -173,7 +181,7 @@ namespace fantasy
 		{
 			_binding_set_items.resize(7);
 			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualGBufferPassConstant));
-			_binding_set_items[6] = BindingSetItem::create_structured_buffer_uav(0, _virtual_page_info_buffer);
+			_binding_set_items[6] = BindingSetItem::create_structured_buffer_uav(0, _vt_page_info_buffer);
 		}
 
 		// Graphics state.
@@ -303,6 +311,31 @@ namespace fantasy
 	
 	bool VirtualGBufferPass::feedback(CommandListInterface* cmdlist)
 	{
+		DeviceInterface* device = cmdlist->get_deivce();
+		HANDLE fence_event = CreateEvent(nullptr, false, false, nullptr);
+
+		VTPageInfo* data = static_cast<VTPageInfo*>(_vt_page_info_buffer->map(CpuAccessMode::Read, fence_event));
+
+		uint32_t info_count = CLIENT_WIDTH * CLIENT_HEIGHT;
+		parallel::parallel_for(
+			[&](uint64_t ix)
+			{
+				const auto& info = *(data + ix);
+
+				uint2 page_id = uint2(
+					((info.page_id_mip_level >> 12) & 0xf << 8) | (info.page_id_mip_level >> 24) & 0xff,
+					((info.page_id_mip_level >> 8) & 0xf << 8) | (info.page_id_mip_level >> 16) & 0xff
+				);
+				uint32_t mip_level = info.page_id_mip_level & 0xff;
+
+				uint32_t mesh_id = info.geometry_id >> 16;
+				uint32_t submesh_id = info.geometry_id & 0xffff;
+
+				// TODO
+			}, 
+			info_count
+		);
+
 		return true;
 	}
 

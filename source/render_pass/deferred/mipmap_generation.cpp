@@ -82,10 +82,8 @@ namespace fantasy
 		{
 		case Material::TextureType_BaseColor: texture_name += "_base_color"; break;
 		case Material::TextureType_Normal:  texture_name += "_normal"; break;
-		case Material::TextureType_Metallic:  texture_name += "_metallic"; break;
-		case Material::TextureType_Roughness:  texture_name += "_roughness"; break;
+		case Material::TextureType_PBR:  texture_name += "_pbr"; break;
 		case Material::TextureType_Emissive:  texture_name += "_emissive"; break;
-		case Material::TextureType_Occlusion:  texture_name += "_occlusion"; break;
 		default: break;
 		}
 		return texture_name;

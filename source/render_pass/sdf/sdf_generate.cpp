@@ -1,6 +1,5 @@
 #include "sdf_generate.h"
 #include "../../shader/shader_compiler.h"
-#include "../../scene/scene.h"
 #include "../../gui/gui_panel.h"
 #include "../../core/math/bvh.h"
 #include <memory>

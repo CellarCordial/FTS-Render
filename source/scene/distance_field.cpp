@@ -1,4 +1,4 @@
-#include "distance_filed.h"
+#include "distance_field.h"
 #include "../core/tools/file.h"
 #include "../gui/gui_panel.h"
 #include "scene.h"
