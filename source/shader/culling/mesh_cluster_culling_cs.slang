@@ -17,9 +17,10 @@ cbuffer pass_constants : register(b0)
     uint32_t hzb_resolution;
 
     uint32_t group_count;
+    uint32_t cluster_size;
 };
 
-RWStructuredBuffer<DrawIndexedIndirectArguments> draw_indexed_indirect_arguments_buffer : register(u0);
+RWStructuredBuffer<DrawIndirectArguments> draw_indirect_arguments_buffer : register(u0);
 RWStructuredBuffer<uint32_t> visible_cluster_id_buffer : register(u1);
 
 StructuredBuffer<MeshClusterGroup> mesh_cluster_group_buffer : register(t0);
@@ -72,10 +73,11 @@ void compute_shader(uint3 thread_id: SV_DispatchThreadID)
                     {
                         uint32_t current_pos;
                         InterlockedAdd(
-                            draw_indexed_indirect_arguments_buffer[0].instance_count,
+                            draw_indirect_arguments_buffer[0].instance_count,
                             1,
                             current_pos
                         );
+                        draw_indirect_arguments_buffer[0].vertex_count = cluster_size;
                         visible_cluster_id_buffer[current_pos] = cluster_id;
                     }
                 }

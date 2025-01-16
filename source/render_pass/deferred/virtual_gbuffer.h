@@ -3,6 +3,8 @@
  
 #include "../../render_graph/render_pass.h"
 #include "../../core/math/matrix.h"
+#include "../../scene/geometry.h"
+#include <vector>
  
 namespace fantasy
 {
@@ -39,18 +41,26 @@ namespace fantasy
 	class VirtualGBufferPass : public RenderPassInterface
 	{
 	public:
-		VirtualGBufferPass() { type = RenderPassType::Graphics; }
+		VirtualGBufferPass() { type = RenderPassType::Graphics | RenderPassType::Feedback; }
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
+        bool feedback(CommandListInterface* cmdlist) override;
+        bool finish_pass() override;
+	
 	private:
 		bool _resource_writed = false;
 		constant::VirtualGBufferPassConstant _pass_constant;
+		std::vector<Vertex> _cluster_vertices;
+		std::vector<uint32_t> _cluster_triangles;
+		std::vector<GeometryConstantGpu> _geometry_constants;
 
 		std::shared_ptr<BufferInterface> _geometry_constant_buffer;
+		std::shared_ptr<BufferInterface> _cluster_vertex_buffer;
+		std::shared_ptr<BufferInterface> _cluster_triangle_buffer;
 		std::shared_ptr<BufferInterface> _virtual_page_info_buffer;
-		std::shared_ptr<BufferInterface> _vertex_buffer;
+		std::shared_ptr<BufferInterface> _draw_indexed_indirect_arguments_buffer;
 
 		std::shared_ptr<TextureInterface> _world_position_view_depth_texture;
 		std::shared_ptr<TextureInterface> _view_space_velocity_texture;

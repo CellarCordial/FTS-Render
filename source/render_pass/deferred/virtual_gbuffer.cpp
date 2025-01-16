@@ -2,6 +2,8 @@
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
 #include "../../scene/virtual_texture.h"
+#include "../../scene/virtual_mesh.h"
+#include <cstdint>
 #include <memory>
 
 namespace fantasy
@@ -10,13 +12,14 @@ namespace fantasy
 	{
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(6);
+			BindingLayoutItemArray binding_layout_items(7);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::VirtualGBufferPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_structured_buffer_srv(1);
 			binding_layout_items[3] = BindingLayoutItem::create_structured_buffer_srv(2);
 			binding_layout_items[4] = BindingLayoutItem::create_structured_buffer_srv(3);
-			binding_layout_items[5] = BindingLayoutItem::create_structured_buffer_uav(0);
+			binding_layout_items[5] = BindingLayoutItem::create_structured_buffer_srv(4);
+			binding_layout_items[6] = BindingLayoutItem::create_structured_buffer_uav(0);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -168,17 +171,9 @@ namespace fantasy
 
 		// Binding Set.
 		{
-			_binding_set_items.resize(6);
+			_binding_set_items.resize(7);
 			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualGBufferPassConstant));
-			// _binding_set_items[1] = BindingSetItem::create_structured_buffer_srv(0, _buffer);
-			_binding_set_items[2] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("visible_cluster_id_buffer")));
-			_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("cluster_buffer")));
-			// _binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(3, _buffer);
-			_binding_set_items[5] = BindingSetItem::create_structured_buffer_uav(0, _virtual_page_info_buffer);
-			// ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
-			// 	BindingSetDesc{ .binding_items = _binding_set_items },
-			// 	_binding_layout.get()
-			// )));
+			_binding_set_items[6] = BindingSetItem::create_structured_buffer_uav(0, _virtual_page_info_buffer);
 		}
 
 		// Graphics state.
@@ -197,19 +192,124 @@ namespace fantasy
 	{
 		ReturnIfFalse(cmdlist->open());
 
-		// if (!_resource_writed)
-		// {
-		// 	ReturnIfFalse(cmdlist->write_buffer(vertex_buffer.Get(), vertices.data(), sizeof(Vertex) * vertices.size()));
-		// 	ReturnIfFalse(cmdlist->write_buffer(index_buffer.Get(), indices.data(), sizeof(Format::R16_UINT) * indices.size()));
-		// 	_resource_writed = true;
-		// }
+		if (!_resource_writed)
+		{
+			bool res = cache->get_world()->each<VirtualMesh, Mesh, Material>(
+                [&](Entity* entity, VirtualMesh* virtual_mesh, Mesh* mesh, Material* material) -> bool
+                {
+                    for (const auto& submesh : virtual_mesh->_submeshes)
+                    {
+                        for (const auto& group : submesh.cluster_groups)
+                        {
+                            for (auto ix : group.cluster_indices)
+                            {
+                                const auto& cluster = submesh.clusters[ix];
+								_cluster_vertices.insert(_cluster_vertices.end(), cluster.vertices.begin(), cluster.vertices.end());
 
-		// ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
-		// ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant)));
-		// ReturnIfFalse(cmdlist->draw_indexed(DrawArgument));
+								for(uint32_t ix = 0; ix < cluster.indices.size() / 3; ++ix)
+								{
+									uint32_t i0 = cluster.indices[ix * 3];
+									uint32_t i1 = cluster.indices[ix * 3 + 1];
+									uint32_t i2 = cluster.indices[ix * 3 + 2];
+
+									uint32_t max_index = sizeof(uint8_t);
+									ReturnIfFalse(i0 < max_index && i1 < max_index && i2 < max_index);
+
+									_cluster_triangles.push_back(uint32_t(i0 | (i1 << 8) | (i2 << 16)));
+								}
+                            }
+                        }
+                    }  
+					for (const auto& submesh : mesh->submeshes)
+					{
+						const auto& submaterial = material->submaterials[submesh.material_index];
+						_geometry_constants.emplace_back(
+							GeometryConstantGpu{
+								.world_matrix = submesh.world_matrix,
+								.inv_trans_world = inverse(transpose(submesh.world_matrix)),
+								.base_color = submaterial.base_color_factor,
+								.emissive = submaterial.emissive_factor,
+								.roughness = submaterial.roughness_factor,
+								.metallic = submaterial.metallic_factor,
+								.occlusion = submaterial.occlusion_factor,
+								.texture_resolution = uint2(submaterial.images[0].width, submaterial.images[0].height)
+							}
+						);
+					}
+                    return true;
+                }
+            );
+			ReturnIfFalse(res);
+
+			DeviceInterface* device = cmdlist->get_deivce();
+
+			ReturnIfFalse(_cluster_vertex_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+					BufferDesc::create_structured(
+						sizeof(Vertex) * _cluster_vertices.size(), 
+						sizeof(Vertex),
+						false,
+						"cluster_vertex_buffer"
+					)
+				)
+			));
+			ReturnIfFalse(_cluster_triangle_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+					BufferDesc::create_structured(
+						sizeof(uint32_t) * _cluster_triangles.size(), 
+						sizeof(uint32_t),
+						false,
+						"cluster_triangle_buffer"
+					)
+				)
+			));
+			ReturnIfFalse(_geometry_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+					BufferDesc::create_structured(
+						sizeof(GeometryConstantGpu) * _geometry_constants.size(), 
+						sizeof(GeometryConstantGpu),
+						false,
+						"geometry_constant_buffer"
+					)
+				)
+			));
+
+			ReturnIfFalse(cmdlist->write_buffer(_cluster_vertex_buffer.get(), _cluster_vertices.data(), sizeof(Vertex) * _cluster_vertices.size()));
+			ReturnIfFalse(cmdlist->write_buffer(_cluster_triangle_buffer.get(), _cluster_triangles.data(), sizeof(Vertex) * _cluster_vertices.size()));
+			ReturnIfFalse(cmdlist->write_buffer(_geometry_constant_buffer.get(), _geometry_constants.data(), sizeof(Vertex) * _cluster_vertices.size()));
+
+			_binding_set.reset();
+			_binding_set_items[1] = BindingSetItem::create_structured_buffer_srv(0, _geometry_constant_buffer);
+			_binding_set_items[2] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("visible_cluster_id_buffer")));
+			_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("cluster_buffer")));
+			_binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(3, _cluster_vertex_buffer);
+			_binding_set_items[5] = BindingSetItem::create_structured_buffer_srv(4, _cluster_triangle_buffer);
+			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
+				BindingSetDesc{ .binding_items = _binding_set_items },
+				_binding_layout.get()
+			)));
+
+			_graphics_state.binding_sets[0] = _binding_set.get();
+			_graphics_state.indirect_buffer = check_cast<BufferInterface>(cache->require("draw_indexed_indirect_arguments_buffer")).get();
+
+			_resource_writed = true;
+		}
+
+		ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
+		ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::VirtualGBufferPassConstant)));
+		ReturnIfFalse(cmdlist->draw_indirect());
 
 		ReturnIfFalse(cmdlist->close());
 		return true;
 	}
+
+	
+	bool VirtualGBufferPass::feedback(CommandListInterface* cmdlist)
+	{
+		return true;
+	}
+
+	bool VirtualGBufferPass::finish_pass()
+	{
+		return true;
+	}
+
 }
 

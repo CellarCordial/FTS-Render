@@ -20,6 +20,7 @@ namespace fantasy
             uint32_t hzb_resolution = 0;
 
             uint32_t group_count = 0;
+			uint32_t cluster_size = MeshCluster::cluster_size;
 		};
 	}
 

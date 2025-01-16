@@ -65,7 +65,7 @@ namespace fantasy
 
         struct SubMaterial
         {
-			float diffuse_factor[4] = { 0.0f };
+			float base_color_factor[4] = { 0.0f };
 			float roughness_factor = 0.0f;
 			float metallic_factor = 0.0f;
 			float occlusion_factor = 0.0f;
@@ -76,10 +76,10 @@ namespace fantasy
             bool operator==(const SubMaterial& other) const
             {
                 ReturnIfFalse(
-                    diffuse_factor[0] == other.diffuse_factor[0] &&
-                    diffuse_factor[1] == other.diffuse_factor[1] &&
-                    diffuse_factor[2] == other.diffuse_factor[2] &&
-                    diffuse_factor[3] == other.diffuse_factor[3] &&
+                    base_color_factor[0] == other.base_color_factor[0] &&
+                    base_color_factor[1] == other.base_color_factor[1] &&
+                    base_color_factor[2] == other.base_color_factor[2] &&
+                    base_color_factor[3] == other.base_color_factor[3] &&
                     roughness_factor  == other.roughness_factor &&
                     metallic_factor   == other.metallic_factor &&
                     occlusion_factor  == other.occlusion_factor &&
@@ -129,6 +129,20 @@ namespace fantasy
         float4x4 world_matrix;
         bool moved = false;
         bool culling = false;
+    };
+
+    struct GeometryConstantGpu
+    {
+        float4x4 world_matrix;
+        float4x4 inv_trans_world;
+
+        float4 base_color;
+        float4 emissive;
+        float roughness;
+        float metallic;
+        float occlusion;
+
+        uint2 texture_resolution;
     };
 
 

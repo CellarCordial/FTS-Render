@@ -323,7 +323,7 @@ namespace fantasy
 						{
 							const auto& submaterial = material->submaterials[submesh.material_index];
 
-							geometry_constant.diffuse = submaterial.diffuse_factor;
+							geometry_constant.diffuse = submaterial.base_color_factor;
 							geometry_constant.emissive = submaterial.emissive_factor;    
 							geometry_constant.roughness = submaterial.roughness_factor;
 							geometry_constant.metallic = submaterial.metallic_factor;

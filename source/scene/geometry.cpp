@@ -209,7 +209,7 @@ namespace fantasy
 
 				aiColor4D ai_color;
 				if (assimp_material->Get(AI_MATKEY_BASE_COLOR, ai_color) == AI_SUCCESS) 
-					memcpy(submaterial.diffuse_factor, &ai_color, sizeof(float) * 4);
+					memcpy(submaterial.base_color_factor, &ai_color, sizeof(float) * 4);
 				if (assimp_material->Get(AI_MATKEY_COLOR_EMISSIVE, ai_color) == AI_SUCCESS) 
 					memcpy(submaterial.emissive_factor, &ai_color, sizeof(float) * 4);
 				

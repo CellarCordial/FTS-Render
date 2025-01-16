@@ -200,9 +200,9 @@ namespace fantasy
         bool draw_indexed(const DrawArguments& arguments) override;
         bool dispatch(uint32_t thread_group_num_x, uint32_t thread_group_num_y = 1, uint32_t thread_group_num_z = 1) override;
 		
-        bool draw_indirect(uint32_t offset_bytes, uint32_t draw_count = 1) override;         
-        bool draw_indexed_indirect(uint32_t offset_bytes, uint32_t draw_count = 1) override;
-        bool dispatch_indirect(uint32_t offset_bytes) override;
+        bool draw_indirect(uint32_t offset_bytes = 0, uint32_t draw_count = 1) override;         
+        bool draw_indexed_indirect(uint32_t offset_bytes = 0, uint32_t draw_count = 1) override;
+        bool dispatch_indirect(uint32_t offset_bytes = 0) override;
 
         bool dispatch_rays(const ray_tracing::DispatchRaysArguments& arguments) override;
         
