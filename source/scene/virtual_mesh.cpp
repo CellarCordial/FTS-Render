@@ -648,7 +648,7 @@ namespace fantasy
 			}
 			virtual_submesh.mip_level_num = mip_level + 1;
 
-
+			_current_geometry_id++;
 			_indices.clear();
 			_vertices.clear();
 		}
@@ -719,6 +719,7 @@ namespace fantasy
 		for (const auto& [left, right] : partitionar._part_ranges)
 		{
 			auto& cluster = submesh.clusters.emplace_back();
+			cluster.geometry_id = _current_geometry_id;
 
 			// Map the vertices in _vertices to the _clusters.
 			std::unordered_map<uint32_t, uint32_t> cluster_vertex_index_map;

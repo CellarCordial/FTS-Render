@@ -145,6 +145,7 @@ namespace fantasy
     private:
 		std::vector<uint32_t> _indices;
         std::vector<Vertex> _vertices;
+        uint32_t _current_geometry_id = 0;
     };
 
 

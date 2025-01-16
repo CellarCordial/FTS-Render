@@ -308,6 +308,9 @@ namespace fantasy
 
 	bool VirtualGBufferPass::finish_pass()
 	{
+		_cluster_vertices.clear(); _cluster_vertices.shrink_to_fit();
+		_cluster_triangles.clear(); _cluster_triangles.shrink_to_fit();
+		_geometry_constants.clear(); _geometry_constants.shrink_to_fit();
 		return true;
 	}
 
