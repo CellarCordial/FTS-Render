@@ -142,8 +142,8 @@ namespace fantasy
 		{
 			ReturnIfFalse(_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_(
-					width,
-					height,
+					CLIENT_WIDTH,
+					CLIENT_HEIGHT,
 					Format::RGBA32_FLOAT,
 					"Texture"
 				)

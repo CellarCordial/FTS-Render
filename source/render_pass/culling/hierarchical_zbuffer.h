@@ -1,5 +1,5 @@
-#ifndef RENDER_PASS_H
-#define RENDER_PASS_H
+#ifndef RENDER_HIERARCHICAL_ZBUFFER_PASS_H
+#define RENDER_HIERARCHICAL_ZBUFFER_PASS_H
  
 #include "../../render_graph/render_pass.h"
  

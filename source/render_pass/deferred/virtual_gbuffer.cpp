@@ -1,6 +1,8 @@
 #include "virtual_gbuffer.h"
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
+#include "../../scene/virtual_texture.h"
+#include <memory>
 
 namespace fantasy
 {
@@ -43,36 +45,112 @@ namespace fantasy
 			ReturnIfFalse(_ps = std::unique_ptr<Shader>(create_shader(ps_desc, ps_data.data(), ps_data.size())));
 		}
 
-		// Buffer.
+		// Buffer
 		{
-			ReturnIfFalse(_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_(
-					byte_size, 
-					"Buffer"
+			ReturnIfFalse(_virtual_page_info_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+				BufferDesc::create_rwstructured(
+					sizeof(VTPageInfo) * CLIENT_WIDTH * CLIENT_HEIGHT, 
+					sizeof(VTPageInfo),
+					"virtual_page_info_buffer"
 				)
 			)));
+			cache->collect(_virtual_page_info_buffer, ResourceType::Buffer);
 		}
 
 		// Texture.
 		{
-			ReturnIfFalse(_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_(
-					width,
-					height,
+			ReturnIfFalse(_world_position_view_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_render_target(
+					CLIENT_WIDTH,
+					CLIENT_HEIGHT,
 					Format::RGBA32_FLOAT,
-					"Texture"
+					"world_position_view_depth_texture"
 				)
 			)));
-			cache->collect(_texture, ResourceType::Texture);
+			cache->collect(_world_position_view_depth_texture, ResourceType::Texture);
+
+			ReturnIfFalse(_view_space_velocity_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_render_target(
+					CLIENT_WIDTH,
+					CLIENT_HEIGHT,
+					Format::RGB32_FLOAT,
+					"view_space_velocity_texture"
+				)
+			)));
+			cache->collect(_view_space_velocity_texture, ResourceType::Texture);
+
+			ReturnIfFalse(_tile_uv_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_render_target(
+					CLIENT_WIDTH,
+					CLIENT_HEIGHT,
+					Format::RG32_FLOAT,
+					"tile_uv_texture"
+				)
+			)));
+			cache->collect(_tile_uv_texture, ResourceType::Texture);
+
+			ReturnIfFalse(_world_space_normal_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_render_target(
+					CLIENT_WIDTH,
+					CLIENT_HEIGHT,
+					Format::RGB32_FLOAT,
+					"world_space_normal_texture"
+				)
+			)));
+			cache->collect(_world_space_normal_texture, ResourceType::Texture);
+
+			ReturnIfFalse(_world_space_tangent_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_render_target(
+					CLIENT_WIDTH,
+					CLIENT_HEIGHT,
+					Format::RGB32_FLOAT,
+					"world_space_tangent_texture"
+				)
+			)));
+			cache->collect(_world_space_tangent_texture, ResourceType::Texture);
+
+			ReturnIfFalse(_base_color_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_render_target(
+					CLIENT_WIDTH,
+					CLIENT_HEIGHT,
+					Format::RGBA32_FLOAT,
+					"base_color_texture"
+				)
+			)));
+			cache->collect(_base_color_texture, ResourceType::Texture);
+
+			ReturnIfFalse(_pbr_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_render_target(
+					CLIENT_WIDTH,
+					CLIENT_HEIGHT,
+					Format::RGB32_FLOAT,
+					"pbr_texture"
+				)
+			)));
+			cache->collect(_pbr_texture, ResourceType::Texture);
+
+			ReturnIfFalse(_emmisive_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_render_target(
+					CLIENT_WIDTH,
+					CLIENT_HEIGHT,
+					Format::RGBA32_FLOAT,
+					"emmisive_texture"
+				)
+			)));
+			cache->collect(_emmisive_texture, ResourceType::Texture);
 		}
- 
+
 		// Frame Buffer.
 		{
 			FrameBufferDesc frame_buffer_desc;
-			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(pRenderTargetTexture));
-			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(pRenderTargetTexture));
-			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(pRenderTargetTexture));
-			frame_buffer_desc.depth_stencil_attachment = FrameBufferAttachment::create_attachment(pDepthStencilTexture);
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_position_view_depth_texture));
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_view_space_velocity_texture));
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_tile_uv_texture));
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_space_normal_texture));
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_space_tangent_texture));
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_base_color_texture));
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_pbr_texture));
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_emmisive_texture));
 			ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
 		}
  
@@ -90,31 +168,25 @@ namespace fantasy
 
 		// Binding Set.
 		{
-			BindingSetItemArray binding_set_items(N);
-			binding_set_items[Index] = BindingSetItem::create_push_constants(Slot, sizeof(constant));
-			binding_set_items[Index] = BindingSetItem::create_constant_buffer(Slot, _buffer);
-			binding_set_items[Index] = BindingSetItem::create_structured_buffer_srv(Slot, _buffer);
-			binding_set_items[Index] = BindingSetItem::create_structured_buffer_uav(Slot, _buffer);
-			binding_set_items[Index] = BindingSetItem::create_raw_buffer_srv(Slot, _buffer);
-			binding_set_items[Index] = BindingSetItem::create_raw_buffer_uav(Slot, _buffer);
-			binding_set_items[Index] = BindingSetItem::create_typed_buffer_srv(Slot, _buffer);
-			binding_set_items[Index] = BindingSetItem::create_typed_buffer_uav(Slot, _buffer);
-			binding_set_items[Index] = BindingSetItem::create_texture_srv(Slot, _texture);
-			binding_set_items[Index] = BindingSetItem::create_texture_uav(Slot, _texture);
-			binding_set_items[Index] = BindingSetItem::create_sampler(Slot, sampler.Get());
-			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
-				BindingSetDesc{ .binding_items = binding_set_items },
-				_binding_layout.get()
-			)));
+			_binding_set_items.resize(6);
+			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualGBufferPassConstant));
+			// _binding_set_items[1] = BindingSetItem::create_structured_buffer_srv(0, _buffer);
+			_binding_set_items[2] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("visible_cluster_id_buffer")));
+			_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("cluster_buffer")));
+			// _binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(3, _buffer);
+			_binding_set_items[5] = BindingSetItem::create_structured_buffer_uav(0, _virtual_page_info_buffer);
+			// ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
+			// 	BindingSetDesc{ .binding_items = _binding_set_items },
+			// 	_binding_layout.get()
+			// )));
 		}
 
 		// Graphics state.
 		{
 			_graphics_state.pipeline = _pipeline.get();
 			_graphics_state.frame_buffer = _frame_buffer.get();
-			_graphics_state.binding_sets.push_back(_binding_set.get());
-			_graphics_state.index_buffer_binding = IndexBufferBinding{ .buffer = index_buffer };
-			_graphics_state.vertex_buffer_bindings.push_back(VertexBufferBinding{ .buffer = vertex_buffer });
+			_graphics_state.binding_sets.resize(1);
+			// _graphics_state.index_buffer_binding = IndexBufferBinding{ .buffer = index_buffer };
 			_graphics_state.viewport_state = ViewportState::create_default_viewport(CLIENT_WIDTH, CLIENT_HEIGHT);
 		}
 
@@ -125,16 +197,16 @@ namespace fantasy
 	{
 		ReturnIfFalse(cmdlist->open());
 
-		if (!_resource_writed)
-		{
-			ReturnIfFalse(cmdlist->write_buffer(vertex_buffer.Get(), vertices.data(), sizeof(Vertex) * vertices.size()));
-			ReturnIfFalse(cmdlist->write_buffer(index_buffer.Get(), indices.data(), sizeof(Format::R16_UINT) * indices.size()));
-			_resource_writed = true;
-		}
+		// if (!_resource_writed)
+		// {
+		// 	ReturnIfFalse(cmdlist->write_buffer(vertex_buffer.Get(), vertices.data(), sizeof(Vertex) * vertices.size()));
+		// 	ReturnIfFalse(cmdlist->write_buffer(index_buffer.Get(), indices.data(), sizeof(Format::R16_UINT) * indices.size()));
+		// 	_resource_writed = true;
+		// }
 
-		ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
-		ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant)));
-		ReturnIfFalse(cmdlist->draw_indexed(DrawArgument));
+		// ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
+		// ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant)));
+		// ReturnIfFalse(cmdlist->draw_indexed(DrawArgument));
 
 		ReturnIfFalse(cmdlist->close());
 		return true;

@@ -1,5 +1,5 @@
-#ifndef RENDER_PASS_H
-#define RENDER_PASS_H
+#ifndef RENDER_MESH_CLUSTER_CULLING_PASS_H
+#define RENDER_MESH_CLUSTER_CULLING_PASS_H
 
 #include "../../render_graph/render_pass.h"
 #include "../../scene/virtual_mesh.h"
@@ -37,8 +37,8 @@ namespace fantasy
         uint32_t _hzb_resolution = 1024u;
 		constant::MeshClusterCullingPassConstant _pass_constant;
 
-        std::vector<MeshClusterGroup> _mesh_cluster_groups;
-        std::vector<MeshCluster> _mesh_clusters;
+        std::vector<MeshClusterGroupGpu> _mesh_cluster_groups;
+        std::vector<MeshClusterGpu> _mesh_clusters;
 
 		std::shared_ptr<BufferInterface> _mesh_cluster_group_buffer;
 		std::shared_ptr<BufferInterface> _mesh_cluster_buffer;

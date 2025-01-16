@@ -27,6 +27,7 @@ StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
 StructuredBuffer<uint32_t> visible_cluster_id_buffer : register(t1);
 StructuredBuffer<MeshCluster> cluster_buffer : register(t2);
 StructuredBuffer<Vertex> vertex_buffer : register(t3);
+StructuredBuffer<uint32_t> triangle_buffer : register(t4);
 
 struct VertexOutput
 {
@@ -80,8 +81,11 @@ VertexOutput vertex_shader(uint32_t instance_id: SV_InstanceID, uint32_t vertex_
     case 3: output.color = color_hash(cluster.mip_level);
     };
 
+    uint32_t packed_triangle = triangle_buffer[cluster.triangle_offset + triangle_index];
+    uint32_t index_id = (packed_triangle >> (vertex_index % 3 * 8)) & 255;
+    Vertex vertex = vertex_buffer[cluster.vertex_offset + index_id];
+    
     GeometryConstant geometry = geometry_constant_buffer[cluster.geometry_id];
-    Vertex vertex = vertex_buffer[cluster.vertex_offset + vertex_index];
     float4 world_pos = mul(float4(vertex.position, 1.0f), geometry.world_matrix);
 
     output.sv_position = mul(world_pos, view_proj);

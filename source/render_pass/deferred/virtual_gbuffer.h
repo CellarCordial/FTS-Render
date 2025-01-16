@@ -1,9 +1,8 @@
-#ifndef RENDER_PASS_H
-#define RENDER_PASS_H
+#ifndef RENDER_VIRTUAL_GBUFFER_PASS_H
+#define RENDER_VIRTUAL_GBUFFER_PASS_H
  
 #include "../../render_graph/render_pass.h"
 #include "../../core/math/matrix.h"
-#include "../../scene/geometry.h"
  
 namespace fantasy
 {
@@ -46,11 +45,22 @@ namespace fantasy
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
 	private:
+		bool _resource_writed = false;
 		constant::VirtualGBufferPassConstant _pass_constant;
 
-		std::shared_ptr<BufferInterface> _buffer;
-		std::shared_ptr<TextureInterface> _texture;
-		
+		std::shared_ptr<BufferInterface> _geometry_constant_buffer;
+		std::shared_ptr<BufferInterface> _virtual_page_info_buffer;
+		std::shared_ptr<BufferInterface> _vertex_buffer;
+
+		std::shared_ptr<TextureInterface> _world_position_view_depth_texture;
+		std::shared_ptr<TextureInterface> _view_space_velocity_texture;
+		std::shared_ptr<TextureInterface> _tile_uv_texture;
+		std::shared_ptr<TextureInterface> _world_space_normal_texture;
+		std::shared_ptr<TextureInterface> _world_space_tangent_texture;
+		std::shared_ptr<TextureInterface> _base_color_texture;
+		std::shared_ptr<TextureInterface> _pbr_texture;
+		std::shared_ptr<TextureInterface> _emmisive_texture;
+
 		std::unique_ptr<BindingLayoutInterface> _binding_layout;
 		std::unique_ptr<InputLayoutInterface> _input_layout;
 
@@ -60,6 +70,7 @@ namespace fantasy
 		std::unique_ptr<FrameBufferInterface> _frame_buffer;
 		std::unique_ptr<GraphicsPipelineInterface> _pipeline;
 
+		BindingSetItemArray _binding_set_items;
 		std::unique_ptr<BindingSetInterface> _binding_set;
 		GraphicsState _graphics_state;
         DrawArguments _draw_arguments;

@@ -33,7 +33,7 @@ struct VertexOutput
 struct PixelOutput
 {
     float4 world_position_view_depth : SV_Target0;
-    float4 view_space_velocity : SV_TARGET1;
+    float3 view_space_velocity : SV_TARGET1;
     float2 tile_uv : SV_Target2;
 
     float3 world_space_normal : SV_TARGET3;
@@ -82,7 +82,7 @@ PixelOutput pixel_shader(VertexOutput input)
 
     PixelOutput output;
     output.world_position_view_depth = float4(input.world_space_position, input.view_space_position.z);
-    output.view_space_velocity = float4(input.prev_view_space_position - input.view_space_position, 1.0f);
+    output.view_space_velocity = input.prev_view_space_position - input.view_space_position;
 
     uint32_t vt_mip_page_size = vt_page_size << mip_level;
     uint2 mip_page_id = (uint2)floor(input.uv * (geometry.texture_resolution / vt_mip_page_size));

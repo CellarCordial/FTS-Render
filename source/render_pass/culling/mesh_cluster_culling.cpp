@@ -78,7 +78,7 @@ namespace fantasy
             TextureDesc desc = TextureDesc::create_shader_resource(
                 _hzb_resolution,
                 _hzb_resolution,
-                Format::RGBA32_FLOAT,
+                Format::R32_FLOAT,
                 "hierarchical_zbuffer_texture"
             );
             desc.mip_levels = hzb_mip_levels;
@@ -136,22 +136,30 @@ namespace fantasy
             DeviceInterface* device = cmdlist->get_deivce();
             _pass_constant.group_count = 0;
 
+            uint32_t vertex_offset = 0;
+            uint32_t triangle_offset = 0;
+            uint32_t cluster_index_offset = 0;
+
             ReturnIfFalse(world->each<VirtualMesh>(
                 [&](Entity* entity, VirtualMesh* virtual_mesh) -> bool
                 {
                     for (const auto& submesh : virtual_mesh->_submeshes)
                     {
                         _pass_constant.group_count += static_cast<uint32_t>(submesh.cluster_groups.size());
-                        _mesh_cluster_groups.insert(
-                            _mesh_cluster_groups.end(), 
-                            submesh.cluster_groups.begin(), 
-                            submesh.cluster_groups.end()
-                        );
-                        _mesh_clusters.insert(
-                            _mesh_clusters.end(), 
-                            submesh.clusters.begin(), 
-                            submesh.clusters.end()
-                        );
+
+                        for (const auto& group : submesh.cluster_groups)
+                        {
+                            _mesh_cluster_groups.emplace_back(convert_mesh_cluster_group(group, cluster_index_offset));
+                            
+                            cluster_index_offset += static_cast<uint32_t>(group.cluster_indices.size());
+                        }
+                        for (const auto& cluster : submesh.clusters)
+                        {
+                            _mesh_clusters.emplace_back(convert_mesh_cluster(cluster, vertex_offset, triangle_offset));
+
+                            vertex_offset += static_cast<uint32_t>(cluster.vertices.size());
+                            triangle_offset += static_cast<uint32_t>(cluster.indices.size() / 3);
+                        }
                     }  
                     return true;
                 }
@@ -159,8 +167,8 @@ namespace fantasy
             
             ReturnIfFalse(_mesh_cluster_group_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
                 BufferDesc::create_structured(
-                    sizeof(MeshClusterGroup) * _mesh_cluster_groups.size(), 
-                    sizeof(MeshClusterGroup),
+                    sizeof(MeshClusterGroupGpu) * _mesh_cluster_groups.size(), 
+                    sizeof(MeshClusterGroupGpu),
                     true,
                     "mesh_cluster_group_buffer"
                 )
@@ -168,8 +176,8 @@ namespace fantasy
             
             ReturnIfFalse(_mesh_cluster_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
                 BufferDesc::create_structured(
-                    sizeof(MeshCluster) * _mesh_clusters.size(), 
-                    sizeof(MeshCluster),
+                    sizeof(MeshClusterGpu) * _mesh_clusters.size(), 
+                    sizeof(MeshClusterGpu),
                     true,
                     "mesh_cluster_buffer"
                 )
@@ -178,7 +186,7 @@ namespace fantasy
 
             ReturnIfFalse(_visible_cluster_id_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
                 BufferDesc::create_structured(
-                    sizeof(uint32_t) * _pass_constant.group_count, 
+                    sizeof(uint32_t) * cluster_index_offset, 
                     sizeof(uint32_t),
                     true,
                     "visible_cluster_id_buffer"
@@ -186,6 +194,16 @@ namespace fantasy
             )));
             cache->collect(_visible_cluster_id_buffer, ResourceType::Buffer);
 
+            ReturnIfFalse(cmdlist->write_buffer(
+                _mesh_cluster_group_buffer.get(), 
+                _mesh_cluster_groups.data(), 
+                sizeof(MeshClusterGroupGpu) * _mesh_cluster_groups.size()
+            ));
+            ReturnIfFalse(cmdlist->write_buffer(
+                _mesh_cluster_buffer.get(), 
+                _mesh_clusters.data(), 
+                sizeof(MeshClusterGpu) * _mesh_clusters.size()
+            ));
 
             _binding_set.reset();
 

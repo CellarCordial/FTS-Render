@@ -101,6 +101,7 @@ namespace fantasy
         float lod_error = 0.0f;
         uint32_t mip_level = 0;
         uint32_t group_id = 0;
+        uint32_t geometry_id = 0;
     };
 
     struct MeshClusterGroup
@@ -113,6 +114,31 @@ namespace fantasy
         Sphere lod_bounding_sphere;
         float parent_lod_error = 0.0f;
         uint32_t mip_level = 0;
+    };
+
+    struct MeshClusterGpu
+    {
+        float4 bounding_sphere;
+        float4 lod_bounding_sphere;
+
+        uint32_t mip_level;
+        uint32_t group_id;
+        float lod_error;
+
+        uint32_t vertex_offset;
+        uint32_t triangle_offset;
+        uint32_t triangle_count;
+
+        uint32_t geometry_id;
+    };
+
+    struct MeshClusterGroupGpu
+    {
+        float4 lod_bounding_sphere;
+
+        uint32_t cluster_count;
+        uint32_t cluster_index_offset;
+        float max_parent_lod_error;
     };
 
     class VirtualMesh
@@ -147,6 +173,52 @@ namespace fantasy
         std::vector<float3> _vertex_positons;
     };
 
+    inline MeshClusterGpu convert_mesh_cluster(
+        const MeshCluster& cluster,
+        uint32_t vertex_offset,
+        uint32_t triangle_offset
+    )
+    {
+        MeshClusterGpu ret;
+        ret.bounding_sphere = float4(
+            cluster.bounding_sphere.center.x,
+            cluster.bounding_sphere.center.y,
+            cluster.bounding_sphere.center.z,
+            cluster.bounding_sphere.radius
+        );
+        ret.lod_bounding_sphere = float4(
+            cluster.lod_bounding_sphere.center.x,
+            cluster.lod_bounding_sphere.center.y,
+            cluster.lod_bounding_sphere.center.z,
+            cluster.lod_bounding_sphere.radius
+        );
+        ret.mip_level = cluster.mip_level;
+        ret.group_id = cluster.group_id;
+        ret.lod_error = cluster.lod_error;
+        ret.triangle_count = static_cast<uint32_t>(cluster.indices.size()) / 3;
+        ret.geometry_id = cluster.geometry_id;
+        ret.vertex_offset = vertex_offset;
+        ret.triangle_offset = triangle_offset;
+        return ret;
+    }
+
+    inline MeshClusterGroupGpu convert_mesh_cluster_group(
+        const MeshClusterGroup& group,
+        uint32_t cluster_index_offset
+    )
+    {
+        MeshClusterGroupGpu ret;
+        ret.lod_bounding_sphere = float4(
+            group.lod_bounding_sphere.center.x,
+            group.lod_bounding_sphere.center.y,
+            group.lod_bounding_sphere.center.z,
+            group.lod_bounding_sphere.radius
+        );
+        ret.cluster_count = static_cast<uint32_t>(group.cluster_indices.size());
+        ret.max_parent_lod_error = group.parent_lod_error;
+        ret.cluster_index_offset = cluster_index_offset;
+        return ret;
+    }
 }
 
 #endif
