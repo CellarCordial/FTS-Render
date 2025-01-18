@@ -66,7 +66,7 @@ SamplerState gSurfaceSampler : register(s2);
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
-void compute_shader(uint3 ThreadID : SV_DispatchThreadID)
+void main(uint3 ThreadID : SV_DispatchThreadID)
 {
     uint32_t dwRayIndex = ThreadID.x;
     uint32_t dwProbeIndex = ThreadID.y;

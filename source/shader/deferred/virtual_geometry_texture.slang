@@ -28,7 +28,7 @@ SamplerState linear_clamp_sampler : register(s0);
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
-void compute_shader(uint3 thread_id : SV_DispatchThreadID)
+void main(uint3 thread_id : SV_DispatchThreadID)
 {
     uint2 pixel_id = thread_id.xy;
     float2 tile_uv = tile_uv_texture[pixel_id];

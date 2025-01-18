@@ -5,7 +5,6 @@
 #include <basetsd.h>
 #include <string>
 #include <vector>
-#include <windows.h>
 
 namespace fantasy 
 {

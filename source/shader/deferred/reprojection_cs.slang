@@ -16,7 +16,7 @@ RWTexture2D<float2> reprojection_texture : register(u0);
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
-void compute_shader(uint3 thread_id : SV_DispatchThreadID)
+void main(uint3 thread_id : SV_DispatchThreadID)
 {
     uint32_t width, height;
     reprojection_texture.GetDimensions(width, height);

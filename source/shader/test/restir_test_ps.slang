@@ -21,7 +21,7 @@ struct VertexOutput
 };
 
 [shader("pixel")]
-float4 pixel_shader(VertexOutput input) : SV_Target0
+float4 main(VertexOutput input) : SV_Target0
 {
     float4 color;
     switch (show_type)

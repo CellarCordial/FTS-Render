@@ -33,7 +33,7 @@ void LightIntegate(float3 WorldOri, float3 WorldDir, float SunTheta, float3 SunD
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
-void compute_shader(uint3 ThreadIndex : SV_DispatchThreadID)
+void main(uint3 ThreadIndex : SV_DispatchThreadID)
 {
     uint32_t dwWidth, dwHeight;
     gMultiScatterTexture.GetDimensions(dwWidth, dwHeight);

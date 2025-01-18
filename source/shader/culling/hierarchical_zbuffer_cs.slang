@@ -23,7 +23,7 @@ struct VertexOutput
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
-void compute_shader(uint3 thread_id: SV_DispatchThreadID)
+void main(uint3 thread_id: SV_DispatchThreadID)
 {
     uint2 uv = thread_id.xy;
     if (last_mip_level == 0) uv = uv / hzb_resolution * client_resolution;

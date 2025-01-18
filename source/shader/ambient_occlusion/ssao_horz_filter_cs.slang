@@ -32,7 +32,7 @@ groupshared float2 gOcclusionCache[THREAD_GROUP_NUM_X + 2 * BLUR_RADIUS];
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_NUM_X, 1, 1)]
-void compute_shader(uint3 ThreadID: SV_ThreadID, uint3 GroupThreadID : SV_GroupThreadID)
+void main(uint3 ThreadID: SV_ThreadID, uint3 GroupThreadID : SV_GroupThreadID)
 {
     uint2 SSAOTextureRes;
     gSSAOTexture.GetDimensions(SSAOTextureRes.x, SSAOTextureRes.y);

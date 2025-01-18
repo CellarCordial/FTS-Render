@@ -7,7 +7,7 @@ struct VertexOutput
 };
 
 [shader("vertex")]
-VertexOutput vertex_shader(uint32_t vertex_id : SV_VertexID)
+VertexOutput main(uint32_t vertex_id : SV_VertexID)
 {
     VertexOutput output;
     output.uv = float2((vertex_id << 1) & 2, vertex_id & 2);

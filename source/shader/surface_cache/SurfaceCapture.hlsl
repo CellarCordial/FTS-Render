@@ -31,7 +31,7 @@ struct VertexOutput
 };
 
 
-VertexOutput vertex_shader(VertexInput In, uint32_t instance_id : SV_InstanceID)
+VertexOutput main(VertexInput In, uint32_t instance_id : SV_InstanceID)
 {
     float4 PosW = mul(float4(In.local_space_position, 1.0f),  WorldMatrices[instance_id]);
 
@@ -64,7 +64,7 @@ float3 calcute_normal(float3 TextureNormal, float3 VertexNormal, float4 VertexTa
     return normalize(mul(UnpackedNormal, TBN));
 }
 
-FPixelOutput pixel_shader(VertexOutput In)
+FPixelOutput main(VertexOutput In)
 {
     FPixelOutput Out;
 

@@ -50,7 +50,7 @@ struct PixelOutput
 };
 
 [shader("pixel")]
-PixelOutput pixel_shader(VertexOutput input)
+PixelOutput main(VertexOutput input)
 {
     GeometryConstant constant = geometry_constant_buffer[geometry_constant_index];
 

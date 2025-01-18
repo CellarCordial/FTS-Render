@@ -18,7 +18,7 @@ struct VertexOutput
 };
 
 [shader("pixel")]
-float4 pixel_shader(VertexOutput In) : SV_Target0
+float4 main(VertexOutput In) : SV_Target0
 {
     float2 uv = GetProbeTextureUV(
         normalize(In.normal),

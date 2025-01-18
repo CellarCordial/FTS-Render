@@ -44,7 +44,7 @@ int32_t trace_triangle_index(float3 p, float3 d, float max_length);
 
 [shader("compute")]
 [numthreads(1, GROUP_THREAD_NUM_Y, GROUP_THREAD_NUM_Z)]
-void compute_shader(uint3 thread_id : SV_DispatchThreadID)
+void main(uint3 thread_id : SV_DispatchThreadID)
 {
     uint32_t width, height, depth;
     sdf_texture.GetDimensions(width, height, depth);

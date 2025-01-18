@@ -60,22 +60,22 @@ namespace fantasy
 		{
 			ShaderCompileDesc shader_compile_desc;
 			shader_compile_desc.shader_name = "atmosphere/sun_disk_vs.slang";
-			shader_compile_desc.entry_point = "vertex_shader";
+			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = shader_compile::compile_shader(shader_compile_desc);
 			shader_compile_desc.shader_name = "atmosphere/sun_disk_ps.slang";
-			shader_compile_desc.entry_point = "pixel_shader";
+			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Pixel;
 			ShaderData ps_data = shader_compile::compile_shader(shader_compile_desc);
 
 			ShaderDesc vs_desc;
-			vs_desc.entry = "vertex_shader";
+			vs_desc.entry = "main";
 			vs_desc.shader_type = ShaderType::Vertex;
 			ReturnIfFalse(_vs = std::unique_ptr<Shader>(create_shader(vs_desc, vs_data.data(), vs_data.size())));
 
 			ShaderDesc ps_desc;
 			ps_desc.shader_type = ShaderType::Pixel;
-			ps_desc.entry = "pixel_shader";
+			ps_desc.entry = "main";
 			ReturnIfFalse(_ps = std::unique_ptr<Shader>(create_shader(ps_desc, ps_data.data(), ps_data.size())));
 		}
 

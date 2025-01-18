@@ -22,7 +22,7 @@ struct VertexOutput
 };
 
 [shader("vertex")]
-VertexOutput vertex_shader(VertexInput In, uint32_t dwProbeIndex : SV_InstanceID)
+VertexOutput main(VertexInput In, uint32_t dwProbeIndex : SV_InstanceID)
 {
     VertexOutput Out;
 

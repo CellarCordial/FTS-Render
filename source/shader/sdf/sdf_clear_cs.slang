@@ -20,7 +20,7 @@ RWTexture3D<float> global_sdf_texture : register(u0);
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, THREAD_GROUP_SIZE_Z)]
-void compute_shader(uint3 thread_id : SV_DispatchThreadID)
+void main(uint3 thread_id : SV_DispatchThreadID)
 {
     uint3 voxel_id = voxel_offset + thread_id;
     global_sdf_texture[uint3(voxel_id.x, voxel_id.y, voxel_id.z)] = 0.0f;

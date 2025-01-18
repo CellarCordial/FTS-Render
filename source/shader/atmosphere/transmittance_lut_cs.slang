@@ -18,7 +18,7 @@ RWTexture2D<float4> transmittance_texture : register(u0);
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_X, 1)]
-void compute_shader(uint3 ThreadIndex : SV_DispatchThreadID)
+void main(uint3 ThreadIndex : SV_DispatchThreadID)
 {
     uint32_t dwWidth, dwHeight;
     transmittance_texture.GetDimensions(dwWidth, dwHeight);

@@ -56,7 +56,7 @@ RWStructuredBuffer<VTPageInfo> vt_page_info_buffer : register(u0);
 uint32_t estimate_mip_level(float2 texture_coordinate);
 
 [shader("pixel")]
-PixelOutput pixel_shader(VertexOutput input)
+PixelOutput main(VertexOutput input)
 {
     GeometryConstant geometry = geometry_constant_buffer[input.geometry_id];
     uint2 page_id = (uint2)floor(input.uv * (geometry.texture_resolution / vt_page_size));

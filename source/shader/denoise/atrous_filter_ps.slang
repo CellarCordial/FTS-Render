@@ -41,7 +41,7 @@ static const float2 offset[KERNEL_SIZE] =
     { -2, 2 }, { -1, 2 }, { 0, 2 }, { 1, 2 }, { 2, 2 }
 };
 
-float4 pixel_shader(VertexOutput input) : SV_Target0
+float4 main(VertexOutput input) : SV_Target0
 {
     float2 uv = input.uv;
     uint2 ori_pixel_id = uint2(window_resolution * uv);

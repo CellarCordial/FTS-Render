@@ -29,7 +29,7 @@ SamplerState gSampler : register(s0);
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
-void compute_shader(uint3 ThreadID : SV_DispatchThreadID)
+void main(uint3 ThreadID : SV_DispatchThreadID)
 {
     uint2 uv = ThreadID.xy;
     float depth = gDepthTexture[uv];

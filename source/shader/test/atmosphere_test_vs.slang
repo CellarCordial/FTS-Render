@@ -24,7 +24,7 @@ struct VertexOutput
 };
 
 [shader("vertex")]
-VertexOutput vertex_shader(VertexInput In)
+VertexOutput main(VertexInput In)
 {
     VertexOutput output;
     float4 world_space_position = mul(float4(In.local_space_position, 1.0f), world_matrix);

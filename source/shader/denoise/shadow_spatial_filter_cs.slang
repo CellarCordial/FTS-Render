@@ -47,7 +47,7 @@ uint32_t FFX_DNSR_Shadows_ReadTileMetaData(uint32_t tile_index)
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_NUM_X, THREAD_GROUP_NUM_Y, 1)]
-void compute_shader(uint3 thread_id : SV_Dispatchthread_id, uint2 group_id: SV_GroupID, uint2 group_thread_id : SV_Groupthread_id)
+void main(uint3 thread_id : SV_Dispatchthread_id, uint2 group_id: SV_GroupID, uint2 group_thread_id : SV_Groupthread_id)
 {
     bool write_result = true;
     float2 Result = FFX_DNSR_Shadows_FilterSoftShadowsPass(group_id, group_thread_id, thread_id.xy, write_result, 0, step_size);

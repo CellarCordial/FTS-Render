@@ -35,7 +35,7 @@ RWTexture2D<float2> ssao_texture : register(u0);
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_NUM_X, THREAD_GROUP_NUM_Y, 1)]
-void compute_shader(uint3 thread_id: SV_Dispatchthread_id)
+void main(uint3 thread_id: SV_Dispatchthread_id)
 {
     float3 view_space_position = view_space_position_texture[thread_id.xy];
     float3 view_space_normal = view_space_normal_texture[thread_id.xy];

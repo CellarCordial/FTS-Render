@@ -10,7 +10,7 @@ RWTexture2D<float4> history_reprojection_texture : register(u0);
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_NUM_X, THREAD_GROUP_NUM_Y, 1)]
-void compute_shader(uint3 thread_id: SV_DispatchThreadID)
+void main(uint3 thread_id: SV_DispatchThreadID)
 {
     
 }

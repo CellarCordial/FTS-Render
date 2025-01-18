@@ -48,12 +48,12 @@ namespace fantasy
 		{
 			ShaderCompileDesc vs_compile_desc;
 			vs_compile_desc.shader_name = "shadow/shadow_map_vs.slang";
-			vs_compile_desc.entry_point = "vertex_shader";
+			vs_compile_desc.entry_point = "main";
 			vs_compile_desc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = shader_compile::compile_shader(vs_compile_desc);
 
 			ShaderDesc vs_desc;
-			vs_desc.entry = "vertex_shader";
+			vs_desc.entry = "main";
 			vs_desc.shader_type = ShaderType::Vertex;
 			_vs = std::unique_ptr<Shader>(create_shader(vs_desc, vs_data.data(), vs_data.size()));
 		}

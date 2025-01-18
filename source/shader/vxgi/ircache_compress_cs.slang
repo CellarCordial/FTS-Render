@@ -12,7 +12,7 @@ RWStructuredBuffer<uint32_t> ircache_entry_indirection_buffer : register(u1);
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_NUM_X, 1, 1)]
-void compute_shader(uint3 thread_id: SV_DispatchThreadID)
+void main(uint3 thread_id: SV_DispatchThreadID)
 {
     uint32_t entry_index = thread_id.x;
     uint32_t total_entry_num = ircache_meta_buffer.Load(IRCACHE_META_ENTRY_COUNT);

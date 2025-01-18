@@ -37,7 +37,7 @@ float read_sdf(uint3 thread_id, uint3 voxel_id, float min_sdf);
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, THREAD_GROUP_SIZE_Z)]
-void compute_shader(uint3 thread_id : SV_DispatchThreadID)
+void main(uint3 thread_id : SV_DispatchThreadID)
 {
     uint3 voxel_id = voxel_offset + thread_id;
     float3 voxel_world_pos = mul(float4(voxel_id, 1.0f), voxel_world_matrix).xyz;

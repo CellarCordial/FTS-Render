@@ -26,7 +26,7 @@ Texture2D<float3> transmittance_texture : register(t0);
 SamplerState sampler : register(s0);
 
 [shader("vertex")]
-VertexOutput vertex_shader(float2 Pos : POSITION)
+VertexOutput main(float2 Pos : POSITION)
 {
 	VertexOutput output;
 	output.sv_position = mul(float4(Pos, 0.0f, 1.0f), WorldViewProj);

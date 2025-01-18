@@ -18,7 +18,7 @@ struct VertexOutput
 };
 
 [shader("pixel")]
-float4 pixel_shader(VertexOutput In) : SV_Target0
+float4 main(VertexOutput In) : SV_Target0
 {
 	return float4(simple_post_process(In.ClipPos.xy / In.ClipPos.w, In.transmittance * SunRadius), 1.0f);
 }

@@ -97,7 +97,7 @@ float FFX_DNSR_Shadows_ReadHistory(float2 uv)
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_NUM_X, THREAD_GROUP_NUM_Y, 1)]
-void compute_shader(uint32_t group_index: SV_GroupIndex, uint2 group_id : SV_GroupID)
+void main(uint32_t group_index: SV_GroupIndex, uint2 group_id : SV_GroupID)
 {
     FFX_DNSR_Shadows_TileClassification(group_index, group_id);
 }

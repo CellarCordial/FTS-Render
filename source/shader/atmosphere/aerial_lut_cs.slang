@@ -1,5 +1,4 @@
-// #define THREAD_GROUP_SIZE_X 1
-// #define THREAD_GROUP_SIZE_Y 1
+/
 
 #include "../atmosphere_properties.slang"
 #include "../intersect.slang"
@@ -42,7 +41,7 @@ float RelativeLuminance(float3 c)
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
-void compute_shader(uint3 thread_id : SV_DispatchThreadID)
+void main(uint3 thread_id : SV_DispatchThreadID)
 {
     uint32_t width, height, depth;
     aerial_perspective_lut_texture.GetDimensions(width, height, depth);

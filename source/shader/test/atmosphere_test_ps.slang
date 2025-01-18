@@ -46,7 +46,7 @@ Texture2D<float2> blue_noise_texture : register(t3);
 SamplerState blue_noise_sampler : register(s2);
 
 [shader("pixel")]
-float4 pixel_shader(VertexOutput In) : SV_Target0
+float4 main(VertexOutput In) : SV_Target0
 {
     float2 screen_space_position = In.screen_space_position.xy / In.screen_space_position.w;
     screen_space_position = 0.5f + float2(0.5f, -0.5f) * screen_space_position;

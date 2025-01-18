@@ -22,7 +22,7 @@ struct VertexOutput
 };
 
 [shader("pixel")]
-float4 pixel_shader(VertexOutput input) : SV_Target0
+float4 main(VertexOutput input) : SV_Target0
 {
     float3 o = camera_pos;
     float3 d = lerp(

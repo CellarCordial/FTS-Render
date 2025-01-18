@@ -11,7 +11,7 @@ groupshared uint32_t shared_buffer[SHARED_SIZE];
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_NUM_X, 1, 1)]
-void compute_shader(uint3 thread_id: SV_DispatchThreadID, uint3 group_id : SV_GroupID)
+void main(uint3 thread_id: SV_DispatchThreadID, uint3 group_id : SV_GroupID)
 {
     uint32_t index = thread_id.x;
     uint32_t offset = group_id.x;

@@ -294,7 +294,7 @@ namespace fantasy
 		{
 			ShaderCompileDesc cs_compile_desc;
 			cs_compile_desc.shader_name = "sdf/sdf_merge_cs.slang";
-			cs_compile_desc.entry_point = "compute_shader";
+			cs_compile_desc.entry_point = "main";
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
@@ -303,7 +303,7 @@ namespace fantasy
 
 			ShaderDesc cs_desc;
 			cs_desc.shader_type = ShaderType::Compute;
-			cs_desc.entry = "compute_shader";
+			cs_desc.entry = "main";
 			ReturnIfFalse(_cs = std::unique_ptr<Shader>(create_shader(cs_desc, cs_data.data(), cs_data.size())));
 
 

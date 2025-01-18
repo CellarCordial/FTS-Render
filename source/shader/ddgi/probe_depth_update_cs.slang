@@ -25,7 +25,7 @@ RWTexture2D<float2> gOutputDepthTexture : register(u0);
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
-void compute_shader(uint3 ThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID, uint32_t dwGroupIndex : SV_GroupIndex)
+void main(uint3 ThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID, uint32_t dwGroupIndex : SV_GroupIndex)
 {
     if (any(ThreadID.xy >= dwDepthTextureRes)) return;
     uint2 StandaloneDepthUV = ThreadID.xy + 1;

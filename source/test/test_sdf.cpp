@@ -27,21 +27,21 @@ namespace fantasy
 		{
 			ShaderCompileDesc ShaderCompileDesc;
 			ShaderCompileDesc.shader_name = "full_screen_quad_vs.slang";
-			ShaderCompileDesc.entry_point = "vertex_shader";
+			ShaderCompileDesc.entry_point = "main";
 			ShaderCompileDesc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = shader_compile::compile_shader(ShaderCompileDesc);
 			ShaderCompileDesc.shader_name = "test/sdf_test_ps.slang";
-			ShaderCompileDesc.entry_point = "pixel_shader";
+			ShaderCompileDesc.entry_point = "main";
 			ShaderCompileDesc.target = ShaderTarget::Pixel;
 			ShaderData ps_data = shader_compile::compile_shader(ShaderCompileDesc);
 
 			ShaderDesc shader_desc;
 			shader_desc.shader_type = ShaderType::Vertex;
-			shader_desc.entry = "vertex_shader";
+			shader_desc.entry = "main";
 			_vs = std::unique_ptr<Shader>(create_shader(shader_desc, vs_data.data(), vs_data.size()));
 
 			shader_desc.shader_type = ShaderType::Pixel;
-			shader_desc.entry = "pixel_shader";
+			shader_desc.entry = "main";
 			_ps = std::unique_ptr<Shader>(create_shader(shader_desc, ps_data.data(), ps_data.size()));
 		}
 

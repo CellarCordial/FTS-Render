@@ -63,7 +63,7 @@ void RayMarching(float fPhaseU, float3 o, float3 d, float t, float dt, inout flo
 }
 
 [shader("pixel")]
-float4 pixel_shader(VertexOutput In) : SV_Target0
+float4 main(VertexOutput In) : SV_Target0
 {
     float fPhi = 2 * PI * In.uv.x;   // [0, 2PI] 在 x-z 平面的投影与 x 轴的夹角.
     float vm = 2 * In.uv.y - 1;

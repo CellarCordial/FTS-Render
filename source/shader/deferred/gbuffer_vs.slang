@@ -39,7 +39,7 @@ struct VertexOutput
 };
 
 [shader("vertex")]
-VertexOutput vertex_shader(VertexInput input)
+VertexOutput main(VertexInput input)
 {
     GeometryConstant constant = geometry_constant_buffer[geometry_constant_index];
 

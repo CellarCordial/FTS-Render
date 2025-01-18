@@ -6,7 +6,7 @@ cbuffer gPassConstant : register(b0)
 };
 
 [shader("vertex")]
-float4 vertex_shader(float3 Position : POSITION) : SV_POSITION
+float4 main(float3 Position : POSITION) : SV_POSITION
 {
     return mul(mul(float4(Position, 1.0f), world_matrix), view_proj);
 }

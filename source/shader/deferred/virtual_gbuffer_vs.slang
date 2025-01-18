@@ -59,7 +59,7 @@ float3 color_hash(uint32_t index)
 }
 
 [shader("vertex")]
-VertexOutput vertex_shader(uint32_t instance_id: SV_InstanceID, uint32_t vertex_index : SV_VertexID)
+VertexOutput main(uint32_t instance_id: SV_InstanceID, uint32_t vertex_index : SV_VertexID)
 {
     VertexOutput output;
 

@@ -42,7 +42,7 @@ void release_grid_voxel(uint32_t voxel_index)
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_NUM_X, 1, 1)]
-void compute_shader(uint3 thread_id: SV_DispatchThreadID)
+void main(uint3 thread_id: SV_DispatchThreadID)
 {
     uint3 voxel_id = uint3(thread_id.xy, thread_id.z % IRCACHE_CASCADE_SIZE);
     uint32_t cascade_index = thread_id.z / IRCACHE_CASCADE_SIZE;

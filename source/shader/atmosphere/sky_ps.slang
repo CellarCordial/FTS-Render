@@ -20,7 +20,7 @@ struct VertexOutput
 };
 
 [shader("pixel")]
-float4 pixel_shader(VertexOutput In) : SV_Target0
+float4 main(VertexOutput In) : SV_Target0
 {
     float3 Dir = normalize(lerp(
         lerp(FrustumA, FrustumB, In.uv.x),
