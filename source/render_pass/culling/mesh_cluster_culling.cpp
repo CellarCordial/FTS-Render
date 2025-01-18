@@ -13,13 +13,14 @@ namespace fantasy
  
 	bool MeshClusterCullingPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
-        cache->get_world()->each<event::ModelLoaded>(
-            [this](Entity* entity, event::ModelLoaded* event) -> bool
+        cache->get_world()->get_global_entity()->get_component<event::ModelLoaded>()->add_event(
+            [this]() -> bool
             {
                 _resource_writed = false;
-                return true;
+				return true;
             }
         );
+        
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(7);

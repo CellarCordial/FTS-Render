@@ -70,6 +70,7 @@ namespace fantasy
 			float emissive_factor[4] = { 0.0f };
 
             Image images[TextureType_Num];
+            uint32_t mip_levels = 0;
 
             bool operator==(const SubMaterial& other) const
             {
@@ -143,6 +144,29 @@ namespace fantasy
 
         uint2 texture_resolution;
     };
+
+    
+	inline std::string get_geometry_texture_name(
+        uint32_t image_index, 
+        uint32_t mip_level, 
+        const std::string& model_name
+    )
+	{
+		std::string texture_name;
+		switch (image_index) 
+		{
+		case Material::TextureType_BaseColor: 
+			texture_name = model_name + "_base_color" + "_mip" + std::to_string(mip_level); break;
+		case Material::TextureType_Normal:  
+			texture_name = model_name + "_normal" + "_mip" + std::to_string(mip_level);; break;
+		case Material::TextureType_PBR:  
+			texture_name = model_name + "_pbr" + "_mip" + std::to_string(mip_level);; break;
+		case Material::TextureType_Emissive:  
+			texture_name = model_name + "_emissive" + "_mip" + std::to_string(mip_level);; break;
+		default: break;
+		}
+		return texture_name;
+	}
 
 
     namespace Geometry

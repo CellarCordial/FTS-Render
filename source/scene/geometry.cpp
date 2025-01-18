@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
+#include <thread>
 #include <vector>
 
 #include "scene.h"
@@ -57,13 +58,19 @@ namespace fantasy
 		event.entity->assign<SurfaceCache>();
 		// event.entity->assign<VirtualMesh>();
 		// event.entity->assign<DistanceField>();
+		uint32_t* finished_task_num = event.entity->assign<uint32_t>(0);
 
 		_sdf_data_path.clear();
 		_model_directory.clear();
 
 		_loaded_model_names.insert(event.model_path);
 
-		gui::notify_message(gui::ENotifyType::Info, "Loaded " + event.model_path);
+		// ReturnIfFalse(_global_entity->get_component<event::GenerateSdf>()->broadcast(event.entity));
+		// ReturnIfFalse(_global_entity->get_component<event::GenerateMipmap>()->broadcast(event.entity));
+		// ReturnIfFalse(_global_entity->get_component<event::GenerateSurfaceCache>()->broadcast(event.entity));
+
+		// if (*finished_task_num < 3) std::this_thread::yield();
+		// gui::notify_message(gui::ENotifyType::Info, "Loaded " + event.model_path);
 
 		ReturnIfFalse(_current_mesh_count++ < max_mesh_num);
 		

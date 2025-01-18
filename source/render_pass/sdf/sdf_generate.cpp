@@ -2,6 +2,7 @@
 #include "../../shader/shader_compiler.h"
 #include "../../gui/gui_panel.h"
 #include "../../core/math/bvh.h"
+#include <cstdint>
 #include <memory>
 #include <string>
 
@@ -19,6 +20,7 @@ namespace fantasy
 			[this](Entity* entity) 
 			{ 
 				recompute();
+				_modle_entity = entity;
 				_distance_field = entity->get_component<DistanceField>();
 
 				ReturnIfFalse(_distance_field != nullptr);
@@ -292,7 +294,11 @@ namespace fantasy
 				std::string strSdfName = mesh_df.sdf_texture_name.substr(0, mesh_df.sdf_texture_name.find("SdfTexture")) + ".sdf";
 				gui::notify_message(gui::ENotifyType::Info, strSdfName + " bake finished.");
 
-				for (auto& rDF : _distance_field->mesh_distance_fields) rDF.sdf_data.clear();
+				// finished_task_num++;
+				(*_modle_entity->get_component<uint32_t>())++;
+				for (auto& df : _distance_field->mesh_distance_fields) df.sdf_data.clear();
+
+				_modle_entity = nullptr;
 				_distance_field = nullptr;
 				_current_mesh_sdf_index = 0;
 			}

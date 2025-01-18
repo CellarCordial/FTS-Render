@@ -43,6 +43,7 @@ namespace fantasy
         uint32_t _begin_x = 0;
         bool _resource_writed = false;
         uint32_t _current_mesh_sdf_index = 0;
+        Entity* _modle_entity = nullptr;
         DistanceField* _distance_field = nullptr;
         std::unique_ptr<serialization::BinaryOutput> _binary_output;
 		constant::SdfGeneratePassConstants _pass_constants;

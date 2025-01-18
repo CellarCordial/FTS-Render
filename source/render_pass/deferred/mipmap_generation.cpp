@@ -15,19 +15,13 @@ namespace fantasy
  
 	bool MipmapGenerationPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
-        ReturnIfFalse(cache->get_world()->each<event::ModelLoaded>(
-            [this](Entity* entity, event::ModelLoaded* event) -> bool
+        cache->get_world()->get_global_entity()->get_component<event::GenerateMipmap>()->add_event(
+            [this](Entity* entity) -> bool
             {
-				event->add_event(
-					[&]() 
-					{ 
-						_current_model = entity; 
-						return true; 
-					}
-				);
+				_current_model = entity; 
 				return true;
             }
-        ));
+        );
 
 		// Binding Layout.
 		{
@@ -75,20 +69,6 @@ namespace fantasy
 		return true;
 	}
 
-	std::string convert_image_name(uint32_t image_index, const std::string& model_name)
-	{
-		std::string texture_name = model_name;
-		switch (image_index) 
-		{
-		case Material::TextureType_BaseColor: texture_name += "_base_color"; break;
-		case Material::TextureType_Normal:  texture_name += "_normal"; break;
-		case Material::TextureType_PBR:  texture_name += "_pbr"; break;
-		case Material::TextureType_Emissive:  texture_name += "_emissive"; break;
-		default: break;
-		}
-		return texture_name;
-	}
-
 	bool MipmapGenerationPass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
 		if (_current_model)
@@ -99,12 +79,11 @@ namespace fantasy
 
 			const auto& model_name = *_current_model->get_component<std::string>();
 
-			const auto& material = _current_model->get_component<Material>();
-			const auto& image = 
-				material->submaterials[_current_submaterial_index].images[_current_image_index];
+			Material::SubMaterial& submaterial = _current_model->get_component<Material>()->submaterials[_current_submaterial_index];
+			const auto& image = submaterial.images[_current_image_index];
 
-			uint32_t mip_levels = std::log2(previous_power_of_2(std::max(image.width, image.height)) / page_size) + 1;
-			_textures.resize(mip_levels);
+			submaterial.mip_levels = std::log2(previous_power_of_2(std::max(image.width, image.height)) / page_size) + 1;
+			_textures.resize(submaterial.mip_levels);
 
 			ReturnIfFalse(_textures[0] = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_shader_resource(
@@ -112,7 +91,7 @@ namespace fantasy
 					image.height,
 					image.format,
 					true,
-					convert_image_name(_current_image_index, model_name) + "_mip0"
+					get_geometry_texture_name(_current_image_index, 0, model_name)
 				)
 			)));
 			cache->collect(_textures[0], ResourceType::Texture);
@@ -120,7 +99,7 @@ namespace fantasy
 
 
 			uint2 texture_resolution = uint2(image.width, image.height);
-			for (uint32_t mip_level = 1; mip_level <= mip_levels - 1; ++mip_level)
+			for (uint32_t mip_level = 1; mip_level <= submaterial.mip_levels - 1; ++mip_level)
 			{
 				texture_resolution.x >>= 1;
 				texture_resolution.y >>= 1;
@@ -130,7 +109,7 @@ namespace fantasy
 						texture_resolution.y,
 						image.format,
 						true,
-						convert_image_name(_current_image_index, model_name) + "_mip" + std::to_string(mip_level)
+						get_geometry_texture_name(_current_image_index, mip_level, model_name)
 					)
 				)));
 				cache->collect(_textures[mip_level], ResourceType::Texture);
@@ -171,7 +150,13 @@ namespace fantasy
 			_current_submaterial_index++;
 			if (_current_submaterial_index == _current_model->get_component<Material>()->submaterials.size()) 
 			{
+				// finished_task_num++.
+				(*_current_model->get_component<uint32_t>())++;
+				
+				std::string model_name = *_current_model->get_component<std::string>();
+				
 				_current_model = nullptr;
+				LOG_INFO(model_name + "geometry texture mip generated.");
 			}
 			else 
 			{

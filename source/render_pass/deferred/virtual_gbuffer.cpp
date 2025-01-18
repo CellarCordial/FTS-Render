@@ -10,13 +10,13 @@ namespace fantasy
 {
 	bool VirtualGBufferPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
-		ReturnIfFalse(cache->get_world()->each<event::ModelLoaded>(
-			[this](Entity* entity, event::ModelLoaded* event) -> bool
+		cache->get_world()->get_global_entity()->get_component<event::ModelLoaded>()->add_event(
+			[this]() -> bool
 			{
-				_resource_writed = false;		
+				_resource_writed = false;	
 				return true;
 			}
-		));
+		);
 
 		// Binding Layout.
 		{
@@ -189,7 +189,6 @@ namespace fantasy
 			_graphics_state.pipeline = _pipeline.get();
 			_graphics_state.frame_buffer = _frame_buffer.get();
 			_graphics_state.binding_sets.resize(1);
-			// _graphics_state.index_buffer_binding = IndexBufferBinding{ .buffer = index_buffer };
 			_graphics_state.viewport_state = ViewportState::create_default_viewport(CLIENT_WIDTH, CLIENT_HEIGHT);
 		}
 
@@ -316,7 +315,7 @@ namespace fantasy
 
 		VTPageInfo* data = static_cast<VTPageInfo*>(_vt_page_info_buffer->map(CpuAccessMode::Read, fence_event));
 
-		uint32_t info_count = CLIENT_WIDTH * CLIENT_HEIGHT;
+		uint32_t page_info_count = CLIENT_WIDTH * CLIENT_HEIGHT;
 		parallel::parallel_for(
 			[&](uint64_t ix)
 			{
@@ -333,7 +332,7 @@ namespace fantasy
 
 				// TODO
 			}, 
-			info_count
+			page_info_count
 		);
 
 		return true;

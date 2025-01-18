@@ -226,6 +226,9 @@ namespace fantasy
 		Entity* create_entity();
 		bool destroy_entity(Entity* entity, bool bImmediately = false);
 
+		Entity* create_entity_delay();
+		void add_delay_entity(Entity* entity);
+
 		Entity* get_global_entity() { return _entities[0].get(); }
 
 		bool tick(float delta);
@@ -347,6 +350,7 @@ namespace fantasy
 
 	private:
 		std::vector<std::unique_ptr<Entity>> _entities;
+		std::vector<std::unique_ptr<Entity>> _delay_entities;
 		std::vector<std::unique_ptr<EntitySystemInterface>> _systems;
 		std::vector<std::unique_ptr<EntitySystemInterface>> disabled_systems;
 		std::unordered_map<std::type_index, std::vector<IEventSubscriber*>> _subscribers;

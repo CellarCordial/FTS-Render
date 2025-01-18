@@ -12,11 +12,11 @@ namespace fantasy
 {
 	bool RayTracingShadowMapPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
-        cache->get_world()->each<event::ModelLoaded>(
-            [this](Entity* entity, event::ModelLoaded* event) -> bool
+		cache->get_world()->get_global_entity()->get_component<event::ModelLoaded>()->add_event(
+            [this]() -> bool
             {
-                event->add_event([&]() { _update_vertex_buffer = true; return true; });
-                return true;
+				_update_vertex_buffer = true;
+				return true;
             }
         );
 

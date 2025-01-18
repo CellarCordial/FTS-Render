@@ -5,7 +5,7 @@
 
 namespace fantasy 
 {
-    Entity::Entity(World* pWorld, uint64_t stID) : _world(pWorld), _index(stID)
+    Entity::Entity(World* world, uint64_t stID) : _world(world), _index(stID)
     {
     }
 
@@ -23,13 +23,13 @@ namespace fantasy
 
     void Entity::remove_all()
     {
-        for (const auto& [TypeIndex, crpComponent] : _components)
+        for (const auto& [type_index, component] : _components)
         {
-            crpComponent->removed(this);
+            component->removed(this);
         }
 
 		{
-			std::lock_guard Lock(_component_mutex);
+			std::lock_guard lock(_component_mutex);
             _components.clear();   
 		}
     }
@@ -37,24 +37,24 @@ namespace fantasy
 
 	World::~World()
     {
-        for (auto& rpSystem : _systems) assert(rpSystem->Destroy());
+        for (auto& system : _systems) assert(system->Destroy());
 
-        for (auto& rpEntity : _entities)
+        for (auto& entity : _entities)
         {
-            if (!rpEntity->is_pending_destroy())
+            if (!entity->is_pending_destroy())
             {
-                rpEntity->_is_pending_destroy = true;
+                entity->_is_pending_destroy = true;
             }
         }
         _entities.clear();
 
-        for (auto& rpSystem : _systems) rpSystem.reset();
+        for (auto& system : _systems) system.reset();
     }
 
     Entity* World::create_entity()
     {
-        uint64_t stIndex = _entities.size();
-        _entities.emplace_back(std::make_unique<Entity>(this, stIndex));
+        uint64_t index = _entities.size();
+        _entities.emplace_back(std::make_unique<Entity>(this, index));
 
         return _entities.back().get();
     }
@@ -84,6 +84,21 @@ namespace fantasy
             _entities.erase(std::remove_if(_entities.begin(), _entities.end(), CompareFunc), _entities.end());
         }
         return true;
+    }
+
+    Entity* World::create_entity_delay()
+    {
+        uint64_t index = _delay_entities.size();
+        _delay_entities.emplace_back(std::make_unique<Entity>(this, index));
+
+        return _delay_entities.back().get();
+    }
+
+    void World::add_delay_entity(Entity* entity)
+    {
+        uint64_t index = entity->_index;
+        entity->_index = _entities.size();
+        _entities.emplace_back(std::move(_delay_entities[index]));
     }
 
     bool World::tick(float delta)

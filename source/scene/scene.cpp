@@ -60,7 +60,7 @@ namespace fantasy
 
 				if (!_loaded_model_names.contains(model_name))
 				{
-					model_entity = _world->create_entity();
+					model_entity = _world->create_entity_delay();
 					thread_id = parallel::begin_thread(
 						[this, model_name]() -> bool
 						{
@@ -79,9 +79,8 @@ namespace fantasy
 
 			if (model_entity && parallel::thread_finished(thread_id) && parallel::thread_success(thread_id))
 			{
-				// ReturnIfFalse(_global_entity->get_component<event::ModelLoaded>()->broadcast());
-				// ReturnIfFalse(_global_entity->get_component<event::GenerateSdf>()->broadcast(model_entity));
-				// ReturnIfFalse(_global_entity->get_component<event::GenerateSurfaceCache>()->Broadcast(pModelEntity));
+				_world->add_delay_entity(model_entity);
+				ReturnIfFalse(_global_entity->get_component<event::ModelLoaded>()->broadcast());
 
 				thread_id = INVALID_SIZE_64;
 				model_entity = nullptr;
