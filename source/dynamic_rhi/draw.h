@@ -112,7 +112,7 @@ namespace fantasy
 
         uint8_t dynamic_stencil_ref_value = 0;
 
-        BufferInterface* indirect_buffer;
+        BufferInterface* indirect_buffer = nullptr;
     };
 
     struct ComputeState
@@ -120,7 +120,7 @@ namespace fantasy
         ComputePipelineInterface* pipeline = nullptr;
         PipelineStateBindingSetArray binding_sets;
 
-        BufferInterface* indirect_buffer;
+        BufferInterface* indirect_buffer = nullptr;
     };
 
     namespace ray_tracing 

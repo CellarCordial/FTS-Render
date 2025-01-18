@@ -1,4 +1,5 @@
-/
+// #define THREAD_GROUP_SIZE_X 1
+// #define THREAD_GROUP_SIZE_Y 1
 
 #include "../atmosphere_properties.slang"
 #include "../intersect.slang"
