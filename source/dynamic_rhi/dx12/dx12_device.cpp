@@ -1,4 +1,4 @@
-#include "dx12_Device.h"
+#include "dx12_device.h"
 #include <combaseapi.h>
 #include <d3d12.h>
 #include <d3dcommon.h>

@@ -12,6 +12,8 @@
 namespace fantasy 
 {
     const static uint32_t page_size = 128u;
+	const static uint32_t lowest_texture_resolution = 512u;
+	const static uint32_t highest_texture_resolution = 4096u;
     static const uint32_t physical_texture_slice_size = 1024u;
     static const uint32_t physical_texture_resolution = 4096u;
 
@@ -43,11 +45,12 @@ namespace fantasy
         uint32_t page_id_mip_level;
     };
 
-    class Mipmap
+    class MipmapLUT
     {
     public:
-        bool initialize(uint32_t mip_levels, uint32_t mip0_resolution);
+        bool initialize(uint32_t mip0_resolution);
         VTPage* query_page(uint2 uv, uint32_t mip_level);
+        uint32_t get_mip_levels() const { return static_cast<uint32_t>(_mips.size()); }
 
     private:
         struct Mip
@@ -59,6 +62,10 @@ namespace fantasy
         class QuadTree
         {
         public:
+            QuadTree() = default;
+            QuadTree(const QuadTree& other);
+            QuadTree& operator=(const QuadTree& other);
+
             bool initialize(uint32_t mip0_resolution_in_page, uint32_t mip_levels);
             uint32_t query_page_morton_code(uint2 page_id, uint32_t mip_level);
 
@@ -73,6 +80,9 @@ namespace fantasy
                 uint32_t mip_level = INVALID_SIZE_32;
                 uint32_t morton_code = INVALID_SIZE_32;
 
+                Node() = default;
+                Node(const Node& other);
+                Node& operator=(const Node& other);
                 bool is_leaf() const { return children[0] == nullptr; }
             };
 
@@ -92,14 +102,13 @@ namespace fantasy
         {
         }
 
-        void set_page(uint2 uv, uint2 page_pos)
+        void set_page(uint2 page_id, uint2 page_pos)
         {
             assert(uv < resolution);
-            page_pointers[uv.y * resolution.x + uv.x] = page_pos;
+            page_pointers[page_id.y * resolution.x + page_id.x] = page_pos;
         }
 
-        void set_page_null(uint2 uv) { set_page(uv, uint2(INVALID_SIZE_32)); }
-
+        void set_page_null(uint2 page_id) { set_page(page_id, uint2(INVALID_SIZE_32)); }
         uint2* get_data() { return page_pointers.data(); }
 
     private:
@@ -111,12 +120,9 @@ namespace fantasy
     class VTPhysicalTexture
     {
     public:
-        VTPhysicalTexture() : _tiles(_resolution_in_tile * _resolution_in_tile)
-        {
-        }
+        VTPhysicalTexture() : _tiles(_resolution_in_tile * _resolution_in_tile) {}
 
         uint2 add_page(VTPage* page);
-
         static std::string get_slice_name(uint32_t texture_type, uint2 uv);
 
     private:
@@ -129,8 +135,8 @@ namespace fantasy
             VTPage* cache_page = nullptr;
             uint2 position = uint2(INVALID_SIZE_32);
         };
-
         LruCache<Tile> _tiles;
+        uint2 _current_avaible_pos = uint2(0u);
     };
 }
 

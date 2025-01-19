@@ -600,16 +600,16 @@ namespace fantasy
 	template <typename T>
 	bool inside_exclusive(const Vector3<T>& vec, const Bounds3<T>& bound)
 	{
-		return	vec.x >= bound._lower.x && vec.x < bound.m_mMax.x &&
-				vec.y >= bound._lower.y && vec.y < bound.m_mMax.y &&
-				vec.z >= bound._lower.z && vec.z < bound.m_mMax.z;
+		return	vec.x >= bound._lower.x && vec.x < bound._upper.x &&
+				vec.y >= bound._lower.y && vec.y < bound._upper.y &&
+				vec.z >= bound._lower.z && vec.z < bound._upper.z;
 	}
 
 	template <typename T>
 	bool inside_exclusive(const Vector2<T>& vec, const Bounds2<T>& bound)
 	{
-		return	vec.x >= bound._lower.x && vec.x < bound.m_mMax.x &&
-				vec.y >= bound._lower.y && vec.y < bound.m_mMax.y;
+		return	vec.x >= bound._lower.x && vec.x < bound._upper.x &&
+				vec.y >= bound._lower.y && vec.y < bound._upper.y;
 	}
 
 	// 扩充包围盒边界框

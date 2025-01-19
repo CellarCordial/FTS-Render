@@ -5,22 +5,24 @@
 #include <memory>
 
 #include "geometry.h"
-#include "scene.h"
 
 namespace fantasy 
 {
-    bool Mipmap::initialize(uint32_t mip_levels, uint32_t mip0_resolution)
+    bool MipmapLUT::initialize(uint32_t mip0_resolution)
     {
         ReturnIfFalse(is_power_of_2(mip0_resolution));
 
-        _quad_tree.initialize(mip0_resolution / page_size, mip_levels);
+        uint32_t mip0_resolution_in_page = mip0_resolution / page_size;
+        uint32_t mip_levels = std::log2(mip0_resolution_in_page);
+
+        _quad_tree.initialize(mip0_resolution_in_page, mip_levels);
 
         _mips.resize(mip_levels);
         for (uint32_t ix = 0; ix < mip_levels; ++ix)
         {
             auto& mip = _mips[ix];
             
-            mip.resolution = ix == 0 ? mip0_resolution : _mips[ix - 1].resolution >> 2;
+            mip.resolution = ix == 0 ? mip0_resolution : _mips[ix - 1].resolution >> 1;
             
             uint32_t resolution_in_page = mip.resolution / page_size;
             mip.pages.resize(resolution_in_page * resolution_in_page);
@@ -42,14 +44,52 @@ namespace fantasy
         return true;
     }
 
-    VTPage* Mipmap::query_page(uint2 uv, uint32_t mip_level)
+    VTPage* MipmapLUT::query_page(uint2 uv, uint32_t mip_level)
     {
         uint2 page_id = uv / page_size;
         uint32_t morton_code = _quad_tree.query_page_morton_code(page_id, mip_level);
         return &_mips[mip_level].pages[morton_code];
     }
+
+    MipmapLUT::QuadTree::QuadTree(const QuadTree& other)
+    {
+        _root = std::make_unique<Node>(*other._root);
+    }
+
+    MipmapLUT::QuadTree& MipmapLUT::QuadTree::operator=(const QuadTree& other)
+    {
+        _root = std::make_unique<Node>(*other._root);
+        return *this;
+    }
+
     
-    bool Mipmap::QuadTree::initialize(uint32_t mip0_resolution_in_page, uint32_t mip_levels)
+    MipmapLUT::QuadTree::Node::Node(const Node& other) : 
+        virtual_bounds(other.virtual_bounds),
+        parent_node(other.parent_node),
+        mip_level(other.mip_level),
+        morton_code(other.mip_level)
+    {
+        for (uint32_t ix = 0; ix < children.size(); ++ix)
+        {
+            children[ix] = std::make_unique<Node>(*other.children[ix]);
+        }
+    }
+    
+    MipmapLUT::QuadTree::Node& MipmapLUT::QuadTree::Node::operator=(const Node& other)
+    {
+        virtual_bounds = other.virtual_bounds;
+        parent_node = other.parent_node;
+        mip_level = other.mip_level;
+        morton_code = other.mip_level;
+        for (uint32_t ix = 0; ix < children.size(); ++ix)
+        {
+            children[ix] = std::make_unique<Node>(*other.children[ix]);
+        }
+        return *this;
+    }
+
+
+    bool MipmapLUT::QuadTree::initialize(uint32_t mip0_resolution_in_page, uint32_t mip_levels)
     {
         ReturnIfFalse(is_power_of_2(mip0_resolution_in_page));
 
@@ -93,7 +133,7 @@ namespace fantasy
     }
 
 
-    uint32_t Mipmap::QuadTree::query_page_morton_code(uint2 page_id, uint32_t mip_level)
+    uint32_t MipmapLUT::QuadTree::query_page_morton_code(uint2 page_id, uint32_t mip_level)
     {
         uint32_t ret = INVALID_SIZE_32;
         Node* current_node = _root.get();
@@ -120,13 +160,52 @@ namespace fantasy
         return ret;
     }
 
-    bool SceneSystem::publish(World* world, const event::OnComponentAssigned<Mipmap>& event)
+    uint2 VTPhysicalTexture::add_page(VTPage* page)
     {
-		Mipmap* mipmap = event.component;
-		Material* material = event.entity->get_component<Material>();
+        uint64_t key = reinterpret_cast<uint64_t>(page);
+        Tile* tile = _tiles.get(key);
 
-        uint32_t mip_levels = std::log2( material->image_resolution / page_size) + 1;
-		return mipmap->initialize(mip_levels, material->image_resolution);
+        uint2 ret;
+        if (tile == nullptr)
+        {
+            _tiles.insert(key, Tile{ .cache_page = page, .position = _current_avaible_pos});
+
+            ret = _current_avaible_pos;
+            _current_avaible_pos.x = (_current_avaible_pos.x + 1) % _resolution_in_tile;
+            if (_current_avaible_pos.x == 0) _current_avaible_pos.y++;
+            
+            assert(_current_avaible_pos.y < _resolution_in_tile);
+        }
+        else 
+        {
+            // 将其提到 LruCache 最前面 (即更新其 least recently used time).
+            _tiles.insert(key, *tile);
+
+            ret = tile->position;
+        }
+        return ret;
+    }
+
+    std::string VTPhysicalTexture::get_slice_name(uint32_t texture_type, uint2 uv)
+    {
+        uint32_t slice_row_num = physical_texture_resolution / physical_texture_slice_size;
+        uint2 slice_id = uv / physical_texture_slice_size;
+        uint32_t slice_index = slice_id.x + slice_id.y * slice_row_num;
+
+        std::string ret;
+        switch (texture_type) 
+		{
+		case Material::TextureType_BaseColor: 
+			ret = "vt_physical_texture_base_color" + std::to_string(slice_index); break;
+		case Material::TextureType_Normal:  
+			ret = "vt_physical_texture_normal" + std::to_string(slice_index);; break;
+		case Material::TextureType_PBR:  
+			ret = "vt_physical_texture_pbr" + std::to_string(slice_index);; break;
+		case Material::TextureType_Emissive:  
+			ret = "vt_physical_texture_emissive" + std::to_string(slice_index);; break;
+		default: break;
+		}
+        return ret;
     }
 
 }

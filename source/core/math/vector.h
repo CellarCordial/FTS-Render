@@ -723,8 +723,7 @@ namespace fantasy
 	{
 		return Vector2<T>{
 			(std::max)(vec1.x, vec2.x),
-			(std::max)(vec1.y, vec2.y),
-			(std::max)(vec1.z, vec2.z)
+			(std::max)(vec1.y, vec2.y)
 		};
 	}
 

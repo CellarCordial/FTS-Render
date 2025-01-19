@@ -4,6 +4,7 @@
 #include "../core/parallel/parallel.h"
 #include "../core/tools/file.h"
 #include "../gui/gui_panel.h"
+#include "virtual_texture.h"
 
 
 namespace fantasy
@@ -20,13 +21,21 @@ namespace fantasy
 		_world->subscribe<event::OnComponentAssigned<DistanceField>>(this);
 		_world->subscribe<event::OnComponentAssigned<VirtualMesh>>(this);
 
-		_global_entity = world->get_global_entity();
+		_global_entity = _world->get_global_entity();
 
 		_global_entity->assign<SceneGrid>();
 		_global_entity->assign<event::GenerateSdf>();
 		_global_entity->assign<event::ModelLoaded>();
 		_global_entity->assign<event::UpdateGlobalSdf>();
 		_global_entity->assign<event::GenerateSurfaceCache>();
+
+		
+		uint32_t current_resolution = lowest_texture_resolution;
+		while (current_resolution < highest_texture_resolution)
+		{
+			_world->create_entity()->assign<MipmapLUT>()->initialize(current_resolution);
+			current_resolution <<= 1;
+		}
 
 		return true;
 	}
