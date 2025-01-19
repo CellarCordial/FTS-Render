@@ -13,7 +13,7 @@ namespace fantasy
     public:
         explicit LruCache(uint32_t capacity = 0) : _capacity(capacity) {}
         
-        T* get(uint32_t key) 
+        T* get(uint64_t key) 
         {
             auto iter = _map.find(key);
             if(iter == _map.end())
@@ -28,7 +28,7 @@ namespace fantasy
             }
         }
         
-        void insert(uint32_t key, const T& value) 
+        void insert(uint64_t key, const T& value) 
         {
             auto iter = _map.find(key);
             if(iter == _map.end())
@@ -51,8 +51,8 @@ namespace fantasy
 
     private:
         uint32_t _capacity;
-        std::unordered_map<uint32_t,  typename std::list<std::pair<uint32_t, T>>::iterator> _map;
-        std::list<std::pair<uint32_t, T>> _list;
+        std::unordered_map<uint64_t,  typename std::list<std::pair<uint64_t, T>>::iterator> _map;
+        std::list<std::pair<uint64_t, T>> _list;
     };
 }
 

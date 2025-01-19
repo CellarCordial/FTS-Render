@@ -27,7 +27,7 @@ namespace fantasy
         virtual bool compile(DeviceInterface* device, RenderResourceCache* cache) = 0;
         virtual bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) = 0;
         
-        virtual bool feedback(CommandListInterface* cmdlist) { return true; }
+        virtual bool feedback(CommandListInterface* cmdlist, RenderResourceCache* cache) { return true; }
         virtual bool finish_pass() { return true; }
         virtual void window_resize() {}
 

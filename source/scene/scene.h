@@ -5,6 +5,7 @@
 #include "distance_field.h"
 #include "surface_cache.h"
 #include "virtual_mesh.h"
+#include "virtual_texture.h"
 
 namespace fantasy
 {
@@ -18,7 +19,8 @@ namespace fantasy
 		public EventSubscriber<event::OnComponentAssigned<Material>>,
 		public EventSubscriber<event::OnComponentAssigned<SurfaceCache>>,
 		public EventSubscriber<event::OnComponentAssigned<DistanceField>>,
-		public EventSubscriber<event::OnComponentAssigned<VirtualMesh>>
+		public EventSubscriber<event::OnComponentAssigned<VirtualMesh>>,
+		public EventSubscriber<event::OnComponentAssigned<Mipmap>>
 	{
 	public:
 		bool initialize(World* world) override;
@@ -33,6 +35,7 @@ namespace fantasy
 		bool publish(World* world, const event::OnComponentAssigned<SurfaceCache>& event) override;
 		bool publish(World* world, const event::OnComponentAssigned<DistanceField>& event) override;
 		bool publish(World* world, const event::OnComponentAssigned<VirtualMesh>& event) override;
+		bool publish(World* world, const event::OnComponentAssigned<Mipmap>& event) override;
 
 	private:
 		World* _world = nullptr;

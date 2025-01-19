@@ -99,6 +99,11 @@ namespace fantasy
 			return vec.x * vec.y;
 		}
 
+		Vector2<T> center() const
+		{
+			return Vector2<T>((_lower.x + _upper.x) * 0.5f, (_lower.y + _upper.y) * 0.5f);
+		}
+
 		// 返回三轴中最长轴的索引
 		uint32_t max_extent() const
 		{
@@ -135,10 +140,10 @@ namespace fantasy
 	};
 
 	using Bounds2F = Bounds2<float>;
-	using Bounds2I = Bounds2<int32_t>;
+	using Bounds2I = Bounds2<uint32_t>;
 
 	using Bounds3F = Bounds3<float>;
-	using Bounds3I = Bounds3<int32_t>;
+	using Bounds3I = Bounds3<uint32_t>;
 	
 	template <typename T>
 	requires std::is_arithmetic_v<T>
@@ -577,7 +582,6 @@ namespace fantasy
 		return x && y;
 	}
 
-	// 判断点是否在包围盒内
 	template <typename T>
 	bool inside(const Vector3<T>& vec, const Bounds3<T>& bound)
 	{
@@ -586,7 +590,6 @@ namespace fantasy
 				vec.z >= bound._lower.z && vec.z <= bound.m_mMax.z;
 	}
 
-	// 判断点是否在包围盒内
 	template <typename T>
 	bool inside(const Vector2<T>& vec, const Bounds2<T>& bound)
 	{
@@ -594,7 +597,6 @@ namespace fantasy
 				vec.y >= bound._lower.y && vec.y <= bound.m_mMax.y;
 	}
 	
-	// 判断点是否在包围盒内，不包含上边界
 	template <typename T>
 	bool inside_exclusive(const Vector3<T>& vec, const Bounds3<T>& bound)
 	{
@@ -603,7 +605,6 @@ namespace fantasy
 				vec.z >= bound._lower.z && vec.z < bound.m_mMax.z;
 	}
 
-	// 判断点是否在包围盒内，不包含上边界
 	template <typename T>
 	bool inside_exclusive(const Vector2<T>& vec, const Bounds2<T>& bound)
 	{

@@ -79,11 +79,11 @@ namespace fantasy
 
 			const auto& model_name = *_current_model->get_component<std::string>();
 
-			Material::SubMaterial& submaterial = _current_model->get_component<Material>()->submaterials[_current_submaterial_index];
-			const auto& image = submaterial.images[_current_image_index];
+			const Material* material = _current_model->get_component<Material>();
+			const auto& image = material->submaterials[_current_submaterial_index].images[_current_image_index];
 
-			submaterial.mip_levels = std::log2(previous_power_of_2(std::max(image.width, image.height)) / page_size) + 1;
-			_textures.resize(submaterial.mip_levels);
+			uint32_t mip_levels = std::log2( material->image_resolution / page_size) + 1;
+			_textures.resize(mip_levels);
 
 			ReturnIfFalse(_textures[0] = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_shader_resource(
@@ -99,7 +99,7 @@ namespace fantasy
 
 
 			uint2 texture_resolution = uint2(image.width, image.height);
-			for (uint32_t mip_level = 1; mip_level <= submaterial.mip_levels - 1; ++mip_level)
+			for (uint32_t mip_level = 1; mip_level <= mip_levels - 1; ++mip_level)
 			{
 				texture_resolution.x >>= 1;
 				texture_resolution.y >>= 1;

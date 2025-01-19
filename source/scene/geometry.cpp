@@ -2,7 +2,6 @@
 #include <cmath>
 #include <cstdint>
 #include <cstring>
-#include <thread>
 #include <vector>
 
 #include "scene.h"
@@ -15,7 +14,6 @@
 
 #include "../core/parallel/parallel.h"
 #include "../core/tools/file.h"
-#include "../gui/gui_panel.h"
 
 
 namespace fantasy
@@ -56,7 +54,7 @@ namespace fantasy
 		event.entity->assign<Material>();
 		event.entity->assign<Transform>();
 		event.entity->assign<SurfaceCache>();
-		// event.entity->assign<VirtualMesh>();
+		event.entity->assign<VirtualMesh>();
 		// event.entity->assign<DistanceField>();
 		uint32_t* finished_task_num = event.entity->assign<uint32_t>(0);
 
@@ -242,6 +240,32 @@ namespace fantasy
 			},
 			material->submaterials.size()
 		);
+
+		uint2 resolution = uint2(
+			material->submaterials[0].images[0].width,
+			material->submaterials[0].images[0].height
+		);
+		ReturnIfFalse(resolution.x == resolution.y);
+
+		for (const auto& submaterial : material->submaterials)
+		{
+			for (const auto& image : submaterial.images)
+			{
+				if (resolution != uint2(image.width, image.height))
+				{
+					LOG_ERROR("All Geometry texture resolution must be the same.");
+					return false;
+				}
+			}
+		}
+
+		material->image_resolution = resolution.x;
+		if (!is_power_of_2(material->image_resolution))
+		{
+			LOG_ERROR("Geometry texture resolution must be power of 2.");
+			return false;
+		}
+		
 		return true;
 	}
 

@@ -1,19 +1,12 @@
 #ifndef SCENE_IMAGE_H
 #define SCENE_IMAGE_H
 
-#include "../core/tools/delegate.h"
 #include "../dynamic_rhi/format.h"
-#include "../core/tools/ecs.h"
 #include <memory>
 
 
 namespace fantasy 
 {
-    namespace event
-	{
-		DELCARE_DELEGATE_EVENT(GenerateMipmap, Entity*);
-	};
-    
     struct Image
     {
         uint32_t width = 0;

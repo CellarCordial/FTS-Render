@@ -47,13 +47,14 @@ namespace fantasy
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
-        bool feedback(CommandListInterface* cmdlist) override;
+        bool feedback(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
         bool finish_pass() override;
 	
 	private:
 		bool _resource_writed = false;
 		constant::VirtualGBufferPassConstant _pass_constant;
 
+		VTIndirectTexture _vt_indirect_texture;
 		VTPhysicalTexture _vt_physical_texture;
 
 		std::vector<Vertex> _cluster_vertices;

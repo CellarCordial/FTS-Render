@@ -22,6 +22,8 @@ namespace fantasy
 
 		Vector2(const T v[2]) : x(v[0]), y(v[1]) {}
 
+		Vector2(T val) : x(val), y(val) {}
+
 		Vector2(T _x, T _y) : x(_x), y(_y) {}
 
 		Vector2(const Vector2<T>& vec) : x(vec.x), y(vec.y) {}

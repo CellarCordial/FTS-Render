@@ -257,7 +257,7 @@ namespace fantasy
 					if (is_feedback_pass)
 					{
 						_device->wait_for_idle();
-            			ReturnIfFalse(_passes[ix]->feedback(_cmdlists[ix].get()));
+            			ReturnIfFalse(_passes[ix]->feedback(_cmdlists[ix].get(), _resource_cache.get()));
 
 						graphics_cmdlists.emplace_back(_cmdlists[ix].get());
 						_compute_wait_value = _device->execute_command_lists(
@@ -299,7 +299,7 @@ namespace fantasy
 					if (is_feedback_pass)
 					{
 						_device->wait_for_idle();
-            			ReturnIfFalse(_passes[ix]->feedback(_cmdlists[ix].get()));
+            			ReturnIfFalse(_passes[ix]->feedback(_cmdlists[ix].get(), _resource_cache.get()));
 
 						compute_cmdlists.emplace_back(_cmdlists[ix].get());
 						_graphics_wait_value = _device->execute_command_lists(

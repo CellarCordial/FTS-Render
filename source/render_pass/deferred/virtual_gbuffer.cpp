@@ -308,13 +308,14 @@ namespace fantasy
 	}
 
 	
-	bool VirtualGBufferPass::feedback(CommandListInterface* cmdlist)
+	bool VirtualGBufferPass::feedback(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
 		DeviceInterface* device = cmdlist->get_deivce();
+		World* world = cache->get_world();
 		HANDLE fence_event = CreateEvent(nullptr, false, false, nullptr);
 
 		VTPageInfo* data = static_cast<VTPageInfo*>(_vt_page_info_buffer->map(CpuAccessMode::Read, fence_event));
-
+		
 		uint32_t page_info_count = CLIENT_WIDTH * CLIENT_HEIGHT;
 		parallel::parallel_for(
 			[&](uint64_t ix)
@@ -330,7 +331,18 @@ namespace fantasy
 				uint32_t mesh_id = info.geometry_id >> 16;
 				uint32_t submesh_id = info.geometry_id & 0xffff;
 
-				// TODO
+				bool res = world->each<Mesh, Material>(
+					[&](Entity* entity, Mesh* mesh, Material* material) -> bool
+					{
+						if (mesh->mesh_id == mesh_id)
+						{
+							const auto& submesh = mesh->submeshes[submesh_id];
+							
+						}
+						return true;
+					}
+				);
+				assert(res);
 			}, 
 			page_info_count
 		);

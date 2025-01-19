@@ -4,15 +4,21 @@
 #include <cstdint>
 #include <vector>
 #include <string>
-#include "../core/math/rectangle.h"
 #include "../core/tools/lru_cache.h"
-#include "geometry.h"
+#include "../core/tools/delegate.h"
+#include "../core/math/bounds.h"
+#include "../core/tools/ecs.h"
 
 namespace fantasy 
 {
     const static uint32_t page_size = 128u;
     static const uint32_t physical_texture_slice_size = 1024u;
     static const uint32_t physical_texture_resolution = 4096u;
+
+    namespace event
+	{
+		DELCARE_DELEGATE_EVENT(GenerateMipmap, Entity*);
+	};
 
     struct VTPage
     {
@@ -23,14 +29,11 @@ namespace fantasy
             Loaded
         };
 
-        uint32_t x = 0;
-        uint32_t y = 0;
-        uint32_t morton_id = 0;
-
-        uint32_t mip = 0;
-        uint32_t mip_mask = 0; 
+        Bounds2I bounds;
+        uint32_t mip_level = INVALID_SIZE_32;
         
         LoadFlag flag = LoadFlag::None;
+
         bool always_in_cache = false;
     };
 
@@ -40,46 +43,94 @@ namespace fantasy
         uint32_t page_id_mip_level;
     };
 
-
     class Mipmap
     {
     public:
-        Mipmap(uint32_t mip_level, uint32_t mip0_size_in_page, uint32_t page_size);
-
-        VTPage GetPage(uint32_t morton) const;
-        VTPage GetPage(uint32_t x, uint32_t y) const;
+        bool initialize(uint32_t mip_levels, uint32_t mip0_resolution);
+        VTPage* query_page(uint2 uv, uint32_t mip_level);
 
     private:
-        uint32_t _mip_level;
-        uint32_t _size_in_page; // 单位为 page.
-        uint32_t _real_resolution;
-        std::vector<VTPage> _pages;
+        struct Mip
+        {
+            uint32_t resolution = 0;
+            std::vector<VTPage> pages;  // 以 morton code 排序.
+        };
+
+        class QuadTree
+        {
+        public:
+            bool initialize(uint32_t mip0_resolution_in_page, uint32_t mip_levels);
+            uint32_t query_page_morton_code(uint2 page_id, uint32_t mip_level);
+
+        private:
+            // 每个 Node 代表一个 Page.
+            struct Node
+            {
+                std::array<std::unique_ptr<Node>, 4> children;
+                Node* parent_node = nullptr;
+                
+                Bounds2I virtual_bounds;    // 代表该 node 实际映射 virtual texture 的部分 (单位是 page).
+                uint32_t mip_level = INVALID_SIZE_32;
+                uint32_t morton_code = INVALID_SIZE_32;
+
+                bool is_leaf() const { return children[0] == nullptr; }
+            };
+
+            std::unique_ptr<Node> _root;
+        };
+
+        QuadTree _quad_tree;
+        std::vector<Mip> _mips;
     };
 
     class VTIndirectTexture
     {
+    public:
+        VTIndirectTexture() : 
+            page_pointers(CLIENT_WIDTH * CLIENT_HEIGHT, uint2(INVALID_SIZE_32)),
+            resolution(CLIENT_WIDTH, CLIENT_HEIGHT) 
+        {
+        }
 
+        void set_page(uint2 uv, uint2 page_pos)
+        {
+            assert(uv < resolution);
+            page_pointers[uv.y * resolution.x + uv.x] = page_pos;
+        }
+
+        void set_page_null(uint2 uv) { set_page(uv, uint2(INVALID_SIZE_32)); }
+
+        uint2* get_data() { return page_pointers.data(); }
+
+    private:
+        std::vector<uint2> page_pointers;
+        std::string texture_name;
+        uint2 resolution;
     };
 
     class VTPhysicalTexture
     {
     public:
-        struct Tile
+        VTPhysicalTexture() : _tiles(_resolution_in_tile * _resolution_in_tile)
         {
-            Rectangle rect;
-            VTPage* cache_page;
-        };
+        }
+
+        uint2 add_page(VTPage* page);
+
+        static std::string get_slice_name(uint32_t texture_type, uint2 uv);
 
     private:
-        uint32_t _real_width;
-        uint32_t _real_height;
+        uint32_t _resolution = physical_texture_resolution;
+        uint32_t _resolution_in_tile = physical_texture_resolution / page_size;
 
-        uint32_t _tile_count_x;
-        uint32_t _tile_count_y;
-        
+        // 一个 Tile 对应 一个 Page.
+        struct Tile
+        {
+            VTPage* cache_page = nullptr;
+            uint2 position = uint2(INVALID_SIZE_32);
+        };
+
         LruCache<Tile> _tiles;
-
-        std::array<std::string, Material::TextureType_Num> _physical_textures;
     };
 }
 
