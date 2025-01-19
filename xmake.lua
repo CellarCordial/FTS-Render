@@ -40,6 +40,7 @@ target("FTS-Render")
         "$(projectdir)/external/assimp/include",
         "$(projectdir)/external/spdlog/include",
         "$(projectdir)/external/minizip/include",
+        "$(projectdir)/external/VulkanSDK/include",
         "$(projectdir)/external/glfw-3.4.bin.WIN64/include"
     )
     add_linkdirs(
@@ -50,6 +51,7 @@ target("FTS-Render")
         "$(projectdir)/external/spdlog/lib",
         "$(projectdir)/external/assimp/lib",
         "$(projectdir)/external/minizip/lib",
+        "$(projectdir)/external/VulkanSDK/lib",
         "$(projectdir)/external/glfw-3.4.bin.WIN64/lib-static-ucrt"
     )
     add_links(
@@ -60,6 +62,7 @@ target("FTS-Render")
         "spdlog.lib",
         "minizip.lib",
         "glfw3dll.lib",
+        "vulkan-1.lib",
         "assimp-vc143-mt.lib"
     )
 
