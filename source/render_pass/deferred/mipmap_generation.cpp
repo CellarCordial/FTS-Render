@@ -91,7 +91,12 @@ namespace fantasy
 					image.height,
 					image.format,
 					true,
-					get_geometry_texture_name(_current_image_index, 0, model_name)
+					get_geometry_texture_name(
+						_current_submaterial_index, 
+						_current_image_index, 
+						0, 
+						model_name
+					)
 				)
 			)));
 			cache->collect(_textures[0], ResourceType::Texture);
@@ -109,7 +114,12 @@ namespace fantasy
 						texture_resolution.y,
 						image.format,
 						true,
-						get_geometry_texture_name(_current_image_index, mip_level, model_name)
+						get_geometry_texture_name(
+							_current_submaterial_index, 
+							_current_image_index, 
+							mip_level, 
+							model_name
+						)
 					)
 				)));
 				cache->collect(_textures[mip_level], ResourceType::Texture);

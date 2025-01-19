@@ -54,8 +54,8 @@ namespace fantasy
 		bool _resource_writed = false;
 		constant::VirtualGBufferPassConstant _pass_constant;
 
-		VTIndirectTexture _vt_indirect_texture;
-		VTPhysicalTexture _vt_physical_texture;
+		VTIndirectTable _vt_indirect_table;
+		VTPhysicalTable _vt_physical_table;
 
 		std::vector<Vertex> _cluster_vertices;
 		std::vector<uint32_t> _cluster_triangles;
@@ -66,6 +66,9 @@ namespace fantasy
 		std::shared_ptr<BufferInterface> _cluster_triangle_buffer;
 		std::shared_ptr<BufferInterface> _vt_page_info_buffer;
 		std::shared_ptr<BufferInterface> _draw_indexed_indirect_arguments_buffer;
+
+		std::shared_ptr<TextureInterface> _vt_indirect_texture;
+		std::vector<std::shared_ptr<TextureInterface>> _vt_physical_textures;
 
 		std::shared_ptr<TextureInterface> _world_position_view_depth_texture;
 		std::shared_ptr<TextureInterface> _view_space_velocity_texture;

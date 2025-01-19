@@ -11,7 +11,9 @@ namespace fantasy
     bool MipmapLUT::initialize(uint32_t mip0_resolution)
     {
         ReturnIfFalse(is_power_of_2(mip0_resolution));
-
+        
+        _mip0_resolution = mip0_resolution;
+        
         uint32_t mip0_resolution_in_page = mip0_resolution / page_size;
         uint32_t mip_levels = std::log2(mip0_resolution_in_page);
 
@@ -44,9 +46,8 @@ namespace fantasy
         return true;
     }
 
-    VTPage* MipmapLUT::query_page(uint2 uv, uint32_t mip_level)
+    VTPage* MipmapLUT::query_page(uint2 page_id, uint32_t mip_level)
     {
-        uint2 page_id = uv / page_size;
         uint32_t morton_code = _quad_tree.query_page_morton_code(page_id, mip_level);
         return &_mips[mip_level].pages[morton_code];
     }
@@ -160,7 +161,7 @@ namespace fantasy
         return ret;
     }
 
-    uint2 VTPhysicalTexture::add_page(VTPage* page)
+    uint2 VTPhysicalTable::add_page(VTPage* page)
     {
         uint64_t key = reinterpret_cast<uint64_t>(page);
         Tile* tile = _tiles.get(key);
@@ -183,15 +184,15 @@ namespace fantasy
 
             ret = tile->position;
         }
-        return ret;
+
+        page->flag = VTPage::LoadFlag::Loaded;
+
+        return ret * page_size;
     }
 
-    std::string VTPhysicalTexture::get_slice_name(uint32_t texture_type, uint2 uv)
-    {
-        uint32_t slice_row_num = physical_texture_resolution / physical_texture_slice_size;
-        uint2 slice_id = uv / physical_texture_slice_size;
-        uint32_t slice_index = slice_id.x + slice_id.y * slice_row_num;
 
+    std::string VTPhysicalTable::get_slice_name(uint32_t texture_type, uint32_t slice_index)
+    {
         std::string ret;
         switch (texture_type) 
 		{
@@ -207,5 +208,4 @@ namespace fantasy
 		}
         return ret;
     }
-
 }

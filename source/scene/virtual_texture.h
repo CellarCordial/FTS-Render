@@ -26,15 +26,14 @@ namespace fantasy
     {
         enum class LoadFlag : uint8_t
         {
-            None,
-            Loading,
+            Unload,
             Loaded
         };
 
         Bounds2I bounds;
         uint32_t mip_level = INVALID_SIZE_32;
         
-        LoadFlag flag = LoadFlag::None;
+        LoadFlag flag = LoadFlag::Unload;
 
         bool always_in_cache = false;
     };
@@ -49,7 +48,8 @@ namespace fantasy
     {
     public:
         bool initialize(uint32_t mip0_resolution);
-        VTPage* query_page(uint2 uv, uint32_t mip_level);
+        VTPage* query_page(uint2 page_id, uint32_t mip_level);
+        uint32_t get_mip0_resolution() const { return _mip0_resolution; }
         uint32_t get_mip_levels() const { return static_cast<uint32_t>(_mips.size()); }
 
     private:
@@ -89,14 +89,16 @@ namespace fantasy
             std::unique_ptr<Node> _root;
         };
 
+        uint32_t _mip0_resolution = 0;
+
         QuadTree _quad_tree;
         std::vector<Mip> _mips;
     };
 
-    class VTIndirectTexture
+    class VTIndirectTable
     {
     public:
-        VTIndirectTexture() : 
+        VTIndirectTable() : 
             page_pointers(CLIENT_WIDTH * CLIENT_HEIGHT, uint2(INVALID_SIZE_32)),
             resolution(CLIENT_WIDTH, CLIENT_HEIGHT) 
         {
@@ -117,24 +119,32 @@ namespace fantasy
         uint2 resolution;
     };
 
-    class VTPhysicalTexture
+
+    class VTPhysicalTable
     {
     public:
-        VTPhysicalTexture() : _tiles(_resolution_in_tile * _resolution_in_tile) {}
-
-        uint2 add_page(VTPage* page);
-        static std::string get_slice_name(uint32_t texture_type, uint2 uv);
-
-    private:
-        uint32_t _resolution = physical_texture_resolution;
-        uint32_t _resolution_in_tile = physical_texture_resolution / page_size;
-
         // 一个 Tile 对应 一个 Page.
         struct Tile
         {
             VTPage* cache_page = nullptr;
             uint2 position = uint2(INVALID_SIZE_32);
         };
+
+        static void on_page_evict(Tile& tile)
+        {
+            tile.cache_page->flag = VTPage::LoadFlag::Unload;
+        }
+
+    public:
+        VTPhysicalTable() : _tiles(_resolution_in_tile * _resolution_in_tile, on_page_evict) {}
+
+        uint2 add_page(VTPage* page);
+        static std::string get_slice_name(uint32_t texture_type, uint32_t slice_index);
+
+    private:
+        uint32_t _resolution = physical_texture_resolution;
+        uint32_t _resolution_in_tile = physical_texture_resolution / page_size;
+
         LruCache<Tile> _tiles;
         uint2 _current_avaible_pos = uint2(0u);
     };

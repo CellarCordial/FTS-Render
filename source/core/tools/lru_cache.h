@@ -4,14 +4,18 @@
 #include <cstdint>
 #include <list>
 #include <unordered_map>
+#include <functional>
 
 namespace fantasy 
 {
-    template <typename T>
+    template <typename T, typename OnEvict = std::function<void(T&)>>
     class LruCache 
     {
     public:
-        explicit LruCache(uint32_t capacity = 0) : _capacity(capacity) {}
+        explicit LruCache(uint32_t capacity = 0, OnEvict on_evict = [](T&) {}) : 
+            _capacity(capacity), _on_evict(on_evict) 
+        {
+        }
         
         T* get(uint64_t key) 
         {
@@ -39,6 +43,7 @@ namespace fantasy
                 {
                     auto data = &_list.back();
                     _map.erase(data->first);
+                    _on_evict(data->second);
                     _list.pop_back();
                 }
             }
@@ -50,6 +55,7 @@ namespace fantasy
         }
 
     private:
+        OnEvict _on_evict;
         uint32_t _capacity;
         std::unordered_map<uint64_t,  typename std::list<std::pair<uint64_t, T>>::iterator> _map;
         std::list<std::pair<uint64_t, T>> _list;
