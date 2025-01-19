@@ -362,9 +362,10 @@ namespace fantasy
 
 		uint32_t page_info_count = CLIENT_WIDTH * CLIENT_HEIGHT;
 		parallel::parallel_for(
-			[&](uint64_t ix)
+			[&](uint64_t x, uint64_t y)
 			{
-				const auto& info = *(data + ix);
+				uint32_t offset = static_cast<uint32_t>(x + y * CLIENT_WIDTH);
+				const auto& info = *(data + offset);
 
 				uint2 page_id = uint2(
 					((info.page_id_mip_level >> 12) & 0xf << 8) | (info.page_id_mip_level >> 24) & 0xff,
@@ -391,21 +392,28 @@ namespace fantasy
 										found = true;
 
 										VTPage* page = mipmap_lut->query_page(page_id, mip_level);
-										VTPage::LoadFlag flag = page->flag;
 										
-										uint2 page_physical_pos = _vt_physical_table.add_page(page);
-										_vt_indirect_table.set_page(page_id, page_physical_pos);
-
-										if (flag == VTPage::LoadFlag::Unload)
+										uint2 page_physical_pos;
 										{
 											std::lock_guard lock(info_mutex);
-											copy_infos.emplace_back(TextureCopyInfo{
-												.submesh_id = submesh_id,
-												.page = page,
-												.page_physical_pos = page_physical_pos,
-												.model_name = model_name
-											});
+
+											VTPage::LoadFlag flag = page->flag;
+											page_physical_pos = _vt_physical_table.add_page(page);
+
+											if (flag == VTPage::LoadFlag::Unload)
+											{
+												copy_infos.emplace_back(TextureCopyInfo{
+													.submesh_id = submesh_id,
+													.page = page,
+													.page_physical_pos = page_physical_pos,
+													.model_name = model_name
+												});
+											}
 										}
+										_vt_indirect_table.set_page(
+											uint2(static_cast<uint32_t>(x), static_cast<uint32_t>(y)), 
+											page_physical_pos
+										);
 									}
 									return found;
 								}
@@ -416,7 +424,8 @@ namespace fantasy
 				);
 				assert(res);
 			}, 
-			page_info_count
+			CLIENT_WIDTH,
+			CLIENT_HEIGHT
 		);
 
 		for (const auto& info : copy_infos)
