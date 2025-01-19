@@ -49,7 +49,7 @@ namespace fantasy
         bool initialize();
 
         // HeapInterface.
-        HeapDesc get_desc() const override { return _desc; }
+        const HeapDesc& get_desc() const override { return _desc; }
 
     public:
         Microsoft::WRL::ComPtr<ID3D12Heap> _d3d12_heap;

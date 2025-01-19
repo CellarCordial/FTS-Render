@@ -147,7 +147,7 @@ namespace fantasy
 
     struct HeapInterface
     {
-        virtual HeapDesc get_desc() const = 0;
+        virtual const HeapDesc& get_desc() const = 0;
         
 		virtual ~HeapInterface() = default;
     };

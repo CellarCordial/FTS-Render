@@ -38,7 +38,6 @@ namespace fantasy
         return device;
     }
     
-
     template <class T>
     inline void hash_combine(uint64_t& key, const T& value)
     {

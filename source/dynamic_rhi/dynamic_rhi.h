@@ -3,6 +3,7 @@
 
 #include "device.h"
 #include <d3d12.h>
+#include <vulkan/vulkan.h>
 
 
 namespace fantasy
@@ -32,9 +33,31 @@ namespace fantasy
     /////////////////////////////////////////////////////////////////////////////////////////////
 
 
+    struct VKDeviceDesc
+    {
+        VkInstance instance;
+        VkPhysicalDevice physical_device;
+        VkDevice device;
 
+        VkQueue graphics_queue;
+        uint32_t graphics_queue_index = -1;
+        VkQueue transfer_queue;
+        uint32_t transfer_queue_index = -1;
+        VkQueue compute_queue;
+        uint32_t compute_queue_index = -1;
 
+        const char** instance_extensions = nullptr;
+        size_t num_instance_extensions = 0;
+        
+        const char** device_extensions = nullptr;
+        size_t num_device_extensions = 0;
 
+        uint32_t max_timer_queries = 256;
+
+        bool buffer_device_address_supported = false;
+    };
+
+    DeviceInterface* VKDeviceDesc(const DX12DeviceDesc& desc);
 }
 
 
