@@ -11,11 +11,10 @@
 
 namespace fantasy 
 {
-    const static uint32_t page_size = 128u;
+    const static uint32_t vt_page_size = 128u;
 	const static uint32_t lowest_texture_resolution = 512u;
 	const static uint32_t highest_texture_resolution = 4096u;
-    static const uint32_t physical_texture_slice_size = 1024u;
-    static const uint32_t physical_texture_resolution = 4096u;
+    static const uint32_t vt_physical_texture_resolution = 4096u;
 
     namespace event
 	{
@@ -139,11 +138,11 @@ namespace fantasy
         VTPhysicalTable() : _tiles(_resolution_in_tile * _resolution_in_tile, on_page_evict) {}
 
         uint2 add_page(VTPage* page);
-        static std::string get_slice_name(uint32_t texture_type, uint32_t slice_index);
+        static std::string get_texture_name(uint32_t texture_type);
 
     private:
-        uint32_t _resolution = physical_texture_resolution;
-        uint32_t _resolution_in_tile = physical_texture_resolution / page_size;
+        uint32_t _resolution = vt_physical_texture_resolution;
+        uint32_t _resolution_in_tile = vt_physical_texture_resolution / vt_page_size;
 
         LruCache<Tile> _tiles;
         uint2 _current_avaible_pos = uint2(0u);

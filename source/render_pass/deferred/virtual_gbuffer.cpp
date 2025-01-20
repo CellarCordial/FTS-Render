@@ -79,26 +79,19 @@ namespace fantasy
 					"vt_indirect_texture"
 				)
 			)));
-
-			uint32_t slice_num = physical_texture_resolution / physical_texture_slice_size;
-			slice_num *= slice_num;
-			_vt_physical_textures.resize(slice_num);
+			cache->collect(_vt_indirect_texture, ResourceType::Texture);
 
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
 			{
-				for (uint32_t jx = 0; jx < slice_num; ++jx)
-				{
-					uint32_t index = ix * slice_num + jx;
-					ReturnIfFalse(_vt_physical_textures[index] = std::shared_ptr<TextureInterface>(device->create_texture(
-						TextureDesc::create_render_target(
-							CLIENT_WIDTH,
-							CLIENT_HEIGHT,
-							Format::RGBA32_FLOAT,
-							VTPhysicalTable::get_slice_name(ix, jx)
-						)
-					)));
-				}
-				
+				ReturnIfFalse(_vt_physical_textures[ix] = std::shared_ptr<TextureInterface>(device->create_texture(
+					TextureDesc::create_render_target(
+						CLIENT_WIDTH,
+						CLIENT_HEIGHT,
+						Format::RGBA32_FLOAT,
+						VTPhysicalTable::get_texture_name(ix)
+					)
+				)));
+				cache->collect(_vt_physical_textures[index], ResourceType::Texture);
 			}
 
 			ReturnIfFalse(_world_position_view_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
@@ -430,19 +423,13 @@ namespace fantasy
 
 		for (const auto& info : copy_infos)
 		{
-			uint32_t slice_row_num = physical_texture_resolution / physical_texture_slice_size;
-			uint2 slice_id = info.page_physical_pos / physical_texture_slice_size;
-			uint32_t slice_index_offset = slice_id.x + slice_id.y * slice_row_num;
-			
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
 			{
-				uint32_t index = ix * slice_row_num * slice_row_num + slice_index_offset;
-				
 				TextureSlice dst_slice = TextureSlice{
-					.x = info.page_physical_pos.x * page_size,
-					.y = info.page_physical_pos.y * page_size,
-					.width = page_size,
-					.height = page_size
+					.x = info.page_physical_pos.x * vt_page_size,
+					.y = info.page_physical_pos.y * vt_page_size,
+					.width = vt_page_size,
+					.height = vt_page_size
 				};
 				TextureSlice src_slice = TextureSlice{
 					.x = info.page->bounds._lower.x,
@@ -452,7 +439,7 @@ namespace fantasy
 				};
 
 				ReturnIfFalse(cmdlist->copy_texture(
-					_vt_physical_textures[index].get(), 
+					_vt_physical_textures[ix].get(), 
 					dst_slice, 
 					check_cast<TextureInterface>(
 						cache->require(get_geometry_texture_name(

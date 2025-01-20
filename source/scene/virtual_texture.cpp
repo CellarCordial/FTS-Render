@@ -14,7 +14,7 @@ namespace fantasy
         
         _mip0_resolution = mip0_resolution;
         
-        uint32_t mip0_resolution_in_page = mip0_resolution / page_size;
+        uint32_t mip0_resolution_in_page = mip0_resolution / vt_page_size;
         uint32_t mip_levels = std::log2(mip0_resolution_in_page);
 
         _quad_tree.initialize(mip0_resolution_in_page, mip_levels);
@@ -26,7 +26,7 @@ namespace fantasy
             
             mip.resolution = ix == 0 ? mip0_resolution : _mips[ix - 1].resolution >> 1;
             
-            uint32_t resolution_in_page = mip.resolution / page_size;
+            uint32_t resolution_in_page = mip.resolution / vt_page_size;
             mip.pages.resize(resolution_in_page * resolution_in_page);
             
             parallel::parallel_for(
@@ -36,8 +36,8 @@ namespace fantasy
                     auto& page = mip.pages[morton_code];
                     page.mip_level = ix;
                     
-                    uint2 lower = uint2(x * page_size, y * page_size);
-                    page.bounds = Bounds2I(lower, lower + page_size);
+                    uint2 lower = uint2(x * vt_page_size, y * vt_page_size);
+                    page.bounds = Bounds2I(lower, lower + vt_page_size);
                 }, 
                 resolution_in_page, 
                 resolution_in_page
@@ -187,23 +187,23 @@ namespace fantasy
 
         page->flag = VTPage::LoadFlag::Loaded;
 
-        return ret * page_size;
+        return ret * vt_page_size;
     }
 
 
-    std::string VTPhysicalTable::get_slice_name(uint32_t texture_type, uint32_t slice_index)
+    std::string VTPhysicalTable::get_texture_name(uint32_t texture_type)
     {
         std::string ret;
         switch (texture_type) 
 		{
 		case Material::TextureType_BaseColor: 
-			ret = "vt_physical_texture_base_color" + std::to_string(slice_index); break;
+			ret = "vt_physical_texture_base_color"; break;
 		case Material::TextureType_Normal:  
-			ret = "vt_physical_texture_normal" + std::to_string(slice_index);; break;
+			ret = "vt_physical_texture_normal";; break;
 		case Material::TextureType_PBR:  
-			ret = "vt_physical_texture_pbr" + std::to_string(slice_index);; break;
+			ret = "vt_physical_texture_pbr";; break;
 		case Material::TextureType_Emissive:  
-			ret = "vt_physical_texture_emissive" + std::to_string(slice_index);; break;
+			ret = "vt_physical_texture_emissive";; break;
 		default: break;
 		}
         return ret;

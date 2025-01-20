@@ -7,8 +7,8 @@
 
 namespace fantasy
 {
-#define THREAD_GROUP_SIZE_X 16 
-#define THREAD_GROUP_SIZE_Y 16 
+#define THREAD_GROUP_SIZE_X 16
+#define THREAD_GROUP_SIZE_Y 16
  
 	bool ReprojectionPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{

@@ -24,7 +24,6 @@ namespace fantasy
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
 	private:
-		bool _resource_writed = false;
 		constant::VirtualGeometryTexturePassConstant _pass_constant;
 
 		std::shared_ptr<BufferInterface> _buffer;
