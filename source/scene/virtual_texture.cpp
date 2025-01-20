@@ -8,14 +8,15 @@
 
 namespace fantasy 
 {
-    bool MipmapLUT::initialize(uint32_t mip0_resolution)
+    bool MipmapLUT::initialize(uint32_t mip0_resolution, uint32_t max_mip_resolution)
     {
         ReturnIfFalse(is_power_of_2(mip0_resolution));
         
         _mip0_resolution = mip0_resolution;
         
         uint32_t mip0_resolution_in_page = mip0_resolution / vt_page_size;
-        uint32_t mip_levels = std::log2(mip0_resolution_in_page);
+        uint32_t max_mip_resolution_in_page = max_mip_resolution / vt_page_size;
+        uint32_t mip_levels = std::log2(mip0_resolution_in_page / max_mip_resolution_in_page);
 
         _quad_tree.initialize(mip0_resolution_in_page, mip_levels);
 

@@ -1,11 +1,10 @@
 #include "virtual_gbuffer.h"
 #include "../../shader/shader_compiler.h"
-#include "../../core/parallel/parallel.h"
 #include "../../core/tools/check_cast.h"
 #include "../../scene/virtual_mesh.h"
+#include "../../scene/virtual_texture.h"
 #include <cstdint>
 #include <memory>
-#include <mutex>
 
 namespace fantasy
 {
@@ -71,29 +70,6 @@ namespace fantasy
 
 		// Texture.
 		{
-			ReturnIfFalse(_vt_indirect_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target(
-					CLIENT_WIDTH,
-					CLIENT_HEIGHT,
-					Format::RG32_UINT,
-					"vt_indirect_texture"
-				)
-			)));
-			cache->collect(_vt_indirect_texture, ResourceType::Texture);
-
-			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
-			{
-				ReturnIfFalse(_vt_physical_textures[ix] = std::shared_ptr<TextureInterface>(device->create_texture(
-					TextureDesc::create_render_target(
-						CLIENT_WIDTH,
-						CLIENT_HEIGHT,
-						Format::RGBA32_FLOAT,
-						VTPhysicalTable::get_texture_name(ix)
-					)
-				)));
-				cache->collect(_vt_physical_textures[index], ResourceType::Texture);
-			}
-
 			ReturnIfFalse(_world_position_view_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target(
 					CLIENT_WIDTH,
@@ -328,133 +304,6 @@ namespace fantasy
 		ReturnIfFalse(cmdlist->draw_indirect());
 
 		ReturnIfFalse(cmdlist->close());
-		return true;
-	}
-
-	
-	bool VirtualGBufferPass::feedback(CommandListInterface* cmdlist, RenderResourceCache* cache)
-	{
-		ReturnIfFalse(cmdlist->open());
-
-		DeviceInterface* device = cmdlist->get_deivce();
-		World* world = cache->get_world();
-		HANDLE fence_event = CreateEvent(nullptr, false, false, nullptr);
-
-		VTPageInfo* data = static_cast<VTPageInfo*>(_vt_page_info_buffer->map(CpuAccessMode::Read, fence_event));
-		
-		struct TextureCopyInfo
-		{
-			uint32_t submesh_id = 0;
-			VTPage* page = nullptr;
-			uint2 page_physical_pos;
-			std::string* model_name = nullptr;
-		};
-
-		std::mutex info_mutex;
-		std::vector<TextureCopyInfo> copy_infos;
-
-		uint32_t page_info_count = CLIENT_WIDTH * CLIENT_HEIGHT;
-		parallel::parallel_for(
-			[&](uint64_t x, uint64_t y)
-			{
-				uint32_t offset = static_cast<uint32_t>(x + y * CLIENT_WIDTH);
-				const auto& info = *(data + offset);
-
-				uint2 page_id = uint2(
-					((info.page_id_mip_level >> 12) & 0xf << 8) | (info.page_id_mip_level >> 24) & 0xff,
-					((info.page_id_mip_level >> 8) & 0xf << 8) | (info.page_id_mip_level >> 16) & 0xff
-				);
-				uint32_t mip_level = info.page_id_mip_level & 0xff;
-				uint32_t mesh_id = info.geometry_id >> 16;
-				uint32_t submesh_id = info.geometry_id & 0xffff;
-
-
-				bool res = world->each<std::string, Mesh, Material>(
-					[&](Entity* entity, std::string* model_name, Mesh* mesh, Material* material) -> bool
-					{
-						if (mesh->mesh_id == mesh_id)
-						{
-							const auto& submesh = mesh->submeshes[submesh_id];
-							
-							ReturnIfFalse(world->each<MipmapLUT>(
-								[&](Entity* entity, MipmapLUT* mipmap_lut) -> bool
-								{
-									bool found = false;
-									if (mipmap_lut->get_mip0_resolution() == material->image_resolution)
-									{
-										found = true;
-
-										VTPage* page = mipmap_lut->query_page(page_id, mip_level);
-										
-										uint2 page_physical_pos;
-										{
-											std::lock_guard lock(info_mutex);
-
-											VTPage::LoadFlag flag = page->flag;
-											page_physical_pos = _vt_physical_table.add_page(page);
-
-											if (flag == VTPage::LoadFlag::Unload)
-											{
-												copy_infos.emplace_back(TextureCopyInfo{
-													.submesh_id = submesh_id,
-													.page = page,
-													.page_physical_pos = page_physical_pos,
-													.model_name = model_name
-												});
-											}
-										}
-										_vt_indirect_table.set_page(
-											uint2(static_cast<uint32_t>(x), static_cast<uint32_t>(y)), 
-											page_physical_pos
-										);
-									}
-									return found;
-								}
-							));
-						}
-						return true;
-					}
-				);
-				assert(res);
-			}, 
-			CLIENT_WIDTH,
-			CLIENT_HEIGHT
-		);
-
-		for (const auto& info : copy_infos)
-		{
-			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
-			{
-				TextureSlice dst_slice = TextureSlice{
-					.x = info.page_physical_pos.x * vt_page_size,
-					.y = info.page_physical_pos.y * vt_page_size,
-					.width = vt_page_size,
-					.height = vt_page_size
-				};
-				TextureSlice src_slice = TextureSlice{
-					.x = info.page->bounds._lower.x,
-					.y = info.page->bounds._lower.y,
-					.width = info.page->bounds.width(),
-					.height = info.page->bounds.height()
-				};
-
-				ReturnIfFalse(cmdlist->copy_texture(
-					_vt_physical_textures[ix].get(), 
-					dst_slice, 
-					check_cast<TextureInterface>(
-						cache->require(get_geometry_texture_name(
-							info.submesh_id, 
-							ix, 
-							info.page->mip_level, 
-							*info.model_name
-						).c_str())).get(), 
-					src_slice
-				));
-			}
-		}
-
-		ReturnIfFalse(cmdlist->close());
-
 		return true;
 	}
 

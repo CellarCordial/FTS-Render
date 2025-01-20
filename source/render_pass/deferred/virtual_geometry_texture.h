@@ -2,6 +2,8 @@
 #define RENDER_PASS_H
 
 #include "../../render_graph/render_pass.h"
+#include "../../scene/virtual_texture.h"
+#include "../../scene/geometry.h"
 #include <memory>
 
 namespace fantasy
@@ -18,7 +20,7 @@ namespace fantasy
 	class VirtualGeometryTexturePass : public RenderPassInterface
 	{
 	public:
-		VirtualGeometryTexturePass() { type = RenderPassType::Compute; }
+		VirtualGeometryTexturePass() { type = RenderPassType::Compute | RenderPassType::Immediately; }
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
@@ -26,8 +28,11 @@ namespace fantasy
 	private:
 		constant::VirtualGeometryTexturePassConstant _pass_constant;
 
-		std::shared_ptr<BufferInterface> _buffer;
-		std::shared_ptr<TextureInterface> _texture;
+		VTIndirectTable _vt_indirect_table;
+		VTPhysicalTable _vt_physical_table;
+
+		std::shared_ptr<TextureInterface> _vt_indirect_texture;
+		std::array<std::shared_ptr<TextureInterface>, Material::TextureType_Num> _vt_physical_textures;
 
 		std::unique_ptr<BindingLayoutInterface> _binding_layout;
 

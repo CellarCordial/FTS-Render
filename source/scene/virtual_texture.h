@@ -46,7 +46,7 @@ namespace fantasy
     class MipmapLUT
     {
     public:
-        bool initialize(uint32_t mip0_resolution);
+        bool initialize(uint32_t mip0_resolution, uint32_t max_mip_resolution = vt_page_size);
         VTPage* query_page(uint2 page_id, uint32_t mip_level);
         uint32_t get_mip0_resolution() const { return _mip0_resolution; }
         uint32_t get_mip_levels() const { return static_cast<uint32_t>(_mips.size()); }
