@@ -11,26 +11,31 @@ namespace fantasy
 {
 	namespace constant
 	{
-		struct Constant
+		struct VirtualShadowMapPassConstant
 		{
+			float4x4 shadow_view_proj;
 
+			float3 camera_position;
+			uint32_t virtual_shadow_resolution;
+
+			uint32_t virtual_shadow_page_size;
+			uint32_t client_width;
 		};
 	}
 
-	class Pass : public RenderPassInterface
+	class VirtualShadowMapPass : public RenderPassInterface
 	{
 	public:
-		Pass() { type = RenderPassType::Compute; }
+		VirtualShadowMapPass() { type = RenderPassType::Compute; }
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
 	private:
 		bool _resource_writed = false;
-		constant::Constant _pass_constant;
+		constant::VirtualShadowMapPassConstant _pass_constant;
 
-		std::shared_ptr<BufferInterface> _buffer;
-		std::shared_ptr<TextureInterface> _texture;
+		std::shared_ptr<BufferInterface> _virtual_shadow_page_buffer;
 
 		std::unique_ptr<BindingLayoutInterface> _binding_layout;
 

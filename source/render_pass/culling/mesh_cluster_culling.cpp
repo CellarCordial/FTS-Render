@@ -63,10 +63,9 @@ namespace fantasy
 		// Buffer.
 		{
 			ReturnIfFalse(_virtual_gbuffer_indirect_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_structured(
+				BufferDesc::create_rwstructured(
 					sizeof(DrawIndexedIndirectArguments), 
 					sizeof(DrawIndexedIndirectArguments),
-                    true, 
 					"virtual_gbuffer_indirect_buffer"
 				)
 			)));
@@ -189,10 +188,9 @@ namespace fantasy
             cache->collect(_mesh_cluster_buffer, ResourceType::Buffer);
 
             ReturnIfFalse(_visible_cluster_id_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-                BufferDesc::create_structured(
+                BufferDesc::create_rwstructured(
                     sizeof(uint32_t) * cluster_index_offset, 
                     sizeof(uint32_t),
-                    true,
                     "visible_cluster_id_buffer"
                 )
             )));

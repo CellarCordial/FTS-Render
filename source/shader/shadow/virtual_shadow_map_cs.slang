@@ -13,7 +13,7 @@ cbuffer pass_constants : register(b0)
     uint32_t client_width;
 };
 
-Texture2D<float4> world_position_view_depth : register(t0);
+Texture2D<float4> world_position_view_depth_texture : register(t0);
 
 RWStructuredBuffer<uint2> virtual_shadow_page_buffer : register(u0);
 
@@ -24,7 +24,7 @@ RWStructuredBuffer<uint2> virtual_shadow_page_buffer : register(u0);
 void main(uint3 thread_id: SV_DispatchThreadID)
 {
     uint2 pixel_id = thread_id.xy;
-    float3 world_pos = world_position_view_depth[pixel_id].xyz;
+    float3 world_pos = world_position_view_depth_texture[pixel_id].xyz;
     float4 shadow_view_proj_pos = mul(float4(world_pos, 1.0f), shadow_view_proj);
     shadow_view_proj_pos.xyz = shadow_view_proj_pos.xyz / shadow_view_proj_pos.z;
 

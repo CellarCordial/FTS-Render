@@ -59,17 +59,17 @@ namespace fantasy
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(N);
-			binding_layout_items[Index] = BindingLayoutItem::create_push_constants(Slot, sizeof(constant));
-			binding_layout_items[Index] = BindingLayoutItem::create_constant_buffer(Slot);
-			binding_layout_items[Index] = BindingLayoutItem::create_structured_buffer_srv(Slot);
-			binding_layout_items[Index] = BindingLayoutItem::create_structured_buffer_uav(Slot);
-			binding_layout_items[Index] = BindingLayoutItem::create_raw_buffer_srv(Slot);
-			binding_layout_items[Index] = BindingLayoutItem::create_raw_buffer_uav(Slot);
-			binding_layout_items[Index] = BindingLayoutItem::create_typed_buffer_srv(Slot);
-			binding_layout_items[Index] = BindingLayoutItem::create_typed_buffer_uav(Slot);
-			binding_layout_items[Index] = BindingLayoutItem::create_texture_srv(Slot);
-			binding_layout_items[Index] = BindingLayoutItem::create_texture_uav(Slot);
-			binding_layout_items[Index] = BindingLayoutItem::create_sampler(Slot);
+			binding_layout_items[Index] = BindingLayoutItem::create_push_constants(slot, sizeof(constant));
+			binding_layout_items[Index] = BindingLayoutItem::create_constant_buffer(slot);
+			binding_layout_items[Index] = BindingLayoutItem::create_structured_buffer_srv(slot);
+			binding_layout_items[Index] = BindingLayoutItem::create_structured_buffer_uav(slot);
+			binding_layout_items[Index] = BindingLayoutItem::create_raw_buffer_srv(slot);
+			binding_layout_items[Index] = BindingLayoutItem::create_raw_buffer_uav(slot);
+			binding_layout_items[Index] = BindingLayoutItem::create_typed_buffer_srv(slot);
+			binding_layout_items[Index] = BindingLayoutItem::create_typed_buffer_uav(slot);
+			binding_layout_items[Index] = BindingLayoutItem::create_texture_srv(slot);
+			binding_layout_items[Index] = BindingLayoutItem::create_texture_uav(slot);
+			binding_layout_items[Index] = BindingLayoutItem::create_sampler(slot);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -136,17 +136,17 @@ namespace fantasy
 		// Binding Set.
 		{
 			BindingSetItemArray binding_set_items(N);
-			binding_set_items[Index] = BindingSetItem::create_push_constants(Slot, sizeof(constant));
-			binding_set_items[Index] = BindingSetItem::create_constant_buffer(Slot, _buffer);
-			binding_set_items[Index] = BindingSetItem::create_structured_buffer_srv(Slot, _buffer);
-			binding_set_items[Index] = BindingSetItem::create_structured_buffer_uav(Slot, _buffer);
-			binding_set_items[Index] = BindingSetItem::create_raw_buffer_srv(Slot, _buffer);
-			binding_set_items[Index] = BindingSetItem::create_raw_buffer_uav(Slot, _buffer);
-			binding_set_items[Index] = BindingSetItem::create_typed_buffer_srv(Slot, _buffer);
-			binding_set_items[Index] = BindingSetItem::create_typed_buffer_uav(Slot, _buffer);
-			binding_set_items[Index] = BindingSetItem::create_texture_srv(Slot, _texture);
-			binding_set_items[Index] = BindingSetItem::create_texture_uav(Slot, _texture);
-			binding_set_items[Index] = BindingSetItem::create_sampler(Slot, sampler.Get());
+			binding_set_items[Index] = BindingSetItem::create_push_constants(slot, sizeof(constant));
+			binding_set_items[Index] = BindingSetItem::create_constant_buffer(slot, _buffer);
+			binding_set_items[Index] = BindingSetItem::create_structured_buffer_srv(slot, _buffer);
+			binding_set_items[Index] = BindingSetItem::create_structured_buffer_uav(slot, _buffer);
+			binding_set_items[Index] = BindingSetItem::create_raw_buffer_srv(slot, _buffer);
+			binding_set_items[Index] = BindingSetItem::create_raw_buffer_uav(slot, _buffer);
+			binding_set_items[Index] = BindingSetItem::create_typed_buffer_srv(slot, _buffer);
+			binding_set_items[Index] = BindingSetItem::create_typed_buffer_uav(slot, _buffer);
+			binding_set_items[Index] = BindingSetItem::create_texture_srv(slot, _texture);
+			binding_set_items[Index] = BindingSetItem::create_texture_uav(slot, _texture);
+			binding_set_items[Index] = BindingSetItem::create_sampler(slot, sampler.Get());
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
 				_binding_layout.get()
