@@ -1,5 +1,5 @@
-#include "../atmosphere_properties.slang"
-#include "../intersect.slang"
+#include "../common/atmosphere_properties.slang"
+#include "../common/intersect.slang"
 
 cbuffer gAtomsphereProperties : register(b0)
 {

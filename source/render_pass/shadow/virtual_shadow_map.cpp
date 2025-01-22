@@ -1,6 +1,8 @@
 #include "virtual_shadow_map.h"
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
+#include "../../scene/camera.h"
+#include "../../scene/light.h"
 
 
 namespace fantasy
@@ -74,12 +76,19 @@ namespace fantasy
 			_compute_state.binding_sets.push_back(_binding_set.get());
 			_compute_state.pipeline = _pipeline.get();
 		}
+
+		_pass_constant.virtual_shadow_page_size = _virtual_shadow_page_size;
+		_pass_constant.virtual_shadow_resolution = _virtual_shadow_resolution;
  
 		return true;
 	}
 
 	bool VirtualShadowMapPass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
+		Entity* global_entity = cache->get_world()->get_global_entity();
+		_pass_constant.camera_position = global_entity->get_component<Camera>()->position;
+		_pass_constant.shadow_view_proj = global_entity->get_component<DirectionalLight>()->view_proj;
+		
 		ReturnIfFalse(cmdlist->open());
 
 		uint2 thread_group_num = {

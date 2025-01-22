@@ -1,7 +1,7 @@
 // #define THREAD_GROUP_SIZE_X 0
 // #define THREAD_GROUP_SIZE_Y 0
 
-#include "../DDGI.slang"
+#include "../common/DDGI.slang"
 
 
 cbuffer pass_constants : register(b0)

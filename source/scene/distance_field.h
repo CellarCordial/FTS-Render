@@ -48,9 +48,6 @@ namespace fantasy
 	inline const uint32_t VOXEL_NUM_PER_CHUNK = 32u;
 	inline const uint32_t SDF_RESOLUTION = 64u;
 
-	inline const uint32_t CARD_RESOLUTION = 32u;
-	inline const uint32_t SURFACE_RESOLUTION = 128u;
-
 	struct SceneGrid
 	{
 		struct Chunk

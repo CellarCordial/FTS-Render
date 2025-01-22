@@ -1,7 +1,7 @@
 ﻿#include "shader_compiler.h"
 
-#include "../core/tools/file.h"
-#include "../core/tools/log.h"
+#include "../common/core/tools/file.h"
+#include "../common/core/tools/log.h"
 #include <cstdint>
 #include <string>
 #include <vector>

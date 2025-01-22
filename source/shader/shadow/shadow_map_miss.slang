@@ -1,6 +1,6 @@
 
 
-#include "../shadow_helper.slang"
+#include "../common/shadow_helper.slang"
 
 [shader("miss")]
 void miss_shader(inout ShadowRayPayload payload: SV_RayPayload)

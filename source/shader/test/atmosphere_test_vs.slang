@@ -1,4 +1,4 @@
-#include "../atmosphere_properties.slang"
+#include "../common/atmosphere_properties.slang"
 
 cbuffer pass_constant0 : register(b0)
 {

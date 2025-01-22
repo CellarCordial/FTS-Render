@@ -1,6 +1,6 @@
 #define THREAD_GROUP_NUM_X 1
 
-#include "../vxgi_helper.slang"
+#include "../common/vxgi_helper.slang"
 
 ByteAddressBuffer ircache_meta_buffer : register(t0);
 StructuredBuffer<uint32_t> ircache_life_buffer : register(t1);

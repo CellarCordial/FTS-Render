@@ -1,6 +1,6 @@
 #define THREAD_GROUP_NUM_X 1
 
-#include "../vxgi_helper.slang"
+#include "../common/vxgi_helper.slang"
 using namespace voxel_irradiance;
 
 ByteAddressBuffer ircache_grid_meta_buffer_ping : register(t0);

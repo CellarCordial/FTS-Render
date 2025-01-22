@@ -6,6 +6,7 @@
 #include "../core/tools/log.h"
 #include "../core/math/graph.h"
 #include "../core/math/matrix.h"
+#include "../core/math/bounds.h"
 #include "../core/tools/delegate.h"
 #include "image.h"
 #include <basetsd.h>
@@ -122,6 +123,7 @@ namespace fantasy
             
             float4x4 world_matrix;
             uint32_t material_index;
+            Sphere bounding_sphere;
         };
 
         std::vector<Submesh> submeshes;

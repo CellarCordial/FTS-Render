@@ -2,8 +2,8 @@
 // #define THREAD_GROUP_SIZE_Y 1
 // #define DIRECTION_SAMPLE_COUNT 1
 
-#include "../atmosphere_properties.slang"
-#include "../intersect.slang"
+#include "../common/atmosphere_properties.slang"
+#include "../common/intersect.slang"
 
 #if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y) && defined(DIRECTION_SAMPLE_COUNT)
 

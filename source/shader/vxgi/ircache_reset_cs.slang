@@ -1,6 +1,6 @@
 #define THREAD_GROUP_NUM_X 1
 
-#include "../vxgi_helper.slang"
+#include "../common/vxgi_helper.slang"
 using namespace voxel_irradiance;
 
 StructuredBuffer<uint32_t> ircache_entry_indirection_buffer : register(t0);

@@ -1,4 +1,4 @@
-#include "../DDGI.slang"
+#include "../common/DDGI.slang"
 
 cbuffer pass_constants : register(b0)
 {

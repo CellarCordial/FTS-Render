@@ -9,7 +9,7 @@ namespace fantasy
 {
 	namespace constant
 	{
-		struct PassConstant
+		struct Constant
 		{
 
 		};
@@ -24,7 +24,7 @@ namespace fantasy
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
 	private:
-		constant::PassConstant _pass_constant;
+		constant::Constant _pass_constant;
 
 		std::shared_ptr<BufferInterface> _buffer;
 		std::shared_ptr<TextureInterface> _texture;

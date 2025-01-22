@@ -1,6 +1,6 @@
-#include "../../vxgi_helper.slang"
-#include "../../restir_helper.slang"
-#include "../../shadow_helper.slang"
+#include "../common/../vxgi_helper.slang"
+#include "../common/../restir_helper.slang"
+#include "../common/../shadow_helper.slang"
 
 using namespace voxel_irradiance;
 

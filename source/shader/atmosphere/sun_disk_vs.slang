@@ -1,5 +1,5 @@
-#include "../post_process.slang"
-#include "../atmosphere_properties.slang"
+#include "../common/post_process.slang"
+#include "../common/atmosphere_properties.slang"
 
 cbuffer gAtomsphereProperties : register(b0)
 {

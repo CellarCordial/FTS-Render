@@ -3,7 +3,7 @@
 // #define GROUP_THREAD_NUM_Y 1
 // #define GROUP_THREAD_NUM_Z 1
 
-#include "../intersect.slang"
+#include "../common/intersect.slang"
 
 cbuffer pass_constant : register(b0)
 {

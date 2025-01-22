@@ -1,5 +1,5 @@
-#include "../sky.slang"
-#include "../post_process.slang"
+#include "../common/sky.slang"
+#include "../common/post_process.slang"
 
 cbuffer gPassConstant : register(b0)
 {

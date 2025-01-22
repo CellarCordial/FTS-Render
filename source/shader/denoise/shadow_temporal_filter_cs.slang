@@ -1,7 +1,7 @@
 #define THREAD_GROUP_NUM_X 1
 #define THREAD_GROUP_NUM_Y 1
 
-#include "../bicubic_texture_filter.slang"
+#include "../common/bicubic_texture_filter.slang"
 
 cbuffer pass_constants : register(b0)
 {
@@ -91,7 +91,7 @@ float FFX_DNSR_Shadows_ReadHistory(float2 uv)
 }
 
 
-#include "../../External/ffx-shadows-dnsr/ffx_denoiser_shadows_tileclassification.slang"
+#include "../common/../External/ffx-shadows-dnsr/ffx_denoiser_shadows_tileclassification.slang"
 
 #if defined(THREAD_GROUP_NUM_X) && defined(THREAD_GROUP_NUM_Y)
 

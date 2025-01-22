@@ -1,5 +1,5 @@
-#include "../gbuffer.slang"
-#include "../octahedral.slang"
+#include "../common/gbuffer.slang"
+#include "../common/octahedral.slang"
 
 
 cbuffer pass_constants : register(b0)

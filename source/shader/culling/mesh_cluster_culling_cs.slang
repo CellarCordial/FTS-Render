@@ -1,9 +1,9 @@
 #define THREAD_GROUP_SIZE_X 1
 #define THREAD_GROUP_SIZE_Y 1
 
-#include "../gbuffer.slang"
-#include "../math_helper.slang"
-#include "../indirect_argument.slang"
+#include "../common/gbuffer.slang"
+#include "../common/math_helper.slang"
+#include "../common/indirect_argument.slang"
 
 
 cbuffer pass_constants : register(b0)

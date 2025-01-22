@@ -1,4 +1,4 @@
-#include "../sdf_trace.slang"
+#include "../common/sdf_trace.slang"
 
 cbuffer gPassConstants : register(b0)
 {

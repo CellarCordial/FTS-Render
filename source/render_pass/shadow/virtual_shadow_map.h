@@ -1,9 +1,6 @@
 #ifndef RENDER_PASS_VIRTUAL_SHADOW_MAP_H
 #define RENDER_PASS_VIRTUAL_SHADOW_MAP_H
 
-
-
-
 #include "../../render_graph/render_pass.h"
 #include <memory>
 
@@ -16,10 +13,10 @@ namespace fantasy
 			float4x4 shadow_view_proj;
 
 			float3 camera_position;
-			uint32_t virtual_shadow_resolution;
+			uint32_t virtual_shadow_resolution = 0;
 
 			uint32_t virtual_shadow_page_size;
-			uint32_t client_width;
+			uint32_t client_width = CLIENT_WIDTH;
 		};
 	}
 
@@ -33,6 +30,10 @@ namespace fantasy
 
 	private:
 		bool _resource_writed = false;
+		static const uint32_t _virtual_shadow_page_size = 1024;
+		static const uint32_t _virtual_shadow_resolution = 16000;
+		static const uint32_t _physical_shadow_resolution = 8192;
+
 		constant::VirtualShadowMapPassConstant _pass_constant;
 
 		std::shared_ptr<BufferInterface> _virtual_shadow_page_buffer;

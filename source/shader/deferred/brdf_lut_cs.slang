@@ -1,8 +1,8 @@
 // #define THREAD_GROUP_SIZE_X 1
 // #define THREAD_GROUP_SIZE_Y 1
 
-#include "../bxdf.slang"
-#include "../math_helper.slang"
+#include "../common/bxdf.slang"
+#include "../common/math_helper.slang"
 
 RWTexture2D<float3> brdf_lut_texture : register(u0);
 

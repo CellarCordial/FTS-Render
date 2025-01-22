@@ -1,7 +1,7 @@
 // #define THREAD_GROUP_SIZE_X 1
 // #define THREAD_GROUP_SIZE_Y 1
 
-#include "../octahedral.slang"
+#include "../common/octahedral.slang"
 
 cbuffer pass_constants : register(b0)
 {

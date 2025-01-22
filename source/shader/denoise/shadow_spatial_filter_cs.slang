@@ -41,7 +41,7 @@ uint32_t FFX_DNSR_Shadows_ReadTileMetaData(uint32_t tile_index)
     return shadow_meta_texture[tile_id];
 }
 
-#include "../../External/ffx-shadows-dnsr/ffx_denoiser_shadows_filter.slang"
+#include "../common/../External/ffx-shadows-dnsr/ffx_denoiser_shadows_filter.slang"
 
 #if defined(THREAD_GROUP_NUM_X) && defined(THREAD_GROUP_NUM_Y)
 

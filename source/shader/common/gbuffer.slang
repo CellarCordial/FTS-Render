@@ -2,7 +2,7 @@
 #define SHADER_RAY_TRACING_HELPER_GBUFFER_TRACING_SLANG
 
 #include "ray_cone.slang"
-#include "../math_helper.slang"
+#include "../common/math_helper.slang"
 
 struct GeometryConstant
 {

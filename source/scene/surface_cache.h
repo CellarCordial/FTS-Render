@@ -16,6 +16,9 @@ namespace fantasy
 		DELCARE_DELEGATE_EVENT(GenerateSurfaceCache, Entity*);
 	};
 
+	inline const uint32_t CARD_RESOLUTION = 32u;
+	inline const uint32_t SURFACE_RESOLUTION = 128u;
+
 	struct SurfaceCache
 	{
 		struct Surface
@@ -26,18 +29,18 @@ namespace fantasy
 
 		struct MeshSurfaceCache
 		{
-			enum SurfaceType : uint8_t
+			enum
 			{
-				Color,
-				normal,
-				Depth,
-				PBR,
-				Emissve,
-				Count
+				SurfaceType_BaseColor,
+				SurfaceType_Normal,
+				SurfaceType_Depth,
+				SurfaceType_PBR,
+				SurfaceType_Emissve,
+				SurfaceType_Num
 			};
 			
-			std::array<Surface, SurfaceType::Count> surfaces;
-			std::string LightCache;
+			std::array<Surface, SurfaceType_Num> surfaces;
+			std::string light_cache;
 		};
 
 		Format format = Format::RGBA8_UNORM;

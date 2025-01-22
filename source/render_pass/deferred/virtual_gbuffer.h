@@ -46,7 +46,6 @@ namespace fantasy
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
-        bool feedback(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
         bool finish_pass() override;
 	
 	private:

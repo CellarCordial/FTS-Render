@@ -161,13 +161,18 @@ namespace fantasy
 					}
 				}
 
+				std::vector<float3> positons(assimp_meshes[ix]->mNumVertices);
+				submesh.vertices.resize(assimp_meshes[ix]->mNumVertices);
+
 				for(uint32_t jx = 0; jx < assimp_meshes[ix]->mNumVertices; jx++)
 				{
-					Vertex& vertex = submesh.vertices.emplace_back();
+					Vertex& vertex = submesh.vertices[jx];
 					
 					vertex.position.x = assimp_meshes[ix]->mVertices[jx].x;
 					vertex.position.y = assimp_meshes[ix]->mVertices[jx].y;
 					vertex.position.z = assimp_meshes[ix]->mVertices[jx].z;
+
+					positons[jx] = vertex.position;
 
 					if (assimp_meshes[ix]->HasNormals())
 					{
@@ -189,6 +194,8 @@ namespace fantasy
 						vertex.uv.y = assimp_meshes[ix]->mTextureCoords[0][jx].y;
 					}
 				}
+
+				submesh.bounding_sphere = Sphere(positons);
 			},
 			submeshes.size()
 		);

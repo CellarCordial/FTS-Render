@@ -29,10 +29,10 @@ namespace fantasy
 				for (uint32_t ix = 0; ix < surface_cache->mesh_surface_caches.size(); ++ix)
 				{
 					auto& mesh_surface_cache = surface_cache->mesh_surface_caches[ix];
-					for (uint32_t ix = 0; ix < SurfaceCache::MeshSurfaceCache::SurfaceType::Count; ++ix)
+					for (uint32_t ix = 0; ix < SurfaceCache::MeshSurfaceCache::SurfaceType_Num; ++ix)
 					{
 						mesh_surface_cache.surfaces[ix].surface_texture_name = 
-							*event.entity->get_component<std::string>() + "SurfaceTexture" + std::to_string(ix);
+							*event.entity->get_component<std::string>() + "surface_texture" + std::to_string(ix);
 						mesh_surface_cache.surfaces[ix].data.resize(data_size);
 						input.load_binary_data(mesh_surface_cache.surfaces[ix].data.data(), data_size);
 					}
@@ -47,13 +47,13 @@ namespace fantasy
 			std::string model_name = *event.entity->get_component<std::string>();
 			for (uint32_t ix = 0; ix < surface_cache->mesh_surface_caches.size(); ++ix)
 			{
-				std::string strMeshIndex = std::to_string(ix);
+				std::string submesh_index = std::to_string(ix);
 				auto& mesh_surface_cache = surface_cache->mesh_surface_caches[ix];
-				mesh_surface_cache.surfaces[0].surface_texture_name = model_name + "SurfaceColorTexture" + strMeshIndex;
-				mesh_surface_cache.surfaces[1].surface_texture_name = model_name + "SurfaceNormalTexture" + strMeshIndex;
-				mesh_surface_cache.surfaces[2].surface_texture_name = model_name + "SurfacePBRTexture" + strMeshIndex;
-				mesh_surface_cache.surfaces[3].surface_texture_name = model_name + "SurfaceEmissveTexture" + strMeshIndex;
-				mesh_surface_cache.LightCache = model_name + "SurfaceLightTexture" + strMeshIndex;
+				mesh_surface_cache.surfaces[0].surface_texture_name = model_name + "_surface_base_color_texture" + submesh_index;
+				mesh_surface_cache.surfaces[1].surface_texture_name = model_name + "_surface_normal_texture" + submesh_index;
+				mesh_surface_cache.surfaces[2].surface_texture_name = model_name + "_surface_pbr_texture" + submesh_index;
+				mesh_surface_cache.surfaces[3].surface_texture_name = model_name + "_surface_emissve_texture" + submesh_index;
+				mesh_surface_cache.light_cache = model_name + "_surface_light_texture" + submesh_index;
 			}
 		}
 

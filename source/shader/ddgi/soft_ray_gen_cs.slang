@@ -1,9 +1,9 @@
 // #define THREAD_GROUP_SIZE_X 0
 // #define THREAD_GROUP_SIZE_Y 0
 
-#include "../DDGI.slang"
-#include "../sdf_trace.slang"
-#include "../sky.slang"
+#include "../common/DDGI.slang"
+#include "../common/sdf_trace.slang"
+#include "../common/sky.slang"
 
 
 cbuffer pass_constants : register(b0)

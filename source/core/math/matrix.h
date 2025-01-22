@@ -141,8 +141,8 @@ namespace fantasy
     
 
 	float4x4 rotate(const float3& crRotation);
-    float4x4 rotate(float theta, const float3& crAxis);
-    float4x4 rotate(float theta, const float3& crAxis);
+    float4x4 rotate(float theta, const float3& axis);
+    float4x4 rotate(float theta, const float3& axis);
     float4x4 rotate_z(float theta);
     float4x4 rotate_y(float theta);
     float4x4 rotate_x(float theta);
