@@ -1,7 +1,7 @@
 // #define THREAD_GROUP_SIZE_X 0
 // #define THREAD_GROUP_SIZE_Y 0
 
-#include "../common/DDGI.slang"
+#include "../common/ddgi.slang"
 
 
 cbuffer pass_constants : register(b0)
@@ -11,7 +11,7 @@ cbuffer pass_constants : register(b0)
     float3 camera_position;
     float pad;
 
-    FDDGIVolumeData VolumeData;
+    DDGIVolumeData VolumeData;
 };
 
 Texture2D<float3> gIrradianceTexture : register(t0);

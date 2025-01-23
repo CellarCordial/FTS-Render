@@ -1,9 +1,9 @@
-#include "../common/DDGI.slang"
+#include "../common/ddgi.slang"
 
 
 cbuffer pass_constants : register(b0)
 {
-    FDDGIVolumeData VolumeData;
+    DDGIVolumeData VolumeData;
     float4x4 view_proj;
     float fProbeScale;
 };

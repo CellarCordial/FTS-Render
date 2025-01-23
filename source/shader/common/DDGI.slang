@@ -4,7 +4,7 @@
 #include "math_helper.slang"
 #include "octahedral.slang"
 
-struct FDDGIVolumeData
+struct DDGIVolumeData
 {
     float3 OriginPos;
     float fProbeIntervalSize;
@@ -48,7 +48,7 @@ float2 GetProbeTextureUV(
 }
 
 float3 SampleProbeIrradiance(
-    FDDGIVolumeData VolumeData, 
+    DDGIVolumeData VolumeData, 
     float3 position, 
     float3 normal, 
     float3 PixelToCamera, 
@@ -101,7 +101,7 @@ float3 SampleProbeIrradiance(
         float fChebyshev = fSigma / (fSigma + fTemp * fTemp);
         fChebyshev = max(fChebyshev * fChebyshev * fChebyshev, 0.0f);
 
-        fWeight *= fProbeToPixelLength <= fMu ? 1.0f : fChebyshev;
+        fWeight = fWeight * select(fProbeToPixelLength <= fMu, 1.0f, fChebyshev);
 
 
         // 权重压缩.

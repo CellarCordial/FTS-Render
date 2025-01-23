@@ -1,28 +1,28 @@
-// #define THREAD_GROUP_SIZE_X 0
-// #define THREAD_GROUP_SIZE_Y 0
+#define THREAD_GROUP_SIZE_X 1
+#define THREAD_GROUP_SIZE_Y 1
 
-#include "../common/DDGI.slang"
+#include "../common/ddgi.slang"
 #include "../common/sdf_trace.slang"
 #include "../common/sky.slang"
 
 
 cbuffer pass_constants : register(b0)
 {
-    float4x4 RandomOrientation;
+    float4x4 random_orientation;
     
-    float fSdfVoxelSize;
-    float fSdfChunkSize;
+    float sdf_voxel_size;
+    float sdf_chunk_size;
     float scene_grid_size;
-    float fMaxGIDistance;
+    float max_gi_distance;
 
     uint32_t dwSurfaceTextureRes;
     uint32_t dwSurfaceAtlasRes;
-    
-    FDDGIVolumeData VolumeData;
+
+    DDGIVolumeData VolumeData;
     GlobalSdfData sdf_data;    
 };
 
-struct FSdfChunkData
+struct SDFChunkData
 {
     int32_t dwModelIndexBegin;
     int32_t dwModelIndexEnd;
@@ -53,7 +53,7 @@ SamplerState gSkySampler : register(s1);
 Texture2D<float3> gOutputRadianceTexture : register(t2);
 Texture2D<float4> gOutputDirectionDistanceTexture : register(t3);
 
-StructuredBuffer<FSdfChunkData> gSdfChunkDatas : register(t4);
+StructuredBuffer<SDFChunkData> gSdfChunkDatas : register(t4);
 StructuredBuffer<FModelSurfaceData> gModelSurfaceDatas : register(t4);
 
 Texture2D<float4> gSurfaceNormalTexture : register(t5);
@@ -80,7 +80,7 @@ void main(uint3 ThreadID : SV_DispatchThreadID)
         dwProbeIndex / (VolumeData.ProbesNum.x * VolumeData.ProbesNum.y)
     );
     float3 RayOri = VolumeData.OriginPos + ProbeID * VolumeData.fProbeIntervalSize;
-    float3 RayDir = mul(float4(spherical_fibonacci(dwRayIndex, VolumeData.dwRaysNum), 1.0f), RandomOrientation).xyz;
+    float3 RayDir = mul(float4(spherical_fibonacci(dwRayIndex, VolumeData.dwRaysNum), 1.0f), random_orientation).xyz;
 
     SdfHitData HitData = trace_global_sdf(RayOri, RayDir, sdf_data, gGlobalSDF, gSDFSampler);
 
@@ -90,23 +90,23 @@ void main(uint3 ThreadID : SV_DispatchThreadID)
     if (HitData.step_size < 0.00001f)   // 没有击中.
     {
         Radiance = gSkyLUT.Sample(gSkySampler, get_sky_uv(RayDir));
-        fDistance = fMaxGIDistance;
+        fDistance = max_gi_distance;
     }
     else
     {
         if (HitData.sdf <= 0.0f)
         {
-            fDistance = fMaxGIDistance;
+            fDistance = max_gi_distance;
         }
         else
         {
             float3 HitPos = RayOri + RayDir * HitData.step_size;
 
-            uint32_t dwChunkNumPerAxis = scene_grid_size / fSdfChunkSize;
+            uint32_t dwChunkNumPerAxis = scene_grid_size / sdf_chunk_size;
             float3 scene_grid_origin = -scene_grid_size * 0.5f;
-            uint3 ChunkID = (HitPos - scene_grid_origin) / fSdfChunkSize;
+            uint3 ChunkID = (HitPos - scene_grid_origin) / sdf_chunk_size;
             uint32_t dwChunkIndex = ChunkID.x + ChunkID.y * dwChunkNumPerAxis + ChunkID.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
-            FSdfChunkData ChunkData = gSdfChunkDatas[dwChunkIndex];
+            SDFChunkData ChunkData = gSdfChunkDatas[dwChunkIndex];
             
             // Chunk 不为空.
             if (ChunkData.dwModelIndexBegin != -1)
@@ -120,7 +120,7 @@ void main(uint3 ThreadID : SV_DispatchThreadID)
                     if (distance(Center, HitPos) > SurfaceData.fHalfBoxDiagonal) continue;
 
                     float3 ClampHitPos = clamp(HitPos, SurfaceData.BoxLower, SurfaceData.BoxUpper);
-                    if (any(abs(ClampHitPos - HitPos) > fSdfVoxelSize)) continue;
+                    if (any(abs(ClampHitPos - HitPos) > sdf_voxel_size)) continue;
                     
                     [unroll]
                     for (uint32_t jx = 0; jx < 6; ++jx)
@@ -156,7 +156,7 @@ void main(uint3 ThreadID : SV_DispatchThreadID)
                                 // 如果 hit position 和其所对应的 surface depth 相隔超过 3 个体素距离, 则 depthVisibility = 0.0f, 
                                 // 在 2 ~ 3 个体素之间 depthVisibility = 0 ~ 1,
                                 // 在 2 个体素以下 depthVisibility = 1.
-                                DepthWeight[kx] = 1.0f - clamp(abs(LocalHitPos.z - SurfaceDepth[kx]) - 2.0f * fSdfVoxelSize, 0.0f, 1.0f);
+                                DepthWeight[kx] = 1.0f - clamp(abs(LocalHitPos.z - SurfaceDepth[kx]) - 2.0f * sdf_voxel_size, 0.0f, 1.0f);
                             }
                         }
 
@@ -181,7 +181,7 @@ void main(uint3 ThreadID : SV_DispatchThreadID)
                 Radiance /= max(fWeightSum, 0.0001f);
             }
 
-            fDistance = max(HitData.step_size + 0.5f * fSdfVoxelSize, 0.0f);
+            fDistance = max(HitData.step_size + 0.5f * sdf_voxel_size, 0.0f);
         }
     }
 
