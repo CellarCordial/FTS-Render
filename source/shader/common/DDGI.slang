@@ -60,7 +60,7 @@ float3 sample_probe_irradiance(
     ));
 
     float3 irradiance_sum = 0.0f;
-    float wieght_sum = 0.0f;
+    float weight_sum = 0.0f;
 
     for (uint32_t ix = 0; ix < 8; ++ix)
     {
@@ -94,51 +94,51 @@ float3 sample_probe_irradiance(
             volume_data.single_depth_texture_size
         );
 
-        float2 fMu = depth_texture.SampleLevel(sampler_, depth_uv, 0.0f);
-        float fSigma = abs(fMu.x * fMu.x - fMu.y);
+        float2 mean = depth_texture.SampleLevel(sampler_, depth_uv, 0.0f);
+        float sigma = abs(mean.y - mean.x * mean.x);
 
-        float fProbeToPixelLength = length(probe_to_pixel_with_bias);
-        float fTemp = fProbeToPixelLength - fMu.x;
+        float probe_to_pixel_length = length(probe_to_pixel_with_bias);
+        float tmp = probe_to_pixel_length - mean.x;
 
-        float fChebyshev = fSigma / (fSigma + fTemp * fTemp);
-        fChebyshev = max(fChebyshev * fChebyshev * fChebyshev, 0.0f);
+        float chebyshev = sigma / (sigma + tmp * tmp);
+        chebyshev = max(chebyshev * chebyshev * chebyshev, 0.0f);
 
-        weight *= fProbeToPixelLength <= fMu.x ? 1.0f : fChebyshev;
+        weight *= probe_to_pixel_length <= mean.x ? 1.0f : chebyshev;
 
 
         // 权重压缩.
-        float fCrushThreshold = 0.2f;
-        if (weight < fCrushThreshold) weight *= weight * weight * (1.0f / fCrushThreshold * fCrushThreshold); 
+        float compress_threshold = 0.2f;
+        if (weight < compress_threshold) weight *= weight * weight * (1.0f / compress_threshold * compress_threshold); 
 
 
         // 三线性插值权重.
-        float3 BaseProbePos = volume_data.origin_position + volume_data.probe_interval_size * float3(base_probe_id);
-        float3 fInterpolation = clamp(
-            (pixel_position - BaseProbePos) / volume_data.probe_interval_size, 
+        float3 base_probe_pos = volume_data.origin_position + volume_data.probe_interval_size * (float3)base_probe_id;
+        float3 interpolation = clamp(
+            (pixel_position - base_probe_pos) / volume_data.probe_interval_size, 
             float3(0.0f, 0.0f, 0.0f), 
             float3(1.0f, 1.0f, 1.0f)
         );
-        float3 Trilinear = max(0.001f, lerp(1.0f - fInterpolation, fInterpolation, offset));
-        weight *= Trilinear.x * Trilinear.y * Trilinear.z;
+        float3 trilinear = max(0.001f, lerp(1.0f - interpolation, interpolation, offset));
+        weight *= trilinear.x * trilinear.y * trilinear.z;
 
 
-        float3 IrradianceDir = normalize(pixel_normal);
-        float2 IrradianceUV = get_probe_texture_uv(
-            IrradianceDir,
+        float3 irradiance_dir = normalize(pixel_normal);
+        float2 irradiance_uv = get_probe_texture_uv(
+            irradiance_dir,
             probe_index,
             volume_data.irradiance_texture_resolution, 
             volume_data.single_irradiance_texture_size
         );
-        float3 Irradiance = irradiance_texture.SampleLevel(sampler_, IrradianceUV, 0.0f);
-        Irradiance = pow(Irradiance, float3(1.0f / 2.2f));
+        float3 irradiance = irradiance_texture.SampleLevel(sampler_, irradiance_uv, 0.0f);
+        irradiance = pow(irradiance, (float3)(1.0f / 2.2f));
 
 
-        irradiance_sum += Irradiance * weight;
-        wieght_sum += weight;
+        irradiance_sum += irradiance * weight;
+        weight_sum += weight;
     }
 
-    float3 Irradiance = irradiance_sum / wieght_sum;
-    return 2.0f * PI * Irradiance * Irradiance;
+    float3 irradiance = irradiance_sum / weight_sum;
+    return 2.0f * PI * irradiance * irradiance;
 }
 
 
