@@ -101,7 +101,7 @@ float3 SampleProbeIrradiance(
         float fChebyshev = fSigma / (fSigma + fTemp * fTemp);
         fChebyshev = max(fChebyshev * fChebyshev * fChebyshev, 0.0f);
 
-        fWeight = fWeight * select(fProbeToPixelLength <= fMu, 1.0f, fChebyshev);
+        fWeight *= fProbeToPixelLength <= fMu ? 1.0f : fChebyshev;
 
 
         // 权重压缩.
