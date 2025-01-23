@@ -1,7 +1,7 @@
 ﻿#include "shader_compiler.h"
 
-#include "../common/core/tools/file.h"
-#include "../common/core/tools/log.h"
+#include "../core/tools/file.h"
+#include "../core/tools/log.h"
 #include <cstdint>
 #include <string>
 #include <vector>
@@ -20,7 +20,7 @@ namespace fantasy
     {
         if (!is_file_exist(cache_path)) return false;
         if (compare_file_write_time(shader_path, cache_path)) return false;
-        return true;
+        return true; 
     }
 
     void save_to_cache(const char* cache_path, const ShaderData& data)

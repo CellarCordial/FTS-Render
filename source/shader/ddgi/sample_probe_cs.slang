@@ -1,5 +1,5 @@
-// #define THREAD_GROUP_SIZE_X 0
-// #define THREAD_GROUP_SIZE_Y 0
+#define THREAD_GROUP_SIZE_X 1
+#define THREAD_GROUP_SIZE_Y 1
 
 #include "../common/ddgi.slang"
 
@@ -32,7 +32,7 @@ SamplerState gSampler : register(s0);
 void main(uint3 ThreadID : SV_DispatchThreadID)
 {
     uint2 uv = ThreadID.xy;
-    float depth = gDepthTexture[uv];
+    float depth = gDepthTexture[uv].r;
     
     if (abs(depth - 1.0f) <= 0.0001f)
     {
