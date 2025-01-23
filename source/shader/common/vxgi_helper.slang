@@ -109,7 +109,7 @@ namespace voxel_irradiance
             float2 random = generate_random2(hash(_pixel_position >> 4) % SAMPLER_SEQUENCE_LENGTH);
             float2 uv = (float2(id) + random) / IRCACHE_OCTAHEDRAL_DIMS;
 
-            return OctahedronToUnitVector(uv);
+            return octahedron_to_unit_vector(uv);
         }
 
         // (x, y)

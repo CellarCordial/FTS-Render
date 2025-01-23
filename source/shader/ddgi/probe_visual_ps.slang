@@ -20,12 +20,12 @@ struct VertexOutput
 [shader("pixel")]
 float4 main(VertexOutput In) : SV_Target0
 {
-    float2 uv = GetProbeTextureUV(
+    float2 uv = get_probe_texture_uv(
         normalize(In.normal),
         In.dwProbeIndex,
-        VolumeData.dwIrradianceTexturesWidth, 
-        VolumeData.dwIrradianceTexturesHeight, 
-        VolumeData.dwSingleDepthTextureSize
+        VolumeData.irradiance_texture_width, 
+        VolumeData.irradiance_texture_height, 
+        VolumeData.single_depth_texture_size
     );
 
     return gIrradianceTexture.Sample(gSampler, uv);

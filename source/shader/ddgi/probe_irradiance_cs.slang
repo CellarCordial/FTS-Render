@@ -41,7 +41,7 @@ void main(uint3 ThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID, uint
         float3 RayDirection = gDirectionDistanceTexture[uv].xyz;
 
         float2 normalizedIrradianceUV = ((float2(StandaloneIrradianceUV) + 0.5f) / float(dwIrradianceTextureRes)) * 2.0f - 1.0f;
-        float3 PixelDirection = OctahedronToUnitVector(normalizedIrradianceUV);
+        float3 PixelDirection = octahedron_to_unit_vector(normalizedIrradianceUV);
 
         float fWeight = max(0.0f, dot(PixelDirection, RayDirection));
         IrradianceSum += Radiance * fWeight;

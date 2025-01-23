@@ -40,7 +40,7 @@ void main(uint3 ThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID, uint
         float4 RayDirectionDistance = gDirectionDistanceTexture[uv];
 
         float2 normalizedDepthUV = ((float2(StandaloneDepthUV) + 0.5f) / float(dwDepthTextureRes)) * 2.0f - 1.0f;
-        float3 PixelDirection = OctahedronToUnitVector(normalizedDepthUV);
+        float3 PixelDirection = octahedron_to_unit_vector(normalizedDepthUV);
 
         float fWeight = pow(max(0.0f, dot(PixelDirection, RayDirectionDistance.xyz)), fDepthSharpness);
         DepthSum += float2(RayDirectionDistance.w * fWeight, RayDirectionDistance.w * RayDirectionDistance.w * fWeight);

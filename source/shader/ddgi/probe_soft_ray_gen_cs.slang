@@ -71,16 +71,16 @@ void main(uint3 ThreadID : SV_DispatchThreadID)
     uint32_t dwRayIndex = ThreadID.x;
     uint32_t dwProbeIndex = ThreadID.y;
 
-    uint32_t dwTotalProbesNum = VolumeData.ProbesNum.x * VolumeData.ProbesNum.y * VolumeData.ProbesNum.z;
-    if (dwRayIndex >= VolumeData.dwRaysNum || dwProbeIndex >= dwTotalProbesNum) return;
+    uint32_t dwTotalProbesNum = VolumeData.probe_count.x * VolumeData.probe_count.y * VolumeData.probe_count.z;
+    if (dwRayIndex >= VolumeData.ray_count || dwProbeIndex >= dwTotalProbesNum) return;
 
     uint3 ProbeID = uint3(
-        dwProbeIndex % VolumeData.ProbesNum.x,
-        (dwProbeIndex / VolumeData.ProbesNum.x) % VolumeData.ProbesNum.y,
-        dwProbeIndex / (VolumeData.ProbesNum.x * VolumeData.ProbesNum.y)
+        dwProbeIndex % VolumeData.probe_count.x,
+        (dwProbeIndex / VolumeData.probe_count.x) % VolumeData.probe_count.y,
+        dwProbeIndex / (VolumeData.probe_count.x * VolumeData.probe_count.y)
     );
-    float3 RayOri = VolumeData.OriginPos + ProbeID * VolumeData.fProbeIntervalSize;
-    float3 RayDir = mul(float4(spherical_fibonacci(dwRayIndex, VolumeData.dwRaysNum), 1.0f), random_orientation).xyz;
+    float3 RayOri = VolumeData.origin_position + ProbeID * VolumeData.probe_interval_size;
+    float3 RayDir = mul(float4(spherical_fibonacci(dwRayIndex, VolumeData.ray_count), 1.0f), random_orientation).xyz;
 
     SdfHitData HitData = trace_global_sdf(RayOri, RayDir, sdf_data, gGlobalSDF, gSDFSampler);
 

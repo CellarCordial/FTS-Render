@@ -27,12 +27,12 @@ VertexOutput main(VertexInput In, uint32_t dwProbeIndex : SV_InstanceID)
     VertexOutput Out;
 
     uint3 ProbeID = uint3(
-        dwProbeIndex % VolumeData.ProbesNum.x,
-        (dwProbeIndex / VolumeData.ProbesNum.x) % VolumeData.ProbesNum.y,
-        dwProbeIndex / (VolumeData.ProbesNum.x * VolumeData.ProbesNum.y)
+        dwProbeIndex % VolumeData.probe_count.x,
+        (dwProbeIndex / VolumeData.probe_count.x) % VolumeData.probe_count.y,
+        dwProbeIndex / (VolumeData.probe_count.x * VolumeData.probe_count.y)
     );
 
-    float3 ProbePos = VolumeData.OriginPos + VolumeData.fProbeIntervalSize * float3(ProbeID);
+    float3 ProbePos = VolumeData.origin_position + VolumeData.probe_interval_size * float3(ProbeID);
 
     Out.sv_position = mul(float4(In.position * fProbeScale, 1.0f), view_proj);
     Out.normal = In.normal;

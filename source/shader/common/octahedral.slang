@@ -1,7 +1,7 @@
 #ifndef SHADER_OCOTOHEDRAL_SLANG
 #define SHADER_OCOTOHEDRAL_SLANG
 
-float2 UnitVectorToOctahedron(float3 v)
+float2 unit_vector_to_octahedron(float3 v)
 {
     // dot(1.0f, abs(v)) = abs(v.x) + abs(v.y) + abs(v.z)
     v.xz = v.xz / dot(float3(1.0f, 1.0f, 1.0f), abs(v));
@@ -14,7 +14,7 @@ float2 UnitVectorToOctahedron(float3 v)
     return v.xz;
 }
 
-float3 OctahedronToUnitVector(float2 Oct)
+float3 octahedron_to_unit_vector(float2 Oct)
 {
     float3 v = float3(Oct, 1.0f - dot(float2(1.0f, 1.0f), abs(Oct)));
 

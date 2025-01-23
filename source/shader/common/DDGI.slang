@@ -6,137 +6,138 @@
 
 struct DDGIVolumeData
 {
-    float3 OriginPos;
-    float fProbeIntervalSize;
+    float3 origin_position;
+    float probe_interval_size;
     
-    uint3 ProbesNum;
-    uint32_t dwRaysNum;
+    uint3 probe_count;
+    uint32_t ray_count;
 
-    uint32_t dwIrradianceTexturesWidth;
-    uint32_t dwIrradianceTexturesHeight;
-    uint32_t dwDepthTexturesWidth;
-    uint32_t dwDepthTexturesHeight;
+    uint2 irradiance_texture_resolution;
+    uint2 depth_texture_resolution;
 
-    uint32_t dwSingleIrradianceTextureSize;
-    uint32_t dwSingleDepthTextureSize;
-    float fNormalBias;
-    float fProbeGamma;
+    uint32_t single_irradiance_texture_size;
+    uint32_t single_depth_texture_size;
+    float normal_bias;
 };
 
-float2 GetProbeTextureUV(
-    float3 UnitProbeToPixel, 
-    uint32_t dwProbeIndex, 
-    uint32_t dwProbeTexturesWidth, 
-    uint32_t dwProbeTexturesHeight, 
-    uint32_t dwSingleProbeTextureSize
+float2 get_probe_texture_uv(
+    float3 unit_probe_to_pixel,
+    uint32_t probe_index,
+    uint2 probe_textures_resolution, 
+    uint32_t single_probe_texture_size
 )
 {
-    float2 DstTextureOctUV = (UnitVectorToOctahedron(UnitProbeToPixel) + 1.0f) * 0.5f;
-    float2 UVOffset = (DstTextureOctUV * dwSingleProbeTextureSize) / float2(dwProbeTexturesWidth, dwProbeTexturesHeight);
+    float2 dst_texture_oct_uv = (unit_vector_to_octahedron(unit_probe_to_pixel) + 1.0f) * 0.5f;
+    float2 uv_offset = (dst_texture_oct_uv * single_probe_texture_size) / (float2)probe_textures_resolution;
 
-    uint32_t dwSingleProbeTextureSizeWithBorder = dwSingleProbeTextureSize + 2;
-    uint32_t dwRowProbesNum = dwProbeTexturesWidth / dwSingleProbeTextureSizeWithBorder;
+    uint32_t single_probe_texture_size_with_border = single_probe_texture_size + 2;
+    uint32_t row_probes_count = probe_textures_resolution.x / single_probe_texture_size_with_border;
 
-    uint2 DstTextureStartPos = uint2(
-        (dwProbeIndex % dwRowProbesNum) * dwSingleProbeTextureSizeWithBorder,
-        (dwProbeIndex / dwRowProbesNum) * dwSingleProbeTextureSizeWithBorder
+    uint2 dst_texture_start_pos = uint2(
+        (probe_index % row_probes_count) * single_probe_texture_size_with_border,
+        (probe_index / row_probes_count) * single_probe_texture_size_with_border
     );
 
-    float2 UVStart = (DstTextureStartPos + 1) / float2(dwProbeTexturesWidth, dwProbeTexturesHeight);
+    float2 uv_start = (dst_texture_start_pos + 1) / (float2)probe_textures_resolution;
 
-    return UVStart + UVOffset;
+    return uv_start + uv_offset;
 }
 
-float3 SampleProbeIrradiance(
-    DDGIVolumeData VolumeData, 
-    float3 position, 
-    float3 normal, 
-    float3 PixelToCamera, 
-    Texture2D<float3> IrradianceTexture, 
-    Texture2D<float2> DepthTexture,
-    SamplerState Sampler
+float3 sample_probe_irradiance(
+    DDGIVolumeData volume_data, 
+    float3 pixel_position, 
+    float3 pixel_normal, 
+    float3 pixel_to_camera, 
+    Texture2D<float3> irradiance_texture, 
+    Texture2D<float2> depth_texture,
+    SamplerState sampler_
 )
 {
-    uint3 BaseProbeID = uint3(clamp(position - VolumeData.OriginPos, uint3(0, 0, 0), uint3(VolumeData.ProbesNum) - uint3(1, 1, 1)));
+    uint3 base_probe_id = (uint3)(clamp(
+        (pixel_position - volume_data.origin_position) / volume_data.probe_interval_size, 
+        uint3(0, 0, 0), 
+        volume_data.probe_count - uint3(1, 1, 1)
+    ));
 
-    float3 IrradianceSum = 0.0f;
-    float fWeightSum = 0.0f;
+    float3 irradiance_sum = 0.0f;
+    float wieght_sum = 0.0f;
 
     for (uint32_t ix = 0; ix < 8; ++ix)
     {
         uint3 offset = uint3(ix, ix >> 1, ix >> 2) & uint3(1, 1, 1);
-        uint3 ProbeID = uint3(clamp(
-            float3(BaseProbeID + offset) - VolumeData.OriginPos, 
+        uint3 probe_id = (uint3)(clamp(
+            base_probe_id + offset, 
             uint3(0, 0, 0), 
-            uint3(VolumeData.ProbesNum) - uint3(1, 1, 1)
+            volume_data.probe_count - uint3(1, 1, 1)
         ));
-        float3 ProbePos = VolumeData.OriginPos + VolumeData.fProbeIntervalSize * float3(ProbeID);
+        float3 probe_pos = volume_data.origin_position + volume_data.probe_interval_size * probe_id;
 
-        float fWeight = 1.0f;
+        float weight = 1.0f;
 
         // 方向权重.
-        float3 PixelToProbe = normalize(ProbePos - position);
-        float theta = (dot(normal, PixelToProbe) + 1.0f) * 0.5f;
-        fWeight *= theta * theta + 0.2f;
+        float3 pixel_to_probe = normalize(probe_pos - pixel_position);
+        float theta = (dot(pixel_normal, pixel_to_probe) + 1.0f) * 0.5f;
+        weight *= theta * theta + 0.2f;
 
         // 切比雪夫权重.
-        uint32_t dwProbeIndex = ProbeID.x + ProbeID.y * VolumeData.ProbesNum.x + ProbeID.z * VolumeData.ProbesNum.y * VolumeData.ProbesNum.x;
+        uint32_t probe_index = 
+            probe_id.z * volume_data.probe_count.y * volume_data.probe_count.x +
+            probe_id.y * volume_data.probe_count.x +
+            probe_id.x;
 
-        float3 Bias = (normal + 3.0f * PixelToCamera) * VolumeData.fNormalBias;
-        float3 ProbeToPixelWithBias = normalize(position - ProbePos + Bias);
-        float2 DepthUV = GetProbeTextureUV(
-            ProbeToPixelWithBias, 
-            dwProbeIndex,
-            VolumeData.dwIrradianceTexturesWidth, 
-            VolumeData.dwIrradianceTexturesHeight, 
-            VolumeData.dwSingleDepthTextureSize
+        float3 bias = (pixel_normal * 0.2f + pixel_to_camera * 0.8f) * volume_data.normal_bias;
+        float3 probe_to_pixel_with_bias = normalize(pixel_position + bias - probe_pos);
+        float2 depth_uv = get_probe_texture_uv(
+            probe_to_pixel_with_bias,
+            probe_index,
+            volume_data.depth_texture_resolution, 
+            volume_data.single_depth_texture_size
         );
 
-        float2 fMu = DepthTexture.SampleLevel(Sampler, DepthUV, 0.0f);
+        float2 fMu = depth_texture.SampleLevel(sampler_, depth_uv, 0.0f);
         float fSigma = abs(fMu.x * fMu.x - fMu.y);
 
-        float fProbeToPixelLength = length(ProbeToPixelWithBias);
-        float fTemp = fProbeToPixelLength - fMu;
+        float fProbeToPixelLength = length(probe_to_pixel_with_bias);
+        float fTemp = fProbeToPixelLength - fMu.x;
 
         float fChebyshev = fSigma / (fSigma + fTemp * fTemp);
         fChebyshev = max(fChebyshev * fChebyshev * fChebyshev, 0.0f);
 
-        fWeight *= fProbeToPixelLength <= fMu ? 1.0f : fChebyshev;
+        weight *= fProbeToPixelLength <= fMu.x ? 1.0f : fChebyshev;
 
 
         // 权重压缩.
         float fCrushThreshold = 0.2f;
-        if (fWeight < fCrushThreshold) fWeight *= fWeight * fWeight * (1.0f / fCrushThreshold * fCrushThreshold); 
+        if (weight < fCrushThreshold) weight *= weight * weight * (1.0f / fCrushThreshold * fCrushThreshold); 
 
 
         // 三线性插值权重.
-        float3 BaseProbePos = VolumeData.OriginPos + VolumeData.fProbeIntervalSize * float3(BaseProbeID);
-        float fInterpolation = clamp(
-            (position - BaseProbePos) / VolumeData.fProbeIntervalSize, 
+        float3 BaseProbePos = volume_data.origin_position + volume_data.probe_interval_size * float3(base_probe_id);
+        float3 fInterpolation = clamp(
+            (pixel_position - BaseProbePos) / volume_data.probe_interval_size, 
             float3(0.0f, 0.0f, 0.0f), 
             float3(1.0f, 1.0f, 1.0f)
         );
         float3 Trilinear = max(0.001f, lerp(1.0f - fInterpolation, fInterpolation, offset));
-        fWeight *= Trilinear.x * Trilinear.y * Trilinear.z;
+        weight *= Trilinear.x * Trilinear.y * Trilinear.z;
 
 
-        float3 IrradianceDir = normalize(normal);
-        float2 IrradianceUV = GetProbeTextureUV(
-            IrradianceDir, 
-            dwProbeIndex, 
-            VolumeData.dwIrradianceTexturesWidth, 
-            VolumeData.dwIrradianceTexturesHeight, 
-            VolumeData.dwSingleIrradianceTextureSize
+        float3 IrradianceDir = normalize(pixel_normal);
+        float2 IrradianceUV = get_probe_texture_uv(
+            IrradianceDir,
+            probe_index,
+            volume_data.irradiance_texture_resolution, 
+            volume_data.single_irradiance_texture_size
         );
-        float3 Irradiance = IrradianceTexture.SampleLevel(Sampler, IrradianceUV, 0.0f);
+        float3 Irradiance = irradiance_texture.SampleLevel(sampler_, IrradianceUV, 0.0f);
         Irradiance = pow(Irradiance, float3(1.0f / 2.2f));
 
 
-        IrradianceSum += Irradiance * fWeight;
-        fWeightSum += fWeight;
+        irradiance_sum += Irradiance * weight;
+        wieght_sum += weight;
     }
 
-    float3 Irradiance = IrradianceSum / fWeightSum;
+    float3 Irradiance = irradiance_sum / wieght_sum;
     return 2.0f * PI * Irradiance * Irradiance;
 }
 
