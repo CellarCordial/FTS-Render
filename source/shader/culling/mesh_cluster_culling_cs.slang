@@ -2,7 +2,7 @@
 #define THREAD_GROUP_SIZE_Y 1
 
 #include "../common/gbuffer.slang"
-#include "../common/math_helper.slang"
+#include "../common/math.slang"
 #include "../common/indirect_argument.slang"
 
 
@@ -77,6 +77,8 @@ void main(uint3 thread_id: SV_DispatchThreadID)
                             1,
                             current_pos
                         );
+                        current_pos++;
+                        
                         draw_indirect_arguments_buffer[0].vertex_count = cluster_size;
                         visible_cluster_id_buffer[current_pos] = cluster_id;
                     }

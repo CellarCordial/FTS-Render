@@ -48,7 +48,7 @@ namespace fantasy
 	inline const uint32_t VOXEL_NUM_PER_CHUNK = 32u;
 	inline const uint32_t SDF_RESOLUTION = 64u;
 
-	struct SceneGrid
+	struct SDFGrid
 	{
 		struct Chunk
 		{
@@ -60,7 +60,7 @@ namespace fantasy
 		std::vector<Bounds3F> boxes;
 		Bvh bvh;
 
-		SceneGrid();
+		SDFGrid();
 	};
 }
 

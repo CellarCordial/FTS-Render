@@ -14,10 +14,10 @@ cbuffer pass_constants : register(b0)
     float fDepthSharpness;
 };
 
-Texture2D<float3> gRadianceTexture : register(t0);
-Texture2D<float4> gDirectionDistanceTexture : register(t1);
+Texture2D<float3> ddgi_radiance_texture : register(t0);
+Texture2D<float4> ddgi_direction_distance_texture : register(t1);
 
-RWTexture2D<float2> gOutputDepthTexture : register(u0);
+RWTexture2D<float2> ddgi_volume_depth_texture : register(u0);
 
 
 
@@ -37,7 +37,7 @@ void main(uint3 ThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID, uint
     for (uint32_t ix = 0; ix < dwRayNumPerProbe; ++ix)
     {
         uint2 uv = uint2(ix, dwProbeIndex);
-        float4 RayDirectionDistance = gDirectionDistanceTexture[uv];
+        float4 RayDirectionDistance = ddgi_direction_distance_texture[uv];
 
         float2 normalizedDepthUV = ((float2(StandaloneDepthUV) + 0.5f) / float(dwDepthTextureRes)) * 2.0f - 1.0f;
         float3 PixelDirection = octahedron_to_unit_vector(normalizedDepthUV);

@@ -1,6 +1,7 @@
 #ifndef SCENE_LGIHT_H
 #define SCENE_LGIHT_H
 #include "../core/math/matrix.h"
+#include "../core/tools/delegate.h"
 
 namespace fantasy 
 {
@@ -17,11 +18,19 @@ namespace fantasy
     {
         float4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
         float3 position = { 0.0f, 2.0f, 0.0f };
+        float3 direction;
         float intensity = 0.5f;
-        float inner = 0.0f;
-        float outter = 0.0f;
-
+        float inner_angle = 0.0f;
+        float outer_angle = 0.0f;
+        float attenuation = 0.0f;
+        float max_distance = 0.0f;
     };
+
+    namespace event 
+    {
+        DELCARE_DELEGATE_EVENT(AddPointLight);
+        DELCARE_DELEGATE_EVENT(AddSpotLight);
+    }
 
     struct DirectionalLight
     {

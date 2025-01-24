@@ -1,16 +1,16 @@
 
-#include "surface_cache.h"
+#include "surface_bake.h"
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
-#include "../../scene/geometry.h"
 #include "../../scene/surface_cache.h"
+#include "../../scene/geometry.h"
 #include <cstdint>
 #include <memory>
 #include <string>
 
 namespace fantasy
 {
-	bool SurfaceCachePass::compile(DeviceInterface* device, RenderResourceCache* cache)
+	bool SurfaceBakePass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
         cache->get_world()->get_global_entity()->get_component<event::GenerateSurfaceCache>()->add_event(
             [this](Entity* model_entity) -> bool
@@ -22,7 +22,7 @@ namespace fantasy
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(6);
-			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::SurfaceCachePassConstant));
+			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::SurfaceBakePassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(1);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(2);
@@ -59,15 +59,14 @@ namespace fantasy
 			)));
 		}
 
-
 		// Shader.
 		{
 			ShaderCompileDesc shader_compile_desc;
-			shader_compile_desc.shader_name = "sdf/surface_cache_vs.slang";
+			shader_compile_desc.shader_name = "surface_cache/surface_bake_vs.slang";
 			shader_compile_desc.entry_point = "vertex_shader";
 			shader_compile_desc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = shader_compile::compile_shader(shader_compile_desc);
-			shader_compile_desc.shader_name = "sdf/surface_cache_ps.slang";
+			shader_compile_desc.shader_name = "surface_cache/surface_bake_ps.slang";
 			shader_compile_desc.entry_point = "pixel_shader";
 			shader_compile_desc.target = ShaderTarget::Pixel;
 			ShaderData ps_data = shader_compile::compile_shader(shader_compile_desc);
@@ -94,14 +93,14 @@ namespace fantasy
 		// Binding Set.
 		{
 			_binding_set_items.resize(5);
-			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::SurfaceCachePassConstant));
+			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::SurfaceBakePassConstant));
 			_binding_set_items[4] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
 		}
 
 		return true;
 	}
 
-	bool SurfaceCachePass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
+	bool SurfaceBakePass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
         DeviceInterface* device = cmdlist->get_deivce();
         if (_model_entity)
@@ -132,6 +131,7 @@ namespace fantasy
                 std::shared_ptr<TextureInterface> surface_pbr_texture;
                 std::shared_ptr<TextureInterface> surface_emissive_texture;
                 std::shared_ptr<TextureInterface> surface_light_cache_texture;
+                std::shared_ptr<TextureInterface> surface_depth_texture;
 
                 // Texture
                 {
@@ -168,6 +168,14 @@ namespace fantasy
                             submesh_surface_cache.surfaces[SurfaceCache::MeshSurfaceCache::SurfaceType_Emissve].surface_texture_name.c_str()
                         )
                     )));
+                    ReturnIfFalse(surface_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+                        TextureDesc::create_depth(
+                            SURFACE_RESOLUTION, 
+                            SURFACE_RESOLUTION, 
+                            Format::D32,
+                            submesh_surface_cache.surfaces[SurfaceCache::MeshSurfaceCache::SurfaceType_Depth].surface_texture_name.c_str()
+                        )
+                    )));
                     ReturnIfFalse(surface_light_cache_texture = std::shared_ptr<TextureInterface>(device->create_texture(
                         TextureDesc::create_render_target(
                             SURFACE_RESOLUTION, 
@@ -181,6 +189,7 @@ namespace fantasy
                     cache->collect(surface_normal_texture, ResourceType::Texture);
                     cache->collect(surface_pbr_texture, ResourceType::Texture);
                     cache->collect(surface_emissive_texture, ResourceType::Texture);
+                    cache->collect(surface_depth_texture, ResourceType::Texture);
                     cache->collect(surface_light_cache_texture, ResourceType::Texture);
                     
                 }
@@ -193,6 +202,7 @@ namespace fantasy
                 	frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(surface_pbr_texture));
                 	frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(surface_emissive_texture));
                 	frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(surface_light_cache_texture));
+                    frame_buffer_desc.depth_stencil_attachment = FrameBufferAttachment::create_attachment(surface_depth_texture);
                 	ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
                 }
 
@@ -236,7 +246,7 @@ namespace fantasy
                 ReturnIfFalse(cmdlist->open());
 
                 ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
-                ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::SurfaceCachePassConstant)));
+                ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::SurfaceBakePassConstant)));
                 ReturnIfFalse(cmdlist->draw_indexed(_draw_arguments));
 
                 ReturnIfFalse(cmdlist->close());
@@ -247,7 +257,7 @@ namespace fantasy
 		return false;
 	}
 
-    bool SurfaceCachePass::finish_pass()
+    bool SurfaceBakePass::finish_pass()
     {
         _model_entity = nullptr;
 

@@ -5,188 +5,179 @@
 #include "../common/sdf_trace.slang"
 #include "../common/sky.slang"
 
-
 cbuffer pass_constants : register(b0)
 {
+    DDGIVolumeData volume_data;
+    GlobalSdfData sdf_data;    
+
     float4x4 random_orientation;
     
     float sdf_voxel_size;
     float sdf_chunk_size;
-    float scene_grid_size;
     float max_gi_distance;
-
-    uint32_t dwSurfaceTextureRes;
-    uint32_t dwSurfaceAtlasRes;
-
-    DDGIVolumeData VolumeData;
-    GlobalSdfData sdf_data;    
+    uint32_t surface_texture_resolution;
+    uint32_t surface_atlas_resolution;
 };
 
 struct SDFChunkData
 {
-    int32_t dwModelIndexBegin;
-    int32_t dwModelIndexEnd;
+    int32_t mesh_index_begin;
+    int32_t mesh_index_end;
 };
 
-struct FCardData
+struct CardData
 {
-    float4x4 LocalMatrix;
-    uint2 AtlasOffset;
+    float4x4 local_matrix;
+    uint2 atlas_offset;
     float3 extent;
 };
 
-struct FModelSurfaceData
+struct MeshSurfaceData
 {
-    float fHalfBoxDiagonal;
-    float3 BoxUpper;
-    float3 BoxLower;
+    float box_half_diagonal;
+    float3 box_upper;
+    float3 box_lower;
 
-    FCardData Cards[6];
+    CardData cards[6];
 };
 
-Texture3D<float> gGlobalSDF : register(t0);
-SamplerState gSDFSampler : register(s0);
+Texture3D<float> global_sdf_texture : register(t0);
+Texture2D<float3> sky_lut_texture : register(t1);
 
-Texture2D<float3> gSkyLUT : register(t1);
-SamplerState gSkySampler : register(s1);
+SamplerState linear_clamp_sampler : register(s1);
 
-Texture2D<float3> gOutputRadianceTexture : register(t2);
-Texture2D<float4> gOutputDirectionDistanceTexture : register(t3);
+RWTexture2D<float3> ddgi_radiance_texture : register(t2);
+RWTexture2D<float4> ddgi_direction_distance_texture : register(t3);
 
-StructuredBuffer<SDFChunkData> gSdfChunkDatas : register(t4);
-StructuredBuffer<FModelSurfaceData> gModelSurfaceDatas : register(t4);
+StructuredBuffer<SDFChunkData> sdf_chunk_data_buffer : register(t4);
+StructuredBuffer<MeshSurfaceData> mesh_surface_data_buffer : register(t4);
 
-Texture2D<float4> gSurfaceNormalTexture : register(t5);
-Texture2D<float4> gSurfaceLightTexture : register(t6);
-Texture2D<float> gSurfaceDepthTexture : register(t7);
-SamplerState gSurfaceSampler : register(s2);
+Texture2D<float3> surface_normal_atlas_texture : register(t5);
+Texture2D<float4> surface_light_cache_atlas_texture : register(t6);
+Texture2D<float> surface_depth_atlas_texture : register(t7);
+SamplerState linear_wrap_sampler : register(s2);
 
 
 #if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y)
 
 [shader("compute")]
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
-void main(uint3 ThreadID : SV_DispatchThreadID)
+void main(uint3 thread_id : SV_DispatchThreadID)
 {
-    uint32_t dwRayIndex = ThreadID.x;
-    uint32_t dwProbeIndex = ThreadID.y;
+    uint32_t ray_index = thread_id.x;
+    uint32_t probe_index = thread_id.y;
 
-    uint32_t dwTotalProbesNum = VolumeData.probe_count.x * VolumeData.probe_count.y * VolumeData.probe_count.z;
-    if (dwRayIndex >= VolumeData.ray_count || dwProbeIndex >= dwTotalProbesNum) return;
+    uint32_t total_probe_num = volume_data.probe_count.x * volume_data.probe_count.y * volume_data.probe_count.z;
+    if (ray_index >= volume_data.ray_count || probe_index >= total_probe_num) return;
 
-    uint3 ProbeID = uint3(
-        dwProbeIndex % VolumeData.probe_count.x,
-        (dwProbeIndex / VolumeData.probe_count.x) % VolumeData.probe_count.y,
-        dwProbeIndex / (VolumeData.probe_count.x * VolumeData.probe_count.y)
+    uint3 probe_id = uint3(
+        probe_index % volume_data.probe_count.x,
+        (probe_index / volume_data.probe_count.x) % volume_data.probe_count.y,
+        probe_index / (volume_data.probe_count.x * volume_data.probe_count.y)
     );
-    float3 RayOri = VolumeData.origin_position + ProbeID * VolumeData.probe_interval_size;
-    float3 RayDir = mul(float4(spherical_fibonacci(dwRayIndex, VolumeData.ray_count), 1.0f), random_orientation).xyz;
+    float3 ray_ori = volume_data.origin_position + probe_id * volume_data.probe_interval_size;
+    float3 ray_dir = mul(float4(spherical_fibonacci(ray_index, volume_data.ray_count), 1.0f), random_orientation).xyz;
 
-    SdfHitData HitData = trace_global_sdf(RayOri, RayDir, sdf_data, gGlobalSDF, gSDFSampler);
+    SDFHitData hit_data = trace_global_sdf(ray_ori, ray_dir, sdf_data, global_sdf_texture, linear_clamp_sampler);
 
-    float3 Radiance = float3(0.0f, 0.0f, 0.0f);
-    float fDistance = 0.0f;
+    float3 radiance = float3(0.0f, 0.0f, 0.0f);
+    float distance = 0.0f;
 
-    if (HitData.step_size < 0.00001f)   // 没有击中.
+    if (!hit_data.is_hit())
     {
-        Radiance = gSkyLUT.Sample(gSkySampler, get_sky_uv(RayDir));
-        fDistance = max_gi_distance;
+        radiance = sky_lut_texture.Sample(linear_clamp_sampler, get_sky_uv(ray_dir));
+        distance = max_gi_distance;
     }
     else
     {
-        if (HitData.sdf <= 0.0f)
+        if (!hit_data.is_inside())
         {
-            fDistance = max_gi_distance;
-        }
-        else
-        {
-            float3 HitPos = RayOri + RayDir * HitData.step_size;
+            float3 hit_pos = ray_ori + ray_dir * hit_data.step_size;
 
-            uint32_t dwChunkNumPerAxis = scene_grid_size / sdf_chunk_size;
-            float3 scene_grid_origin = -scene_grid_size * 0.5f;
-            uint3 ChunkID = (HitPos - scene_grid_origin) / sdf_chunk_size;
-            uint32_t dwChunkIndex = ChunkID.x + ChunkID.y * dwChunkNumPerAxis + ChunkID.z * dwChunkNumPerAxis * dwChunkNumPerAxis;
-            SDFChunkData ChunkData = gSdfChunkDatas[dwChunkIndex];
+            uint32_t chunk_num_per_axis = (uint32_t)(sdf_data.sdf_grid_size / sdf_chunk_size);
+            uint3 chunk_id = (uint3)((hit_pos - sdf_data.sdf_grid_origin) / sdf_chunk_size);
+            uint32_t chunk_index = chunk_id.x + chunk_id.y * chunk_num_per_axis + chunk_id.z * chunk_num_per_axis * chunk_num_per_axis;
+            SDFChunkData sdf_chunk_data = sdf_chunk_data_buffer[chunk_index];
             
             // Chunk 不为空.
-            if (ChunkData.dwModelIndexBegin != -1)
+            if (sdf_chunk_data.mesh_index_begin != -1)
             {
-                float fWeightSum = 0.0f;
-                for (int32_t ix = ChunkData.dwModelIndexBegin; ix < ChunkData.dwModelIndexEnd; ++ix)
+                float weight_sum = 0.0f;
+                for (int32_t ix = sdf_chunk_data.mesh_index_begin; ix < sdf_chunk_data.mesh_index_end; ++ix)
                 {
-                    FModelSurfaceData SurfaceData = gModelSurfaceDatas[ix];
+                    MeshSurfaceData surface_data = mesh_surface_data_buffer[ix];
 
-                    float3 Center = (SurfaceData.BoxUpper + SurfaceData.BoxLower) * 0.5f;
-                    if (distance(Center, HitPos) > SurfaceData.fHalfBoxDiagonal) continue;
+                    float3 center = (surface_data.box_upper + surface_data.box_lower) * 0.5f;
+                    if (length(center - hit_pos) > surface_data.box_half_diagonal) continue;
 
-                    float3 ClampHitPos = clamp(HitPos, SurfaceData.BoxLower, SurfaceData.BoxUpper);
-                    if (any(abs(ClampHitPos - HitPos) > sdf_voxel_size)) continue;
+                    float3 clamp_hit_pos = clamp(hit_pos, surface_data.box_lower, surface_data.box_upper);
+                    if (any(abs(clamp_hit_pos - hit_pos) > sdf_voxel_size)) continue;
                     
                     [unroll]
                     for (uint32_t jx = 0; jx < 6; ++jx)
                     {
-                        FCardData Card = SurfaceData.Cards[jx];
-                        float3 LocalHitPos = mul(float4(HitPos, 1.0f), Card.LocalMatrix).xyz;
+                        CardData card = surface_data.cards[jx];
+                        float3 local_hit_pos = mul(float4(hit_pos, 1.0f), card.local_matrix).xyz;
                         
-                        float2 uv = saturate(LocalHitPos.xy / Card.extent.xy + 0.5f);
+                        float2 uv = saturate(local_hit_pos.xy / card.extent.xy + 0.5f);
                         uv.y = 1.0f - uv.y;
 
                         // 双线性插值权重.
-                        float4 BilinearWeight = float4(
+                        float4 bilinear_weight = float4(
                             (1.0f - uv.x) * (1.0f - uv.y),
                             (uv.x)        * (1.0f - uv.y),
                             (1.0f - uv.x) * (uv.y),
                             (uv.x)        * (uv.y)
                         );
 
-                        uv = (uv * dwSurfaceTextureRes + Card.AtlasOffset) / dwSurfaceAtlasRes;
+                        uv = (uv * surface_texture_resolution + card.atlas_offset) / surface_atlas_resolution;
 
                         // 击中点的深度与实际 surface 上的深度比值权重.
-                        float4 SurfaceDepth = gSurfaceDepthTexture.Gather(gSurfaceSampler, uv) * Card.extent.z;
-                        float4 DepthWeight;
+                        float4 surface_depth = surface_depth_atlas_texture.Gather(linear_wrap_sampler, uv) * card.extent.z;
+                        float4 depth_weight;
                         [unroll]
                         for (uint32_t kx = 0; kx < 4; ++kx)
                         {
-                            if (SurfaceDepth[kx] >= 1.0f) 
+                            if (surface_depth[kx] >= 1.0f) 
                             {
-                                DepthWeight[kx] = 0.0f;
+                                depth_weight[kx] = 0.0f;
                             }
                             else 
                             {
                                 // 如果 hit position 和其所对应的 surface depth 相隔超过 3 个体素距离, 则 depthVisibility = 0.0f, 
                                 // 在 2 ~ 3 个体素之间 depthVisibility = 0 ~ 1,
                                 // 在 2 个体素以下 depthVisibility = 1.
-                                DepthWeight[kx] = 1.0f - clamp(abs(LocalHitPos.z - SurfaceDepth[kx]) - 2.0f * sdf_voxel_size, 0.0f, 1.0f);
+                                depth_weight[kx] = 1.0f - clamp(abs(local_hit_pos.z - surface_depth[kx]) - 2.0f * sdf_voxel_size, 0.0f, 1.0f);
                             }
                         }
 
                         // 光线与击中点的夹角权重.
-                        float3 HitNormal = gSurfaceNormalTexture.SampleLevel(gSurfaceSampler, uv, 0.0f);
-                        float fNormalWeight = saturate(dot(HitNormal, RayDir));
+                        float3 hit_normal = surface_normal_atlas_texture.SampleLevel(linear_wrap_sampler, uv, 0.0f);
+                        float normal_weight = saturate(dot(hit_normal, ray_dir));
                         
                         // 总权重.
-                        float fSampleWeight = dot(DepthWeight, BilinearWeight) * fNormalWeight;
-                        if (fSampleWeight <= 0.0f) continue;
+                        float sample_weight = dot(depth_weight, bilinear_weight) * normal_weight;
+                        if (sample_weight <= 0.0f) continue;
                         else
                         {
-                            Radiance += float3(
-                                dot(gSurfaceLightTexture.GatherRed(gSurfaceSampler, uv), fSampleWeight), 
-                                dot(gSurfaceLightTexture.GatherGreen(gSurfaceSampler, uv), fSampleWeight), 
-                                dot(gSurfaceLightTexture.GatherBlue(gSurfaceSampler, uv), fSampleWeight)
+                            radiance += float3(
+                                dot(surface_light_cache_atlas_texture.GatherRed(linear_wrap_sampler, uv), sample_weight), 
+                                dot(surface_light_cache_atlas_texture.GatherGreen(linear_wrap_sampler, uv), sample_weight), 
+                                dot(surface_light_cache_atlas_texture.GatherBlue(linear_wrap_sampler, uv), sample_weight)
                             );
-                            fWeightSum += fSampleWeight;
+                            weight_sum += sample_weight;
                         }
                     }
                 }
-                Radiance /= max(fWeightSum, 0.0001f);
+                radiance /= max(weight_sum, 0.0001f);
             }
 
-            fDistance = max(HitData.step_size + 0.5f * sdf_voxel_size, 0.0f);
+            distance = max(hit_data.step_size + 0.5f * sdf_voxel_size, 0.0f);
         }
     }
 
-    gOutputRadianceTexture[ThreadID.xy] = Radiance;
-    gOutputDirectionDistanceTexture[ThreadID.xy] = float4(RayDir, fDistance);
+    ddgi_radiance_texture[thread_id.xy] = radiance;
+    ddgi_direction_distance_texture[thread_id.xy] = float4(ray_dir, distance);
 }
 
 

@@ -12,9 +12,15 @@ namespace fantasy
     class LruCache 
     {
     public:
-        explicit LruCache(uint32_t capacity = 0, OnEvict on_evict = [](T&) {}) : 
+        LruCache(uint32_t capacity = 0, OnEvict on_evict = [](T&) {}) : 
             _capacity(capacity), _on_evict(on_evict) 
         {
+        }
+
+        void initialize(uint32_t capacity, OnEvict on_evict)
+        {
+            _capacity = capacity;
+            _on_evict = on_evict;
         }
         
         T* get(uint64_t key) 

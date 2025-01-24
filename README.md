@@ -22,13 +22,7 @@ xmake build FTS-Render
 - Global Signed Distance Field Generate & Update
 
 ## TODO
-- Nanite(Virtual Mesh & Culling)
-- Surface Cache
-- Virtual Shadow Map
-- DDGI
-- SSAO
-- Restir GI
-- Screen Space Probe
-- VXGI
-- Vulkan RHI
+- clusterd light culling
+- light cache update
+- ddgi
     

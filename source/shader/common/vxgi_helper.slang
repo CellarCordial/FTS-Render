@@ -2,7 +2,7 @@
 #define SHADER_IRCACHE_HELPER_SLANG
 
 #include "octahedral.slang"
-#include "math_helper.slang"
+#include "math.slang"
 #include "gbuffer.slang"
 #include "shadow_helper.slang"
 

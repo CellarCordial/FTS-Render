@@ -18,6 +18,7 @@ namespace fantasy
 
 	inline const uint32_t CARD_RESOLUTION = 32u;
 	inline const uint32_t SURFACE_RESOLUTION = 128u;
+	inline const uint32_t SURFACE_ATLAS_RESOLUTION = 4096u;
 
 	struct SurfaceCache
 	{
@@ -33,9 +34,9 @@ namespace fantasy
 			{
 				SurfaceType_BaseColor,
 				SurfaceType_Normal,
-				SurfaceType_Depth,
 				SurfaceType_PBR,
 				SurfaceType_Emissve,
+				SurfaceType_Depth,
 				SurfaceType_Num
 			};
 			

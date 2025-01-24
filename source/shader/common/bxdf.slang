@@ -1,7 +1,7 @@
 #ifndef SHADER_BRDF_SLANG
 #define SHADER_BRDF_SLANG
 
-#include "math_helper.slang"
+#include "math.slang"
 
 static const uint2 BRDF_FG_LUT_DIMS = uint2(64, 64);
 static const float2 BRDF_FG_LUT_UV_SCALE = (BRDF_FG_LUT_DIMS - 1.0) / BRDF_FG_LUT_DIMS;

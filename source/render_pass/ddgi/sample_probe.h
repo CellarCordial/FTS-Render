@@ -2,32 +2,35 @@
 #define RENDER_PASS_H
 
 #include "../../render_graph/render_pass.h"
+#include "ddgi_volume.h"
 #include <memory>
 
 namespace fantasy
 {
 	namespace constant
 	{
-		struct Constant
+		struct SampleProbePassConstant
 		{
+            float3 camera_position;
+            float pad = 0.0f;
 
+            DDGIVolumeDataGpu volume_data;
 		};
 	}
 
-	class SurfaceAtlasUpdatePass : public RenderPassInterface
+	class SampleProbePass : public RenderPassInterface
 	{
 	public:
-		SurfaceAtlasUpdatePass() { type = RenderPassType::Compute; }
+		SampleProbePass() { type = RenderPassType::Compute; }
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
 	private:
 		bool _resource_writed = false;
-		constant::Constant _pass_constant;
+		constant::SampleProbePassConstant _pass_constant;
 
-		std::shared_ptr<BufferInterface> _buffer;
-		std::shared_ptr<TextureInterface> _texture;
+		std::shared_ptr<TextureInterface> _ddgi_irradiance_texture;
 
 		std::unique_ptr<BindingLayoutInterface> _binding_layout;
 
@@ -39,7 +42,5 @@ namespace fantasy
 	};
 }
 #endif
-
-
 
 

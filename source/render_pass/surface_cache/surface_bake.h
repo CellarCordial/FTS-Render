@@ -9,17 +9,17 @@ namespace fantasy
 {
 	namespace constant
 	{
-		struct SurfaceCachePassConstant
+		struct SurfaceBakePassConstant
 		{
             float4x4 view_proj;
             float4x4 world_matrix[6];
 		};
 	}
 
-	class SurfaceCachePass : public RenderPassInterface
+	class SurfaceBakePass : public RenderPassInterface
 	{
 	public:
-		SurfaceCachePass() { type = RenderPassType::Precompute | RenderPassType::Exclude; }
+		SurfaceBakePass() { type = RenderPassType::Precompute | RenderPassType::Exclude; }
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
@@ -27,13 +27,13 @@ namespace fantasy
         bool finish_pass() override;
 
 	private:
-		constant::SurfaceCachePassConstant _pass_constant;
+		constant::SurfaceBakePassConstant _pass_constant;
 
         Entity* _model_entity = nullptr;
 
         std::shared_ptr<BufferInterface> _vertex_buffer;
         std::shared_ptr<BufferInterface> _index_buffer;
-
+		
 		std::unique_ptr<BindingLayoutInterface> _binding_layout;
 		std::unique_ptr<InputLayoutInterface> _input_layout;
 

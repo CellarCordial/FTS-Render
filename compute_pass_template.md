@@ -44,7 +44,6 @@ namespace fantasy
 #include ".h"
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
-#include "../../gui/gui_panel.h"
 
 
 namespace fantasy
@@ -166,9 +165,3 @@ namespace fantasy
         return true;
 	}
 }
-
-
-
-
-
-

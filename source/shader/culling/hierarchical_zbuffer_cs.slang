@@ -1,7 +1,7 @@
 // #define THREAD_GROUP_SIZE_X 1
 // #define THREAD_GROUP_SIZE_Y 1
 
-#include "../common/math_helper.slang"
+#include "../common/math.slang"
 
 cbuffer pass_constants : register(b0)
 {

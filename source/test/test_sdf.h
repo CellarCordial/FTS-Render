@@ -14,8 +14,8 @@ namespace fantasy
     {
         struct GlobalSdfData
         {
-            float scene_grid_size = 0.0f;
-            float3 scene_grid_origin; 
+            float sdf_grid_size = 0.0f;
+            float3 sdf_grid_origin; 
 
             uint32_t max_trace_steps = 1024;
             float abs_threshold = 0.01f;

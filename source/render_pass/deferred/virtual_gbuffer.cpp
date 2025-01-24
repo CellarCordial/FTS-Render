@@ -124,7 +124,7 @@ namespace fantasy
 				TextureDesc::create_render_target(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RGBA32_FLOAT,
+					Format::RGBA16_FLOAT,
 					"base_color_texture"
 				)
 			)));
@@ -134,7 +134,7 @@ namespace fantasy
 				TextureDesc::create_render_target(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RGB32_FLOAT,
+					Format::RGBA8_UNORM,
 					"pbr_texture"
 				)
 			)));
@@ -144,7 +144,7 @@ namespace fantasy
 				TextureDesc::create_render_target(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RGBA32_FLOAT,
+					Format::RGBA16_FLOAT,
 					"emmisive_texture"
 				)
 			)));

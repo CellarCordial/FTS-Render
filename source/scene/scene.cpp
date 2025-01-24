@@ -1,5 +1,6 @@
 #include "scene.h"
 
+#include "light.h"
 #include "camera.h"
 #include "../core/parallel/parallel.h"
 #include "../core/tools/file.h"
@@ -23,9 +24,11 @@ namespace fantasy
 
 		_global_entity = _world->get_global_entity();
 
-		_global_entity->assign<SceneGrid>();
+		_global_entity->assign<SDFGrid>();
 		_global_entity->assign<event::GenerateSdf>();
 		_global_entity->assign<event::ModelLoaded>();
+		_global_entity->assign<event::AddSpotLight>();
+		_global_entity->assign<event::AddPointLight>();
 		_global_entity->assign<event::UpdateGlobalSdf>();
 		_global_entity->assign<event::GenerateSurfaceCache>();
 

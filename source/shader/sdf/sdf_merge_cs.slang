@@ -28,7 +28,7 @@ cbuffer pass_constant : register(b0)
 
 StructuredBuffer<ModelSdfData> model_sdf_data_buffer : register(t0);
 Texture3D<float> model_sdf_textures[] : register(t1);
-SamplerState sampler : register(s0);
+SamplerState sampler_ : register(s0);
 
 RWTexture3D<float> global_sdf_texture : register(u0);
 
@@ -65,7 +65,7 @@ float calculate_sdf(float min_sdf, uint32_t sdf_index, float3 voxel_world_pos)
     float3 uvw = mul(float4(world_pos_clamped, 1.0f), sdf_data.coord_matrix).xyz;
     uvw.y = 1.0f - uvw.y;
 
-    float sdf = model_sdf_textures[sdf_data.mesh_sdf_index].SampleLevel(sampler, uvw, 0);
+    float sdf = model_sdf_textures[sdf_data.mesh_sdf_index].SampleLevel(sampler_, uvw, 0);
     // Voxel 在 MeshSdf 内.
     if (distance_to_sdf < 0.001f) return min(sdf, min_sdf);
 

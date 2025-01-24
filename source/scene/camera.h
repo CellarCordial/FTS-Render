@@ -33,6 +33,10 @@ namespace fantasy
 
         float get_fov_x() const;
         float get_fov_y() const;
+
+        
+        float get_near_z() const { return _near_z; }
+        float get_far_z() const { return _far_z; }
         
         float get_frustum_near_width() const;
         float get_frustum_far_width() const;

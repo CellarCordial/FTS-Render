@@ -31,7 +31,7 @@ float4 main(VertexOutput input) : SV_Target0
         input.uv.y
     );
 
-    SdfHitData hit_data = trace_global_sdf(o, d, global_sdf_data, gSdf, gSampler);
+    SDFHitData hit_data = trace_global_sdf(o, d, global_sdf_data, gSdf, gSampler);
 
     float color = float(hit_data.step_count) / float(global_sdf_data.max_trace_steps - 1);
     color = pow(color, 1 / 2.2f);

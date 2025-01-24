@@ -1,5 +1,5 @@
-#ifndef RENDER_PASS_H
-#define RENDER_PASS_H
+#ifndef RENDER_PASS_VIRTUAL_TEXTURE_UPDATE_H
+#define RENDER_PASS_VIRTUAL_TEXTURE_UPDATE_H
 
 #include "../../render_graph/render_pass.h"
 #include "../../scene/virtual_texture.h"
@@ -17,10 +17,10 @@ namespace fantasy
 		};
 	}
 
-	class VirtualGeometryTexturePass : public RenderPassInterface
+	class VirtualTextureUpdatePass : public RenderPassInterface
 	{
 	public:
-		VirtualGeometryTexturePass() { type = RenderPassType::Compute | RenderPassType::Immediately; }
+		VirtualTextureUpdatePass() { type = RenderPassType::Compute | RenderPassType::Immediately; }
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;

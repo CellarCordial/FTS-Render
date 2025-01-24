@@ -1,6 +1,6 @@
 #ifndef SHADER_MEDIUM_SLANG
 #define SHADER_MEDIUM_SLANG
-#include "math_helper.slang"
+#include "math.slang"
 
 
 struct AtmosphereProperties

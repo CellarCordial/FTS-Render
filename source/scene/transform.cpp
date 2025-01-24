@@ -12,7 +12,7 @@ namespace fantasy
 		float voxel_size = SCENE_GRID_SIZE / GLOBAL_SDF_RESOLUTION;
 		float chunk_size = 1.0f * VOXEL_NUM_PER_CHUNK * voxel_size;
 
-		SceneGrid* grid = _global_entity->get_component<SceneGrid>();
+		SDFGrid* grid = _global_entity->get_component<SDFGrid>();
 
 		auto func_mark = [&](const Bounds3F& box, bool insert_or_erase)
 		{

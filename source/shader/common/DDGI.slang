@@ -1,7 +1,7 @@
 #ifndef SHADER_DDGI_COMMON_SLANG
 #define SHADER_DDGI_COMMON_SLANG
 
-#include "math_helper.slang"
+#include "math.slang"
 #include "octahedral.slang"
 
 struct DDGIVolumeData
@@ -18,6 +18,7 @@ struct DDGIVolumeData
     uint32_t single_irradiance_texture_size;
     uint32_t single_depth_texture_size;
     float normal_bias;
+    float pad = 0;
 };
 
 float2 get_probe_texture_uv(

@@ -28,9 +28,9 @@ float CalcTriangleUdf(float3 a, float3 b, float3 c, float3 p)
         dot(nor, pa) * dot(nor, pa) / dot2(nor) );
 }
 
-bool IntersectBoxSphere(float3 Lower, float3 Upper, float3 p, float fRadius)
+bool IntersectBoxSphere(float3 lower, float3 upper, float3 p, float fRadius)
 {
-    float3 q = clamp(p, Lower, Upper);
+    float3 q = clamp(p, lower, upper);
     return dot(p - q, p - q) <= fRadius * fRadius;
 }
 
@@ -60,56 +60,56 @@ float min3(float x, float y, float z)
 }
 
 
-bool IntersectRayBox(float3 o, float3 d, float fT0, float fT1, float3 Lower, float3 Upper)
+bool IntersectRayBox(float3 o, float3 d, float t0, float t1, float3 lower, float3 upper)
 {
-    float3 InvD = 1.0f / d;
+    float3 inv_d = 1.0f / d;
 
-    float3 fNear = (Lower - o) * InvD;
-    float3 fFar = (Upper - o) * InvD;
+    float3 near = (lower - o) * inv_d;
+    float3 far = (upper - o) * inv_d;
 
-    float3 fMaxNF = max(fNear, fFar);
-    float3 fMinNF = min(fNear, fFar);
+    float3 max_nf = max(near, far);
+    float3 min_nf = min(near, far);
 
-    fT0 = max4(fT0, fMinNF.x, fMinNF.y, fMinNF.z);
-    fT1 = min4(fT1, fMaxNF.x, fMaxNF.y, fMaxNF.z);
+    t0 = max4(t0, min_nf.x, min_nf.y, min_nf.z);
+    t1 = min4(t1, max_nf.x, max_nf.y, max_nf.z);
 
-    return fT0 <= fT1;
+    return t0 <= t1;
 }
 
-bool IntersectRayBox(float3 o, float3 d, float3 Lower, float3 Upper, out float fStep)
+bool IntersectRayBox(float3 o, float3 d, float3 lower, float3 upper, out float step)
 {
-    float3 InvD = 1.0f / d;
+    float3 inv_d = 1.0f / d;
 
-    float3 fNear = (Lower - o) * InvD;
-    float3 fFar = (Upper - o) * InvD;
+    float3 near = (lower - o) * inv_d;
+    float3 far = (upper - o) * inv_d;
 
-    float3 fMaxNF = max(fNear, fFar);
-    float3 fMinNF = min(fNear, fFar);
+    float3 max_nf = max(near, far);
+    float3 min_nf = min(near, far);
 
-    float fT0 = max3(fMinNF.x, fMinNF.y, fMinNF.z);
-    float fT1 = min3(fMaxNF.x, fMaxNF.y, fMaxNF.z);
+    float t0 = max3(min_nf.x, min_nf.y, min_nf.z);
+    float t1 = min3(max_nf.x, max_nf.y, max_nf.z);
 
-    fStep = max(fT0, 0.0f) + 0.01f;
+    step = max(t0, 0.0f) + 0.01f;
 
-    return fT0 <= fT1;
+    return t0 <= t1;
 }
 
-bool IntersectRayBoxInside(float3 o, float3 d, float3 Lower, float3 Upper, out float fStep)
+bool intersect_ray_box_inside(float3 o, float3 d, float3 lower, float3 upper, out float step)
 {
-    float3 InvD = 1.0f / d;
+    float3 inv_d = 1.0f / d;
 
-    float3 fNear = (Lower - o) * InvD;
-    float3 fFar = (Upper - o) * InvD;
+    float3 near = (lower - o) * inv_d;
+    float3 far = (upper - o) * inv_d;
 
-    float3 fMaxNF = max(fNear, fFar);
-    float3 fMinNF = min(fNear, fFar);
+    float3 max_nf = max(near, far);
+    float3 min_nf = min(near, far);
 
-    float fT0 = max3(fMinNF.x, fMinNF.y, fMinNF.z);
-    float fT1 = min3(fMaxNF.x, fMaxNF.y, fMaxNF.z);
+    float t0 = max3(min_nf.x, min_nf.y, min_nf.z);
+    float t1 = min3(max_nf.x, max_nf.y, max_nf.z);
 
-    fStep = max(fT1, 0.0f) + 0.01f;
+    step = max(t1, 0.0f) + 0.01f;
 
-    return fT0 <= fT1;
+    return t0 <= t1;
 }
 
 float InterectRayPlane(in float3 ro, in float3 rd, in float4 p)
@@ -117,95 +117,95 @@ float InterectRayPlane(in float3 ro, in float3 rd, in float4 p)
     return -(dot(ro, p.xyz) + p.w) / dot(rd, p.xyz);
 }
 
-float IntersectRayBoxPlane(float3 o, float3 d, float3 Lower, float3 Upper, out float3 normal)
+float IntersectRayBoxPlane(float3 o, float3 d, float3 lower, float3 upper, out float3 normal)
 {
     normal = float3(0.0f, 0.0f, 0.0f);
-    float fStep = 1000.0f;
+    float step = 1000.0f;
     float t;
     
-    if (o.x < Lower.x || o.x > Upper.x)
+    if (o.x < lower.x || o.x > upper.x)
     {
-        t = (Upper.x - o.x) / d.x;
+        t = (upper.x - o.x) / d.x;
         if (t > 0.0f)
         {
             float3 p = o + t * d;
-            float3 ClampPos = clamp(p, Lower, Upper);
-            if (length(ClampPos - p) < 0.001f && t - fStep < 0.001f)
+            float3 ClampPos = clamp(p, lower, upper);
+            if (length(ClampPos - p) < 0.001f && t - step < 0.001f)
             {
                 normal = float3(1.0f, 0.0f, 0.0f);
-                fStep = t;
+                step = t;
             }
         }
 
-        t = (Lower.x - o.x) / d.x;
+        t = (lower.x - o.x) / d.x;
         if (t > 0.0f)
         {
             float3 p = o + t * d;
-            float3 ClampPos = clamp(p, Lower, Upper);
-            if (length(ClampPos - p) < 0.001f && t - fStep < 0.001f)
+            float3 ClampPos = clamp(p, lower, upper);
+            if (length(ClampPos - p) < 0.001f && t - step < 0.001f)
             {
                 normal = float3(-1.0f, 0.0f, 0.0f);
-                fStep = t;
+                step = t;
             }
         }
     }
 
 
-    if (o.y < Lower.y || o.y > Upper.y)
+    if (o.y < lower.y || o.y > upper.y)
     {
-        t = (Upper.y - o.y) / d.y;
+        t = (upper.y - o.y) / d.y;
         if (t > 0.0f)
         {
             float3 p = o + t * d;
-            float3 ClampPos = clamp(p, Lower, Upper);
-            if (length(ClampPos - p) < 0.001f && t - fStep < 0.001f)
+            float3 ClampPos = clamp(p, lower, upper);
+            if (length(ClampPos - p) < 0.001f && t - step < 0.001f)
             {
                 normal = float3(0.0f, 1.0f, 0.0f);
-                fStep = t;
+                step = t;
             }
         }
 
-        t = (Lower.y - o.y) / d.y;
+        t = (lower.y - o.y) / d.y;
         if (t > 0.0f)
         {
             float3 p = o + t * d;
-            float3 ClampPos = clamp(p, Lower, Upper);
-            if (length(ClampPos - p) < 0.001f && t - fStep < 0.001f)
+            float3 ClampPos = clamp(p, lower, upper);
+            if (length(ClampPos - p) < 0.001f && t - step < 0.001f)
             {
                 normal = float3(0.0f, -1.0f, 0.0f);
-                fStep = t;
+                step = t;
             }
         }
     }
 
-    if (o.z < Lower.z || o.z > Upper.z)
+    if (o.z < lower.z || o.z > upper.z)
     {
-        t = (Upper.z - o.z) / d.z;
+        t = (upper.z - o.z) / d.z;
         if (t > 0.0f)
         {
             float3 p = o + t * d;
-            float3 ClampPos = clamp(p, Lower, Upper);
-            if (length(ClampPos - p) < 0.001f && t - fStep < 0.001f)
+            float3 ClampPos = clamp(p, lower, upper);
+            if (length(ClampPos - p) < 0.001f && t - step < 0.001f)
             {
                 normal = float3(0.0f, 0.0f, 1.0f);
-                fStep = t;
+                step = t;
             }
         }
 
-        t = (Lower.z - o.z) / d.z;
+        t = (lower.z - o.z) / d.z;
         if (t > 0.0f)
         {
             float3 p = o + t * d;
-            float3 ClampPos = clamp(p, Lower, Upper);
-            if (length(ClampPos - p) < 0.001f && t - fStep < 0.001f)
+            float3 ClampPos = clamp(p, lower, upper);
+            if (length(ClampPos - p) < 0.001f && t - step < 0.001f)
             {
                 normal = float3(0.0f, 0.0f, -1.0f);
-                fStep = t;
+                step = t;
             }
         }
     }
 
-    return fStep;
+    return step;
 }
 
 

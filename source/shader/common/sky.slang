@@ -1,7 +1,7 @@
 #ifndef SHADER_SKY_COMMON_SLANG
 #define SHADER_SKY_COMMON_SLANG
 
-#include "math_helper.slang"
+#include "math.slang"
 
 float2 get_sky_uv(float3 ray_dir)
 {

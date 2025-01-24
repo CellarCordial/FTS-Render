@@ -1,5 +1,5 @@
-// #define THREAD_GROUP_SIZE_X 1
-// #define THREAD_GROUP_SIZE_Y 1
+#define THREAD_GROUP_SIZE_X 1
+#define THREAD_GROUP_SIZE_Y 1
 
 #include "../common/octahedral.slang"
 
@@ -14,10 +14,10 @@ cbuffer pass_constants : register(b0)
     float fDepthSharpness;
 };
 
-Texture2D<float3> gRadianceTexture : register(t0);
-Texture2D<float4> gDirectionDistanceTexture : register(t1);
+Texture2D<float3> ddgi_radiance_texture : register(t0);
+Texture2D<float4> ddgi_direction_distance_texture : register(t1);
 
-RWTexture2D<float3> gOutputIrradianceTexture : register(u0);
+RWTexture2D<float3> ddgi_volume_irradiance_texture : register(u0);
 
 
 
@@ -37,8 +37,8 @@ void main(uint3 ThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID, uint
     for (uint32_t ix = 0; ix < dwRayNumPerProbe; ++ix)
     {
         uint2 uv = uint2(ix, dwProbeIndex);
-        float3 Radiance = gRadianceTexture[uv];
-        float3 RayDirection = gDirectionDistanceTexture[uv].xyz;
+        float3 Radiance = ddgi_radiance_texture[uv];
+        float3 RayDirection = ddgi_direction_distance_texture[uv].xyz;
 
         float2 normalizedIrradianceUV = ((float2(StandaloneIrradianceUV) + 0.5f) / float(dwIrradianceTextureRes)) * 2.0f - 1.0f;
         float3 PixelDirection = octahedron_to_unit_vector(normalizedIrradianceUV);
@@ -55,12 +55,12 @@ void main(uint3 ThreadID : SV_DispatchThreadID, uint3 GroupID : SV_GroupID, uint
     if (bFirstFrame == 0)
     {
         float fInvHistoryGamma = 1.0f / fHistoryGamma;
-        float3 OldIrrandiance = pow(gOutputIrradianceTexture[IrradianceUV], fInvHistoryGamma);
+        float3 OldIrrandiance = pow(ddgi_volume_irradiance_texture[IrradianceUV], fInvHistoryGamma);
         IrradianceSum = pow(IrradianceSum, fInvHistoryGamma);
         IrradianceSum = pow(lerp(IrradianceSum, OldIrrandiance, fHistoryAlpha), fHistoryGamma);
     }
 
-    gOutputIrradianceTexture[IrradianceUV] = IrradianceSum;
+    ddgi_volume_irradiance_texture[IrradianceUV] = IrradianceSum;
 }
 
 

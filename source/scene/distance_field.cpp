@@ -5,7 +5,7 @@
 
 namespace fantasy 
 {
-    SceneGrid::SceneGrid()
+    SDFGrid::SDFGrid()
 	{
 		uint32_t chunk_num_per_axis = GLOBAL_SDF_RESOLUTION / VOXEL_NUM_PER_CHUNK;
 		float voxel_size = SCENE_GRID_SIZE / GLOBAL_SDF_RESOLUTION;
@@ -138,7 +138,7 @@ namespace fantasy
 			}
 		}
 
-		SceneGrid* grid = _global_entity->get_component<SceneGrid>();
+		SDFGrid* grid = _global_entity->get_component<SDFGrid>();
 
 		for (const auto& mesh_df : distance_field->mesh_distance_fields)
 		{

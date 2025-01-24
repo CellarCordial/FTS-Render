@@ -30,8 +30,8 @@ namespace fantasy
 
 		// Texture.
 		{
-			bool update_model_sdf_texture_resolution = (cache->get_world()->each<SceneGrid>(
-				[&](Entity* entity, SceneGrid* pGrid) -> bool
+			bool update_model_sdf_texture_resolution = (cache->get_world()->each<SDFGrid>(
+				[&](Entity* entity, SDFGrid* pGrid) -> bool
 				{
 					for (const auto& crChunk : pGrid->chunks)
 					{
@@ -73,8 +73,8 @@ namespace fantasy
 
 		// Buffer
 		{
-			bool update_model_sdf_data_resolution = (cache->get_world()->each<SceneGrid>(
-				[&](Entity* entity, SceneGrid* grid) -> bool
+			bool update_model_sdf_data_resolution = (cache->get_world()->each<SDFGrid>(
+				[&](Entity* entity, SDFGrid* grid) -> bool
 				{
 					for (const auto& chunk : grid->chunks)
 					{
@@ -154,8 +154,8 @@ namespace fantasy
 		float offset = -SCENE_GRID_SIZE * 0.5f + voxel_size * 0.5f;
 
 		// clear Pass.
-		bool global_sdf_pass_execute_result = cache->get_world()->each<SceneGrid>(
-			[&](Entity* entity, SceneGrid* grid) -> bool
+		bool global_sdf_pass_execute_result = cache->get_world()->each<SDFGrid>(
+			[&](Entity* entity, SDFGrid* grid) -> bool
 			{
 				for (uint32_t ix = 0; ix < grid->chunks.size(); ++ix)
 				{
@@ -189,8 +189,8 @@ namespace fantasy
 		ReturnIfFalse(global_sdf_pass_execute_result);
 
 		uint32_t mesh_index = 0;
-		global_sdf_pass_execute_result = cache->get_world()->each<SceneGrid>(
-			[&](Entity* entity, SceneGrid* grid) -> bool
+		global_sdf_pass_execute_result = cache->get_world()->each<SDFGrid>(
+			[&](Entity* entity, SDFGrid* grid) -> bool
 			{
 				for (uint32_t ix = 0; ix < grid->chunks.size(); ++ix)
 				{

@@ -8,14 +8,15 @@
 
 namespace fantasy 
 {
-    bool MipmapLUT::initialize(uint32_t mip0_resolution, uint32_t max_mip_resolution)
+    bool MipmapLUT::initialize(uint32_t mip0_resolution, uint32_t max_mip_resolution, uint32_t page_size)
     {
         ReturnIfFalse(is_power_of_2(mip0_resolution));
         
         _mip0_resolution = mip0_resolution;
+        _page_size = page_size;
         
-        uint32_t mip0_resolution_in_page = mip0_resolution / vt_page_size;
-        uint32_t max_mip_resolution_in_page = max_mip_resolution / vt_page_size;
+        uint32_t mip0_resolution_in_page = mip0_resolution / _page_size;
+        uint32_t max_mip_resolution_in_page = max_mip_resolution / _page_size;
         uint32_t mip_levels = std::log2(mip0_resolution_in_page / max_mip_resolution_in_page);
 
         _quad_tree.initialize(mip0_resolution_in_page, mip_levels);
@@ -27,7 +28,7 @@ namespace fantasy
             
             mip.resolution = ix == 0 ? mip0_resolution : _mips[ix - 1].resolution >> 1;
             
-            uint32_t resolution_in_page = mip.resolution / vt_page_size;
+            uint32_t resolution_in_page = mip.resolution / _page_size;
             mip.pages.resize(resolution_in_page * resolution_in_page);
             
             parallel::parallel_for(
@@ -37,8 +38,8 @@ namespace fantasy
                     auto& page = mip.pages[morton_code];
                     page.mip_level = ix;
                     
-                    uint2 lower = uint2(x * vt_page_size, y * vt_page_size);
-                    page.bounds = Bounds2I(lower, lower + vt_page_size);
+                    uint2 lower = uint2(x * _page_size, y * _page_size);
+                    page.bounds = Bounds2I(lower, lower + _page_size);
                 }, 
                 resolution_in_page, 
                 resolution_in_page
@@ -188,7 +189,7 @@ namespace fantasy
 
         page->flag = VTPage::LoadFlag::Loaded;
 
-        return ret * vt_page_size;
+        return ret;
     }
 
 

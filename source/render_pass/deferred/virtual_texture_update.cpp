@@ -1,14 +1,15 @@
-#include "virtual_geometry_texture.h"
+#include "virtual_texture_update.h"
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
 #include "../../core/parallel/parallel.h"
+#include <memory>
 
 namespace fantasy
 {
 #define THREAD_GROUP_SIZE_X 16
 #define THREAD_GROUP_SIZE_Y 16
  
-	bool VirtualGeometryTexturePass::compile(DeviceInterface* device, RenderResourceCache* cache)
+	bool VirtualTextureUpdatePass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
 		// Binding Layout.
 		{
@@ -66,13 +67,17 @@ namespace fantasy
 			)));
 			cache->collect(_vt_indirect_texture, ResourceType::Texture);
 
+			const Format formats[Material::TextureType_Num] = {
+				Format::RGBA16_FLOAT, Format::RGBA32_FLOAT, Format::RGBA8_UNORM, Format::RGBA16_FLOAT
+			};
+
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
 			{
 				ReturnIfFalse(_vt_physical_textures[ix] = std::shared_ptr<TextureInterface>(device->create_texture(
 					TextureDesc::create_render_target(
 						CLIENT_WIDTH,
 						CLIENT_HEIGHT,
-						Format::RGBA32_FLOAT,
+						formats[ix],
 						VTPhysicalTable::get_texture_name(ix)
 					)
 				)));
@@ -114,7 +119,7 @@ namespace fantasy
 		return true;
 	}
 
-	bool VirtualGeometryTexturePass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
+	bool VirtualTextureUpdatePass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
 		ReturnIfFalse(cmdlist->open());
 
@@ -123,9 +128,10 @@ namespace fantasy
 		World* world = cache->get_world();
 		HANDLE fence_event = CreateEvent(nullptr, false, false, nullptr);
 
-		VTPageInfo* data = static_cast<VTPageInfo*>(
-			check_cast<BufferInterface>(cache->require("vt_page_info_buffer"))->map(CpuAccessMode::Read, fence_event)
-		);
+		std::shared_ptr<BufferInterface> vt_page_info_buffer = 
+			check_cast<BufferInterface>(cache->require("vt_page_info_buffer"));
+
+		VTPageInfo* data = static_cast<VTPageInfo*>(vt_page_info_buffer->map(CpuAccessMode::Read, fence_event));
 		
 		struct TextureCopyInfo
 		{
@@ -138,24 +144,20 @@ namespace fantasy
 		std::mutex info_mutex;
 		std::vector<TextureCopyInfo> copy_infos;
 
-		uint32_t page_info_count = CLIENT_WIDTH * CLIENT_HEIGHT;
 		parallel::parallel_for(
 			[&](uint64_t x, uint64_t y)
 			{
 				uint32_t offset = static_cast<uint32_t>(x + y * CLIENT_WIDTH);
 				const auto& info = *(data + offset);
 
-				uint2 page_id = uint2(
-					((info.page_id_mip_level >> 12) & 0xf << 8) | (info.page_id_mip_level >> 24) & 0xff,
-					((info.page_id_mip_level >> 8) & 0xf << 8) | (info.page_id_mip_level >> 16) & 0xff
-				);
-				uint32_t mip_level = info.page_id_mip_level & 0xff;
-				uint32_t mesh_id = info.geometry_id >> 16;
-				uint32_t submesh_id = info.geometry_id & 0xffff;
-
+				uint2 page_id;
+				uint32_t mip_level;
+				uint32_t mesh_id;
+				uint32_t submesh_id;
+				info.get_data(mesh_id, submesh_id, page_id, mip_level);
 
 				bool res = world->each<std::string, Mesh, Material>(
-					[&](Entity* entity, std::string* model_name, Mesh* mesh, Material* material) -> bool
+					[&](Entity* mesh_entity, std::string* model_name, Mesh* mesh, Material* material) -> bool
 					{
 						if (mesh->mesh_id == mesh_id)
 						{
@@ -172,11 +174,12 @@ namespace fantasy
 										VTPage* page = mipmap_lut->query_page(page_id, mip_level);
 										
 										uint2 page_physical_pos;
+
 										{
 											std::lock_guard lock(info_mutex);
 
 											VTPage::LoadFlag flag = page->flag;
-											page_physical_pos = _vt_physical_table.add_page(page);
+											page_physical_pos = _vt_physical_table.add_page(page) * vt_page_size;
 
 											if (flag == VTPage::LoadFlag::Unload)
 											{
@@ -188,6 +191,7 @@ namespace fantasy
 												});
 											}
 										}
+										
 										_vt_indirect_table.set_page(
 											uint2(static_cast<uint32_t>(x), static_cast<uint32_t>(y)), 
 											page_physical_pos
@@ -205,6 +209,8 @@ namespace fantasy
 			CLIENT_WIDTH,
 			CLIENT_HEIGHT
 		);
+
+		vt_page_info_buffer->unmap();
 
 		for (const auto& info : copy_infos)
 		{

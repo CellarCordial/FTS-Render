@@ -31,6 +31,10 @@ namespace fantasy
 #define EQUAL_FLOAT_ONE(x) ((x) > 0.9999f && (x) < 1.0001f)
 #endif
 
+#ifndef INVALID_SIZE_16
+#define INVALID_SIZE_16 static_cast<uint16_t>(-1)
+#endif
+
 #ifndef INVALID_SIZE_32
 #define INVALID_SIZE_32 static_cast<uint32_t>(-1)
 #endif
