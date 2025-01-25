@@ -10,7 +10,7 @@ cbuffer pass_constants : register(b0)
     float history_gamma;
 
     uint32_t first_frame;
-    float fDepthSharpness;
+    float depth_sharpness;
 };
 
 Texture2D<float3> ddgi_radiance_texture : register(t0);

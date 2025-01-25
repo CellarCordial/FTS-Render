@@ -14,10 +14,10 @@ namespace fantasy
 		};
 	}
 
-	class SurfaceAtlasUpdatePass : public RenderPassInterface
+	class ProbeSoftRayPass : public RenderPassInterface
 	{
 	public:
-		SurfaceAtlasUpdatePass() { type = RenderPassType::Compute; }
+		ProbeSoftRayPass() { type = RenderPassType::Compute; }
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
