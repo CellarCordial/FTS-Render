@@ -34,27 +34,25 @@ struct CardData
 
 struct MeshSurfaceData
 {
-    float box_half_diagonal;
-    float3 box_upper;
-    float3 box_lower;
+    float4 bounding_sphere;
 
     CardData cards[6];
 };
 
-Texture3D<float> global_sdf_texture : register(t0);
-Texture2D<float3> sky_lut_texture : register(t1);
+Texture2D<float3> sky_lut_texture : register(t0);
+Texture3D<float> global_sdf_texture : register(t1);
+
+StructuredBuffer<SDFChunkData> sdf_chunk_data_buffer : register(t2);
+StructuredBuffer<MeshSurfaceData> mesh_surface_data_buffer : register(t3);
+
+Texture2D<float3> surface_normal_atlas_texture : register(t4);
+Texture2D<float> surface_depth_atlas_texture : register(t5);
+Texture2D<float4> surface_light_cache_atlas_texture : register(t6);
+
+RWTexture2D<float3> ddgi_radiance_texture : register(u0);
+RWTexture2D<float4> ddgi_direction_distance_texture : register(u1);
 
 SamplerState linear_clamp_sampler : register(s1);
-
-RWTexture2D<float3> ddgi_radiance_texture : register(t2);
-RWTexture2D<float4> ddgi_direction_distance_texture : register(t3);
-
-StructuredBuffer<SDFChunkData> sdf_chunk_data_buffer : register(t4);
-StructuredBuffer<MeshSurfaceData> mesh_surface_data_buffer : register(t4);
-
-Texture2D<float3> surface_normal_atlas_texture : register(t5);
-Texture2D<float4> surface_light_cache_atlas_texture : register(t6);
-Texture2D<float> surface_depth_atlas_texture : register(t7);
 SamplerState linear_wrap_sampler : register(s2);
 
 
@@ -107,12 +105,8 @@ void main(uint3 thread_id : SV_DispatchThreadID)
                 {
                     MeshSurfaceData surface_data = mesh_surface_data_buffer[ix];
 
-                    float3 center = (surface_data.box_upper + surface_data.box_lower) * 0.5f;
-                    if (length(center - hit_pos) > surface_data.box_half_diagonal) continue;
+                    if (length(surface_data.bounding_sphere.xyz - hit_pos) > surface_data.bounding_sphere.w) continue;
 
-                    float3 clamp_hit_pos = clamp(hit_pos, surface_data.box_lower, surface_data.box_upper);
-                    if (any(abs(clamp_hit_pos - hit_pos) > sdf_voxel_size)) continue;
-                    
                     [unroll]
                     for (uint32_t jx = 0; jx < 6; ++jx)
                     {
@@ -122,7 +116,6 @@ void main(uint3 thread_id : SV_DispatchThreadID)
                         float2 uv = saturate(local_hit_pos.xy / card.extent.xy + 0.5f);
                         uv.y = 1.0f - uv.y;
 
-                        // 双线性插值权重.
                         float4 bilinear_weight = float4(
                             (1.0f - uv.x) * (1.0f - uv.y),
                             (uv.x)        * (1.0f - uv.y),
