@@ -8,7 +8,7 @@ namespace fantasy
     SDFGrid::SDFGrid()
 	{
 		uint32_t chunk_num_per_axis = GLOBAL_SDF_RESOLUTION / VOXEL_NUM_PER_CHUNK;
-		float voxel_size = SCENE_GRID_SIZE / GLOBAL_SDF_RESOLUTION;
+		float voxel_size = SDF_SCENE_GRID_SIZE / GLOBAL_SDF_RESOLUTION;
 		float chunk_size = VOXEL_NUM_PER_CHUNK * voxel_size;
 
 		chunks.resize(chunk_num_per_axis * chunk_num_per_axis * chunk_num_per_axis);
@@ -18,13 +18,13 @@ namespace fantasy
 				for (uint32_t x = 0; x < chunk_num_per_axis; ++x)
 				{
 					float3 Lower = {
-						-SCENE_GRID_SIZE * 0.5f + x * chunk_size,
-						-SCENE_GRID_SIZE * 0.5f + y * chunk_size,
-						-SCENE_GRID_SIZE * 0.5f + z * chunk_size
+						-SDF_SCENE_GRID_SIZE * 0.5f + x * chunk_size,
+						-SDF_SCENE_GRID_SIZE * 0.5f + y * chunk_size,
+						-SDF_SCENE_GRID_SIZE * 0.5f + z * chunk_size
 					};
 					boxes[x + y * chunk_num_per_axis + z * chunk_num_per_axis * chunk_num_per_axis] = Bounds3F(Lower, Lower + chunk_size);
 				}
-		Bounds3F global_box(float3(-SCENE_GRID_SIZE * 0.5f), float3(SCENE_GRID_SIZE * 0.5f));
+		Bounds3F global_box(float3(-SDF_SCENE_GRID_SIZE * 0.5f), float3(SDF_SCENE_GRID_SIZE * 0.5f));
 		bvh.build(boxes, global_box);
 	}
 
@@ -144,7 +144,7 @@ namespace fantasy
 		{
 			DistanceField::TransformData data = mesh_df.get_transformed(event.entity->get_component<Transform>());
 			uint32_t chunk_num_per_axis = GLOBAL_SDF_RESOLUTION / VOXEL_NUM_PER_CHUNK;
-			float voxel_size = SCENE_GRID_SIZE / GLOBAL_SDF_RESOLUTION;
+			float voxel_size = SDF_SCENE_GRID_SIZE / GLOBAL_SDF_RESOLUTION;
 			float chunk_size = VOXEL_NUM_PER_CHUNK * voxel_size;
 			float grid_size = chunk_size * chunk_num_per_axis;
 

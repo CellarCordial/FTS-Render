@@ -150,8 +150,8 @@ namespace fantasy
 
 
 		uint32_t chunk_num_per_axis = GLOBAL_SDF_RESOLUTION / VOXEL_NUM_PER_CHUNK;
-		float voxel_size = SCENE_GRID_SIZE / GLOBAL_SDF_RESOLUTION;
-		float offset = -SCENE_GRID_SIZE * 0.5f + voxel_size * 0.5f;
+		float voxel_size = SDF_SCENE_GRID_SIZE / GLOBAL_SDF_RESOLUTION;
+		float offset = -SDF_SCENE_GRID_SIZE * 0.5f + voxel_size * 0.5f;
 
 		// clear Pass.
 		bool global_sdf_pass_execute_result = cache->get_world()->each<SDFGrid>(
@@ -204,7 +204,7 @@ namespace fantasy
 						}
 
 						auto& pass_constants = _pass_constants.emplace_back();
-						pass_constants.gi_max_distance = SCENE_GRID_SIZE;
+						pass_constants.gi_max_distance = SDF_SCENE_GRID_SIZE;
 						pass_constants.mesh_sdf_begin = mesh_index_begin;
 						pass_constants.mesh_sdf_end = mesh_index;
 

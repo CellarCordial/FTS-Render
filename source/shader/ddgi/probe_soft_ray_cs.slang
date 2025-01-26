@@ -4,6 +4,7 @@
 #include "../common/ddgi.slang"
 #include "../common/sdf_trace.slang"
 #include "../common/sky.slang"
+#include "../common/surface_cache.slang"
 
 cbuffer pass_constants : register(b0)
 {
@@ -19,37 +20,16 @@ cbuffer pass_constants : register(b0)
     uint32_t surface_atlas_resolution;
 };
 
-struct SDFChunkData
-{
-    int32_t mesh_index_begin;
-    int32_t mesh_index_end;
-};
-
-struct CardData
-{
-    float4x4 local_matrix;
-    uint2 atlas_offset;
-    float3 extent;
-};
-
-struct MeshSurfaceData
-{
-    float4 bounding_sphere;
-
-    CardData cards[6];
-};
-
 Texture2D<float3> sky_lut_texture : register(t0);
 Texture3D<float> global_sdf_texture : register(t1);
+Texture2D<float3> surface_normal_atlas_texture : register(t2);
+Texture2D<float> surface_depth_atlas_texture : register(t3);
+Texture2D<float4> surface_light_cache_atlas_texture : register(t4);
 
-StructuredBuffer<SDFChunkData> sdf_chunk_data_buffer : register(t2);
-StructuredBuffer<MeshSurfaceData> mesh_surface_data_buffer : register(t3);
+StructuredBuffer<SDFChunkData> sdf_chunk_data_buffer : register(t5);
+StructuredBuffer<MeshSurfaceData> mesh_surface_data_buffer : register(t6);
 
-Texture2D<float3> surface_normal_atlas_texture : register(t4);
-Texture2D<float> surface_depth_atlas_texture : register(t5);
-Texture2D<float4> surface_light_cache_atlas_texture : register(t6);
-
-RWTexture2D<float3> ddgi_radiance_texture : register(u0);
+RWTexture2D<float4> ddgi_radiance_texture : register(u0);
 RWTexture2D<float4> ddgi_direction_distance_texture : register(u1);
 
 SamplerState linear_clamp_sampler : register(s1);
@@ -169,7 +149,7 @@ void main(uint3 thread_id : SV_DispatchThreadID)
         }
     }
 
-    ddgi_radiance_texture[thread_id.xy] = radiance;
+    ddgi_radiance_texture[thread_id.xy] = float4(radiance, 1.0f);
     ddgi_direction_distance_texture[thread_id.xy] = float4(ray_dir, distance);
 }
 

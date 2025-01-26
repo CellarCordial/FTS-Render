@@ -13,10 +13,10 @@ cbuffer pass_constants : register(b0)
     float depth_sharpness;
 };
 
-Texture2D<float3> ddgi_radiance_texture : register(t0);
+Texture2D<float4> ddgi_radiance_texture : register(t0);
 Texture2D<float4> ddgi_direction_distance_texture : register(t1);
 
-RWTexture2D<float3> ddgi_volume_irradiance_texture : register(u0);
+RWTexture2D<float4> ddgi_volume_irradiance_texture : register(u0);
 
 
 
@@ -42,7 +42,7 @@ void main(uint3 thread_id : SV_DispatchThreadID, uint3 group_id : SV_GroupID, ui
     for (uint32_t ix = 0; ix < ray_count_per_probe; ++ix)
     {
         uint2 uv = uint2(ix, probe_index);
-        float3 radiance = ddgi_radiance_texture[uv];
+        float3 radiance = ddgi_radiance_texture[uv].rgb;
         float3 ray_direction = ddgi_direction_distance_texture[uv].xyz;
 
         float2 normalized_irradiance_uv = (((float2)single_irradiance_uv + 0.5f) / (float2)ddgi_volume_irradiance_texture_resolution) * 2.0f - 1.0f;
@@ -60,12 +60,12 @@ void main(uint3 thread_id : SV_DispatchThreadID, uint3 group_id : SV_GroupID, ui
     if (first_frame == 0)
     {
         float inv_history_gamma = 1.0f / history_gamma;
-        float3 old_irradiance = pow(ddgi_volume_irradiance_texture[irradiance_uv], inv_history_gamma);
+        float3 old_irradiance = pow(ddgi_volume_irradiance_texture[irradiance_uv].rgb, inv_history_gamma);
         irradiance_sum = pow(irradiance_sum, inv_history_gamma);
         irradiance_sum = pow(lerp(irradiance_sum, old_irradiance, history_alpha), history_gamma);
     }
 
-    ddgi_volume_irradiance_texture[irradiance_uv] = irradiance_sum;
+    ddgi_volume_irradiance_texture[irradiance_uv] = float4(irradiance_sum, 1.0f);
 }
 
 

@@ -43,7 +43,7 @@ namespace fantasy
 		bool check_sdf_cache_exist() const { return !mesh_distance_fields.empty() && !mesh_distance_fields[0].sdf_data.empty(); }
 	};
 
-	inline const float SCENE_GRID_SIZE = 64.0f;
+	inline const float SDF_SCENE_GRID_SIZE = 64.0f;
 	inline const uint32_t GLOBAL_SDF_RESOLUTION = 256u;
 	inline const uint32_t VOXEL_NUM_PER_CHUNK = 32u;
 	inline const uint32_t SDF_RESOLUTION = 64u;

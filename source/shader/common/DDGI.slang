@@ -45,7 +45,7 @@ float3 sample_probe_irradiance(
     float3 pixel_position, 
     float3 pixel_normal, 
     float3 pixel_to_camera, 
-    Texture2D<float3> irradiance_texture, 
+    Texture2D<float4> irradiance_texture, 
     Texture2D<float2> depth_texture,
     SamplerState sampler_
 )
@@ -126,7 +126,7 @@ float3 sample_probe_irradiance(
             volume_data.volume_texture_resolution,
             volume_data.single_volume_texture_size
         );
-        float3 irradiance = irradiance_texture.SampleLevel(sampler_, irradiance_uv, 0.0f);
+        float3 irradiance = irradiance_texture.SampleLevel(sampler_, irradiance_uv, 0.0f).rgb;
         irradiance = pow(irradiance, (float3)(1.0f / 2.2f));
 
 

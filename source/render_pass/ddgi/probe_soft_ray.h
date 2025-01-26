@@ -10,18 +10,18 @@ namespace fantasy
 {
 	namespace constant
 	{
-		struct Constant
+		struct ProbeSoftRayPassConstant
 		{
 			DDGIVolumeDataGpu volume_data;
 			GlobalSDFInfo sdf_data;    
 
 			float4x4 random_orientation;
 			
-			float sdf_voxel_size;
-			float sdf_chunk_size;
-			float max_gi_distance;
-			uint32_t surface_texture_resolution;
-			uint32_t surface_atlas_resolution;
+			float sdf_voxel_size = 0.0f;
+			float sdf_chunk_size = 0.0f;
+			float max_gi_distance = 0.0f;
+			uint32_t surface_texture_resolution = 0;
+			uint32_t surface_atlas_resolution = 0;
 		};
 	}
 
@@ -35,10 +35,12 @@ namespace fantasy
 
 	private:
 		bool _resource_writed = false;
-		constant::Constant _pass_constant;
+		constant::ProbeSoftRayPassConstant _pass_constant;
 
-		std::shared_ptr<BufferInterface> _buffer;
-		std::shared_ptr<TextureInterface> _texture;
+		DDGIVolumeDataGpu _ddgi_volume_data;
+
+		std::shared_ptr<TextureInterface> _ddgi_radiance_texture;
+		std::shared_ptr<TextureInterface> _ddgi_direction_distance_texture;
 
 		std::unique_ptr<BindingLayoutInterface> _binding_layout;
 

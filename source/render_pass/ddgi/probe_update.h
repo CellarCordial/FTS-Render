@@ -34,6 +34,9 @@ namespace fantasy
 		DDGIVolumeDataGpu* _volume_data = nullptr;
 		uint32_t* _frame_count = nullptr;
 
+		std::shared_ptr<TextureInterface> _ddgi_volume_depth_texture; 
+		std::shared_ptr<TextureInterface> _ddgi_volume_irradiance_texture; 
+
 		std::unique_ptr<BindingLayoutInterface> _binding_layout;
 
 		std::unique_ptr<Shader> _depth_update_cs;

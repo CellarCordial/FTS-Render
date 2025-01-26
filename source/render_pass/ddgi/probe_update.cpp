@@ -2,6 +2,7 @@
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
 #include <cstdint>
+#include <memory>
 
 
 namespace fantasy
@@ -11,6 +12,9 @@ namespace fantasy
  
 	bool ProbeUpdatePass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
+        ReturnIfFalse(cache->require_constants("ddgi_volume_data", reinterpret_cast<void**>(&_volume_data)));
+        ReturnIfFalse(cache->require_constants("frame_count", reinterpret_cast<void**>(&_frame_count)));
+ 
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(4);
@@ -60,19 +64,47 @@ namespace fantasy
 			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
 		}
 
-		// Binding Set. _irradiance_update_binding_set
+		// Texture
 		{
-			BindingSetItemArray binding_set_items(4);
-			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::ProbeUpdatePassConstant));
-			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("ddgi_radiance_texture")));
-			binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("ddgi_direction_distance_texture")));
+			ReturnIfFalse(_ddgi_volume_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_read_write(
+					_volume_data->volume_texture_resolution.x, 
+					_volume_data->volume_texture_resolution.y, 
+					Format::RG32_FLOAT,
+					"ddgi_volume_depth_texture"
+				)
+			)));
+			ReturnIfFalse(_ddgi_volume_irradiance_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_read_write(
+					_volume_data->volume_texture_resolution.x, 
+					_volume_data->volume_texture_resolution.y, 
+					Format::RGBA16_FLOAT,
+					"ddgi_volume_irradiance_texture"
+				)
+			)));
+
+			cache->collect(_ddgi_volume_depth_texture, ResourceType::Texture);
+			cache->collect(_ddgi_volume_irradiance_texture, ResourceType::Texture);
+		}
+
+		// Binding Set.
+		{
+			std::shared_ptr<TextureInterface> ddgi_radiance_texture = check_cast<TextureInterface>(cache->require("ddgi_radiance_texture"));
 			
-			binding_set_items[3] = BindingSetItem::create_texture_uav(0, check_cast<TextureInterface>(cache->require("ddgi_volume_depth_texture")));
+			BindingSetItemArray binding_set_items(3);
+			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::ProbeUpdatePassConstant));
+			binding_set_items[1] = BindingSetItem::create_texture_srv(0, ddgi_radiance_texture);
+			binding_set_items[2] = BindingSetItem::create_texture_uav(0, check_cast<TextureInterface>(cache->require("ddgi_volume_depth_texture")));
             ReturnIfFalse(_depth_update_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
                 BindingSetDesc{ .binding_items = binding_set_items },
                 _binding_layout.get()
             )));
-			
+
+
+			binding_set_items.resize(4);
+			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::ProbeUpdatePassConstant));
+			binding_set_items[1] = BindingSetItem::create_texture_srv(0, ddgi_radiance_texture);
+			binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("ddgi_direction_distance_texture")));
 			binding_set_items[3] = BindingSetItem::create_texture_uav(0, check_cast<TextureInterface>(cache->require("ddgi_volume_irradiance_texture")));
 			ReturnIfFalse(_irradiance_update_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
                 BindingSetDesc{ .binding_items = binding_set_items },
@@ -86,9 +118,6 @@ namespace fantasy
 			_compute_state.pipeline = _pipeline.get();
 		}
 
-        ReturnIfFalse(cache->require_constants("ddgi_volume_data", reinterpret_cast<void**>(&_volume_data)));
-        ReturnIfFalse(cache->require_constants("frame_count", reinterpret_cast<void**>(&_frame_count)));
- 
 		return true;
 	}
 

@@ -9,15 +9,15 @@ namespace fantasy
 		DistanceField* distance_field = event.entity->get_component<DistanceField>();
 
 		uint32_t chunk_num_per_axis = GLOBAL_SDF_RESOLUTION / VOXEL_NUM_PER_CHUNK;
-		float voxel_size = SCENE_GRID_SIZE / GLOBAL_SDF_RESOLUTION;
+		float voxel_size = SDF_SCENE_GRID_SIZE / GLOBAL_SDF_RESOLUTION;
 		float chunk_size = 1.0f * VOXEL_NUM_PER_CHUNK * voxel_size;
 
 		SDFGrid* grid = _global_entity->get_component<SDFGrid>();
 
 		auto func_mark = [&](const Bounds3F& box, bool insert_or_erase)
 		{
-			uint3 uniform_lower = uint3((box._lower + SCENE_GRID_SIZE / 2.0f) / chunk_size);
-			uint3 uniform_upper = uint3((box._upper + SCENE_GRID_SIZE / 2.0f) / chunk_size);
+			uint3 uniform_lower = uint3((box._lower + SDF_SCENE_GRID_SIZE / 2.0f) / chunk_size);
+			uint3 uniform_upper = uint3((box._upper + SDF_SCENE_GRID_SIZE / 2.0f) / chunk_size);
 
 			for (uint32_t ix = 0; ix < 3; ++ix)
 			{

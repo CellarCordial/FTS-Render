@@ -88,10 +88,10 @@ namespace fantasy
 			_graphics_state.viewport_state = ViewportState::create_default_viewport(CLIENT_WIDTH, CLIENT_HEIGHT);
 		}
 
-		float chunk_size = (SCENE_GRID_SIZE / GLOBAL_SDF_RESOLUTION) * VOXEL_NUM_PER_CHUNK;
+		float chunk_size = (SDF_SCENE_GRID_SIZE / GLOBAL_SDF_RESOLUTION) * VOXEL_NUM_PER_CHUNK;
 		_global_sdf_data.default_march = chunk_size;
-		_global_sdf_data.sdf_grid_size = SCENE_GRID_SIZE;
-		_global_sdf_data.sdf_grid_origin = float3(-SCENE_GRID_SIZE * 0.5f);
+		_global_sdf_data.sdf_grid_size = SDF_SCENE_GRID_SIZE;
+		_global_sdf_data.sdf_grid_origin = float3(-SDF_SCENE_GRID_SIZE * 0.5f);
 
 		ReturnIfFalse(cache->collect_constants("GlobalSDFInfo", &_global_sdf_data));
 

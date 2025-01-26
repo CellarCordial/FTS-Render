@@ -62,8 +62,6 @@ namespace fantasy
 			cache->collect(_ddgi_irradiance_texture, ResourceType::Texture);
 		}
 
-// 
-// 
 		// Binding Set.
 		{
 			BindingSetItemArray binding_set_items(7);

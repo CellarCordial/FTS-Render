@@ -15,6 +15,12 @@ struct GlobalSDFInfo
     float pad;
 };
 
+struct SDFChunkData
+{
+    int32_t mesh_index_begin;
+    int32_t mesh_index_end;
+};
+
 struct SDFHitData
 {
     uint32_t step_count;

@@ -13,8 +13,7 @@ cbuffer pass_constants : register(b0)
     float depth_sharpness;
 };
 
-Texture2D<float3> ddgi_radiance_texture : register(t0);
-Texture2D<float4> ddgi_direction_distance_texture : register(t1);
+Texture2D<float4> ddgi_direction_distance_texture : register(t0);
 
 RWTexture2D<float2> ddgi_volume_depth_texture : register(u0);
 
