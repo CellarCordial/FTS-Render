@@ -3,6 +3,7 @@
 
 #include "../render_graph/render_graph.h"
 #include "../core/math/vector.h"
+#include "../render_pass/sdf/global_sdf_info.h"
 #include "../render_pass/sdf/sdf_generate.h"
 #include "../render_pass/sdf/global_sdf.h"
 #include <memory>
@@ -12,16 +13,6 @@ namespace fantasy
 {
     namespace constant
     {
-        struct GlobalSdfData
-        {
-            float sdf_grid_size = 0.0f;
-            float3 sdf_grid_origin; 
-
-            uint32_t max_trace_steps = 1024;
-            float abs_threshold = 0.01f;
-            float default_march = 0.0f;
-        };
-
 		struct SdfDebugPassConstants
 		{
 			float3 frustum_a;     float pad0 = 0.0f;      
@@ -30,7 +21,7 @@ namespace fantasy
             float3 frustum_d;     float pad3 = 0.0f;
             float3 camera_position; float pad4 = 0.0f;
 
-            GlobalSdfData sdf_data;         
+            GlobalSDFInfo sdf_data;         
             float pad5;
 		};
     }
@@ -46,7 +37,7 @@ namespace fantasy
 
     private:
         std::vector<float> sdf_data;
-        constant::GlobalSdfData _global_sdf_data;         
+        GlobalSDFInfo _global_sdf_data;         
         constant::SdfDebugPassConstants _pass_constants;
         
         std::shared_ptr<TextureInterface> _sdf_texture;

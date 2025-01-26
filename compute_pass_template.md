@@ -159,6 +159,7 @@ namespace fantasy
 		};
 
 		ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
+		ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant)));
 		ReturnIfFalse(cmdlist->dispatch(thread_group_num.x, thread_group_num.y));
 
 		ReturnIfFalse(cmdlist->close());

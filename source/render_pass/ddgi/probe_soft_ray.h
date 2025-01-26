@@ -2,6 +2,8 @@
 #define RENDER_PASS_H
 
 #include "../../render_graph/render_pass.h"
+#include "../sdf/global_sdf_info.h"
+#include "ddgi_volume.h"
 #include <memory>
 
 namespace fantasy
@@ -10,7 +12,16 @@ namespace fantasy
 	{
 		struct Constant
 		{
+			DDGIVolumeDataGpu volume_data;
+			GlobalSDFInfo sdf_data;    
 
+			float4x4 random_orientation;
+			
+			float sdf_voxel_size;
+			float sdf_chunk_size;
+			float max_gi_distance;
+			uint32_t surface_texture_resolution;
+			uint32_t surface_atlas_resolution;
 		};
 	}
 

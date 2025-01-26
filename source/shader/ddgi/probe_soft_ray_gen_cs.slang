@@ -8,7 +8,7 @@
 cbuffer pass_constants : register(b0)
 {
     DDGIVolumeData volume_data;
-    GlobalSdfData sdf_data;    
+    GlobalSDFInfo sdf_data;    
 
     float4x4 random_orientation;
     

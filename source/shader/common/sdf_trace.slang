@@ -4,7 +4,7 @@
 #include "intersect.slang"
 #include "math.slang"
 
-struct GlobalSdfData
+struct GlobalSDFInfo
 {
     float3 sdf_grid_origin;
     float sdf_grid_size;
@@ -25,7 +25,7 @@ struct SDFHitData
     bool is_inside() { return step_size <= 0.0f; }
 };
 
-SDFHitData trace_global_sdf(float3 o, float3 d, GlobalSdfData sdf_data, Texture3D<float> global_sdf, SamplerState sampler)
+SDFHitData trace_global_sdf(float3 o, float3 d, GlobalSDFInfo sdf_data, Texture3D<float> global_sdf, SamplerState sampler)
 {
     SDFHitData ret;
 

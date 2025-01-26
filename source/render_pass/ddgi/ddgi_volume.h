@@ -13,13 +13,9 @@ namespace fantasy
         uint3 probe_count;
         uint32_t ray_count = 0;
 
-        uint2 irradiance_texture_resolution;
-        uint2 depth_texture_resolution;
-
-        uint32_t single_irradiance_texture_size = 0;
-        uint32_t single_depth_texture_size = 0;
+        uint2 volume_texture_resolution;
+        uint32_t single_volume_texture_size = 0;
         float normal_bias = 0.0f;
-        float pad = 0.0f;
     };
 }
 

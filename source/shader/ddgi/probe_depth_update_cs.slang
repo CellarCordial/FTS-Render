@@ -6,7 +6,7 @@
 cbuffer pass_constants : register(b0)
 {
     uint32_t ray_count_per_probe;
-    float fHistoryAlpha;
+    float history_alpha;
     float history_gamma;
 
     uint32_t first_frame;
@@ -60,7 +60,7 @@ void main(uint3 thread_id : SV_DispatchThreadID, uint3 group_id : SV_GroupID, ui
         float inv_history_gamma = 1.0f / history_gamma;
         float2 old_irradiance = pow(ddgi_volume_depth_texture[depth_uv], inv_history_gamma);
         depth_sum = pow(depth_sum, inv_history_gamma);
-        depth_sum = pow(lerp(depth_sum, old_irradiance, fHistoryAlpha), history_gamma);
+        depth_sum = pow(lerp(depth_sum, old_irradiance, history_alpha), history_gamma);
     }
 
     ddgi_volume_depth_texture[depth_uv] = depth_sum;

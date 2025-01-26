@@ -93,7 +93,7 @@ namespace fantasy
 		_global_sdf_data.sdf_grid_size = SCENE_GRID_SIZE;
 		_global_sdf_data.sdf_grid_origin = float3(-SCENE_GRID_SIZE * 0.5f);
 
-		ReturnIfFalse(cache->collect_constants("GlobalSdfData", &_global_sdf_data));
+		ReturnIfFalse(cache->collect_constants("GlobalSDFInfo", &_global_sdf_data));
 
 		return true;
 	}

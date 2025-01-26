@@ -7,18 +7,14 @@
 struct DDGIVolumeData
 {
     float3 origin_position;
-    float probe_interval_size;
-    
+    float probe_interval_size = 0.0f;
+
     uint3 probe_count;
-    uint32_t ray_count;
+    uint32_t ray_count = 0;
 
-    uint2 irradiance_texture_resolution;
-    uint2 depth_texture_resolution;
-
-    uint32_t single_irradiance_texture_size;
-    uint32_t single_depth_texture_size;
-    float normal_bias;
-    float pad = 0;
+    uint2 volume_texture_resolution;
+    uint32_t single_volume_texture_size = 0;
+    float normal_bias = 0.0f;
 };
 
 float2 get_probe_texture_uv(
@@ -91,8 +87,8 @@ float3 sample_probe_irradiance(
         float2 depth_uv = get_probe_texture_uv(
             probe_to_pixel_with_bias,
             probe_index,
-            volume_data.depth_texture_resolution, 
-            volume_data.single_depth_texture_size
+            volume_data.volume_texture_resolution,
+            volume_data.single_volume_texture_size
         );
 
         float2 mean = depth_texture.SampleLevel(sampler_, depth_uv, 0.0f);
@@ -127,8 +123,8 @@ float3 sample_probe_irradiance(
         float2 irradiance_uv = get_probe_texture_uv(
             irradiance_dir,
             probe_index,
-            volume_data.irradiance_texture_resolution, 
-            volume_data.single_irradiance_texture_size
+            volume_data.volume_texture_resolution,
+            volume_data.single_volume_texture_size
         );
         float3 irradiance = irradiance_texture.SampleLevel(sampler_, irradiance_uv, 0.0f);
         irradiance = pow(irradiance, (float3)(1.0f / 2.2f));

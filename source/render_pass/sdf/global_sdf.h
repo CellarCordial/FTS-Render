@@ -2,8 +2,8 @@
 #define RENDER_PASS_GLOBAL_SDF_H
 
 #include "../../render_graph/render_pass.h"
+#include "../../scene/distance_field.h"
 #include "../../core/math/matrix.h"
-#include "../../scene/scene.h"
 #include <memory>
 
 namespace fantasy

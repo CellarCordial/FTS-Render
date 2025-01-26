@@ -8,7 +8,7 @@ cbuffer gPassConstants : register(b0)
     float3 frustum_D;        float pad3;
     float3 camera_pos;  float pad4;
 
-    GlobalSdfData global_sdf_data;
+    GlobalSDFInfo global_sdf_data;
     float2 pad5;
 };
 
