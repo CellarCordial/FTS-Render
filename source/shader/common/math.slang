@@ -1,11 +1,25 @@
 #ifndef SHADER_MATH_HELPER_SLANG
 #define SHADER_MATH_HELPER_SLANG
 
-#define PI 3.14159265
-#define PI2 6.28318530717958647692528676655900577
+#define PI 3.14159265358979323846
+#define PI2 6.28318530717958647692
+#define INV_PI 0.318309886183790671538 
 #define MAX_FLOAT 3.402823466e+38f
 #define INVALID_SIZE_32 0xffffffff
 #define RANDOM_SEED 1.32471795724474602596
+
+/** Cosine-weighted sampling of the hemisphere using Shirley's concentric mapping.
+    \param[in] u Uniform random numbers in [0,1)^2.
+    \param[out] pdf Probability density of the sampled direction (= cos(theta)/pi).
+    \return Sampled direction in the local frame (+z axis up).
+*/
+float3 sample_cosine_hemisphere_concentric(float2 u, out float pdf)
+{
+    float2 d = sample_disk_concentric(u);
+    float z = sqrt(max(0.f, 1.f - dot(d, d)));
+    pdf = z * M_1_PI;
+    return float3(d, z);
+}
 
 float3 get_world_pos_from_depth_ndc(float2 uv, float ndc_depth, float4x4 inv_view_proj)
 {
