@@ -427,7 +427,7 @@ namespace fantasy
     {
 		Circle() = default;
 		
-		Circle(const float2& in_center, float in_radius) : center(in_center), radius(in_radius) {}
+		Circle(const float2& center_, float radius_) : center(center_), radius(radius_) {}
 
 		explicit Circle(const std::vector<float2>& vertices)
 		{
@@ -444,7 +444,7 @@ namespace fantasy
     {
 		Sphere() = default;
 
-		Sphere(const float3& in_center, float in_radius) : center(in_center), radius(in_radius) {}
+		Sphere(const float3& center_, float radius_) : center(center_), radius(radius_) {}
 
 		explicit Sphere(const std::vector<float3>& vertices)
 		{

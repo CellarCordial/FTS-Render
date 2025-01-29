@@ -13,7 +13,8 @@ namespace fantasy
     public:
         explicit VulkanAllocator(const VKContext* context)
             : _context(context)
-        { }
+        {
+        }
 
         vk::Result allocateBufferMemory(BufferInterface* buffer, bool enable_buffer_address = false) const;
         void freeBufferMemory(BufferInterface* buffer) const;

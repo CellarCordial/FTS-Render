@@ -79,6 +79,35 @@ namespace fantasy
     };
     ENUM_CLASS_FLAG_OPERATORS(ResourceStates)
 
+
+    struct TiledTextureCoordinate
+    {
+        uint16_t mip_level = 0;
+        uint16_t array_level = 0;
+        uint32_t x = 0;
+        uint32_t y = 0;
+        uint32_t z = 0;
+    };
+
+    struct TiledTextureRegion
+    {
+        uint32_t tiles_count = 0;
+        uint32_t width = 0;
+        uint32_t height = 0;
+        uint32_t depth = 0;
+    };
+
+    struct TextureTilesMapping
+    {
+        TiledTextureCoordinate* tiled_texture_coordinates = nullptr;
+        TiledTextureRegion* tiled_texture_regions = nullptr;
+        uint64_t* byte_offsets = nullptr;
+        uint32_t texture_region_count = 0;
+        
+        HeapInterface* heap = nullptr;
+    };
+
+
     struct TextureDesc
     {
         std::string name;
@@ -623,15 +652,15 @@ namespace fantasy
             uint32_t vertex_stride = 0;
 
             GeometryTriangles(
-                const std::shared_ptr<BufferInterface>& in_index_buffer, 
-                const std::shared_ptr<BufferInterface>& in_vertex_buffer,
-                uint32_t in_vertex_stride,
-                uint64_t in_index_offset = 0,
-                uint64_t in_vertex_offset = 0
+                const std::shared_ptr<BufferInterface>& index_buffer_, 
+                const std::shared_ptr<BufferInterface>& vertex_buffer_,
+                uint32_t vertex_stride_,
+                uint64_t index_offset_ = 0,
+                uint64_t vertex_offset_ = 0
             ) :
-                index_buffer(in_index_buffer), vertex_buffer(in_vertex_buffer),
-                index_offset(in_index_offset), vertex_offset(in_vertex_offset),
-                vertex_stride(in_vertex_stride)
+                index_buffer(index_buffer_), vertex_buffer(vertex_buffer_),
+                index_offset(index_offset_), vertex_offset(vertex_offset_),
+                vertex_stride(vertex_stride_)
             {
                 const auto& index_buffer_desc = index_buffer->get_desc();
                 const auto& vertex_buffer_desc = vertex_buffer->get_desc();
@@ -670,13 +699,13 @@ namespace fantasy
 
 
 
-            explicit GeometryDesc(const GeometryTriangles& in_triangles, GeometryFlags in_flags = GeometryFlags::None) :
-                triangles(in_triangles), type(GeometryType::Triangle), flags(in_flags)
+            explicit GeometryDesc(const GeometryTriangles& triangles_, GeometryFlags flags_ = GeometryFlags::None) :
+                triangles(triangles_), type(GeometryType::Triangle), flags(flags_)
             {
             }
 
-            explicit GeometryDesc(const GeometryBoundingBoxes& in_aabbs, GeometryFlags in_flags = GeometryFlags::None) :
-                aabbs(in_aabbs), type(GeometryType::BoundingBox), flags(in_flags)
+            explicit GeometryDesc(const GeometryBoundingBoxes& aabbs_, GeometryFlags flags_ = GeometryFlags::None) :
+                aabbs(aabbs_), type(GeometryType::BoundingBox), flags(flags_)
             {
             }
 
