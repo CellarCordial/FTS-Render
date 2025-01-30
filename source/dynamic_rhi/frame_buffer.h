@@ -51,6 +51,8 @@ namespace fantasy
         uint32_t height = 0;
 
         
+        FrameBufferInfo() = default;
+
         FrameBufferInfo(const FrameBufferDesc& desc)
         {
             for (const auto& attachment : desc.color_attachments)

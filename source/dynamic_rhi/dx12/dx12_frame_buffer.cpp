@@ -1,4 +1,4 @@
-#include "dx12_frameBuffer.h"
+#include "dx12_frame_buffer.h"
 #include "dx12_resource.h"
 #include <memory>
 #include <sstream>

@@ -8,6 +8,13 @@
 
 namespace fantasy
 {
+    template <class T>
+    inline void hash_combine(uint64_t& key, const T& value)
+    {
+        std::hash<T> hasher;
+        key = hasher(value) + 0x9e3779b9 + (key << 6) + (key >> 2);
+    }
+
     class HashTable
     {
     public:

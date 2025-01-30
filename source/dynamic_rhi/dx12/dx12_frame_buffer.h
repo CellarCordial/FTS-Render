@@ -1,13 +1,3 @@
-/**
- * *****************************************************************************
- * @file        DX12FrameBuffer.h
- * @brief       
- * @author      CellarCordial (591885295@qq.com)
- * @date        2024-06-02
- * @copyright Copyright (c) 2024
- * *****************************************************************************
- */
-
  #ifndef RHI_DX12_FRAME_BUFFER_H
  #define RHI_DX12_FRAME_BUFFER_H
 

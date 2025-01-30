@@ -6,7 +6,7 @@
 
 namespace fantasy
 {
-    class VulkanAllocator;
+    class VKMemoryAllocator;
 
     struct VKContext
     {
@@ -37,7 +37,7 @@ namespace fantasy
     class VKHeap: public HeapInterface
     {
     public:
-        explicit VKHeap(const VKContext* context, const VulkanAllocator* allocator)
+        explicit VKHeap(const VKContext* context, const VKMemoryAllocator* allocator)
             : _context(context), _allocator(allocator)
         {
         }
@@ -49,7 +49,7 @@ namespace fantasy
 
     private:
         const VKContext* _context;
-        const VulkanAllocator* _allocator;
+        const VKMemoryAllocator* _allocator;
         
         HeapDesc desc;
     };

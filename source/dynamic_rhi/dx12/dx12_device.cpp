@@ -13,9 +13,10 @@
 #include "dx12_cmdlist.h"
 #include "dx12_descriptor.h"
 #include "dx12_pipeline.h"
-#include "dx12_frameBuffer.h"
+#include "dx12_frame_buffer.h"
 #include "dx12_ray_tracing.h"
 #include "../../core/tools/check_cast.h"
+#include "../../core/tools/hash_table.h"
 #include "../shader.h"
 #include "dx12_resource.h"
 
@@ -37,14 +38,6 @@ namespace fantasy
         }
         return device;
     }
-    
-    template <class T>
-    inline void hash_combine(uint64_t& key, const T& value)
-    {
-        std::hash<T> hasher;
-        key = hasher(value) + 0x9e3779b9 + (key << 6) + (key >> 2);
-    }
-
     bool DX12EventQuery::start(ID3D12Fence* d3d12_fence, uint64_t fence_counter)
     {
         if (d3d12_fence == nullptr) return false;

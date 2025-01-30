@@ -57,7 +57,7 @@ namespace fantasy
         bool buffer_device_address_supported = false;
     };
 
-    DeviceInterface* VKDeviceDesc(const DX12DeviceDesc& desc);
+    DeviceInterface* CreateDevice(const VKDeviceDesc& desc);
 }
 
 

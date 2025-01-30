@@ -300,6 +300,15 @@ namespace fantasy
         uint32_t base_array_slice = 0;
         uint32_t array_slice_count = 1;
 
+
+        bool operator ==(const TextureSubresourceSet& other) const
+        {
+            return base_mip_level == other.base_mip_level &&
+                   mip_level_count == other.mip_level_count &&
+                   base_array_slice == other.base_array_slice &&
+                   array_slice_count == other.array_slice_count;
+        }
+
         bool is_entire_texture(const TextureDesc& desc) const
         {
             if (base_mip_level > 0 || base_mip_level + mip_level_count < desc.mip_levels)
