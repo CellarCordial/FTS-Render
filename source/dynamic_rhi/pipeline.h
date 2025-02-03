@@ -11,11 +11,11 @@ namespace fantasy
     {
         std::string name;
         Format format = Format::UNKNOWN;
+        uint32_t offset = 0;
+        uint32_t element_stride = 0; 
+        
         uint32_t array_size = 1;
         uint32_t buffer_index = 0;
-        uint32_t offset = 0;
-            
-        uint32_t element_stride = 0;     // 对于大部分 api 来说, 该 stride 应设置为 sizeof(Vertex) 
         bool is_instanced = false;
     };
 
@@ -54,11 +54,11 @@ namespace fantasy
 
     enum class BlendOP : uint8_t
     {
-        add             = 1,
+        Add             = 1,
         Subtract        = 2,
         ReverseSubtract = 3,
-        min             = 4,
-        max             = 5
+        Min             = 4,
+        Max             = 5
     };
 
     enum class ColorMask : uint8_t
@@ -80,11 +80,11 @@ namespace fantasy
             bool        enable_blend = false;
             BlendFactor src_blend     = BlendFactor::One;
             BlendFactor dst_blend     = BlendFactor::Zero;
-            BlendOP     blend_op      = BlendOP::add;
+            BlendOP     blend_op      = BlendOP::Add;
             
             BlendFactor src_blend_alpha = BlendFactor::One;
             BlendFactor dst_blend_alpha = BlendFactor::Zero;
-            BlendOP     blend_op_alpha  = BlendOP::add;
+            BlendOP     blend_op_alpha  = BlendOP::Add;
             
             ColorMask color_write_mask = ColorMask::All;
 
@@ -170,7 +170,7 @@ namespace fantasy
         Always          = 8
     };
 
-    struct StencilOpDesc
+    struct StencilOPDesc
     {
         StencilOP pass_op = StencilOP::Keep;
         StencilOP fail_op = StencilOP::Keep;
@@ -189,8 +189,8 @@ namespace fantasy
         uint8_t           stencil_write_mask = 0xff;
         uint8_t           stencil_ref_value = 0;
         bool            dynamic_stencil_ref = false;
-        StencilOpDesc   front_face_stencil;
-        StencilOpDesc   back_face_stencil;
+        StencilOPDesc   front_face_stencil;
+        StencilOPDesc   back_face_stencil;
     };
 
     using ViewportArray = StackArray<Viewport, MAX_VIEWPORTS>;
@@ -235,8 +235,9 @@ namespace fantasy
     
     struct GraphicsPipelineDesc
     {
-        PrimitiveType PrimitiveType = PrimitiveType::TriangleList;
-        uint32_t dwPatchControlPoints = 0;
+        InputLayoutInterface* input_layout = nullptr;
+        PrimitiveType primitive_type = PrimitiveType::TriangleList;
+        uint32_t patch_control_points = 0;
 
         Shader* vertex_shader = nullptr;
         Shader* hull_shader = nullptr;
@@ -245,8 +246,6 @@ namespace fantasy
         Shader* pixel_shader = nullptr;
 
         RenderState render_state;
-
-        InputLayoutInterface* input_layout = nullptr;
         BindingLayoutInterfaceArray binding_layouts;
     };
 
@@ -266,9 +265,6 @@ namespace fantasy
         Shader* compute_shader = nullptr;
         BindingLayoutInterfaceArray binding_layouts;
     };
-
-
-    
 
     struct ComputePipelineInterface : public ResourceInterface
     {
@@ -340,9 +336,7 @@ namespace fantasy
             
             virtual ~ShaderTableInterface() = default;
         };
-
     }
-
 }
     
 

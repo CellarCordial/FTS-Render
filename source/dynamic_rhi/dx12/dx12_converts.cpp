@@ -53,11 +53,11 @@ namespace fantasy
     {
         switch (op)
         {
-        case BlendOP::add            : return D3D12_BLEND_OP_ADD;
+        case BlendOP::Add            : return D3D12_BLEND_OP_ADD;
         case BlendOP::Subtract       : return D3D12_BLEND_OP_SUBTRACT;
         case BlendOP::ReverseSubtract: return D3D12_BLEND_OP_REV_SUBTRACT;
-        case BlendOP::min            : return D3D12_BLEND_OP_MIN;
-        case BlendOP::max            : return D3D12_BLEND_OP_MAX;
+        case BlendOP::Min            : return D3D12_BLEND_OP_MIN;
+        case BlendOP::Max            : return D3D12_BLEND_OP_MAX;
         }
         return D3D12_BLEND_OP_ADD;
     }

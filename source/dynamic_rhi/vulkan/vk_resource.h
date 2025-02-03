@@ -1,7 +1,7 @@
 #ifndef DYNAMIC_RHI_VULKAN_RESOURCE_H
 #define DYNAMIC_RHI_VULKAN_RESOURCE_H
 
-#include "vk_forward.h"
+#include "vk_allocator.h"
 #include "../command_list.h"
 #include "../../core/tools/hash_table.h"
 #include <memory>
@@ -18,20 +18,15 @@ namespace fantasy
         TextureSubresourceSet subresource;
 
         vk::ImageView view = nullptr;
-        vk::ImageSubresourceRange subresourceRange;
+        vk::ImageSubresourceRange subresource_range;
 
-        VKTextureSubresourceView(VKTexture* texture)
-            : texture(texture)
-        { }
-
-        VKTextureSubresourceView(const VKTextureSubresourceView&) = delete;
-
+        VKTextureSubresourceView(VKTexture* texture)  : texture(texture) {}
         bool operator==(const VKTextureSubresourceView& other) const
         {
             return &texture == &other.texture &&
                     subresource == other.subresource &&
                     view == other.view &&
-                    subresourceRange == other.subresourceRange;
+                    subresource_range == other.subresource_range;
         }
     };
 
@@ -51,7 +46,7 @@ namespace fantasy
         {
             std::size_t operator()(SubresourceViewKey const& s) const noexcept
             {
-                const auto& [subresources, viewType, dimension, format, usage] = s;
+                const auto& [subresources, view_type, dimension, format, usage] = s;
 
                 size_t hash = 0;
 
@@ -59,7 +54,7 @@ namespace fantasy
                 hash_combine(hash, subresources.mip_level_count);
                 hash_combine(hash, subresources.base_array_slice);
                 hash_combine(hash, subresources.array_slice_count);
-                hash_combine(hash, viewType);
+                hash_combine(hash, view_type);
                 hash_combine(hash, dimension);
                 hash_combine(hash, format);
                 hash_combine(hash, static_cast<uint32_t>(usage));
@@ -69,12 +64,10 @@ namespace fantasy
         };
 
     public:
-        VKTexture(const VKContext* context, const VKMemoryAllocator* allocator) :
-            _context(context), 
-            _allocator(allocator)
-        { 
-        }
+        VKTexture(const VKContext* context, const VKMemoryAllocator* allocator, const TextureDesc& desc_);
         ~VKTexture() override;
+
+        bool initialize();
 
         const TextureDesc& get_desc() const override { return desc; }
 
@@ -100,17 +93,18 @@ namespace fantasy
         TextureDesc desc;
 
         vk::ImageCreateInfo image_info;
-        vk::ExternalMemoryImageCreateInfo external_memory_image_info;
         vk::Image image;
 
         std::shared_ptr<HeapInterface> heap;
-        void* sharedHandle = nullptr;
+        void* shared_handle = nullptr;
         std::unordered_map<SubresourceViewKey, VKTextureSubresourceView, VKTexture::Hash> subresource_views;
 
     private:
         const VKContext* _context;
         const VKMemoryAllocator* _allocator;
         std::mutex _mutex;
+
+        vk::DeviceMemory _vk_device_memory;
     };
 
     struct VKVolatileBufferState

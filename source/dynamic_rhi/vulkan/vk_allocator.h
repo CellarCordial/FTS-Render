@@ -6,13 +6,6 @@
 
 namespace fantasy 
 {
-    struct VKMemoryResource
-    {
-        bool managed = true;
-        vk::DeviceMemory memory;
-    };
-
-    
     class VKMemoryAllocator
     {
     public:

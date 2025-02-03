@@ -6,6 +6,7 @@
 #include <string>
 #include <stdint.h>
 #include <vector>
+#include "../core/math/common.h"
 
 namespace fantasy
 {
@@ -13,24 +14,26 @@ namespace fantasy
     {
         None            = 0,
 
-        Compute         = 1 << 1,
+        Compute         = 0x01,
 
-        Vertex          = 1 << 2,
-        Hull            = 1 << 3,
-        Domain          = 1 << 4,
-        Geometry        = 1 << 5,
-        Pixel           = 1 << 6,
+        Vertex          = 0x02,
+        Hull            = 0x04,
+        Domain          = 0x08,
+        Geometry        = 0x10,
+        Pixel           = 0x20,
+        Graphics        = 0x7C,
 
-        RayGeneration   = 1 << 7,
-        AnyHit          = 1 << 8,
-        ClosestHit      = 1 << 9,
-        Miss            = 1 << 10,
-        Intersection    = 1 << 11,
-        Callable        = 1 << 12,
-        RayTracing      = 1 << 13,
+        RayGeneration   = 0x40,
+        AnyHit          = 0x80,
+        ClosestHit      = 0x100,
+        Miss            = 0x200,
+        Intersection    = 0x400,
+        Callable        = 0x800,
+        RayTracing      = 0xFC0,
 
-        All             = 1 << 14,
+        All             = 0x1000,
     };
+    ENUM_CLASS_FLAG_OPERATORS(ShaderType);
 
     struct ShaderDesc
     {

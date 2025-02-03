@@ -82,6 +82,7 @@ namespace fantasy
         TextureBindingKeyHashMap<uint32_t> dsv_indices;
     
         Microsoft::WRL::ComPtr<ID3D12Resource> _d3d12_resource;
+        HANDLE shared_handle;
 
     private:
         const DX12Context* _context;

@@ -81,27 +81,27 @@ namespace fantasy
         for (uint32_t ix = 0; ix < _vertex_attribute_descs.size(); ++ix)
         {
             auto& attribute_desc = _vertex_attribute_descs[ix];
+
+            // 复制 VertexAttributeDesc
             attribute_desc = vertex_attribute_descs[ix];
             
-            if (attribute_desc.array_size == 0)
-            {
-                std::stringstream ss;
-                ss << "Create DX12InputLayout failed for VertexAttributeDesc.array_size = " << attribute_desc.array_size << "";
-                LOG_ERROR(ss.str());
-                return false;
-            }
+            ReturnIfFalse(attribute_desc.array_size != 0);
 
-            const auto& crFormatMapping = get_dxgi_format_mapping(attribute_desc.format);
-            const auto& crFormatInfo = get_format_info(attribute_desc.format);
+            const auto& format_mapping = get_dxgi_format_mapping(attribute_desc.format);
+            const auto& format_info = get_format_info(attribute_desc.format);
 
+            // 依据 VertexAttributeDesc::array_size 数量依次填入 _d3d12_input_element_descs 中.
             for (uint32_t semantic_index = 0; semantic_index < attribute_desc.array_size; ++semantic_index)
             {
-                D3D12_INPUT_ELEMENT_DESC& d3d12_input_element_desc = d3d12_input_element_descs.emplace_back();
+                // 将 VertexAttributeDesc 转换为 D3D12_INPUT_ELEMENT_DESC.
+                D3D12_INPUT_ELEMENT_DESC& d3d12_input_element_desc = _d3d12_input_element_descs.emplace_back();
                 d3d12_input_element_desc.SemanticName = attribute_desc.name.c_str();
-                d3d12_input_element_desc.SemanticIndex = semantic_index;
                 d3d12_input_element_desc.InputSlot = attribute_desc.buffer_index;
-                d3d12_input_element_desc.Format = crFormatMapping.srv_format;
-                d3d12_input_element_desc.AlignedByteOffset = attribute_desc.offset + semantic_index * crFormatInfo.byte_size_per_pixel;
+                d3d12_input_element_desc.Format = format_mapping.srv_format;
+
+                // 该遍历当中只有这两个元素在变化.
+                d3d12_input_element_desc.SemanticIndex = semantic_index;
+                d3d12_input_element_desc.AlignedByteOffset = attribute_desc.offset + semantic_index * format_info.byte_size_per_pixel;
 
                 if (attribute_desc.is_instanced)
                 {
@@ -115,21 +115,15 @@ namespace fantasy
                 }
             }
 
+            // 不同的 VertexAttributeDesc, 若其 buffer_index 相同, 则其 element_stride 也必须相同.
+            // 即确保同一 vertex buffer 中的 Vertex 大小相同.
             if (!slot_strides.contains(attribute_desc.buffer_index))
             {
                 slot_strides[attribute_desc.buffer_index] = attribute_desc.element_stride;
             }
             else 
             {
-                if (slot_strides[attribute_desc.buffer_index] != attribute_desc.element_stride)
-                {
-                    std::stringstream ss;
-                    ss  << "Create DX12InputLayout failed for "
-                        <<"m_SlotStrideMap[rAttributeDesc.buffer_index]: " << slot_strides[attribute_desc.buffer_index]
-                        << " != rAttributeDesc.element_stride: " << attribute_desc.element_stride << "";
-                    LOG_ERROR(ss.str());
-                    return false;
-                }
+                ReturnIfFalse(slot_strides[attribute_desc.buffer_index] != attribute_desc.element_stride)
             }
         }
         return true;
@@ -151,8 +145,8 @@ namespace fantasy
     D3D12_INPUT_LAYOUT_DESC DX12InputLayout::GetD3D12InputLayoutDesc() const
     {
         D3D12_INPUT_LAYOUT_DESC ret;
-        ret.NumElements = static_cast<UINT>(d3d12_input_element_descs.size());
-        ret.pInputElementDescs = d3d12_input_element_descs.data();
+        ret.NumElements = static_cast<UINT>(_d3d12_input_element_descs.size());
+        ret.pInputElementDescs = _d3d12_input_element_descs.data();
         return ret;
     }
 
@@ -595,7 +589,7 @@ namespace fantasy
 
         pipeline_state_desc.RasterizerState = convert_rasterizer_state(_desc.render_state.raster_state);
 
-        switch (_desc.PrimitiveType)
+        switch (_desc.primitive_type)
         {
         case PrimitiveType::PointList: pipeline_state_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT; break;
         case PrimitiveType::LineList: pipeline_state_desc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE; break;

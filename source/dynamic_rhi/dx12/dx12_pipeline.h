@@ -35,12 +35,13 @@ namespace fantasy
         D3D12_INPUT_LAYOUT_DESC GetD3D12InputLayoutDesc() const;
 
     public:
-        std::unordered_map<uint32_t, uint32_t> slot_strides;     /**< Maps a binding slot to an element stride.  */
+        // map<VertexAttributeDesc::buffer_index, VertexAttributeDesc::element_stride>.
+        std::unordered_map<uint32_t, uint32_t> slot_strides;
         
     private:
         const DX12Context* _context; 
         std::vector<VertexAttributeDesc> _vertex_attribute_descs;
-        std::vector<D3D12_INPUT_ELEMENT_DESC> d3d12_input_element_descs;
+        std::vector<D3D12_INPUT_ELEMENT_DESC> _d3d12_input_element_descs;
     };
 
 

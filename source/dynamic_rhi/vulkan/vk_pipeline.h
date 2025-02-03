@@ -15,13 +15,15 @@ namespace fantasy
         VKInputLayout() = default;
 		~VKInputLayout() override = default;
 
+        bool initialize(const VertexAttributeDescArray& vertex_attribute_descs);
+
         const VertexAttributeDesc& get_attribute_desc(uint32_t attribute_index) const override;
         uint32_t get_attributes_num() const override;
 
     public:
-        std::vector<VertexAttributeDesc> input_desc;
-        std::vector<vk::VertexInputBindingDescription> binding_desc;
-        std::vector<vk::VertexInputAttributeDescription> attribute_desc;
+        std::vector<VertexAttributeDesc> attribute_desc;
+        std::vector<vk::VertexInputBindingDescription> vk_input_binding_desc;
+        std::vector<vk::VertexInputAttributeDescription> vk_input_attribute_desc;
     };
 
     class VKBindingLayout : public BindingLayoutInterface

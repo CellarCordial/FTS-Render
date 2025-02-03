@@ -450,7 +450,6 @@ namespace fantasy
             ret.dimension = TextureDimension::Unknown;
             return ret;
         }
-
     };
 
     using BindingSetItemArray = StackArray<BindingSetItem, MAX_BINDINGS_PER_LAYOUT>;

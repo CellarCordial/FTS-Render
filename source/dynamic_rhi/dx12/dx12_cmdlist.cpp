@@ -13,7 +13,7 @@
 
 #include "dx12_converts.h"
 #include "dx12_device.h"
-#include "dx12_frameBuffer.h"
+#include "dx12_frame_buffer.h"
 #include "dx12_pipeline.h"
 #include "dx12_ray_tracing.h"
 #include "dx12_resource.h"
@@ -2510,7 +2510,7 @@ namespace fantasy
 
         active_cmdlist->d3d12_cmdlist->SetPipelineState(reinterpret_cast<ID3D12PipelineState*>(dx12_graphics_pipeline->get_native_object()));
 
-        active_cmdlist->d3d12_cmdlist->IASetPrimitiveTopology(convert_primitive_type(desc.PrimitiveType, desc.dwPatchControlPoints));
+        active_cmdlist->d3d12_cmdlist->IASetPrimitiveTopology(convert_primitive_type(desc.primitive_type, desc.patch_control_points));
 
         return true;
     }

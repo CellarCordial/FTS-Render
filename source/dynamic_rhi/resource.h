@@ -129,7 +129,7 @@ namespace fantasy
         bool is_depth_stencil = false;
         bool is_uav = false;
         bool is_type_less = false;
-
+        
         bool is_virtual = false;
 
         bool use_clear_value = false;
@@ -344,11 +344,11 @@ namespace fantasy
             }
             else
             {
-                const uint32_t dwLastMipLevelPlusOne = std::min(
+                const uint32_t last_mip_level_plus_one = std::min(
                     base_mip_level + mip_level_count,
                     desc.mip_levels
                 );
-                ret.mip_level_count = std::max(0u, dwLastMipLevelPlusOne - base_mip_level);
+                ret.mip_level_count = std::max(0u, last_mip_level_plus_one - base_mip_level);
             }
 
             switch (desc.dimension)

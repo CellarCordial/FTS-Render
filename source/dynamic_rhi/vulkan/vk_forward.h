@@ -12,6 +12,7 @@ namespace fantasy
     {
         vk::Instance instance;
         vk::PhysicalDevice physicalDevice;
+        
         vk::Device device;
         vk::PipelineCache pipelineCache;
         vk::AllocationCallbacks* allocation_callbacks = nullptr;
@@ -32,6 +33,13 @@ namespace fantasy
         vk::PhysicalDeviceProperties physical_device_properties;
         vk::PhysicalDeviceRayTracingPipelinePropertiesKHR ray_tracing_pipeline_properties;
         vk::PhysicalDeviceAccelerationStructurePropertiesKHR accel_struct_properties;
+
+        void name_object(
+            const void* handle, 
+            const vk::ObjectType object_type,
+            const vk::DebugReportObjectTypeEXT object_type_ext, 
+            const char* name
+        ) const;
     };
 
     class VKHeap: public HeapInterface
