@@ -26,17 +26,17 @@ namespace fantasy
         float b = 1.0f;
         float a = 1.0f;
 
-        bool operator==(const Color& crColor) const
+        bool operator==(const Color& other) const
         {
-            return  a == crColor.a &&
-                    r == crColor.r &&
-                    g == crColor.g &&
-                    b == crColor.b;
+            return  a == other.a &&
+                    r == other.r &&
+                    g == other.g &&
+                    b == other.b;
         }
 
-        bool operator!=(const Color& crColor) const
+        bool operator!=(const Color& other) const
         {
-            return !((*this) == crColor);
+            return !((*this) == other);
         }
     };
 
@@ -102,22 +102,6 @@ namespace fantasy
         {
             return !((*this) == crViewport);
         }
-    };
-
-
-    enum class ViewType : uint8_t
-    {
-        DX12_RenderTargetView,
-        DX12_DepthStencilView,
-
-        DX12_GPU_Texture_SRV,
-        DX12_GPU_Texture_UAV,
-		DX12_GPU_TypedBuffer_SRV,
-		DX12_GPU_TypedBuffer_UAV,
-		DX12_GPU_StructuredBuffer_SRV,
-		DX12_GPU_StructuredBuffer_UAV,
-		DX12_GPU_RawBuffer_SRV,
-		DX12_GPU_RawBuffer_UAV,
     };
 
     enum class GraphicsAPI : uint8_t

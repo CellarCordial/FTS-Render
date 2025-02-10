@@ -2,22 +2,12 @@
 #define RHI_D3D12_FORWARD_H
 
 #include <d3d12.h>
-#include "../resource.h"
-#include <memory>
 #include "../../core/tools/stack_array.h"
+#include "../forward.h"
 #include <wrl.h>
 
 namespace fantasy
 {
-    void wait_for_fence(ID3D12Fence* fence, uint64_t fence_value, HANDLE event);
-
-    struct DX12SliceRegion
-    {
-        uint64_t offset;
-        uint64_t size;
-        D3D12_PLACED_SUBRESOURCE_FOOTPRINT footprint;
-    };
-
     using D3D12ViewportArray = StackArray<D3D12_VIEWPORT, MAX_VIEWPORTS>;
     using D3D12ScissorRectArray = StackArray<D3D12_RECT, MAX_VIEWPORTS>;
 
@@ -35,11 +25,8 @@ namespace fantasy
         Microsoft::WRL::ComPtr<ID3D12CommandSignature> draw_indirect_signature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature> draw_indexed_indirect_signature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature> dispatch_indirect_signature;
-
-        Microsoft::WRL::ComPtr<ID3D12QueryHeap> timer_query_heap;
-        std::unique_ptr<BufferInterface> timer_query_resolve_buffer;
     };
-
+    
 
     class DX12Heap : public HeapInterface
     {
@@ -48,19 +35,17 @@ namespace fantasy
 
         bool initialize();
 
-        // HeapInterface.
         const HeapDesc& get_desc() const override { return _desc; }
 
     public:
-        Microsoft::WRL::ComPtr<ID3D12Heap> _d3d12_heap;
+        Microsoft::WRL::ComPtr<ID3D12Heap> d3d12_heap;
 
     private:
         const DX12Context* _context = nullptr;
         HeapDesc _desc{};
     };
 
-    struct DX12RootSignature;
-    
+    bool wait_for_fence(ID3D12Fence* d3d12_fence, uint64_t fence_value);
 }
 
 

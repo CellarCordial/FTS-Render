@@ -15,16 +15,17 @@ namespace fantasy
     {
         std::shared_ptr<TextureInterface> texture;
         TextureSubresourceSet subresource;
-        Format format = Format::UNKNOWN;
-        bool is_read_only = false;
 
         bool is_valid() const { return texture != nullptr; }
 
-        static FrameBufferAttachment create_attachment(const std::shared_ptr<TextureInterface>& texture)
+        static FrameBufferAttachment create_attachment(
+            const std::shared_ptr<TextureInterface>& texture,
+            TextureSubresourceSet subresource = entire_subresource_set
+        )
         {
             FrameBufferAttachment ret;
             ret.texture = texture;
-            ret.format = texture->get_desc().format;
+            ret.subresource = subresource;
             return ret;
         }
     };
@@ -44,43 +45,37 @@ namespace fantasy
         RenderTargetFormatArray rtv_formats;
         Format depth_format = Format::UNKNOWN;
 
-        uint32_t sample_count = 1;
-        uint32_t sample_quality = 0;
-
         uint32_t width = 0;
         uint32_t height = 0;
-
         
         FrameBufferInfo() = default;
-
         FrameBufferInfo(const FrameBufferDesc& desc)
         {
             for (const auto& attachment : desc.color_attachments)
             {
-                rtv_formats.push_back(attachment.format == Format::UNKNOWN && attachment.texture ? attachment.texture->get_desc().format : attachment.format);
+                rtv_formats.push_back(attachment.texture->get_desc().format);
             }
             
             if (desc.depth_stencil_attachment.is_valid())
             {
-                TextureDesc TextureDesc = desc.depth_stencil_attachment.texture->get_desc();
-                depth_format = desc.depth_stencil_attachment.format == Format::UNKNOWN ? TextureDesc.format : desc.depth_stencil_attachment.format;
-                
-                sample_count = TextureDesc.sample_count;
-                sample_quality = TextureDesc.sample_quality;
-                width = std::max(TextureDesc.width >> desc.depth_stencil_attachment.subresource.base_mip_level, 1u);
-                height = std::max(TextureDesc.height >> desc.depth_stencil_attachment.subresource.base_mip_level, 1u);
+                const TextureDesc& texture_desc = desc.depth_stencil_attachment.texture->get_desc();
+                uint32_t base_mip_level = desc.depth_stencil_attachment.subresource.base_mip_level;
+
+                depth_format = texture_desc.format;
+                width = std::max(texture_desc.width >> base_mip_level, 1u);
+                height = std::max(texture_desc.height >> base_mip_level, 1u);
             }
             else if (!desc.color_attachments.empty() && desc.color_attachments[0].is_valid())
             {   
-                TextureDesc TextureDesc = desc.color_attachments[0].texture->get_desc();
-                sample_count = TextureDesc.sample_count;
-                sample_quality = TextureDesc.sample_quality;
-                width = std::max(TextureDesc.width >> desc.color_attachments[0].subresource.base_mip_level, 1u);
-                height = std::max(TextureDesc.height >> desc.color_attachments[0].subresource.base_mip_level, 1u);
+                const TextureDesc& texture_desc = desc.color_attachments[0].texture->get_desc();
+                uint32_t base_mip_level = desc.color_attachments[0].subresource.base_mip_level;
+
+                width = std::max(texture_desc.width >> base_mip_level, 1u);
+                height = std::max(texture_desc.height >> base_mip_level, 1u);
             }
             else 
             {
-                assert(!"Create FrameBuffer without any attachments.");
+                assert(!"Frame buffer initialized.");
             }
         }
 

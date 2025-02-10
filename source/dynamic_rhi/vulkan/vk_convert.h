@@ -3,17 +3,17 @@
 
 #include <vulkan/vulkan.hpp>
 #include "../resource.h"
-#include "../pipeline.h"
+#include "../ray_tracing.h"
 
 
 namespace fantasy 
 {
     struct ResourceStateMapping
     {
-        ResourceStates nvrhi_state;         
-        vk::PipelineStageFlags stage_flags;
-        vk::AccessFlags access_mask;
-        vk::ImageLayout image_layout;
+        ResourceStates state;         
+        vk::PipelineStageFlags vk_stage_flags;
+        vk::AccessFlags vk_access_flags;
+        vk::ImageLayout vk_image_layout;
     };
 
     ResourceStateMapping convert_resource_state(ResourceStates state);
@@ -32,16 +32,20 @@ namespace fantasy
     vk::ColorComponentFlags convert_color_mask(ColorMask mask);
     vk::PipelineColorBlendAttachmentState convert_blend_state(const BlendState::RenderTarget& state);
 
-    VkFormat convert_format(Format format);
+    vk::Format convert_format(Format format);
 
-    vk::ImageType convert_texture_dimension(TextureDimension dimension);
+    vk::ImageType convert_texture_dimension_to_image_type(TextureDimension dimension);
+    vk::ImageViewType convert_texture_dimension_to_image_view_type(TextureDimension dimension);
     vk::ImageUsageFlags get_image_usage_flag(const TextureDesc& desc);
     vk::SampleCountFlagBits get_sample_count_flag(uint32_t sample_count);
-    vk::ImageCreateFlags get_image_create_flag(const TextureDesc& desc);
+    vk::ImageCreateFlags get_image_create_flag(TextureDimension dimension);
+    vk::ImageCreateInfo convert_image_info(const TextureDesc& desc);
+    vk::BufferCreateInfo convert_buffer_info(const BufferDesc& desc);
+    vk::BufferUsageFlags get_buffer_usage(const BufferDesc& desc);
+    vk::SamplerCreateInfo convert_sampler_info(const SamplerDesc& desc);
 
     vk::BuildAccelerationStructureFlagsKHR convert_accel_struct_build_flags(ray_tracing::AccelStructBuildFlags buildFlags);
     vk::GeometryInstanceFlagsKHR convert_instance_flags(ray_tracing::InstanceFlags instanceFlags);
-
 }
 
 

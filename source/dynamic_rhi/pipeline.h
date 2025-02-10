@@ -1,9 +1,9 @@
 ﻿#ifndef RHI_PIPELINE_H
 #define RHI_PIPELINE_H
 
-#include "descriptor.h"
-#include "frame_buffer.h"
+#include "binding.h"
 #include "resource.h"
+#include <memory>
 
 namespace fantasy
 {
@@ -15,12 +15,11 @@ namespace fantasy
         uint32_t element_stride = 0; 
         
         uint32_t array_size = 1;
-        uint32_t buffer_index = 0;
+        uint32_t buffer_slot = 0;
         bool is_instanced = false;
     };
 
     using VertexAttributeDescArray = StackArray<VertexAttributeDesc, MAX_VERTEX_ATTRIBUTES>;
-
 
     struct InputLayoutInterface
     {
@@ -185,9 +184,9 @@ namespace fantasy
         ComparisonFunc depth_func = ComparisonFunc::Less;
         
         bool            enable_stencil = false;
-        uint8_t           stencil_read_mask = 0xff;
-        uint8_t           stencil_write_mask = 0xff;
-        uint8_t           stencil_ref_value = 0;
+        uint8_t         stencil_read_mask = 0xff;
+        uint8_t         stencil_write_mask = 0xff;
+        uint8_t         stencil_ref_value = 0;
         bool            dynamic_stencil_ref = false;
         StencilOPDesc   front_face_stencil;
         StencilOPDesc   back_face_stencil;
@@ -199,14 +198,14 @@ namespace fantasy
     struct ViewportState
     {
         ViewportArray viewports;
-        RectArray rects;
+        RectArray scissor_rects;
 
 
         static ViewportState create_default_viewport(uint32_t width, uint32_t height)
         {
             ViewportState ret;
             ret.viewports.push_back(Viewport{ 0.0f, static_cast<float>(width), 0.0f, static_cast<float>(height), 0.0f, 1.0f });
-            ret.rects.push_back(Rect{ 0, width, 0, height });
+            ret.scissor_rects.push_back(Rect{ 0, width, 0, height });
             return ret;
         }
     };
@@ -231,19 +230,19 @@ namespace fantasy
         RasterState raster_state;
     };
 
-    using BindingLayoutInterfaceArray = StackArray<BindingLayoutInterface*, MAX_BINDING_LAYOUTS>;
+    using BindingLayoutInterfaceArray = StackArray<std::shared_ptr<BindingLayoutInterface>, MAX_BINDING_LAYOUTS>;
     
     struct GraphicsPipelineDesc
     {
-        InputLayoutInterface* input_layout = nullptr;
+        std::shared_ptr<InputLayoutInterface> input_layout;
         PrimitiveType primitive_type = PrimitiveType::TriangleList;
         uint32_t patch_control_points = 0;
 
-        Shader* vertex_shader = nullptr;
-        Shader* hull_shader = nullptr;
-        Shader* domain_shader = nullptr;
-        Shader* geometry_shader = nullptr;
-        Shader* pixel_shader = nullptr;
+        std::shared_ptr<Shader> vertex_shader;
+        std::shared_ptr<Shader> hull_shader;
+        std::shared_ptr<Shader> domain_shader;
+        std::shared_ptr<Shader> geometry_shader;
+        std::shared_ptr<Shader> pixel_shader;
 
         RenderState render_state;
         BindingLayoutInterfaceArray binding_layouts;
@@ -253,7 +252,6 @@ namespace fantasy
     struct GraphicsPipelineInterface : public ResourceInterface
     {
         virtual const GraphicsPipelineDesc& get_desc() const = 0;
-        virtual const FrameBufferInfo& get_frame_buffer_info() const = 0;
         virtual void* get_native_object() = 0;
 
 		virtual ~GraphicsPipelineInterface() = default;
@@ -262,7 +260,7 @@ namespace fantasy
 
     struct ComputePipelineDesc
     {
-        Shader* compute_shader = nullptr;
+        std::shared_ptr<Shader> compute_shader;
         BindingLayoutInterfaceArray binding_layouts;
     };
 
@@ -275,68 +273,7 @@ namespace fantasy
     };
     
 
-    BlendState::RenderTarget Create_render_target_blend(BlendFactor src_blend, BlendFactor dst_blend);
-
-
-
-    namespace ray_tracing
-    {
-        struct ShaderDesc
-        {
-            Shader* shader = nullptr;
-            BindingLayoutInterface* binding_layout = nullptr;
-        };
-
-        struct HitGroupDesc
-        {
-            std::string export_name;
-            Shader* closest_hit_shader = nullptr;
-            Shader* any_hit_shader = nullptr;
-            Shader* intersect_shader = nullptr;
-            BindingLayoutInterface* binding_layout = nullptr;
-            
-            bool is_procedural_primitive = false;
-        };
-
-        struct PipelineDesc
-        {
-            std::vector<ShaderDesc> shader_descs;
-            std::vector<HitGroupDesc> hit_group_descs;
-
-            BindingLayoutInterfaceArray global_binding_layouts;
-            uint32_t max_payload_size = 0;
-            uint32_t max_attribute_size = sizeof(float) * 2;
-            uint32_t max_recursion_depth = 1;
-        };
-
-        
-        struct PipelineInterface : public ResourceInterface
-        {
-            virtual const PipelineDesc& get_desc() const = 0;
-            virtual ShaderTableInterface* create_shader_table() = 0;
-            virtual void* get_native_object() = 0;
-
-            virtual ~PipelineInterface() = default;
-        };
-
-        
-        struct ShaderTableInterface : public ResourceInterface
-        {
-            virtual void set_raygen_shader(const char* name, BindingSetInterface* binding_set = nullptr) = 0;
-
-            virtual int32_t add_miss_shader(const char* name, BindingSetInterface* binding_set = nullptr) = 0;
-            virtual int32_t add_hit_group(const char* name, BindingSetInterface* binding_set = nullptr) = 0;
-            virtual int32_t add_callable_shader(const char* name, BindingSetInterface* binding_set = nullptr) = 0;
-            
-            virtual void clear_miss_shaders() = 0;
-            virtual void clear_hit_groups() = 0;
-            virtual void clear_callable_shaders() = 0;
-
-            virtual PipelineInterface* get_pipeline() const = 0;
-            
-            virtual ~ShaderTableInterface() = default;
-        };
-    }
+    BlendState::RenderTarget create_render_target_blend(BlendFactor src_blend, BlendFactor dst_blend);
 }
     
 

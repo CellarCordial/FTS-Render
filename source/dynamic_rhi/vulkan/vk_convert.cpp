@@ -12,7 +12,7 @@ namespace fantasy
             case SamplerAddressMode::Mirror: return vk::SamplerAddressMode::eMirroredRepeat;
             case SamplerAddressMode::MirrorOnce: return vk::SamplerAddressMode::eMirrorClampToEdge;
             default:
-                assert(false && "Invalid enum.");
+                assert(!"Invalid enum.");
                 return vk::SamplerAddressMode(0);
         }
     }
@@ -34,53 +34,30 @@ namespace fantasy
         return static_cast<vk::PipelineStageFlagBits>(ret);
     }
 
-    vk::ShaderStageFlagBits convert_shader_type_to_shader_stage_flag_bits(ShaderType shaderType)
+    vk::ShaderStageFlagBits convert_shader_type_to_shader_stage_flag_bits(ShaderType shader_type)
     {
-        if (shaderType == ShaderType::All) return vk::ShaderStageFlagBits::eAll;
-        if (shaderType == ShaderType::Graphics) return vk::ShaderStageFlagBits::eAllGraphics;
+        if (shader_type == ShaderType::All) return vk::ShaderStageFlagBits::eAll;
+        if (shader_type == ShaderType::Graphics) return vk::ShaderStageFlagBits::eAllGraphics;
 
         uint32_t ret = 0;
 
-        if ((shaderType & ShaderType::Compute) != 0)        ret |= uint32_t(vk::ShaderStageFlagBits::eCompute);
-        if ((shaderType & ShaderType::Vertex) != 0)         ret |= uint32_t(vk::ShaderStageFlagBits::eVertex);
-        if ((shaderType & ShaderType::Hull) != 0)           ret |= uint32_t(vk::ShaderStageFlagBits::eTessellationControl);
-        if ((shaderType & ShaderType::Domain) != 0)         ret |= uint32_t(vk::ShaderStageFlagBits::eTessellationEvaluation);
-        if ((shaderType & ShaderType::Geometry) != 0)       ret |= uint32_t(vk::ShaderStageFlagBits::eGeometry);
-        if ((shaderType & ShaderType::Pixel) != 0)          ret |= uint32_t(vk::ShaderStageFlagBits::eFragment);
+        if ((shader_type & ShaderType::Compute) != 0)        ret |= uint32_t(vk::ShaderStageFlagBits::eCompute);
+        if ((shader_type & ShaderType::Vertex) != 0)         ret |= uint32_t(vk::ShaderStageFlagBits::eVertex);
+        if ((shader_type & ShaderType::Hull) != 0)           ret |= uint32_t(vk::ShaderStageFlagBits::eTessellationControl);
+        if ((shader_type & ShaderType::Domain) != 0)         ret |= uint32_t(vk::ShaderStageFlagBits::eTessellationEvaluation);
+        if ((shader_type & ShaderType::Geometry) != 0)       ret |= uint32_t(vk::ShaderStageFlagBits::eGeometry);
+        if ((shader_type & ShaderType::Pixel) != 0)          ret |= uint32_t(vk::ShaderStageFlagBits::eFragment);
 
-        if ((shaderType & ShaderType::RayGeneration) != 0)  ret |= uint32_t(vk::ShaderStageFlagBits::eRaygenKHR);
-        if ((shaderType & ShaderType::Miss) != 0)           ret |= uint32_t(vk::ShaderStageFlagBits::eMissKHR);
-        if ((shaderType & ShaderType::ClosestHit) != 0)     ret |= uint32_t(vk::ShaderStageFlagBits::eClosestHitKHR);
-        if ((shaderType & ShaderType::AnyHit) != 0)         ret |= uint32_t(vk::ShaderStageFlagBits::eAnyHitKHR);
-        if ((shaderType & ShaderType::Intersection) != 0)   ret |= uint32_t(vk::ShaderStageFlagBits::eIntersectionKHR);
+        if ((shader_type & ShaderType::RayGeneration) != 0)  ret |= uint32_t(vk::ShaderStageFlagBits::eRaygenKHR);
+        if ((shader_type & ShaderType::Miss) != 0)           ret |= uint32_t(vk::ShaderStageFlagBits::eMissKHR);
+        if ((shader_type & ShaderType::ClosestHit) != 0)     ret |= uint32_t(vk::ShaderStageFlagBits::eClosestHitKHR);
+        if ((shader_type & ShaderType::AnyHit) != 0)         ret |= uint32_t(vk::ShaderStageFlagBits::eAnyHitKHR);
+        if ((shader_type & ShaderType::Intersection) != 0)   ret |= uint32_t(vk::ShaderStageFlagBits::eIntersectionKHR);
 
         return static_cast<vk::ShaderStageFlagBits>(ret);
     }
 
-    struct ResourceStateMappingInternal
-    {
-        ResourceStates nvrhiState;
-        vk::PipelineStageFlags stageFlags;
-        vk::AccessFlags accessMask;
-        vk::ImageLayout imageLayout;
-
-        ResourceStateMapping AsResourceStateMapping() const 
-        {
-            // It's safe to cast vk::AccessFlags2 -> vk::AccessFlags and vk::PipelineStageFlags2 -> vk::PipelineStageFlags (as long as the enum exist in both versions!),
-            // synchronization2 spec says: "The new flags are identical to the old values within the 32-bit range, with new stages and bits beyond that."
-            // The below stages are exclustive to synchronization2
-            assert((stageFlags & vk::PipelineStageFlagBits::eMicromapBuildEXT) != vk::PipelineStageFlagBits::eMicromapBuildEXT);
-            assert((accessMask & vk::AccessFlagBits2::eMicromapWriteEXT) != vk::AccessFlagBits2::eMicromapWriteEXT);
-            return
-                ResourceStateMapping(nvrhiState,
-                    reinterpret_cast<const vk::PipelineStageFlags&>(stageFlags),
-                    reinterpret_cast<const vk::AccessFlags&>(accessMask),
-                    imageLayout
-                );
-        }
-    };
-
-    static const ResourceStateMappingInternal g_ResourceStateMap[] =
+    static const ResourceStateMapping resource_state_map[] =
     {
         { 
             ResourceStates::Common,
@@ -107,19 +84,7 @@ namespace fantasy
             vk::ImageLayout::eUndefined 
         },
         { 
-            ResourceStates::IndirectArgument,
-            vk::PipelineStageFlagBits::eDrawIndirect,
-            vk::AccessFlagBits::eIndirectCommandRead,
-            vk::ImageLayout::eUndefined 
-        },
-        { 
-            ResourceStates::PixelShaderResource,
-            vk::PipelineStageFlagBits::eAllCommands,
-            vk::AccessFlagBits::eShaderRead,
-            vk::ImageLayout::eShaderReadOnlyOptimal 
-        },
-        { 
-            ResourceStates::NonPixelShaderResource,
+            ResourceStates::ShaderResource,
             vk::PipelineStageFlagBits::eAllCommands,
             vk::AccessFlagBits::eShaderRead,
             vk::ImageLayout::eShaderReadOnlyOptimal 
@@ -155,25 +120,13 @@ namespace fantasy
             vk::ImageLayout::eUndefined 
         },
         { 
-            ResourceStates::CopyDest,
+            ResourceStates::CopyDst,
             vk::PipelineStageFlagBits::eTransfer,
             vk::AccessFlagBits::eTransferWrite,
             vk::ImageLayout::eTransferDstOptimal 
         },
         { 
-            ResourceStates::CopySource,
-            vk::PipelineStageFlagBits::eTransfer,
-            vk::AccessFlagBits::eTransferRead,
-            vk::ImageLayout::eTransferSrcOptimal 
-        },
-        { 
-            ResourceStates::ResolveDst,
-            vk::PipelineStageFlagBits::eTransfer,
-            vk::AccessFlagBits::eTransferWrite,
-            vk::ImageLayout::eTransferDstOptimal 
-        },
-        { 
-            ResourceStates::ResolveSrc,
+            ResourceStates::CopySrc,
             vk::PipelineStageFlagBits::eTransfer,
             vk::AccessFlagBits::eTransferRead,
             vk::ImageLayout::eTransferSrcOptimal 
@@ -185,72 +138,70 @@ namespace fantasy
             vk::ImageLayout::ePresentSrcKHR 
         },
         { 
-            ResourceStates::AccelStructRead,
-            vk::PipelineStageFlagBits::eRayTracingShaderKHR | vk::PipelineStageFlagBits::eComputeShader,
-            vk::AccessFlagBits::eAccelerationStructureReadKHR,
-            vk::ImageLayout::eUndefined 
-        },
-        { 
-            ResourceStates::AccelStructWrite,
-            vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR,
-            vk::AccessFlagBits::eAccelerationStructureWriteKHR,
-            vk::ImageLayout::eUndefined 
-        },
-        {
-            ResourceStates::AccelStructBuildInput,
-            vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR,
-            vk::AccessFlagBits::eAccelerationStructureReadKHR,
-            vk::ImageLayout::eUndefined 
-        },
-        { 
-            ResourceStates::AccelStructBuildBlas,
-            vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR,
-            vk::AccessFlagBits::eAccelerationStructureReadKHR,
+            ResourceStates::IndirectArgument,
+            vk::PipelineStageFlagBits::eDrawIndirect,
+            vk::AccessFlagBits::eIndirectCommandRead,
             vk::ImageLayout::eUndefined 
         }
+        // ,
+        // { 
+        //     ResourceStates::AccelStructRead,
+        //     vk::PipelineStageFlagBits::eRayTracingShaderKHR | vk::PipelineStageFlagBits::eComputeShader,
+        //     vk::AccessFlagBits::eAccelerationStructureReadKHR,
+        //     vk::ImageLayout::eUndefined 
+        // },
+        // { 
+        //     ResourceStates::AccelStructWrite,
+        //     vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR,
+        //     vk::AccessFlagBits::eAccelerationStructureWriteKHR,
+        //     vk::ImageLayout::eUndefined 
+        // },
+        // {
+        //     ResourceStates::AccelStructBuildInput,
+        //     vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR,
+        //     vk::AccessFlagBits::eAccelerationStructureReadKHR,
+        //     vk::ImageLayout::eUndefined 
+        // },
+        // { 
+        //     ResourceStates::AccelStructBuildBlas,
+        //     vk::PipelineStageFlagBits::eAccelerationStructureBuildKHR,
+        //     vk::AccessFlagBits::eAccelerationStructureReadKHR,
+        //     vk::ImageLayout::eUndefined 
+        // }
     };
-
-    ResourceStateMappingInternal convertResourceStateInternal(ResourceStates state)
-    {
-        ResourceStateMappingInternal result = {};
-
-        constexpr uint32_t numStateBits = sizeof(g_ResourceStateMap) / sizeof(g_ResourceStateMap[0]);
-
-        uint32_t stateTmp = uint32_t(state);
-        uint32_t bitIndex = 0;
-
-        while (stateTmp != 0 && bitIndex < numStateBits)
-        {
-            uint32_t bit = (1 << bitIndex);
-
-            if (stateTmp & bit)
-            {
-                const ResourceStateMappingInternal& mapping = g_ResourceStateMap[bitIndex];
-
-                assert(uint32_t(mapping.nvrhiState) == bit);
-                assert(result.imageLayout == vk::ImageLayout::eUndefined || mapping.imageLayout == vk::ImageLayout::eUndefined || result.imageLayout == mapping.imageLayout);
-
-                result.nvrhiState = ResourceStates(result.nvrhiState | mapping.nvrhiState);
-                result.accessMask |= mapping.accessMask;
-                result.stageFlags |= mapping.stageFlags;
-                if (mapping.imageLayout != vk::ImageLayout::eUndefined)
-                    result.imageLayout = mapping.imageLayout;
-
-                stateTmp &= ~bit;
-            }
-
-            bitIndex++;
-        }
-
-        assert(result.nvrhiState == state);
-
-        return result;
-    }
 
     ResourceStateMapping convert_resource_state(ResourceStates state)
     {
-        const ResourceStateMappingInternal mapping = convertResourceStateInternal(state);
-        return mapping.AsResourceStateMapping();
+        ResourceStateMapping result{};
+
+        constexpr uint32_t state_bits_count = sizeof(resource_state_map) / sizeof(resource_state_map[0]);
+
+        uint32_t tmp_state = static_cast<uint32_t>(state);
+        uint32_t bit_index = 0;
+
+        while (tmp_state != 0 && bit_index < state_bits_count)
+        {
+            uint32_t bit = (1 << bit_index);
+
+            if (tmp_state & bit)
+            {
+                const ResourceStateMapping& mapping = resource_state_map[bit_index];
+
+                result.state = ResourceStates(result.state | mapping.state);
+                result.vk_access_flags |= mapping.vk_access_flags;
+                result.vk_stage_flags |= mapping.vk_stage_flags;
+                if (mapping.vk_image_layout != vk::ImageLayout::eUndefined)
+                {
+                    result.vk_image_layout = mapping.vk_image_layout;
+                }
+
+                tmp_state &= ~bit;
+            }
+
+            bit_index++;
+        }
+
+        return result;
     }
 
     vk::PrimitiveTopology convert_primitive_topology(PrimitiveType topology)
@@ -265,7 +216,7 @@ namespace fantasy
             case PrimitiveType::TriangleStripWithAdjacency: return vk::PrimitiveTopology::eTriangleStripWithAdjacency;
             case PrimitiveType::PatchList: return vk::PrimitiveTopology::ePatchList;
             default:
-                assert(false && "Invalid enum.");
+                assert(!"Invalid enum.");
                 return vk::PrimitiveTopology::eTriangleList;
         }
     }
@@ -277,7 +228,7 @@ namespace fantasy
             case RasterFillMode::Solid: return vk::PolygonMode::eFill;
             case RasterFillMode::Wireframe: return vk::PolygonMode::eLine;
             default:
-                assert(false && "Invalid enum.");
+                assert(!"Invalid enum.");
                 return vk::PolygonMode::eFill;
         }
     }
@@ -290,7 +241,7 @@ namespace fantasy
             case RasterCullMode::Front: return vk::CullModeFlagBits::eFront;
             case RasterCullMode::None: return vk::CullModeFlagBits::eNone;
             default:
-                assert(false && "Invalid enum.");
+                assert(!"Invalid enum.");
                 return vk::CullModeFlagBits::eNone;
         }
     }
@@ -308,7 +259,7 @@ namespace fantasy
             case ComparisonFunc::GreaterOrEqual: return vk::CompareOp::eGreaterOrEqual;
             case ComparisonFunc::Always: return vk::CompareOp::eAlways;
             default:
-                assert(false && "Invalid enum.");
+                assert(!"Invalid enum.");
                 return vk::CompareOp::eAlways;
         }
     }
@@ -326,7 +277,7 @@ namespace fantasy
             case StencilOP::IncrementAndWrap: return vk::StencilOp::eIncrementAndWrap;
             case StencilOP::DecrementAndWrap: return vk::StencilOp::eDecrementAndWrap;
             default:
-                assert(false && "Invalid enum.");
+                assert(!"Invalid enum.");
                 return vk::StencilOp::eKeep;
         }
     }
@@ -366,7 +317,7 @@ namespace fantasy
             case BlendFactor::Src1Alpha: return vk::BlendFactor::eSrc1Alpha;
             case BlendFactor::InvSrc1Alpha: return vk::BlendFactor::eOneMinusSrc1Alpha;
             default:
-                assert(false && "Invalid enum.");
+                assert(!"Invalid enum.");
                 return vk::BlendFactor::eZero;
         }
     }
@@ -381,7 +332,7 @@ namespace fantasy
             case BlendOP::Min:              return vk::BlendOp::eMin;
             case BlendOP::Max:              return vk::BlendOp::eMax;
 
-            default: assert(false && "Invalid enum."); return vk::BlendOp::eAdd;
+            default: assert(!"Invalid enum."); return vk::BlendOp::eAdd;
         }
     }
 
@@ -434,31 +385,52 @@ namespace fantasy
         return flags;
     }
 
-    vk::ImageType convert_texture_dimension(TextureDimension dimension)
+    vk::ImageType convert_texture_dimension_to_image_type(TextureDimension dimension)
     {
         switch (dimension)
         {
         case TextureDimension::Texture1D:
         case TextureDimension::Texture1DArray:
             return vk::ImageType::e1D;
-
         case TextureDimension::Texture2D:
         case TextureDimension::Texture2DArray:
         case TextureDimension::TextureCube:
         case TextureDimension::TextureCubeArray:
-        case TextureDimension::Texture2DMS:
-        case TextureDimension::Texture2DMSArray:
             return vk::ImageType::e2D;
-
         case TextureDimension::Texture3D:
             return vk::ImageType::e3D;
-
         case TextureDimension::Unknown:
         default:
-            assert(false && "Invalid enum.");
+            assert(!"Invalid enum.");
             return vk::ImageType::e2D;
         }
     }
+
+    vk::ImageViewType convert_texture_dimension_to_image_view_type(TextureDimension dimension)
+    {
+        switch (dimension)
+        {
+        case TextureDimension::Texture1D:
+            return vk::ImageViewType::e1D;
+        case TextureDimension::Texture1DArray:
+            return vk::ImageViewType::e1DArray;
+        case TextureDimension::Texture2D:
+            return vk::ImageViewType::e2D;
+        case TextureDimension::Texture2DArray:
+            return vk::ImageViewType::e2DArray;
+        case TextureDimension::TextureCube:
+            return vk::ImageViewType::eCube;
+        case TextureDimension::TextureCubeArray:
+            return vk::ImageViewType::eCubeArray;
+        case TextureDimension::Texture3D:
+            return vk::ImageViewType::e3D;
+        case TextureDimension::Unknown:
+        default:
+            assert(!"Invalid enum.");
+            return vk::ImageViewType::e2D;
+        }
+    }
+
 
     vk::ImageUsageFlags get_image_usage_flag(const TextureDesc& desc)
     {
@@ -467,17 +439,10 @@ namespace fantasy
         vk::ImageUsageFlags ret = vk::ImageUsageFlagBits::eTransferSrc |
                                   vk::ImageUsageFlagBits::eTransferDst;
         
-        if (desc.is_shader_resource) ret |= vk::ImageUsageFlagBits::eSampled;
-
-        if (desc.is_render_target)
-        {
-            if (format_info.has_depth || format_info.has_stencil)
-                ret |= vk::ImageUsageFlagBits::eDepthStencilAttachment;
-            else 
-                ret |= vk::ImageUsageFlagBits::eColorAttachment;
-        }
-
-        if (desc.is_uav) ret |= vk::ImageUsageFlagBits::eStorage;
+        if (desc.allow_shader_resource) ret |= vk::ImageUsageFlagBits::eSampled;
+        if (desc.allow_render_target) ret |= vk::ImageUsageFlagBits::eColorAttachment;
+        if (desc.allow_depth_stencil) ret |= vk::ImageUsageFlagBits::eDepthStencilAttachment;
+        if (desc.allow_unordered_access) ret |= vk::ImageUsageFlagBits::eStorage;
 
         return ret;
     }
@@ -494,22 +459,122 @@ namespace fantasy
             case 32: return vk::SampleCountFlagBits::e32;
             case 64: return vk::SampleCountFlagBits::e64;
             default:
-                assert(false && "Invalid enum.");
+                assert(!"Invalid enum.");
                 return vk::SampleCountFlagBits::e1;
         }
     }
 
-    vk::ImageCreateFlags get_image_create_flag(const TextureDesc& desc)
+    vk::ImageCreateFlags get_image_create_flag(TextureDimension dimension)
     {
-        vk::ImageCreateFlags flags = vk::ImageCreateFlags(0);
+        vk::ImageCreateFlags flags = vk::ImageCreateFlags();
 
         if (
-            desc.dimension == TextureDimension::TextureCube || 
-            desc.dimension == TextureDimension::TextureCubeArray
+            dimension == TextureDimension::TextureCube || 
+            dimension == TextureDimension::TextureCubeArray
         )
             flags |= vk::ImageCreateFlagBits::eCubeCompatible;
 
         return flags;
+    }
+
+    vk::ImageCreateInfo convert_image_info(const TextureDesc& desc)
+    {
+        vk::ImageCreateInfo ret{};
+        ret.pNext = nullptr;
+        ret.flags = get_image_create_flag(desc.dimension);
+        ret.imageType = convert_texture_dimension_to_image_type(desc.dimension);
+        ret.format = convert_format(desc.format);
+        ret.extent = vk::Extent3D(desc.width, desc.height, desc.depth);
+        ret.mipLevels = desc.mip_levels;
+        ret.arrayLayers = desc.array_size;
+        ret.samples = get_sample_count_flag(1);
+        ret.tiling = vk::ImageTiling::eOptimal;
+        ret.usage = get_image_usage_flag(desc);
+        ret.sharingMode = vk::SharingMode::eExclusive;
+        ret.queueFamilyIndexCount = 0;
+        ret.pQueueFamilyIndices = nullptr;
+        ret.initialLayout = vk::ImageLayout::eUndefined;
+        return ret;
+    }
+
+    vk::BufferCreateInfo convert_buffer_info(const BufferDesc& desc)
+    {
+        vk::BufferUsageFlags usage_flags = vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
+        if (desc.struct_stride != 0 || desc.allow_unordered_access) usage_flags |= vk::BufferUsageFlagBits::eStorageBuffer;
+        if (desc.is_vertex_buffer) usage_flags |= vk::BufferUsageFlagBits::eVertexBuffer;
+        if (desc.is_index_buffer) usage_flags |= vk::BufferUsageFlagBits::eIndexBuffer;
+        if (desc.is_indirect_buffer) usage_flags |= vk::BufferUsageFlagBits::eIndirectBuffer;
+        if (desc.is_constant_buffer) usage_flags |= vk::BufferUsageFlagBits::eUniformBuffer;
+        // if (desc.is_accel_struct_storage) usage_flags |= vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR;
+        // if (desc.is_shader_binding_table) usage_flags |= vk::BufferUsageFlagBits::eShaderBindingTableKHR;
+
+        vk::BufferCreateInfo ret{};
+        ret.pNext = nullptr;
+        ret.flags = vk::BufferCreateFlags();
+        ret.size = desc.byte_size;
+        ret.usage = usage_flags;
+        ret.sharingMode = vk::SharingMode::eExclusive;
+        ret.queueFamilyIndexCount = 0;
+        ret.pQueueFamilyIndices = nullptr;
+        
+        return ret;
+    }
+
+
+    vk::BufferUsageFlags get_buffer_usage(const BufferDesc& desc)
+    {
+        vk::BufferUsageFlags usage_flags;
+
+        return usage_flags;
+    }
+
+    vk::SamplerCreateInfo convert_sampler_info(const SamplerDesc& desc)
+    {
+        vk::BorderColor border_color;
+        if (desc.border_color.r == 0.f && desc.border_color.g == 0.f && desc.border_color.b == 0.f)
+        {
+            if (desc.border_color.a == 0.f) border_color = vk::BorderColor::eFloatTransparentBlack;
+            if (desc.border_color.a == 1.f) border_color = vk::BorderColor::eFloatOpaqueBlack;
+        }
+        else if (desc.border_color.r == 1.f && desc.border_color.g == 1.f && desc.border_color.b == 1.f)
+        {
+            if (desc.border_color.a == 1.f) border_color = vk::BorderColor::eFloatOpaqueWhite;
+        }
+        else 
+        {
+            LOG_ERROR("Sampler border color not supported.");
+            return vk::SamplerCreateInfo{};
+        }
+
+        bool anisotropy_enable = desc.max_anisotropy > 1.0f;
+
+        vk::SamplerCreateInfo ret;
+
+        ret = vk::SamplerCreateInfo();
+        ret.magFilter = desc.max_filter ? vk::Filter::eLinear : vk::Filter::eNearest;
+        ret.minFilter = desc.min_filter ? vk::Filter::eLinear : vk::Filter::eNearest;
+        ret.mipmapMode = desc.mip_filter ? vk::SamplerMipmapMode::eLinear : vk::SamplerMipmapMode::eNearest;
+        ret.addressModeU = convert_sampler_address_mode(desc.address_u);
+        ret.addressModeV = convert_sampler_address_mode(desc.address_v);
+        ret.addressModeW = convert_sampler_address_mode(desc.address_w);
+        ret.mipLodBias = desc.mip_bias;
+        ret.anisotropyEnable = anisotropy_enable;
+        ret.maxAnisotropy = anisotropy_enable ? desc.max_anisotropy : 1.f;
+        ret.compareEnable = desc.reduction_type == SamplerReductionType::Comparison;
+        ret.compareOp = vk::CompareOp::eLess;
+        ret.minLod = 0.f;
+        ret.maxLod = std::numeric_limits<float>::max();
+        ret.borderColor = border_color;
+
+        vk::SamplerReductionModeCreateInfoEXT sampler_reduction_create_info;
+        if (desc.reduction_type == SamplerReductionType::Minimum || desc.reduction_type == SamplerReductionType::Maximum)
+        {
+            sampler_reduction_create_info.reductionMode = desc.reduction_type == SamplerReductionType::Maximum ? 
+                                                         vk::SamplerReductionModeEXT::eMax : vk::SamplerReductionModeEXT::eMin;
+
+            ret.pNext = &sampler_reduction_create_info;
+        }
+        return ret;
     }
 
 
@@ -574,28 +639,14 @@ namespace fantasy
         { Format::X24G8_UINT,        VK_FORMAT_D24_UNORM_S8_UINT        },
         { Format::D32,               VK_FORMAT_D32_SFLOAT               },
         { Format::D32S8,             VK_FORMAT_D32_SFLOAT_S8_UINT       },
-        { Format::X32G8_UINT,        VK_FORMAT_D32_SFLOAT_S8_UINT       },
-        { Format::BC1_UNORM,         VK_FORMAT_BC1_RGBA_UNORM_BLOCK     },
-        { Format::BC1_UNORM_SRGB,    VK_FORMAT_BC1_RGBA_SRGB_BLOCK      },
-        { Format::BC2_UNORM,         VK_FORMAT_BC2_UNORM_BLOCK          },
-        { Format::BC2_UNORM_SRGB,    VK_FORMAT_BC2_SRGB_BLOCK           },
-        { Format::BC3_UNORM,         VK_FORMAT_BC3_UNORM_BLOCK          },
-        { Format::BC3_UNORM_SRGB,    VK_FORMAT_BC3_SRGB_BLOCK           },
-        { Format::BC4_UNORM,         VK_FORMAT_BC4_UNORM_BLOCK          },
-        { Format::BC4_SNORM,         VK_FORMAT_BC4_SNORM_BLOCK          },
-        { Format::BC5_UNORM,         VK_FORMAT_BC5_UNORM_BLOCK          },
-        { Format::BC5_SNORM,         VK_FORMAT_BC5_SNORM_BLOCK          },
-        { Format::BC6H_UFLOAT,       VK_FORMAT_BC6H_UFLOAT_BLOCK        },
-        { Format::BC6H_SFLOAT,       VK_FORMAT_BC6H_SFLOAT_BLOCK        },
-        { Format::BC7_UNORM,         VK_FORMAT_BC7_UNORM_BLOCK          },
-        { Format::BC7_UNORM_SRGB,    VK_FORMAT_BC7_SRGB_BLOCK           },
+        { Format::X32G8_UINT,        VK_FORMAT_D32_SFLOAT_S8_UINT       }
     }};
 
-    VkFormat convert_format(Format format)
+    vk::Format convert_format(Format format)
     {
         assert(format < Format::NUM);
         assert(c_FormatMap[uint32_t(format)].rhiFormat == format);
 
-        return format_map[uint32_t(format)].vk_format;
+        return static_cast<vk::Format>(format_map[uint32_t(format)].vk_format);
     }
 }

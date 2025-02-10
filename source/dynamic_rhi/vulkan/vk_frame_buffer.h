@@ -3,28 +3,29 @@
 
 #include "../frame_buffer.h"
 #include "vk_forward.h"
+#include <memory>
 
 namespace fantasy 
 {
     class VKFrameBuffer : public FrameBufferInterface
     {
     public:
-        explicit VKFrameBuffer(const VKContext* context)
-            : _context(context)
-        { }
-
+        explicit VKFrameBuffer(const VKContext* context, const FrameBufferDesc& desc);
         ~VKFrameBuffer() override;
-        const FrameBufferDesc& get_desc() const override { return desc; }
+
+        bool initialize();
+
+        const FrameBufferDesc& get_desc() const override;
         const FrameBufferInfo& get_info() const override;
 
     public:
         FrameBufferDesc desc;
-        FrameBufferInfo frame_buffer_info;
+        FrameBufferInfo info;
         
-        vk::RenderPass render_pass = vk::RenderPass();
-        vk::Framebuffer frame_buffer = vk::Framebuffer();
+        vk::RenderPass vk_render_pass;
+        vk::Framebuffer vk_frame_buffer;
 
-        std::vector<ResourceInterface> resources;
+        std::vector<std::shared_ptr<ResourceInterface>> ref_resources;
 
         bool managed = true;
 

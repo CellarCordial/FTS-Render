@@ -1,5 +1,5 @@
-﻿#ifndef RHI_H
-#define RHI_H
+﻿#ifndef DYNAMIC_RHI_FORMAT_H
+#define DYNAMIC_RHI_FORMAT_H
 
 #include <stdint.h>
 
@@ -64,21 +64,6 @@ namespace fantasy
         D32S8,
         X32G8_UINT,
 
-        BC1_UNORM,
-        BC1_UNORM_SRGB,
-        BC2_UNORM,
-        BC2_UNORM_SRGB,
-        BC3_UNORM,
-        BC3_UNORM_SRGB,
-        BC4_UNORM,
-        BC4_SNORM,
-        BC5_UNORM,
-        BC5_SNORM,
-        BC6H_UFLOAT,
-        BC6H_SFLOAT,
-        BC7_UNORM,
-        BC7_UNORM_SRGB,
-
         NUM,
     };
 
@@ -94,8 +79,7 @@ namespace fantasy
     {
         Format format;
         const char* name;
-        uint8_t byte_size_per_pixel;
-        uint8_t size_per_block;
+        uint8_t size;
         FormatKind format_kind;
         bool has_red : 1;
         bool has_green : 1;

@@ -88,7 +88,7 @@ namespace fantasy
             case 3: // Bottom Right
                 return Bounds2F(origin + child_size, child_size);
             default:
-                assert(false && "Invalid child index");
+                assert(!"Invalid child index");
                 return Bounds2F();
             }
         }

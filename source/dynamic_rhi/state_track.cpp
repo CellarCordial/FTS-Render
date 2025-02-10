@@ -21,13 +21,13 @@ namespace fantasy
         pStatesTrack->first_uav_barrier_placed = false;
     }
 
-    ResourceStates ResourceStateTracker::get_texture_subresource_state(TextureInterface* texture, uint32_t array_slice, uint32_t mip_level)
+    ResourceStates ResourceStateTracker::get_texture_state(TextureInterface* texture, uint32_t array_slice, uint32_t mip_level)
     {
         auto pTracking = get_texture_state_track(texture);
 
         TextureDesc TextureDesc = texture->get_desc();
 
-        uint32_t dwSubresourceIndex = calculate_texture_subresource(mip_level, array_slice, TextureDesc);
+        uint32_t dwSubresourceIndex = calculate_texture_subresource(mip_level, array_slice, TextureDesc.mip_levels);
         return pTracking->subresource_states[dwSubresourceIndex];
     }
 
@@ -36,13 +36,12 @@ namespace fantasy
         return get_buffer_state_track(buffer)->state;
     }
 
-    bool ResourceStateTracker::set_texture_state(TextureInterface* texture, const TextureSubresourceSet& subresource_set, ResourceStates state)
+    void ResourceStateTracker::set_texture_state(TextureInterface* texture, const TextureSubresourceSet& subresource_set, ResourceStates state)
     {
         TextureDesc desc = texture->get_desc();
-        TextureSubresourceSet resolved_subresource_set = subresource_set.resolve(desc, false);
 
         TextureState* pTrackState = get_texture_state_track(texture);
-        if (resolved_subresource_set.is_entire_texture(desc) && pTrackState->subresource_states.size() == 1)
+        if (subresource_set.is_entire_texture(desc) && pTrackState->subresource_states.size() == 1)
         {
             bool bIsTransitionNecessary = pTrackState->state != state;
             bool bIsUavNecessary = ((state & ResourceStates::UnorderedAccess) == ResourceStates::UnorderedAccess) &&
@@ -67,11 +66,11 @@ namespace fantasy
         else 
         {
             bool bAnyUavBarrier = false;
-            for (uint32_t dwArraySliceIndex = resolved_subresource_set.base_array_slice; dwArraySliceIndex < resolved_subresource_set.base_array_slice + resolved_subresource_set.array_slice_count; ++dwArraySliceIndex)
+            for (uint32_t dwArraySliceIndex = subresource_set.base_array_slice; dwArraySliceIndex < subresource_set.base_array_slice + subresource_set.array_slice_count; ++dwArraySliceIndex)
             {
-                for (uint32_t dwMipLevelIndex = resolved_subresource_set.base_mip_level; dwMipLevelIndex < resolved_subresource_set.base_mip_level + resolved_subresource_set.mip_level_count; ++dwMipLevelIndex)
+                for (uint32_t dwMipLevelIndex = subresource_set.base_mip_level; dwMipLevelIndex < subresource_set.base_mip_level + subresource_set.mip_level_count; ++dwMipLevelIndex)
                 {
-                    uint32_t dwSubresourceIndex = calculate_texture_subresource(dwMipLevelIndex, dwArraySliceIndex, desc);
+                    uint32_t dwSubresourceIndex = calculate_texture_subresource(dwMipLevelIndex, dwArraySliceIndex, desc.mip_levels);
                     ResourceStates PriorState = pTrackState->subresource_states[dwSubresourceIndex];
                     
                     bool bIsTransitionNecessary = PriorState != state;
@@ -102,24 +101,23 @@ namespace fantasy
                 }
             }
         }
-        return true;
     }
     
-    bool ResourceStateTracker::set_buffer_state(BufferInterface* buffer, ResourceStates state)
+    void ResourceStateTracker::set_buffer_state(BufferInterface* buffer, ResourceStates state)
     {
         BufferDesc desc = buffer->get_desc();
 
         // CPU-visible buffers 不能改变 state
-        if (desc.is_volatile || desc.cpu_access != CpuAccessMode::None)
+        if (desc.is_volatile_constant_buffer || desc.cpu_access != CpuAccessMode::None)
         {
             if (get_buffer_state_track(buffer)->state == state)
             {
-                return true;
+                return;
             }
             else
             {
 				LOG_ERROR("CPU-visible buffers can't change state.");
-				return false;
+				return;
             }
         }
 
@@ -156,7 +154,6 @@ namespace fantasy
         }
 
         pTrack->state = state;
-		return true;
 	}
 
     
@@ -186,7 +183,7 @@ namespace fantasy
         _texture_states.insert(std::make_pair(texture, std::move(pTrack)));
         
         TextureDesc desc = texture->get_desc();
-        pTextureStateTrack->state = desc.initial_state;
+        // pTextureStateTrack->state = desc.initial_state;
         pTextureStateTrack->subresource_states.resize(static_cast<size_t>(desc.mip_levels * desc.array_size), pTextureStateTrack->state);
 
         return pTextureStateTrack;
@@ -202,7 +199,7 @@ namespace fantasy
         _buffer_states.insert(std::make_pair(buffer, std::move(pTrack)));
         
         BufferDesc desc = buffer->get_desc();
-        pBufferStateTrack->state = desc.initial_state;
+        // pBufferStateTrack->state = desc.initial_state;
 
         return pBufferStateTrack;
     }

@@ -204,7 +204,7 @@ namespace fantasy
 		}
 		else
 		{
-			uint32_t dwPixelSize = get_format_info(Format::R32_FLOAT).byte_size_per_pixel;
+			uint32_t dwPixelSize = get_format_info(Format::R32_FLOAT).size;
 			ReturnIfFalse(cmdlist->write_texture(
 				_sdf_output_texture.get(),
 				0,

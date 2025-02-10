@@ -169,7 +169,7 @@ namespace fantasy
                         )
                     )));
                     ReturnIfFalse(surface_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-                        TextureDesc::create_depth(
+                        TextureDesc::create_depth_stencil(
                             SURFACE_RESOLUTION, 
                             SURFACE_RESOLUTION, 
                             Format::D32,
@@ -228,7 +228,7 @@ namespace fantasy
                 float mesh_extent = 2.0f * submesh.bounding_sphere.radius;
                 float viewport_size = 3 * mesh_extent;
                 _graphics_state.viewport_state.viewports.push_back(Viewport{ 0.0f, viewport_size, 0.0f, viewport_size, 0.0f, 1.0f });
-                _graphics_state.viewport_state.rects.push_back(Rect{ 0, static_cast<uint32_t>(viewport_size), 0, static_cast<uint32_t>(viewport_size) });
+                _graphics_state.viewport_state.scissor_rects.push_back(Rect{ 0, static_cast<uint32_t>(viewport_size), 0, static_cast<uint32_t>(viewport_size) });
 
                 _pass_constant.view_proj = mul(
                     look_at_left_hand(float3(0.0f), float3(0.0, 0.0f, 1.0f), float3(0.0f, 1.0f, 0.0f)),

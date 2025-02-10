@@ -2,22 +2,13 @@
 #define RHI_DRAW_H
 
 #include "forward.h"
+#include "frame_buffer.h"
 #include "pipeline.h"
 #include "resource.h"
 #include <memory>
 
 namespace fantasy
 {
-    struct TimerQueryInterface 
-    {
-        virtual ~TimerQueryInterface() = default;
-    };
-
-    struct EventQueryInterface 
-    {
-        virtual ~EventQueryInterface() = default;
-    };
-
     struct VertexBufferBinding
     {
         std::shared_ptr<BufferInterface> buffer;
@@ -122,22 +113,6 @@ namespace fantasy
 
         BufferInterface* indirect_buffer = nullptr;
     };
-
-    namespace ray_tracing 
-    {
-        struct PipelineState
-        {
-            ShaderTableInterface* shader_table = nullptr;
-            PipelineStateBindingSetArray binding_sets;
-        };
-
-        struct DispatchRaysArguments
-        {
-            uint32_t width = 1;	
-            uint32_t height = 1;
-            uint32_t depth = 1;
-        };
-    }
 }
 
 

@@ -150,7 +150,7 @@ namespace fantasy
 				)
 			)));
             ReturnIfFalse(_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-                TextureDesc::create_depth(
+                TextureDesc::create_depth_stencil(
                     CLIENT_WIDTH, 
                     CLIENT_HEIGHT, 
                     Format::D32,

@@ -3,6 +3,7 @@
 
 #include <limits>
 #include <stdint.h>
+#include <cassert>
 
 namespace fantasy 
 {
@@ -141,6 +142,39 @@ inline bool operator!=(T a, uint32_t b) { return uint32_t(a) != b; }
         y = -((x >> t) != 0 ? 1 : 0), res += y & t, x >>= y & t, t >>= 1;
         y = (x >> t) != 0 ? 1 : 0, res += y;
         return res;
+    }
+
+    template<typename T, typename U> 
+    inline uint32_t find_array_different_bits(const T& array0, uint32_t size0, const U& array1, uint32_t size1)
+    {
+        assert(size0 <= 32);
+        assert(size1 <= 32);
+
+        if (size0 != size1) return ~0u;
+
+        uint32_t mask = 0;
+        for (uint32_t i = 0; i < size0; i++)
+        {
+            if (array0[i] != array1[i]) mask |= (1 << i);
+        }
+
+        return mask;
+    }
+
+    template <class T>
+    concept StackArrayType =requires(T t) { t.size(); t[0]; };
+
+    template <class StackArrayType>
+    inline bool is_same_arrays(const StackArrayType& array0, const StackArrayType& array1)
+    {
+        if (array0.size() != array1.size()) return false;
+        
+        for (uint32_t ix = 0; ix < array0.size(); ++ix)
+        {
+            if (array0[ix] != (array1[ix])) return false;
+        }
+        
+        return true;
     }
 
 }

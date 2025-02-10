@@ -24,7 +24,7 @@ namespace fantasy
 			if (card_resolution == CARD_RESOLUTION && surface_resolution == SURFACE_RESOLUTION)
 			{
 				FormatInfo FormaInfo = get_format_info(surface_cache->format);
-				uint64_t data_size = static_cast<uint64_t>(SURFACE_RESOLUTION) * SURFACE_RESOLUTION * FormaInfo.byte_size_per_pixel;
+				uint64_t data_size = static_cast<uint64_t>(SURFACE_RESOLUTION) * SURFACE_RESOLUTION * FormaInfo.size;
 
 				for (uint32_t ix = 0; ix < surface_cache->mesh_surface_caches.size(); ++ix)
 				{

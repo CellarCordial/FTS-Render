@@ -26,7 +26,7 @@ namespace fantasy
                 _resource_names[check_cast<SamplerInterface>(resource)->get_desc().name] = ResourceData{ .resource = resource };
                 break;
             default:
-                assert(false && "invalid render resource type.");
+                assert(!"invalid render resource type.");
         }
     }
 

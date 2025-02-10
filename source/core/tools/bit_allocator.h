@@ -12,7 +12,7 @@ namespace fantasy
     class BitSetAllocator
     {
     public:
-        BitSetAllocator(uint64_t size, bool multi_thread);
+        BitSetAllocator(uint64_t size, bool multi_thread = true);
 
         uint32_t allocate();
         bool release(uint32_t index);

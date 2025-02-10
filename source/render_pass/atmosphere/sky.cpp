@@ -49,7 +49,7 @@ namespace fantasy
 		// Texture.
 		{
 			ReturnIfFalse(_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_depth(CLIENT_WIDTH, CLIENT_HEIGHT, Format::D32, "DepthTexture")
+				TextureDesc::create_depth_stencil(CLIENT_WIDTH, CLIENT_HEIGHT, Format::D32, "DepthTexture")
 			)));
 			cache->collect(_depth_texture, ResourceType::Texture);
 		}

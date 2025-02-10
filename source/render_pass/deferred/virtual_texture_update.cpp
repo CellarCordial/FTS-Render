@@ -250,7 +250,7 @@ namespace fantasy
 			0, 
 			0, 
 			reinterpret_cast<uint8_t*>(_vt_indirect_table.get_data()), 
-			get_format_info(desc.format).byte_size_per_pixel * desc.width
+			get_format_info(desc.format).size * desc.width
 		));
 
 		uint2 thread_group_num = {
