@@ -4,6 +4,8 @@
 #include <d3d12.h>
 #include "imgui_file_browser.h"
 #include <imgui_notify.h>
+#include "../dynamic_rhi/dx12/dx12_device.h"
+#include "../core/tools/check_cast.h"
 
 namespace fantasy 
 {
@@ -25,8 +27,9 @@ namespace fantasy
 
             ImGui_ImplGlfw_InitForOther(window, true);
 
-            ID3D12DescriptorHeap* srv_font_descriptor_heap = 
-                reinterpret_cast<ID3D12DescriptorHeap*>(device->get_native_descriptor_heap(DescriptorHeapType::ShaderResourceView));
+            ID3D12DescriptorHeap* srv_font_descriptor_heap = reinterpret_cast<ID3D12DescriptorHeap*>(
+                check_cast<DX12Device*>(device)->descriptor_manager.shader_resource_heap.get_shader_visible_heap()
+            );
 
             ImGui_ImplDX12_Init(
                 reinterpret_cast<ID3D12Device*>(device->get_native_object()), 

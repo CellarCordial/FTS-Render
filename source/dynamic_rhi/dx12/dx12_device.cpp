@@ -23,8 +23,8 @@
 namespace fantasy
 {
 
-    DX12Device::DX12Device(const DX12DeviceDesc& desc) : 
-        _descriptor_manager(&_context), _desc(desc)
+    DX12Device::DX12Device(const DX12DeviceDesc& desc_) : 
+        descriptor_manager(&context), desc(desc_)
     {
     }
 
@@ -36,22 +36,22 @@ namespace fantasy
 
     bool DX12Device::initialize()
     {
-        _context.device = _desc.d3d12_device;
+        context.device = desc.d3d12_device;
 
         D3D12_FEATURE_DATA_D3D12_OPTIONS5 feature_support_data{};
-        _context.device->CheckFeatureSupport(
+        context.device->CheckFeatureSupport(
             D3D12_FEATURE_D3D12_OPTIONS5, 
             &feature_support_data, 
             sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS5)
         );
         if (feature_support_data.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED) 
-            _desc.d3d12_device->QueryInterface(_context.device5.GetAddressOf());
+            desc.d3d12_device->QueryInterface(context.device5.GetAddressOf());
 
 
-        if (_desc.d3d12_graphics_cmd_queue) _cmd_queues[static_cast<uint8_t>(CommandQueueType::Graphics)] = 
-            std::make_unique<DX12CommandQueue>(&_context, CommandQueueType::Graphics, _desc.d3d12_graphics_cmd_queue);
-        if (_desc.d3d12_compute_cmd_queue) _cmd_queues[static_cast<uint8_t>(CommandQueueType::Compute)] = 
-            std::make_unique<DX12CommandQueue>(&_context, CommandQueueType::Compute, _desc.d3d12_compute_cmd_queue);
+        if (desc.d3d12_graphics_cmd_queue) cmd_queues[static_cast<uint8_t>(CommandQueueType::Graphics)] = 
+            std::make_unique<DX12CommandQueue>(&context, CommandQueueType::Graphics, desc.d3d12_graphics_cmd_queue);
+        if (desc.d3d12_compute_cmd_queue) cmd_queues[static_cast<uint8_t>(CommandQueueType::Compute)] = 
+            std::make_unique<DX12CommandQueue>(&context, CommandQueueType::Compute, desc.d3d12_compute_cmd_queue);
 
         
         D3D12_INDIRECT_ARGUMENT_DESC d3d12_indirect_argument_desc{};
@@ -61,32 +61,32 @@ namespace fantasy
 
         d3d12_command_signature_desc.ByteStride = 16;
         d3d12_indirect_argument_desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
-        _context.device->CreateCommandSignature(
+        context.device->CreateCommandSignature(
             &d3d12_command_signature_desc, 
             nullptr, 
-            IID_PPV_ARGS(&_context.draw_indirect_signature)
+            IID_PPV_ARGS(&context.draw_indirect_signature)
         );
 
         d3d12_command_signature_desc.ByteStride = 20;
         d3d12_indirect_argument_desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
-        _context.device->CreateCommandSignature(
+        context.device->CreateCommandSignature(
             &d3d12_command_signature_desc, 
             nullptr, 
-            IID_PPV_ARGS(&_context.draw_indexed_indirect_signature)
+            IID_PPV_ARGS(&context.draw_indexed_indirect_signature)
         );
 
         d3d12_command_signature_desc.ByteStride = 12;
         d3d12_indirect_argument_desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
-        _context.device->CreateCommandSignature(
+        context.device->CreateCommandSignature(
             &d3d12_command_signature_desc, 
             nullptr, 
-            IID_PPV_ARGS(&_context.dispatch_indirect_signature)
+            IID_PPV_ARGS(&context.dispatch_indirect_signature)
         );
 
-        _descriptor_manager.render_target_heap.initialize();
-        _descriptor_manager.depth_stencil_heap.initialize();
-        _descriptor_manager.shader_resource_heap.initialize();
-        _descriptor_manager.sampler_heap.initialize();
+        descriptor_manager.render_target_heap.initialize();
+        descriptor_manager.depth_stencil_heap.initialize();
+        descriptor_manager.shader_resource_heap.initialize();
+        descriptor_manager.sampler_heap.initialize();
 
          return true;
     }
@@ -94,7 +94,7 @@ namespace fantasy
 
     HeapInterface* DX12Device::create_heap(const HeapDesc& desc)
     {
-        DX12Heap* heap = new DX12Heap(&_context, desc);
+        DX12Heap* heap = new DX12Heap(&context, desc);
         if (!heap->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_heap failed.");
@@ -106,7 +106,7 @@ namespace fantasy
 
     TextureInterface* DX12Device::create_texture(const TextureDesc& desc)
     {
-        DX12Texture* texture = new DX12Texture(&_context, &_descriptor_manager, desc);
+        DX12Texture* texture = new DX12Texture(&context, &descriptor_manager, desc);
         if (!texture->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_texture failed.");
@@ -124,8 +124,8 @@ namespace fantasy
             return nullptr;
         }
 
-        DX12StagingTexture* staging_texture = new DX12StagingTexture(&_context, desc, cpu_access);
-        if (!staging_texture->initialize(&_descriptor_manager))
+        DX12StagingTexture* staging_texture = new DX12StagingTexture(&context, desc, cpu_access);
+        if (!staging_texture->initialize(&descriptor_manager))
         {
             LOG_ERROR("Call to DeviceInterface::create_staging_texture failed.");
             delete staging_texture;
@@ -136,7 +136,7 @@ namespace fantasy
     
     BufferInterface* DX12Device::create_buffer(const BufferDesc& desc)
     {
-        DX12Buffer* buffer = new DX12Buffer(&_context, &_descriptor_manager, desc);
+        DX12Buffer* buffer = new DX12Buffer(&context, &descriptor_manager, desc);
         if (!buffer->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_buffer failed.");
@@ -148,21 +148,21 @@ namespace fantasy
 
     TextureInterface* DX12Device::create_texture_from_native(void* native_texture, const TextureDesc& desc)
     {
-        DX12Texture* texture = new DX12Texture(&_context, &_descriptor_manager, desc);
+        DX12Texture* texture = new DX12Texture(&context, &descriptor_manager, desc);
         texture->d3d12_resource = static_cast<ID3D12Resource*>(native_texture);
         return texture;
     }
 
     BufferInterface* DX12Device::create_buffer_from_native(void* native_buffer, const BufferDesc& desc)
     {
-        DX12Buffer* buffer = new DX12Buffer(&_context, &_descriptor_manager, desc);
+        DX12Buffer* buffer = new DX12Buffer(&context, &descriptor_manager, desc);
         buffer->d3d12_resource = static_cast<ID3D12Resource*>(native_buffer);
         return buffer;
     }
 
     SamplerInterface* DX12Device::create_sampler(const SamplerDesc& desc)
     {
-        DX12Sampler* sampler = new DX12Sampler(&_context, desc);
+        DX12Sampler* sampler = new DX12Sampler(&context, desc);
         if (!sampler->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_sampler failed.");
@@ -182,7 +182,7 @@ namespace fantasy
 
         // pVertexShader 在 dx12 中不会用到.
 
-        DX12InputLayout* input_layout = new DX12InputLayout(&_context);
+        DX12InputLayout* input_layout = new DX12InputLayout(&context);
         if (!input_layout->initialize(Attributes))
         {
             LOG_ERROR("Call to DeviceInterface::create_input_layout failed.");
@@ -199,13 +199,13 @@ namespace fantasy
 
     void* DX12Device::get_native_object() const
     {
-        return static_cast<void*>(_desc.d3d12_device.Get());
+        return static_cast<void*>(desc.d3d12_device.Get());
     }
 
     
     FrameBufferInterface* DX12Device::create_frame_buffer(const FrameBufferDesc& desc)
     {
-        DX12FrameBuffer* frame_buffer = new DX12FrameBuffer(&_context, &_descriptor_manager, desc);
+        DX12FrameBuffer* frame_buffer = new DX12FrameBuffer(&context, &descriptor_manager, desc);
         if (!frame_buffer->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_frame_buffer failed.");
@@ -217,7 +217,7 @@ namespace fantasy
 
     GraphicsPipelineInterface* DX12Device::create_graphics_pipeline(const GraphicsPipelineDesc& desc, FrameBufferInterface* frame_buffer)
     {
-        DX12GraphicsPipeline* graphics_pipeline = new DX12GraphicsPipeline(&_context, desc);
+        DX12GraphicsPipeline* graphics_pipeline = new DX12GraphicsPipeline(&context, desc);
         if (!graphics_pipeline->initialize(frame_buffer->get_info()))
         {
             LOG_ERROR("Call to DeviceInterface::create_graphics_pipeline failed.");
@@ -229,7 +229,7 @@ namespace fantasy
 
     ComputePipelineInterface* DX12Device::create_compute_pipeline(const ComputePipelineDesc& desc)
     {
-        DX12ComputePipeline* compute_pipeline = new DX12ComputePipeline(&_context, desc);
+        DX12ComputePipeline* compute_pipeline = new DX12ComputePipeline(&context, desc);
         if (!compute_pipeline->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_compute_pipeline failed.");
@@ -241,7 +241,7 @@ namespace fantasy
 
     BindingLayoutInterface* DX12Device::create_binding_layout(const BindingLayoutDesc& desc)
     {
-        DX12BindingLayout* binding_layout = new DX12BindingLayout(&_context, desc);
+        DX12BindingLayout* binding_layout = new DX12BindingLayout(&context, desc);
         if (!binding_layout->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_binding_layout failed.");
@@ -253,7 +253,7 @@ namespace fantasy
 
     BindingLayoutInterface* DX12Device::create_bindless_layout(const BindlessLayoutDesc& desc)
     {
-        DX12BindlessLayout* bindless_layout = new DX12BindlessLayout(&_context, desc);
+        DX12BindlessLayout* bindless_layout = new DX12BindlessLayout(&context, desc);
         if (!bindless_layout->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_bindless_layout failed.");
@@ -265,7 +265,7 @@ namespace fantasy
 
     BindingSetInterface* DX12Device::create_binding_set(const BindingSetDesc& desc, std::shared_ptr<BindingLayoutInterface> binding_layout)
     {
-        DX12BindingSet* binding_set = new DX12BindingSet(&_context, &_descriptor_manager, desc, binding_layout);
+        DX12BindingSet* binding_set = new DX12BindingSet(&context, &descriptor_manager, desc, binding_layout);
         if (!binding_set->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_binding_set failed.");
@@ -277,7 +277,7 @@ namespace fantasy
     
     BindlessSetInterface* DX12Device::create_bindless_set(std::shared_ptr<BindingLayoutInterface> binding_layout)
     {
-        DX12BindlessSet* bindless_set = new DX12BindlessSet(&_context, &_descriptor_manager, binding_layout);
+        DX12BindlessSet* bindless_set = new DX12BindlessSet(&context, &descriptor_manager, binding_layout);
         if (!bindless_set->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::CreateDescriptorTable failed.");
@@ -289,7 +289,7 @@ namespace fantasy
 
     CommandListInterface* DX12Device::create_command_list(const CommandListDesc& desc)
     {
-        DX12CommandList* cmdlist = new DX12CommandList(&_context, &_descriptor_manager, this, desc);
+        DX12CommandList* cmdlist = new DX12CommandList(&context, &descriptor_manager, this, desc);
         if (!cmdlist->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_command_list failed.");
@@ -309,20 +309,27 @@ namespace fantasy
         DX12CommandQueue* wait_queue = get_queue(wait_queue_type);
         DX12CommandQueue* execution_queue = get_queue(execution_queue_type);
 
-        wait_queue->add_wait_fence(execution_queue->d3d12_recording_fence, submit_id);
+        wait_queue->add_wait_fence(execution_queue->d3d12_tracking_fence, submit_id);
     }
 
 	void DX12Device::wait_for_idle()
     {
-        for (const auto& queue : _cmd_queues)
+        for (const auto& queue : cmd_queues)
         {
             queue->wait_for_idle();
         }
     }
 
+    void DX12Device::run_garbage_collection()
+    {
+        for (auto& queue : cmd_queues)
+        {
+            queue->retire_command_lists();
+        }
+    }
 	// ray_tracing::PipelineInterface* DX12Device::create_ray_tracing_pipline(const ray_tracing::PipelineDesc& desc)
 	// {
-    //     ray_tracing::DX12Pipeline* dx12_pipeline = new ray_tracing::DX12Pipeline(&_context, desc);
+    //     ray_tracing::DX12Pipeline* dx12_pipeline = new ray_tracing::DX12Pipeline(&context, desc);
         
     //     std::vector<std::unique_ptr<DX12RootSignature>> shader_root_signatures;
     //     std::vector<std::unique_ptr<DX12RootSignature>> hit_group_root_signatures;
@@ -368,7 +375,7 @@ namespace fantasy
 
 	// ray_tracing::AccelStructInterface* DX12Device::create_accel_struct(const ray_tracing::AccelStructDesc& desc)
 	// {
-    //     ray_tracing::DX12AccelStruct* dx12_accel_struct = new ray_tracing::DX12AccelStruct(&_context, &_descriptor_manager, desc);
+    //     ray_tracing::DX12AccelStruct* dx12_accel_struct = new ray_tracing::DX12AccelStruct(&context, &descriptor_manager, desc);
     //     if (!dx12_accel_struct->initialize())
     //     {
     //         LOG_ERROR("Create Accel Structure Failed.");

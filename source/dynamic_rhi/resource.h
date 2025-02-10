@@ -178,7 +178,7 @@ namespace fantasy
         uint64_t byte_size = 0;
         uint32_t struct_stride = 0;
         Format format = Format::UNKNOWN;
-        CpuAccessMode cpu_access = CpuAccessMode::None;     // TODO: 这放这干嘛的
+        CpuAccessMode cpu_access = CpuAccessMode::None;
         
         bool allow_shader_resource = true;
         bool allow_unordered_access = false;

@@ -3,7 +3,6 @@
 
 #include "vk_memory.h"
 #include "../binding.h"
-#include "../command_list.h"
 #include "../../core/tools/hash_table.h"
 #include <memory>
 #include <mutex>
@@ -120,9 +119,6 @@ namespace fantasy
         std::shared_ptr<HeapInterface> heap;
         std::unordered_map<uint64_t, vk::BufferView> view_cache;
         
-        CommandQueueType last_used_cmdqueue_type = CommandQueueType::Graphics;
-        uint64_t last_used_cmdlist_id = INVALID_SIZE_64;
-
         void* mapped_volatile_memory = nullptr;
         std::vector<VKBufferVersion> version_tracking;
         uint32_t version_search_start = 0;

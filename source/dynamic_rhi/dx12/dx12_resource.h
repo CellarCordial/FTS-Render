@@ -2,7 +2,6 @@
 #define RHI_DX12_RESOURCE_H
 
 #include "../binding.h"
-#include "../command_list.h"
 #include "dx12_descriptor.h"
 #include "../../core/tools/hash_table.h"
 #include <functional>
@@ -134,12 +133,6 @@ namespace fantasy
         std::shared_ptr<HeapInterface> heap;
         std::unordered_map<SubrangeViewKey, uint32_t, Hash> view_cache;
         
-        Microsoft::WRL::ComPtr<ID3D12Fence> last_used_d3d12_fence;
-        uint64_t last_used_fence_value = 0;
-        
-        CommandQueueType last_used_cmdqueue_type;
-        uint64_t last_used_cmdlist_id = INVALID_SIZE_64;
-
     private:
         const DX12Context* _context;
         DX12DescriptorManager* _descriptor_manager;
@@ -175,9 +168,6 @@ namespace fantasy
         std::vector<uint64_t> subresource_offsets;
         CpuAccessMode access_mode = CpuAccessMode::None;
         
-        Microsoft::WRL::ComPtr<ID3D12Fence> last_used_d3d12_fence;
-        uint64_t last_used_fence_value = 0;
-
     private:
         const DX12Context* _context;
 

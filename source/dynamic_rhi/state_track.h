@@ -13,14 +13,14 @@
         ResourceStates state = ResourceStates::Common;
         std::vector<ResourceStates> subresource_states;
         bool enable_uav_barriers = false;
-        bool first_uav_barrier_placed = false;
+        bool uav_barrier_placed = false;
     };
 
     struct BufferState
     {
         ResourceStates state = ResourceStates::Common;
         bool enable_uav_barriers = false;
-        bool first_uav_barrier_placed = false;
+        bool uav_barrier_placed = false;
     };
 
     struct TextureBarrier
@@ -62,7 +62,6 @@
     private:
         TextureState* get_texture_state_track(TextureInterface* texture);
         BufferState* get_buffer_state_track(BufferInterface* buffer);
-
 
     private:
         std::unordered_map<TextureInterface*, std::unique_ptr<TextureState>> _texture_states;

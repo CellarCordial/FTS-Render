@@ -64,12 +64,12 @@ namespace fantasy
         vk_semaphore_info.pNext = &vk_semaphore_type_info;
         vk_semaphore_info.flags = vk::SemaphoreCreateFlags();
 
-        vk_recording_semaphore = context->device.createSemaphore(vk_semaphore_info, context->allocation_callbacks);
+        vk_tracking_semaphore = context->device.createSemaphore(vk_semaphore_info, context->allocation_callbacks);
     }
 
     VKCommandQueue::~VKCommandQueue()
     {
-        _context->device.destroySemaphore(vk_recording_semaphore, _context->allocation_callbacks);
+        _context->device.destroySemaphore(vk_tracking_semaphore, _context->allocation_callbacks);
     }
 
     std::shared_ptr<VKCommandBuffer> VKCommandQueue::get_command_buffer()
@@ -129,16 +129,10 @@ namespace fantasy
             
             vk_cmdbuffers[ix] = cmdbuffer->vk_cmdbuffer;
             
-            for (uint32_t ix = 0; ix < cmdbuffer->ref_staging_buffers.size(); ++ix)
-            {
-                const auto& buffer = check_cast<VKBuffer>(cmdbuffer->ref_staging_buffers[ix]);
-                buffer->last_used_cmdqueue_type = queue_type;
-                buffer->last_used_cmdlist_id = last_submitted_id;
-            }
             _cmdbuffers_in_flight.push_back(cmdbuffer);
         }
         
-        _vk_signal_semaphores.push_back(vk_recording_semaphore);
+        _vk_signal_semaphores.push_back(vk_tracking_semaphore);
         _signal_semaphore_values.push_back(last_submitted_id);
 
         vk::TimelineSemaphoreSubmitInfo vk_timeline_semaphore_submit_info{};
@@ -187,7 +181,7 @@ namespace fantasy
 
     uint64_t VKCommandQueue::get_last_finished_id()
     {
-        return _context->device.getSemaphoreCounterValue(vk_recording_semaphore);
+        return _context->device.getSemaphoreCounterValue(vk_tracking_semaphore);
     }
 
     void VKCommandQueue::retire_command_buffers()
@@ -198,7 +192,6 @@ namespace fantasy
         {
             if (cmdbuffer->submit_id <= get_last_finished_id())
             {
-                cmdbuffer->ref_staging_buffers.clear();
                 cmdbuffer->submit_id = INVALID_SIZE_64;
 
                 _cmdbuffers_pool.push_back(cmdbuffer);
@@ -224,7 +217,7 @@ namespace fantasy
     {
         if (cmdlist_id == INVALID_SIZE_32) return false;
 
-        return wait_for_semaphore(_context, vk_recording_semaphore, cmdlist_id);
+        return wait_for_semaphore(_context, vk_tracking_semaphore, cmdlist_id);
     }
 
 
@@ -692,7 +685,6 @@ namespace fantasy
         set_texture_state(src_texture, src_subresource, ResourceStates::CopySrc);
         commit_barriers();
 
-        _current_cmdbuffer->ref_staging_buffers.push_back(dst_texture->get_buffer());
         _current_cmdbuffer->vk_cmdbuffer.copyImageToBuffer(
             src_texture->vk_image, 
             vk::ImageLayout::eTransferSrcOptimal,
@@ -760,7 +752,6 @@ namespace fantasy
         set_texture_state(dst_texture, dst_subresource, ResourceStates::CopyDst);
         commit_barriers();
 
-        _current_cmdbuffer->ref_staging_buffers.push_back(src_texture->get_buffer());
         _current_cmdbuffer->vk_cmdbuffer.copyBufferToImage(
             check_cast<VKBuffer>(src_texture->get_buffer())->vk_buffer, 
             dst_texture->vk_image, 

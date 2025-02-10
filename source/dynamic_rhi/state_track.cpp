@@ -2,33 +2,33 @@
 #include <memory>
 #include <utility>
 #include <vector>
-#include "../core/tools/log.h"
+#include "Resource.h"
 
 
 namespace fantasy 
 {
     void ResourceStateTracker::set_texture_enable_uav_barriers(TextureInterface* texture, bool enable_barriers)
     {
-        TextureState* pStatesTrack = get_texture_state_track(texture);
-        pStatesTrack->enable_uav_barriers = enable_barriers;
-        pStatesTrack->first_uav_barrier_placed = false;
+        TextureState* state_track = get_texture_state_track(texture);
+        state_track->enable_uav_barriers = enable_barriers;
+        state_track->uav_barrier_placed = false;
     }
 
     void ResourceStateTracker::set_buffer_enable_uav_barriers(BufferInterface* buffer, bool enable_barriers)
     {
-        BufferState* pStatesTrack = get_buffer_state_track(buffer);
-        pStatesTrack->enable_uav_barriers = enable_barriers;
-        pStatesTrack->first_uav_barrier_placed = false;
+        BufferState* state_track = get_buffer_state_track(buffer);
+        state_track->enable_uav_barriers = enable_barriers;
+        state_track->uav_barrier_placed = false;
     }
 
     ResourceStates ResourceStateTracker::get_texture_state(TextureInterface* texture, uint32_t array_slice, uint32_t mip_level)
     {
-        auto pTracking = get_texture_state_track(texture);
+        auto state_track = get_texture_state_track(texture);
 
-        TextureDesc TextureDesc = texture->get_desc();
+        const TextureDesc& texture_desc = texture->get_desc();
 
-        uint32_t dwSubresourceIndex = calculate_texture_subresource(mip_level, array_slice, TextureDesc.mip_levels);
-        return pTracking->subresource_states[dwSubresourceIndex];
+        uint32_t subresource_index = calculate_texture_subresource(mip_level, array_slice, texture_desc.mip_levels);
+        return state_track->subresource_states[subresource_index];
     }
 
     ResourceStates ResourceStateTracker::get_buffer_state(BufferInterface* buffer)
@@ -38,65 +38,64 @@ namespace fantasy
 
     void ResourceStateTracker::set_texture_state(TextureInterface* texture, const TextureSubresourceSet& subresource_set, ResourceStates state)
     {
-        TextureDesc desc = texture->get_desc();
+        const TextureDesc& desc = texture->get_desc();
 
-        TextureState* pTrackState = get_texture_state_track(texture);
-        if (subresource_set.is_entire_texture(desc) && pTrackState->subresource_states.size() == 1)
+        TextureState* track_state = get_texture_state_track(texture);
+        if (subresource_set.is_entire_texture(desc) && track_state->subresource_states.size() == 1)
         {
-            bool bIsTransitionNecessary = pTrackState->state != state;
-            bool bIsUavNecessary = ((state & ResourceStates::UnorderedAccess) == ResourceStates::UnorderedAccess) &&
-                                   (pTrackState->enable_uav_barriers && !pTrackState->first_uav_barrier_placed);
-            if (bIsTransitionNecessary || bIsUavNecessary)
+            bool is_transition_necessary = track_state->state != state;
+            bool is_uav_necessary = ((state & ResourceStates::UnorderedAccess) == ResourceStates::UnorderedAccess) &&
+                                   (track_state->enable_uav_barriers && !track_state->uav_barrier_placed);
+            if (is_transition_necessary || is_uav_necessary)
             {
-                TextureBarrier Barrier;
-                Barrier.texture = texture;
-                Barrier.is_entire_texture = true;
-                Barrier.state_before = pTrackState->state;
-                Barrier.state_after = state;
-                _texture_barriers.push_back(Barrier);
+                TextureBarrier barrier;
+                barrier.texture = texture;
+                barrier.is_entire_texture = true;
+                barrier.state_before = track_state->state;
+                barrier.state_after = state;
+                _texture_barriers.push_back(barrier);
             }
             
-            pTrackState->state = state;
+            track_state->state = state;
 
-            if (!bIsTransitionNecessary && bIsUavNecessary)
+            if (!is_transition_necessary && is_uav_necessary)
             {
-                pTrackState->first_uav_barrier_placed = true;
+                track_state->uav_barrier_placed = true;
             }
         }
         else 
         {
-            bool bAnyUavBarrier = false;
-            for (uint32_t dwArraySliceIndex = subresource_set.base_array_slice; dwArraySliceIndex < subresource_set.base_array_slice + subresource_set.array_slice_count; ++dwArraySliceIndex)
+            bool any_uav_barrier = false;
+            for (uint32_t slice = subresource_set.base_array_slice; slice < subresource_set.base_array_slice + subresource_set.array_slice_count; ++slice)
             {
-                for (uint32_t dwMipLevelIndex = subresource_set.base_mip_level; dwMipLevelIndex < subresource_set.base_mip_level + subresource_set.mip_level_count; ++dwMipLevelIndex)
+                for (uint32_t mip = subresource_set.base_mip_level; mip < subresource_set.base_mip_level + subresource_set.mip_level_count; ++mip)
                 {
-                    uint32_t dwSubresourceIndex = calculate_texture_subresource(dwMipLevelIndex, dwArraySliceIndex, desc.mip_levels);
-                    ResourceStates PriorState = pTrackState->subresource_states[dwSubresourceIndex];
+                    uint32_t subresource_index = calculate_texture_subresource(mip, slice, desc.mip_levels);
+                    ResourceStates prior_state = track_state->subresource_states[subresource_index];
                     
-                    bool bIsTransitionNecessary = PriorState != state;
-                    bool bIsUavNecessary = ((state & ResourceStates::UnorderedAccess) != 0) && 
-                                            !bAnyUavBarrier && 
-                                            (pTrackState->enable_uav_barriers &&
-                                            !pTrackState->first_uav_barrier_placed);
+                    bool is_transition_necessary = prior_state != state;
+                    bool is_uav_necessary = ((state & ResourceStates::UnorderedAccess) != 0) && 
+                                            (track_state->enable_uav_barriers && !track_state->uav_barrier_placed) &&
+                                            !any_uav_barrier;
 
-                    if (bIsTransitionNecessary || bIsUavNecessary)
+                    if (is_transition_necessary || is_uav_necessary)
                     {
-                        TextureBarrier Barrier;
-                        Barrier.texture = texture;
-                        Barrier.is_entire_texture = false;
-                        Barrier.mip_level = dwMipLevelIndex;
-                        Barrier.array_slice = dwArraySliceIndex;
-                        Barrier.state_before = PriorState;
-                        Barrier.state_after = state;
-                        _texture_barriers.push_back(Barrier);
+                        TextureBarrier barrier;
+                        barrier.texture = texture;
+                        barrier.is_entire_texture = false;
+                        barrier.mip_level = mip;
+                        barrier.array_slice = slice;
+                        barrier.state_before = prior_state;
+                        barrier.state_after = state;
+                        _texture_barriers.push_back(barrier);
                     }
                     
-                    pTrackState->subresource_states[dwSubresourceIndex] = state;
+                    track_state->subresource_states[subresource_index] = state;
 
-                    if (!bIsTransitionNecessary && bIsUavNecessary)
+                    if (!is_transition_necessary && is_uav_necessary)
                     {
-                        bAnyUavBarrier = true;
-                        pTrackState->first_uav_barrier_placed = true;
+                        any_uav_barrier = true;
+                        track_state->uav_barrier_placed = true;
                     }
                 }
             }
@@ -105,55 +104,41 @@ namespace fantasy
     
     void ResourceStateTracker::set_buffer_state(BufferInterface* buffer, ResourceStates state)
     {
-        BufferDesc desc = buffer->get_desc();
+        const BufferDesc& desc = buffer->get_desc();
 
-        // CPU-visible buffers 不能改变 state
-        if (desc.is_volatile_constant_buffer || desc.cpu_access != CpuAccessMode::None)
+        BufferState* track = get_buffer_state_track(buffer);
+
+        bool is_transition_necessary = track->state != state;
+        if (is_transition_necessary)
         {
-            if (get_buffer_state_track(buffer)->state == state)
+            for (auto& barrier : _buffer_barriers)
             {
-                return;
-            }
-            else
-            {
-				LOG_ERROR("CPU-visible buffers can't change state.");
-				return;
-            }
-        }
-
-        BufferState* pTrack = get_buffer_state_track(buffer);
-
-        bool bIsTransitionNecessary = pTrack->state != state;
-        if (bIsTransitionNecessary)
-        {
-            // 若 Barriers 中已经存在同 Buffer 的 Barrier.
-            for (auto& rBarrier : _buffer_barriers)
-            {
-                if (rBarrier.buffer == buffer)
+                if (barrier.buffer == buffer)
                 {
-                    rBarrier.state_after = static_cast<ResourceStates>(rBarrier.state_after | state);
-                    pTrack->state = rBarrier.state_after;
+                    barrier.state_after = static_cast<ResourceStates>(barrier.state_after | state);
+                    track->state = barrier.state_after;
+                    return;
                 }
             }
         }
 
-        bool bIsUavNecessary = ((state & ResourceStates::UnorderedAccess) == ResourceStates::UnorderedAccess) && 
-                               (pTrack->enable_uav_barriers || !pTrack->first_uav_barrier_placed);
-        if (bIsTransitionNecessary || bIsUavNecessary)
+        bool is_uav_necessary = ((state & ResourceStates::UnorderedAccess) == ResourceStates::UnorderedAccess) && 
+                               (track->enable_uav_barriers && !track->uav_barrier_placed);
+        if (is_transition_necessary || is_uav_necessary)
         {
-            BufferBarrier Barrier;
-            Barrier.buffer = buffer;
-            Barrier.state_before = pTrack->state;
-            Barrier.state_after = state;
-            _buffer_barriers.push_back(Barrier);
+            BufferBarrier barrier;
+            barrier.buffer = buffer;
+            barrier.state_before = track->state;
+            barrier.state_after = state;
+            _buffer_barriers.push_back(barrier);
         }
 
-        if (!bIsTransitionNecessary && bIsUavNecessary)
+        if (!is_transition_necessary && is_uav_necessary)
         {
-            pTrack->first_uav_barrier_placed = true;
+            track->uav_barrier_placed = true;
         }
 
-        pTrack->state = state;
+        track->state = state;
 	}
 
     
@@ -178,15 +163,15 @@ namespace fantasy
         auto iter = _texture_states.find(texture);
         if (iter != _texture_states.end()) return iter->second.get();
 
-        std::unique_ptr<TextureState> pTrack = std::make_unique<TextureState>();
-        TextureState* pTextureStateTrack = pTrack.get();
-        _texture_states.insert(std::make_pair(texture, std::move(pTrack)));
+        std::unique_ptr<TextureState> track = std::make_unique<TextureState>();
+        TextureState* texture_state_track = track.get();
+        _texture_states.insert(std::make_pair(texture, std::move(track)));
         
-        TextureDesc desc = texture->get_desc();
-        // pTextureStateTrack->state = desc.initial_state;
-        pTextureStateTrack->subresource_states.resize(static_cast<size_t>(desc.mip_levels * desc.array_size), pTextureStateTrack->state);
+        const TextureDesc& desc = texture->get_desc();
+        texture_state_track->state = ResourceStates::Common;
+        texture_state_track->subresource_states.resize(static_cast<size_t>(desc.mip_levels * desc.array_size), texture_state_track->state);
 
-        return pTextureStateTrack;
+        return texture_state_track;
     }
 
     BufferState* ResourceStateTracker::get_buffer_state_track(BufferInterface* buffer)
@@ -194,14 +179,14 @@ namespace fantasy
         auto iter = _buffer_states.find(buffer);
         if (iter != _buffer_states.end()) return iter->second.get();
 
-        std::unique_ptr<BufferState> pTrack = std::make_unique<BufferState>();
-        BufferState* pBufferStateTrack = pTrack.get();
-        _buffer_states.insert(std::make_pair(buffer, std::move(pTrack)));
+        std::unique_ptr<BufferState> track = std::make_unique<BufferState>();
+        BufferState* buffer_state_track = track.get();
+        _buffer_states.insert(std::make_pair(buffer, std::move(track)));
         
-        BufferDesc desc = buffer->get_desc();
-        // pBufferStateTrack->state = desc.initial_state;
+        const BufferDesc& desc = buffer->get_desc();
+        buffer_state_track->state = ResourceStates::Common;
 
-        return pBufferStateTrack;
+        return buffer_state_track;
     }
 
 }

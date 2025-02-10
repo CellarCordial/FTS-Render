@@ -296,7 +296,6 @@ namespace fantasy
             {
                 if (binding.type == ResourceViewType::VolatileConstantBuffer && binding.slot == d3d12_root_descriptor.ShaderRegister)
                 {
-                    _ref_resources.push_back(binding.resource);
                     buffer = static_cast<BufferInterface*>(binding.resource.get());
                     break;
                 }
@@ -321,7 +320,6 @@ namespace fantasy
                     );
 
                     bool found = false;
-                    std::shared_ptr<ResourceInterface> resource = nullptr;
                     for (uint32_t jx = 0; jx < _desc.binding_items.size(); ++jx)
                     {
                         const auto& binding = _desc.binding_items[jx];
@@ -333,7 +331,6 @@ namespace fantasy
                             DX12Buffer* dx12_buffer = check_cast<DX12Buffer*>(binding.resource.get());
                             dx12_buffer->create_srv(d3d12_descriptor_handle, binding.range, binding.type);
 
-                            resource = binding.resource;
                             found = true;
                             break;
                         }
@@ -343,7 +340,6 @@ namespace fantasy
                             DX12Buffer* dx12_buffer = check_cast<DX12Buffer*>(binding.resource.get());
                             dx12_buffer->create_uav(d3d12_descriptor_handle, binding.range, binding.type);
 
-                            resource = binding.resource;
                             found = true;
                             break;
                         }
@@ -352,7 +348,6 @@ namespace fantasy
                             DX12Texture* dx12_texture = check_cast<DX12Texture*>(binding.resource.get());
                             dx12_texture->create_srv(d3d12_descriptor_handle, binding.subresource);
 
-                            resource = binding.resource;
                             found = true;
                             break;
                         }
@@ -361,7 +356,6 @@ namespace fantasy
                             DX12Texture* dx12_texture = check_cast<DX12Texture*>(binding.resource.get());
                             dx12_texture->create_uav(d3d12_descriptor_handle, binding.subresource);
 
-                            resource = binding.resource;
                             found = true;
                             break;
                         }
@@ -370,7 +364,6 @@ namespace fantasy
                             DX12Buffer* dx12_buffer = check_cast<DX12Buffer*>(binding.resource.get());
                             dx12_buffer->create_cbv(d3d12_descriptor_handle, binding.range);
 
-                            resource = binding.resource;
                             found = true;
                             break;
                         }
@@ -379,8 +372,6 @@ namespace fantasy
                             continue;
                         }
                     }
-
-                    if (resource) _ref_resources.push_back(resource);
 
                     if (!found) return false;
                 }
@@ -412,7 +403,6 @@ namespace fantasy
                             std::shared_ptr<DX12Sampler> dx12_sampler = check_cast<DX12Sampler>(binding.resource);
                             dx12_sampler->create_descriptor(d3d12_cpu_descriptor);
 
-                            _ref_resources.push_back(binding.resource);
                             found = true;
                             break;
                         }

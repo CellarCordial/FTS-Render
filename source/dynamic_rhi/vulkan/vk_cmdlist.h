@@ -19,8 +19,6 @@ namespace fantasy
         uint64_t submit_id = INVALID_SIZE_64;
         uint64_t recording_id = INVALID_SIZE_32;
         
-        std::vector<std::shared_ptr<BufferInterface>> ref_staging_buffers;
-
         const VKContext* context;
 
         VKCommandBuffer(const VKContext* context, uint64_t recording_id);
@@ -56,7 +54,7 @@ namespace fantasy
         
         uint64_t last_submitted_id = 0;
         uint64_t last_recording_id;
-        vk::Semaphore vk_recording_semaphore;
+        vk::Semaphore vk_tracking_semaphore;
         
     private:
         const VKContext* _context;

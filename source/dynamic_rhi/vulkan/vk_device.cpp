@@ -8,36 +8,36 @@
 
 namespace fantasy 
 {
-    VKDevice::VKDevice(const VKDeviceDesc& desc_) : _allocator(&_context), _desc(desc_)
+    VKDevice::VKDevice(const VKDeviceDesc& desc_) : _allocator(&context), desc(desc_)
     {        
-        _context.device = _desc.vk_device;
-        _context.vk_instance = _desc.vk_instance;
-        _context.vk_physical_device = _desc.vk_physical_device;
-        _context.allocation_callbacks = _desc.vk_allocation_callbacks;
+        context.device = desc.vk_device;
+        context.vk_instance = desc.vk_instance;
+        context.vk_physical_device = desc.vk_physical_device;
+        context.allocation_callbacks = desc.vk_allocation_callbacks;
 
-        _cmd_queues[uint32_t(CommandQueueType::Graphics)] = 
-            std::make_unique<VKCommandQueue>(&_context, CommandQueueType::Graphics, _desc.vk_graphics_queue, _desc.graphics_queue_index);
-        _cmd_queues[uint32_t(CommandQueueType::Compute)] = 
-            std::make_unique<VKCommandQueue>(&_context, CommandQueueType::Compute, _desc.vk_compute_queue, _desc.compute_queue_index);
+        cmd_queues[uint32_t(CommandQueueType::Graphics)] = 
+            std::make_unique<VKCommandQueue>(&context, CommandQueueType::Graphics, desc.vk_graphics_queue, desc.graphics_queue_index);
+        cmd_queues[uint32_t(CommandQueueType::Compute)] = 
+            std::make_unique<VKCommandQueue>(&context, CommandQueueType::Compute, desc.vk_compute_queue, desc.compute_queue_index);
 
         vk::PhysicalDeviceConservativeRasterizationPropertiesEXT conservativeRasterizationProperties;
         vk::PhysicalDeviceProperties2 deviceProperties2;
         deviceProperties2.pNext = &conservativeRasterizationProperties;
 
-        _context.vk_physical_device.getProperties2(&deviceProperties2);
-        _context.vk_physical_device_properties = deviceProperties2.properties;
+        context.vk_physical_device.getProperties2(&deviceProperties2);
+        context.vk_physical_device_properties = deviceProperties2.properties;
 
         auto pipelineInfo = vk::PipelineCacheCreateInfo();
-        vk::Result res = _context.device.createPipelineCache(&pipelineInfo,
-            _context.allocation_callbacks,
-            &_context.vk_pipeline_cache);
+        vk::Result res = context.device.createPipelineCache(&pipelineInfo,
+            context.allocation_callbacks,
+            &context.vk_pipeline_cache);
     }
 
     VKDevice::~VKDevice()
     {
-        if (_context.vk_pipeline_cache)
+        if (context.vk_pipeline_cache)
         {
-            _context.device.destroyPipelineCache(_context.vk_pipeline_cache);
+            context.device.destroyPipelineCache(context.vk_pipeline_cache);
          }
     }
 
@@ -49,7 +49,7 @@ namespace fantasy
 
     HeapInterface* VKDevice::create_heap(const HeapDesc& desc)
     {
-        VKHeap* heap = new VKHeap(&_context, &_allocator, desc);
+        VKHeap* heap = new VKHeap(&context, &_allocator, desc);
         if (!heap->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_heap failed.");
@@ -61,7 +61,7 @@ namespace fantasy
 
     TextureInterface* VKDevice::create_texture(const TextureDesc& desc)
     {
-        VKTexture* texture = new VKTexture(&_context, &_allocator, desc);
+        VKTexture* texture = new VKTexture(&context, &_allocator, desc);
         if (!texture->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_texture failed.");
@@ -79,7 +79,7 @@ namespace fantasy
             return nullptr;
         }
 
-        VKStagingTexture* staging_texture = new VKStagingTexture(&_context, desc, cpu_access);
+        VKStagingTexture* staging_texture = new VKStagingTexture(&context, desc, cpu_access);
         if (!staging_texture->initialize(&_allocator))
         {
             LOG_ERROR("Call to DeviceInterface::create_staging_texture failed.");
@@ -91,7 +91,7 @@ namespace fantasy
     
     BufferInterface* VKDevice::create_buffer(const BufferDesc& desc)
     {
-        VKBuffer* buffer = new VKBuffer(&_context, &_allocator, desc);
+        VKBuffer* buffer = new VKBuffer(&context, &_allocator, desc);
         if (!buffer->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_buffer failed.");
@@ -103,21 +103,21 @@ namespace fantasy
 
     TextureInterface* VKDevice::create_texture_from_native(void* native_texture, const TextureDesc& desc)
     {
-        VKTexture* texture = new VKTexture(&_context, &_allocator, desc);
+        VKTexture* texture = new VKTexture(&context, &_allocator, desc);
         texture->vk_image = *static_cast<vk::Image*>(native_texture);
         return texture;
     }
 
     BufferInterface* VKDevice::create_buffer_from_native(void* native_buffer, const BufferDesc& desc)
     {
-        VKBuffer* buffer = new VKBuffer(&_context, &_allocator, desc);
+        VKBuffer* buffer = new VKBuffer(&context, &_allocator, desc);
         buffer->vk_buffer = *static_cast<vk::Buffer*>(native_buffer);
         return buffer;
     }
 
     SamplerInterface* VKDevice::create_sampler(const SamplerDesc& desc)
     {
-        VKSampler* sampler = new VKSampler(&_context, desc);
+        VKSampler* sampler = new VKSampler(&context, desc);
         if (!sampler->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_sampler failed.");
@@ -152,13 +152,13 @@ namespace fantasy
 
     void* VKDevice::get_native_object() const
     {
-        return (void*)&_desc.vk_device;
+        return (void*)&desc.vk_device;
     }
 
     
     FrameBufferInterface* VKDevice::create_frame_buffer(const FrameBufferDesc& desc)
     {
-        VKFrameBuffer* frame_buffer = new VKFrameBuffer(&_context, desc);
+        VKFrameBuffer* frame_buffer = new VKFrameBuffer(&context, desc);
         if (!frame_buffer->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_frame_buffer failed.");
@@ -170,7 +170,7 @@ namespace fantasy
 
     GraphicsPipelineInterface* VKDevice::create_graphics_pipeline(const GraphicsPipelineDesc& desc, FrameBufferInterface* frame_buffer)
     {
-        VKGraphicsPipeline* graphics_pipeline = new VKGraphicsPipeline(&_context, desc);
+        VKGraphicsPipeline* graphics_pipeline = new VKGraphicsPipeline(&context, desc);
         if (!graphics_pipeline->initialize(frame_buffer))
         {
             LOG_ERROR("Call to DeviceInterface::create_graphics_pipeline failed.");
@@ -182,7 +182,7 @@ namespace fantasy
 
     ComputePipelineInterface* VKDevice::create_compute_pipeline(const ComputePipelineDesc& desc)
     {
-        VKComputePipeline* compute_pipeline = new VKComputePipeline(&_context, desc);
+        VKComputePipeline* compute_pipeline = new VKComputePipeline(&context, desc);
         if (!compute_pipeline->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_compute_pipeline failed.");
@@ -194,7 +194,7 @@ namespace fantasy
 
     BindingLayoutInterface* VKDevice::create_binding_layout(const BindingLayoutDesc& desc)
     {
-        VKBindingLayout* binding_layout = new VKBindingLayout(&_context, desc);
+        VKBindingLayout* binding_layout = new VKBindingLayout(&context, desc);
         if (!binding_layout->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_binding_layout failed.");
@@ -206,7 +206,7 @@ namespace fantasy
 
     BindingLayoutInterface* VKDevice::create_bindless_layout(const BindlessLayoutDesc& desc)
     {
-        VKBindingLayout* bindless_layout = new VKBindingLayout(&_context, desc);
+        VKBindingLayout* bindless_layout = new VKBindingLayout(&context, desc);
         if (!bindless_layout->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_bindless_layout failed.");
@@ -218,7 +218,7 @@ namespace fantasy
 
     BindingSetInterface* VKDevice::create_binding_set(const BindingSetDesc& desc, std::shared_ptr<BindingLayoutInterface> binding_layout)
     {
-        VKBindingSet* binding_set = new VKBindingSet(&_context, desc, binding_layout);
+        VKBindingSet* binding_set = new VKBindingSet(&context, desc, binding_layout);
         if (!binding_set->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_binding_set failed.");
@@ -230,7 +230,7 @@ namespace fantasy
     
     BindlessSetInterface* VKDevice::create_bindless_set(std::shared_ptr<BindingLayoutInterface> binding_layout)
     {
-        VKBindlessSet* bindless_set = new VKBindlessSet(&_context, binding_layout);
+        VKBindlessSet* bindless_set = new VKBindlessSet(&context, binding_layout);
         if (!bindless_set->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::CreateDescriptorTable failed.");
@@ -242,7 +242,7 @@ namespace fantasy
 
     CommandListInterface* VKDevice::create_command_list(const CommandListDesc& desc)
     {
-        VKCommandList* cmdlist = new VKCommandList(&_context, this, desc);
+        VKCommandList* cmdlist = new VKCommandList(&context, this, desc);
         if (!cmdlist->initialize())
         {
             LOG_ERROR("Call to DeviceInterface::create_command_list failed.");
@@ -263,17 +263,30 @@ namespace fantasy
         VKCommandQueue* wait_queue = get_queue(wait_queue_type);
         VKCommandQueue* execution_queue = get_queue(execution_queue_type);
 
-        wait_queue->add_wait_semaphore(execution_queue->vk_recording_semaphore, submit_id);
+        wait_queue->add_wait_semaphore(execution_queue->vk_tracking_semaphore, submit_id);
     }
 
 	void VKDevice::wait_for_idle()
     {
-        _context.device.waitIdle();
+        context.device.waitIdle();
+    }
+
+    void VKDevice::run_garbage_collection()
+    {
+        for (auto& queue : cmd_queues)
+        {
+            queue->retire_command_buffers();
+        }
+    }
+
+    uint64_t VKDevice::queue_get_completed_id(CommandQueueType queue)
+    {
+        return context.device.getSemaphoreCounterValue(get_queue(queue)->vk_tracking_semaphore);
     }
 
     VKCommandQueue* VKDevice::get_queue(CommandQueueType queue) const 
     { 
-        return _cmd_queues[static_cast<uint32_t>(queue)].get(); 
+        return cmd_queues[static_cast<uint32_t>(queue)].get(); 
     }
 
 

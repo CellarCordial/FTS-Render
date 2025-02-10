@@ -1,20 +1,12 @@
 #ifndef RENDER_PASS_GUI_H
 #define RENDER_PASS_GUI_H
 
-#include "../render_graph/render_graph.h"
+#include "../render_graph/render_pass.h"
 #include "gui_panel.h"
 #include <memory>
 
 namespace fantasy
 {
-	namespace constant
-	{
-		struct GuiPassConstant
-		{
-
-		};
-	}
-
 	class GuiPass : public RenderPassInterface
 	{
 	public:

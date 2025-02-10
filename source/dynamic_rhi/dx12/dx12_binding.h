@@ -99,7 +99,6 @@ namespace fantasy
         BindingSetDesc _desc;
 
         std::shared_ptr<BindingLayoutInterface> _binding_layout;
-        std::vector<std::shared_ptr<ResourceInterface>> _ref_resources;
     };
 
 

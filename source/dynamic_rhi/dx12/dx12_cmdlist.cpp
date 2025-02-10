@@ -70,7 +70,7 @@ namespace fantasy
         return SUCCEEDED(_context->device->CreateFence(
             0, 
             D3D12_FENCE_FLAG_NONE, 
-            IID_PPV_ARGS(d3d12_recording_fence.GetAddressOf())
+            IID_PPV_ARGS(d3d12_tracking_fence.GetAddressOf())
         ));
     }
 
@@ -126,16 +126,10 @@ namespace fantasy
             
             d3d12_cmdlists[ix] = cmdlist->d3d12_cmdlist.Get();
             
-            for (uint32_t ix = 0; ix < cmdlist->ref_staging_buffers.size(); ++ix)
-            {
-                const auto& buffer = check_cast<DX12Buffer>(cmdlist->ref_staging_buffers[ix]);
-                buffer->last_used_cmdqueue_type = queue_type;
-                buffer->last_used_cmdlist_id = last_submitted_id;
-            }
             _cmdlists_in_flight.push_back(cmdlist);
         }
 
-        _d3d12_signal_fences.push_back(d3d12_recording_fence);
+        _d3d12_signal_fences.push_back(d3d12_tracking_fence);
         _signal_fence_values.push_back(last_submitted_id);
 
         for (uint32_t ix = 0; ix < _d3d12_wait_fences.size(); ++ix)
@@ -171,7 +165,7 @@ namespace fantasy
     
     uint64_t DX12CommandQueue::get_last_finished_id()
     {
-        return d3d12_recording_fence->GetCompletedValue();
+        return d3d12_tracking_fence->GetCompletedValue();
     }
 
     void DX12CommandQueue::retire_command_lists()
@@ -182,7 +176,6 @@ namespace fantasy
         {
             if (cmdlist->submit_id <= get_last_finished_id())
             {
-                cmdlist->ref_staging_buffers.clear();
                 cmdlist->submit_id = INVALID_SIZE_64;
 
                 _cmdlists_pool.push_back(cmdlist);
@@ -208,12 +201,12 @@ namespace fantasy
     {
         if (cmdlist_id == INVALID_SIZE_32) return false;
 
-        return wait_for_fence(d3d12_recording_fence.Get(), cmdlist_id);
+        return wait_for_fence(d3d12_tracking_fence.Get(), cmdlist_id);
     }
 
     void DX12CommandQueue::wait_for_idle()
     {
-        wait_for_fence(d3d12_recording_fence.Get(), last_submitted_id);
+        wait_for_fence(d3d12_tracking_fence.Get(), last_submitted_id);
     }
 
 
@@ -1499,13 +1492,6 @@ namespace fantasy
 
         const CommandQueueType queue_type = queue.queue_type;
         const uint64_t recording_id = _current_cmdlist->recording_id;
-
-        for (const auto& it : _current_cmdlist->ref_staging_buffers)
-        {
-            DX12Buffer* buffer = check_cast<DX12Buffer*>(it.get());
-            buffer->last_used_d3d12_fence = queue.d3d12_recording_fence;
-            buffer->last_used_fence_value = _current_cmdlist->submit_id;
-        }
 
         _current_cmdlist = nullptr;
         

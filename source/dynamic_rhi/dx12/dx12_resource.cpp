@@ -441,12 +441,6 @@ namespace fantasy
     
     void* DX12Buffer::map(CpuAccessMode cpu_access)
     {
-        if (last_used_d3d12_fence != nullptr)
-        {
-            wait_for_fence(last_used_d3d12_fence.Get(), last_used_fence_value);
-            last_used_d3d12_fence = nullptr;
-        }
-
         // 不要从与 D3D12_HEAP_TYPE_UPLOAD 的堆关联的资源读取 CPU, 
         // 故 cpu_access == CpuAccessMode::Write 时设置 range 为 { 0, 0 },
         // D3D12_RANGE End 小于或等于 Begin 的范围，指定 CPU 不会读取任何数据是有效的.
@@ -783,12 +777,6 @@ namespace fantasy
         else if ( cpu_access_mode == CpuAccessMode::Write)
         {
             _d3d12_mapped_range = { 0, 0 };
-        }
-
-        if (last_used_d3d12_fence != nullptr)
-        {
-            if (!wait_for_fence(last_used_d3d12_fence.Get(), last_used_fence_value)) return nullptr;
-            last_used_d3d12_fence = nullptr;
         }
 
         uint8_t* mapped_address = nullptr;

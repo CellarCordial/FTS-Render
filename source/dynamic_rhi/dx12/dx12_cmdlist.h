@@ -26,8 +26,6 @@ namespace fantasy
         uint64_t submit_id = INVALID_SIZE_64;
         uint64_t recording_id = INVALID_SIZE_64;
 
-        std::vector<std::shared_ptr<BufferInterface>> ref_staging_buffers;
-
         const DX12Context* context;
 
         explicit DX12InternalCommandList(const DX12Context* context, uint64_t recording_id);
@@ -66,9 +64,10 @@ namespace fantasy
         
         Microsoft::WRL::ComPtr<ID3D12CommandQueue> d3d12_cmdqueue;
 
-        uint64_t last_submitted_id = 0;
         uint32_t last_recording_id = 0;
-        Microsoft::WRL::ComPtr<ID3D12Fence> d3d12_recording_fence;
+        
+        uint64_t last_submitted_id = 0;
+        Microsoft::WRL::ComPtr<ID3D12Fence> d3d12_tracking_fence;
         
     private:      
         const DX12Context* _context;

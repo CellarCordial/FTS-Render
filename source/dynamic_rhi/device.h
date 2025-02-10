@@ -45,6 +45,7 @@ namespace fantasy
         virtual void queue_wait_for_cmdlist(CommandQueueType wait_queue_type, CommandQueueType execution_queue_type, uint64_t submit_id) = 0;
 
         virtual void wait_for_idle() = 0;
+        virtual void run_garbage_collection() = 0;
 
         virtual GraphicsAPI get_graphics_api() const = 0;
         virtual void* get_native_object() const = 0;

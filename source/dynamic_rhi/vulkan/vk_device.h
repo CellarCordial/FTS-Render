@@ -49,35 +49,24 @@ namespace fantasy
         void queue_wait_for_cmdlist(CommandQueueType WaitQueueType, CommandQueueType queue_type, uint64_t submit_id) override;
 
         void wait_for_idle() override;
+        void run_garbage_collection() override;
 
         GraphicsAPI get_graphics_api() const override;
         void* get_native_object() const override;
 
-
-        VkSemaphore get_queue_semaphore(CommandQueueType queue);
-        void queue_signal_semaphore(CommandQueueType executionQueue, VkSemaphore semaphore, uint64_t value);
-        void queue_waitFor_semaphore(CommandQueueType waitQueue, VkSemaphore semaphore, uint64_t value);
         uint64_t queue_get_completed_id(CommandQueueType queue);
-        FrameBufferInterface* create_framebuffer(
-            VkRenderPass renderPass, 
-            VkFramebuffer framebuffer,
-            const FrameBufferDesc& desc, 
-            bool transferOwnership
-        );
-
-        void* map_buffer(BufferInterface* buffer, CpuAccessMode flags, uint64_t offset, size_t size) const;
-
         VKCommandQueue* get_queue(CommandQueueType queue) const;
 
-    private:
-        VKContext _context;
-        VKMemoryAllocator _allocator;
+    public:
+        VKDeviceDesc desc;
 
-        VKDeviceDesc _desc;
+        VKContext context;
         
+        std::array<std::unique_ptr<VKCommandQueue>, uint32_t(CommandQueueType::Count)> cmd_queues;
+        
+    private:
+        VKMemoryAllocator _allocator;
         std::mutex _mutex;
-
-        std::array<std::unique_ptr<VKCommandQueue>, uint32_t(CommandQueueType::Count)> _cmd_queues;
     };
 }
 

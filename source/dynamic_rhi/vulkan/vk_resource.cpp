@@ -244,18 +244,6 @@ namespace fantasy
             return nullptr;
         }
 
-        // TODO: map buffer need a barrier, like dx12 has fence here.
-        // vk::AccessFlags accessFlags;
-        // if (cpu_access_mode == CpuAccessMode::Read)
-        // {
-        //     accessFlags = vk::AccessFlagBits::eHostRead;
-        // }
-        // else if ( cpu_access_mode == CpuAccessMode::Write)
-        // {
-        //     accessFlags = vk::AccessFlagBits::eHostWrite;
-        // }
-        // check_cast<VKBuffer*>(_buffer.get())->vk_buffer->barrier(cmdlist, vk::PipelineStageFlagBits::eHost, accessFlags);
-
         void* data = nullptr;
         if (_context->device.mapMemory(vk_device_memory, 0, desc.byte_size, vk::MemoryMapFlags(), &data) != vk::Result::eSuccess)
         {
@@ -269,9 +257,6 @@ namespace fantasy
     void VKBuffer::unmap()
     {
         _context->device.unmapMemory(vk_device_memory);
-
-        // TODO: map buffer need a barrier, unlike dx12 has fence here.
-        // buffer->barrier(cmd, vk::PipelineStageFlagBits::eTransfer, vk::AccessFlagBits::eTransferRead);
     }
 
     vk::BufferView VKBuffer::get_typed_buffer_view(const BufferRange& range, ResourceViewType type)
@@ -393,18 +378,6 @@ namespace fantasy
         }
 
         *row_pitch = texture_slice.width * get_format_info(desc.format).size;
-
-        // TODO: map buffer need a barrier, like dx12 has fence here.
-        // vk::AccessFlags accessFlags;
-        // if (cpu_access_mode == CpuAccessMode::Read)
-        // {
-        //     accessFlags = vk::AccessFlagBits::eHostRead;
-        // }
-        // else if ( cpu_access_mode == CpuAccessMode::Write)
-        // {
-        //     accessFlags = vk::AccessFlagBits::eHostWrite;
-        // }
-        // check_cast<VKBuffer*>(_buffer.get())->vk_buffer->barrier(cmdlist, vk::PipelineStageFlagBits::eHost, accessFlags);
 
         void* data = nullptr;
         if (

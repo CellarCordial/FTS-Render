@@ -42,24 +42,26 @@ namespace fantasy
         BindlessSetInterface* create_bindless_set(std::shared_ptr<BindingLayoutInterface> binding_layout) override;
         
         CommandListInterface* create_command_list(const CommandListDesc& desc) override;
+
         uint64_t execute_command_lists(CommandListInterface* const* cmdlists, uint64_t cmd_count = 1, CommandQueueType queue_type = CommandQueueType::Graphics) override;
         void queue_wait_for_cmdlist(CommandQueueType wait_queue_type, CommandQueueType execution_queue_type, uint64_t submit_id) override;
 
         void wait_for_idle() override;
-
+        void run_garbage_collection() override;
 
         uint64_t queue_get_completed_id(CommandQueueType queue);
         DX12CommandQueue* get_queue(CommandQueueType type) const;
 
+    public:
+        DX12DeviceDesc desc;
+        
+        DX12Context context;
+        DX12DescriptorManager descriptor_manager;
+        
+        std::array<std::unique_ptr<DX12CommandQueue>, static_cast<uint8_t>(CommandQueueType::Count)> cmd_queues;
+
     private:
-        DX12Context _context;
-        DX12DescriptorManager _descriptor_manager;
-
-        DX12DeviceDesc _desc;
-
-        std::array<std::unique_ptr<DX12CommandQueue>, static_cast<uint8_t>(CommandQueueType::Count)> _cmd_queues;
         std::mutex _mutex;
-
         std::vector<ID3D12CommandList*> _d3d12_cmdlists_to_execute;
     };
 
