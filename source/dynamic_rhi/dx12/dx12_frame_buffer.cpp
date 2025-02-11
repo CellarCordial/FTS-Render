@@ -32,8 +32,7 @@ namespace fantasy
         {
             auto texture = check_cast<DX12Texture>(attachment.texture);
 
-            uint32_t rtv_index = _descriptor_manager->render_target_heap.allocate_descriptor();
-            texture->create_rtv(_descriptor_manager->render_target_heap.get_cpu_handle(rtv_index), attachment.subresource);
+            uint32_t rtv_index = texture->get_view_index(ResourceViewType::Texture_RTV, attachment.subresource);
 
             rtv_indices.push_back(rtv_index);
             ref_textures.emplace_back(texture);
@@ -43,12 +42,11 @@ namespace fantasy
         {
             std::shared_ptr<DX12Texture> texture = check_cast<DX12Texture>(desc.depth_stencil_attachment.texture);
 
-            uint32_t dsv_index_ = _descriptor_manager->depth_stencil_heap.allocate_descriptor();
-            D3D12_CPU_DESCRIPTOR_HANDLE view = _descriptor_manager->depth_stencil_heap.get_cpu_handle(dsv_index);
+            uint32_t rtv_index = texture->get_view_index(
+                ResourceViewType::Texture_DSV, 
+                desc.depth_stencil_attachment.subresource
+            );
 
-            texture->create_dsv(view, desc.depth_stencil_attachment.subresource);
-
-            dsv_index = dsv_index_;
             ref_textures.emplace_back(texture);
         }
         return true;

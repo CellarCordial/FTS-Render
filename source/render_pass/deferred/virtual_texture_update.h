@@ -34,7 +34,7 @@ namespace fantasy
 		std::shared_ptr<TextureInterface> _vt_indirect_texture;
 		std::array<std::shared_ptr<TextureInterface>, Material::TextureType_Num> _vt_physical_textures;
 
-		std::unique_ptr<BindingLayoutInterface> _binding_layout;
+		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 
 		std::unique_ptr<Shader> _cs;
 		std::unique_ptr<ComputePipelineInterface> _pipeline;

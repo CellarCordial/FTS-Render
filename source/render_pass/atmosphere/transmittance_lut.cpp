@@ -56,7 +56,7 @@ namespace fantasy
 				BufferDesc::create_constant(
 					sizeof(constant::AtmosphereProperties), 
 					false, 
-					"AtmospherePropertiesBuffer"
+					"atmosphere_properties_buffer"
 				)
 			)));
 			cache->collect(_atomsphere_properties_buffer, ResourceType::Buffer);
@@ -68,7 +68,7 @@ namespace fantasy
 				TRANSMITTANCE_LUT_RES,
 				TRANSMITTANCE_LUT_RES,
 				Format::RGBA32_FLOAT,
-				"TransmittanceTexture"
+				"transmittance_texture"
 			);
 			ReturnIfFalse(_transmittance_texture = std::shared_ptr<TextureInterface>(device->create_texture(texture_desc)));
 			cache->collect(_transmittance_texture, ResourceType::Texture);

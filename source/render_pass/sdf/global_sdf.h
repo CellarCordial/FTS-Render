@@ -56,7 +56,7 @@ namespace fantasy
 		std::shared_ptr<TextureInterface> _global_sdf_texture;
 		std::vector<const DistanceField::MeshDistanceField*> _mesh_sdfs;
 
-		std::unique_ptr<BindingLayoutInterface> _binding_layout;
+		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 		std::unique_ptr<BindingLayoutInterface> _dynamic_binding_layout;
 		std::unique_ptr<BindingLayoutInterface> _bindingless_layout;
 

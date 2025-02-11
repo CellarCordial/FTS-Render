@@ -1,7 +1,7 @@
 #ifndef RENDER_PASS_ATOMSPHERE_MULTISCATTERING_LUT_H
 #define RENDER_PASS_ATOMSPHERE_MULTISCATTERING_LUT_H
 
-#include "../../render_graph/render_graph.h"
+#include "../../render_graph/render_pass.h"
 #include "../../core/math/vector.h"
 #include <memory>
 
@@ -48,9 +48,9 @@ namespace fantasy
         std::shared_ptr<BufferInterface> _dir_sample_buffer;
         std::shared_ptr<TextureInterface> _multi_scattering_texture;
 
-        std::unique_ptr<BindingLayoutInterface> _binding_layout;
+        std::shared_ptr<BindingLayoutInterface> _binding_layout;
 
-        std::unique_ptr<Shader> _cs;
+        std::shared_ptr<Shader> _cs;
         std::unique_ptr<ComputePipelineInterface> _pipeline;
 
         std::unique_ptr<BindingSetInterface> _binding_set;

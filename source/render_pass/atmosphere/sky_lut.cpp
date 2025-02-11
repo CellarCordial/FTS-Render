@@ -15,7 +15,7 @@ namespace fantasy
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(5);
-			binding_layout_items[0] = BindingLayoutItem::create_constant_buffer(0, false);
+			binding_layout_items[0] = BindingLayoutItem::create_volatile_constant_buffer(0);
 			binding_layout_items[1] = BindingLayoutItem::create_constant_buffer(1);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(1);
@@ -51,14 +51,17 @@ namespace fantasy
 		// Buffer.
 		{
 			ReturnIfFalse(_pass_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_constant(sizeof(constant::SkyLUTPassConstant))
+				BufferDesc::create_constant_buffer(
+					sizeof(constant::SkyLUTPassConstant),
+					"sky_lut_pass_constant_buffer"
+				)
 			)));
 		}
  
 		// Texture.
 		{
 			ReturnIfFalse(_sky_lut_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target(
+				TextureDesc::create_render_target_texture(
 					SKY_LUT_RES,
 					SKY_LUT_RES,
 					Format::RGBA32_FLOAT,
@@ -78,26 +81,26 @@ namespace fantasy
 		// Pipeline.
 		{
 			GraphicsPipelineDesc pipeline_desc;
-			pipeline_desc.vertex_shader = _vs.get();
-			pipeline_desc.pixel_shader = _ps.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.vertex_shader = _vs;
+			pipeline_desc.pixel_shader = _ps;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(device->create_graphics_pipeline(pipeline_desc, _frame_buffer.get())));
 		}
 
 		// Binding Set.
 		{
-			_multi_scattering_texture = check_cast<TextureInterface>(cache->require("MultiScatteringTexture"));
-			_transmittance_texture = check_cast<TextureInterface>(cache->require("TransmittanceTexture"));
+			_multi_scattering_texture = check_cast<TextureInterface>(cache->require("multi_scattering_texture"));
+			_transmittance_texture = check_cast<TextureInterface>(cache->require("transmittance_texture"));
 
 			BindingSetItemArray binding_set_items(5);
-			binding_set_items[0] = BindingSetItem::create_constant_buffer(0, check_cast<BufferInterface>(cache->require("AtmospherePropertiesBuffer")));
+			binding_set_items[0] = BindingSetItem::create_constant_buffer(0, check_cast<BufferInterface>(cache->require("atmosphere_properties_buffer")));
 			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, _pass_constant_buffer);
 			binding_set_items[2] = BindingSetItem::create_texture_srv(0, _multi_scattering_texture);
 			binding_set_items[3] = BindingSetItem::create_texture_srv(1, _transmittance_texture);
 			binding_set_items[4] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
-				_binding_layout.get()
+				_binding_layout
 			)));
 		}
 
@@ -139,8 +142,7 @@ namespace fantasy
 			ReturnIfFalse(cmdlist->write_buffer(_pass_constant_buffer.get(), &_pass_constant, sizeof(constant::SkyLUTPassConstant)));
 		}
 
-		ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
-		ReturnIfFalse(cmdlist->draw(DrawArguments{ .index_count = 6 }));
+		ReturnIfFalse(cmdlist->draw(_graphics_state, DrawArguments{ .index_count = 6 }));
 
 		ReturnIfFalse(cmdlist->set_texture_state(_transmittance_texture.get(), TextureSubresourceSet{}, ResourceStates::NonPixelShaderResource));
 		ReturnIfFalse(cmdlist->set_texture_state(_multi_scattering_texture.get(), TextureSubresourceSet{}, ResourceStates::NonPixelShaderResource));

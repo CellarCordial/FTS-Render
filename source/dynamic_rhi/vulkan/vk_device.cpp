@@ -271,7 +271,7 @@ namespace fantasy
         context.device.waitIdle();
     }
 
-    void VKDevice::run_garbage_collection()
+    void VKDevice::collect_garbage()
     {
         for (auto& queue : cmd_queues)
         {

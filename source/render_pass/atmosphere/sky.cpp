@@ -49,7 +49,12 @@ namespace fantasy
 		// Texture.
 		{
 			ReturnIfFalse(_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_depth_stencil(CLIENT_WIDTH, CLIENT_HEIGHT, Format::D32, "DepthTexture")
+				TextureDesc::create_depth_stencil_texture(
+					CLIENT_WIDTH, 
+					CLIENT_HEIGHT, 
+					Format::D32, 
+					"depth_texture"
+				)
 			)));
 			cache->collect(_depth_texture, ResourceType::Texture);
 		}
@@ -75,9 +80,9 @@ namespace fantasy
 		// Pipeline.
 		{
 			GraphicsPipelineDesc pipeline_desc;
-			pipeline_desc.vertex_shader = _vs.get();
-			pipeline_desc.pixel_shader = _ps.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.vertex_shader = _vs;
+			pipeline_desc.pixel_shader = _ps;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(device->create_graphics_pipeline(pipeline_desc, _frame_buffer.get())));
 		}
 
@@ -89,7 +94,7 @@ namespace fantasy
 			binding_set_items[2] = BindingSetItem::create_sampler(0, _sampler);
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
-				_binding_layout.get()
+				_binding_layout
 			)));
 		}
 
@@ -121,9 +126,12 @@ namespace fantasy
 		));
 		clear_depth_stencil_attachment(cmdlist, _frame_buffer.get());
 
-		ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
-		ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::SkyPassConstant)));
-		ReturnIfFalse(cmdlist->draw(DrawArguments{ .index_count = 6 }));
+		ReturnIfFalse(cmdlist->draw(
+			_graphics_state, 
+			DrawArguments{ .index_count = 6 },
+			&_pass_constant, 
+			sizeof(constant::SkyPassConstant)
+		));
 
 		ReturnIfFalse(cmdlist->close());
 

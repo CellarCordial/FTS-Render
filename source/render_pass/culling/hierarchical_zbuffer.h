@@ -26,7 +26,7 @@ namespace fantasy
 	private:
 		std::vector<constant::HierarchicalZBufferPassConstant> _pass_constants;
     
-		std::unique_ptr<BindingLayoutInterface> _binding_layout;
+		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 
 		std::unique_ptr<Shader> _cs;
 		std::unique_ptr<ComputePipelineInterface> _pipeline;

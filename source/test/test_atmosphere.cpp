@@ -80,7 +80,7 @@ namespace fantasy
 		{
 			FrameBufferDesc FrameBufferDesc;
 			FrameBufferDesc.color_attachments.push_back(FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("FinalTexture"))));
-			FrameBufferDesc.depth_stencil_attachment = FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("DepthTexture")));
+			FrameBufferDesc.depth_stencil_attachment = FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("depth_texture")));
 			ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(FrameBufferDesc)));
 		}
 
@@ -121,18 +121,18 @@ namespace fantasy
 
 		// Binding Set.
 		{
-			_transmittance_texture = check_cast<TextureInterface>(cache->require("TransmittanceTexture"));
-			_aerial_lut_texture = check_cast<TextureInterface>(cache->require("AerialLUTTexture"));
-			_multi_scattering_texture = check_cast<TextureInterface>(cache->require("MultiScatteringTexture"));
+			_transmittance_texture = check_cast<TextureInterface>(cache->require("transmittance_texture"));
+			_aerial_lut_texture = check_cast<TextureInterface>(cache->require("aerial_lut_texture"));
+			_multi_scattering_texture = check_cast<TextureInterface>(cache->require("multi_scattering_texture"));
 			_final_texture = check_cast<TextureInterface>(cache->require("FinalTexture"));
 
 			BindingSetItemArray binding_set_items(10);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::AtmosphereDebugPassConstant0));
-			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, check_cast<BufferInterface>(cache->require("AtmospherePropertiesBuffer")));
+			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, check_cast<BufferInterface>(cache->require("atmosphere_properties_buffer")));
 			binding_set_items[2] = BindingSetItem::create_constant_buffer(2, _pass_constant1_buffer);
 			binding_set_items[3] = BindingSetItem::create_texture_srv(0, _transmittance_texture);
 			binding_set_items[4] = BindingSetItem::create_texture_srv(1, _aerial_lut_texture);
-			binding_set_items[5] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("ShadowMapTexture")));
+			binding_set_items[5] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("shadow_map_texture")));
 			binding_set_items[6] = BindingSetItem::create_texture_srv(3, _blue_noise_texture);
 			binding_set_items[7] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
 			binding_set_items[8] = BindingSetItem::create_sampler(1, check_cast<SamplerInterface>(cache->require("point_clamp_sampler")));

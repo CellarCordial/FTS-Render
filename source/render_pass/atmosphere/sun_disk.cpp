@@ -99,7 +99,7 @@ namespace fantasy
 				)
 			);
 			frame_buffer_desc.depth_stencil_attachment = 
-				FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("DepthTexture")));
+				FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("depth_texture")));
 			ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
 		}
 
@@ -121,9 +121,9 @@ namespace fantasy
 		// Binding Set.
 		{
 			BindingSetItemArray binding_set_items(4);
-			binding_set_items[0] = BindingSetItem::create_constant_buffer(0, check_cast<BufferInterface>(cache->require("AtmospherePropertiesBuffer")));
+			binding_set_items[0] = BindingSetItem::create_constant_buffer(0, check_cast<BufferInterface>(cache->require("atmosphere_properties_buffer")));
 			binding_set_items[1] = BindingSetItem::create_push_constants(1, sizeof(constant::SunDiskPassConstant));
-			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("TransmittanceTexture")));
+			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("transmittance_texture")));
 			binding_set_items[3] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },

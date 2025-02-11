@@ -51,6 +51,7 @@ namespace fantasy
         CommandQueueType queue_type;
         
         vk::Queue vk_queue;
+        uint32_t queue_family_index = INVALID_SIZE_32;
         
         uint64_t last_submitted_id = 0;
         uint64_t last_recording_id;
@@ -58,8 +59,6 @@ namespace fantasy
         
     private:
         const VKContext* _context;
-        
-        uint32_t _queue_family_index = INVALID_SIZE_32;
         
         std::mutex _mutex;
 

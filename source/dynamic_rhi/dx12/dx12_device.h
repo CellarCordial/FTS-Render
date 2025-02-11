@@ -47,7 +47,7 @@ namespace fantasy
         void queue_wait_for_cmdlist(CommandQueueType wait_queue_type, CommandQueueType execution_queue_type, uint64_t submit_id) override;
 
         void wait_for_idle() override;
-        void run_garbage_collection() override;
+        void collect_garbage() override;
 
         uint64_t queue_get_completed_id(CommandQueueType queue);
         DX12CommandQueue* get_queue(CommandQueueType type) const;

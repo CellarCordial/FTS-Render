@@ -49,7 +49,7 @@ namespace fantasy
         void queue_wait_for_cmdlist(CommandQueueType WaitQueueType, CommandQueueType queue_type, uint64_t submit_id) override;
 
         void wait_for_idle() override;
-        void run_garbage_collection() override;
+        void collect_garbage() override;
 
         GraphicsAPI get_graphics_api() const override;
         void* get_native_object() const override;

@@ -20,7 +20,7 @@ namespace fantasy
 		// BindingLayout.
 		{
 			BindingLayoutItemArray binding_layout_items(8);
-			binding_layout_items[0] = BindingLayoutItem::create_constant_buffer(0, false);
+			binding_layout_items[0] = BindingLayoutItem::create_volatile_constant_buffer(0);
 			binding_layout_items[1] = BindingLayoutItem::create_constant_buffer(1);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(1);
@@ -52,27 +52,30 @@ namespace fantasy
 		// Pipeline.
 		{
 			ComputePipelineDesc pipeline_desc;
-			pipeline_desc.compute_shader = _cs.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.compute_shader = _cs;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
 		}
 
 		// Buffer.
 		{
 			ReturnIfFalse(_pass_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_constant(sizeof(constant::AerialLUTPassConstant))
+				BufferDesc::create_constant_buffer(
+					sizeof(constant::AerialLUTPassConstant),
+					"aerial_lut_pass_constant_buffer"
+				)
 			)));
 		}
 
 		// Texture.
 		{
 			ReturnIfFalse(_aerial_lut_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_read_write(
+				TextureDesc::create_read_write_texture(
 					AERIAL_LUT_RES_X,
 					AERIAL_LUT_RES_Y,
 					AERIAL_LUT_RES_Z,
 					Format::RGBA32_FLOAT,
-					"AerialLUTTexture"
+					"aerial_lut_texture"
 				)
 			)));
 			cache->collect(_aerial_lut_texture, ResourceType::Texture);
@@ -81,17 +84,17 @@ namespace fantasy
 		// Binding Set.
 		{
 			BindingSetItemArray binding_set_items(8);
-			binding_set_items[0] = BindingSetItem::create_constant_buffer(0, check_cast<BufferInterface>(cache->require("AtmospherePropertiesBuffer")));
+			binding_set_items[0] = BindingSetItem::create_volatile_constant_buffer(0, check_cast<BufferInterface>(cache->require("atmosphere_properties_buffer")));
 			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, _pass_constant_buffer);
-			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("MultiScatteringTexture")));
-			binding_set_items[3] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("TransmittanceTexture")));
-			binding_set_items[4] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("ShadowMapTexture")));
+			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("multi_scattering_texture")));
+			binding_set_items[3] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("transmittance_texture")));
+			binding_set_items[4] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("shadow_map_texture")));
 			binding_set_items[5] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
 			binding_set_items[6] = BindingSetItem::create_sampler(1, check_cast<SamplerInterface>(cache->require("point_clamp_sampler")));
 			binding_set_items[7] = BindingSetItem::create_texture_uav(0, _aerial_lut_texture);
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
-				_binding_layout.get()
+				_binding_layout
 			)));
 		}
 
@@ -147,8 +150,7 @@ namespace fantasy
 			static_cast<uint32_t>(align(AERIAL_LUT_RES_Y, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y),
 		};
 
-		ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
-		ReturnIfFalse(cmdlist->dispatch(thread_group_num.x, thread_group_num.y));
+		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y));
 
 		ReturnIfFalse(cmdlist->close());
 		return true;

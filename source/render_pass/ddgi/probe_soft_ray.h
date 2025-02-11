@@ -42,7 +42,7 @@ namespace fantasy
 		std::shared_ptr<TextureInterface> _ddgi_radiance_texture;
 		std::shared_ptr<TextureInterface> _ddgi_direction_distance_texture;
 
-		std::unique_ptr<BindingLayoutInterface> _binding_layout;
+		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 
 		std::unique_ptr<Shader> _cs;
 		std::unique_ptr<ComputePipelineInterface> _pipeline;

@@ -97,6 +97,71 @@ namespace fantasy
         bool allow_unordered_access = false;
         
         bool is_virtual = false;
+
+        
+        static TextureDesc create_read_write_texture(
+            uint32_t width, 
+            uint32_t height, 
+            Format format, 
+            std::string name = ""
+        )
+        {
+            TextureDesc ret;
+            ret.width = width;
+            ret.height = height;
+            ret.format = format;
+            ret.dimension = TextureDimension::Texture3D;
+            ret.allow_unordered_access = true;
+            return ret;
+        }
+
+        static TextureDesc create_read_write_texture(
+            uint32_t width, 
+            uint32_t height, 
+            uint32_t depth, 
+            Format format, 
+            std::string name = ""
+        )
+        {
+            TextureDesc ret;
+            ret.width = width;
+            ret.height = height;
+            ret.depth = depth;
+            ret.format = format;
+            ret.dimension = TextureDimension::Texture3D;
+            ret.allow_unordered_access = true;
+            return ret;
+        }
+
+        static TextureDesc create_render_target_texture(
+            uint32_t width, 
+            uint32_t height, 
+            Format format, 
+            std::string name = ""
+        )
+        {
+            TextureDesc ret;
+            ret.width = width;
+            ret.height = height;
+            ret.format = format;
+            ret.allow_render_target = true;
+            return ret;
+        }
+
+        static TextureDesc create_depth_stencil_texture(
+            uint32_t width, 
+            uint32_t height, 
+            Format format, 
+            std::string name = ""
+        )
+        {
+            TextureDesc ret;
+            ret.width = width;
+            ret.height = height;
+            ret.format = format;
+            ret.allow_depth_stencil = true;
+            return ret;
+        }
     };
     
     struct TextureSlice
@@ -193,6 +258,34 @@ namespace fantasy
         // bool is_accel_struct_storage = false;
 
         bool is_virtual = false;
+        
+        static BufferDesc create_constant_buffer(uint64_t size, std::string name = "")
+        {
+            BufferDesc ret;
+			ret.name = name;
+			ret.byte_size = size;
+			ret.is_constant_buffer = true;
+            return ret;
+        }
+
+        static BufferDesc create_volatile_constant_buffer(uint64_t size, std::string name = "")
+        {
+            BufferDesc ret;
+			ret.name = name;
+			ret.byte_size = size;
+			ret.is_volatile_constant_buffer = true;
+            return ret;
+        }
+
+        static BufferDesc create_structured_buffer(uint64_t size, uint32_t stride, std::string name = "")
+        {
+            BufferDesc ret;
+			ret.name = name;
+			ret.byte_size = size;
+            ret.struct_stride = stride;
+			ret.allow_unordered_access = true;
+            return ret;
+        }
     };
 
     struct BufferRange

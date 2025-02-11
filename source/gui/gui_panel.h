@@ -6,7 +6,7 @@
 
 namespace fantasy::gui 
 {
-    void initialize(GLFWwindow* window, DeviceInterface* device);
+    bool initialize(GLFWwindow* window, DeviceInterface* device);
     void destroy();
 
     void add(std::function<void()>&& InFunction);

@@ -261,11 +261,11 @@ namespace fantasy
 			{
 				if (wait)
 				{
-					ReturnIfFalse(_device->queue_wait_for_cmdlist(
+					_device->queue_wait_for_cmdlist(
 						CommandQueueType::Graphics,
 						CommandQueueType::Compute,
 						_graphics_wait_value
-					));
+					);
 				}
 
 				if (immediately)
@@ -287,11 +287,11 @@ namespace fantasy
 			{
 				if (wait)
 				{
-					ReturnIfFalse(_device->queue_wait_for_cmdlist(
+					_device->queue_wait_for_cmdlist(
 						CommandQueueType::Compute,
 						CommandQueueType::Graphics,
 						_compute_wait_value
-					));
+					);
 				}
 
 				if (immediately)

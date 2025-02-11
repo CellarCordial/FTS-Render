@@ -53,7 +53,7 @@ namespace fantasy
         std::shared_ptr<TextureInterface> _sdf_output_texture;
         std::unique_ptr<StagingTextureInterface> _read_back_texture;
 
-        std::unique_ptr<BindingLayoutInterface> _binding_layout;
+        std::shared_ptr<BindingLayoutInterface> _binding_layout;
         
         std::unique_ptr<Shader> _cs;
         std::unique_ptr<ComputePipelineInterface> _pipeline;

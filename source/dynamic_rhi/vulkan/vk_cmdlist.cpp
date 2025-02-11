@@ -51,7 +51,7 @@ namespace fantasy
         _context(context), 
         queue_type(queue_type),
         vk_queue(vk_queue_),
-        _queue_family_index(queue_family_index)
+        queue_family_index(queue_family_index)
     {
         last_recording_id = 0;
 
@@ -80,7 +80,7 @@ namespace fantasy
         if (_cmdbuffers_pool.empty())
         {
             cmdbuffer = std::make_shared<VKCommandBuffer>(_context, ++last_recording_id);
-            if (!cmdbuffer->initialize(_queue_family_index))
+            if (!cmdbuffer->initialize(queue_family_index))
             {
                 LOG_ERROR("Create command buffer failed.");
                 return nullptr;

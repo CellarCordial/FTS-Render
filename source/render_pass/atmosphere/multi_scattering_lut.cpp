@@ -45,7 +45,7 @@ namespace fantasy
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(6);
-			binding_layout_items[0] = BindingLayoutItem::create_constant_buffer(0, false);
+			binding_layout_items[0] = BindingLayoutItem::create_volatile_constant_buffer(0);
 			binding_layout_items[1] = BindingLayoutItem::create_constant_buffer(1);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[3] = BindingLayoutItem::create_structured_buffer_srv(1);
@@ -76,18 +76,25 @@ namespace fantasy
         // Pipeline.
 		{
 			ComputePipelineDesc pipeline_desc;
-			pipeline_desc.compute_shader = _cs.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.compute_shader = _cs;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
 		}
 
         // Buffer.
 		{
 			ReturnIfFalse(_pass_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-                BufferDesc::create_constant(sizeof(constant::MultiScatteringPassConstant))
+                BufferDesc::create_constant_buffer(
+					sizeof(constant::MultiScatteringPassConstant),
+					"multiscattering_pass_constant_buffer" 
+				)
 			)));
 			ReturnIfFalse(_dir_sample_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-                BufferDesc::create_structured(sizeof(uint2) * DIRECTION_SAMPLE_COUNT, sizeof(uint2), true)
+                BufferDesc::create_structured_buffer(
+					sizeof(uint2) * DIRECTION_SAMPLE_COUNT, 
+					sizeof(uint2),
+					"direction_sample_buffer" 
+				)
 			)));
 
 		}
@@ -95,11 +102,11 @@ namespace fantasy
 		// Texture.
 		{
 			ReturnIfFalse(_multi_scattering_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_read_write(
+				TextureDesc::create_read_write_texture(
 					MULTI_SCATTERING_LUT_RES,
 					MULTI_SCATTERING_LUT_RES,
 					Format::RGBA32_FLOAT,
-					"MultiScatteringTexture"
+					"multi_scattering_texture"
 				)
 			)));
 			cache->collect(_multi_scattering_texture, ResourceType::Texture);
@@ -108,15 +115,15 @@ namespace fantasy
 		// Binding Set.
 		{
 			BindingSetItemArray binding_set_items(6);
-			binding_set_items[0] = BindingSetItem::create_constant_buffer(0, check_cast<BufferInterface>(cache->require("AtmospherePropertiesBuffer")));
+			binding_set_items[0] = BindingSetItem::create_volatile_constant_buffer(0, check_cast<BufferInterface>(cache->require("atmosphere_properties_buffer")));
 			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, _pass_constant_buffer);
-			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("TransmittanceTexture")));
+			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("transmittance_texture")));
 			binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(1, _dir_sample_buffer);
 			binding_set_items[4] = BindingSetItem::create_texture_uav(0, _multi_scattering_texture);
 			binding_set_items[5] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
-				_binding_layout.get()
+				_binding_layout
 			)));
 		}
 
@@ -160,8 +167,7 @@ namespace fantasy
 			static_cast<uint32_t>(align(MULTI_SCATTERING_LUT_RES, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y),
 		};
 
-		ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
-		ReturnIfFalse(cmdlist->dispatch(thread_group_num.x, thread_group_num.y));
+		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y));
 
 		ReturnIfFalse(cmdlist->close());
 

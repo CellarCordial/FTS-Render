@@ -38,7 +38,7 @@ namespace fantasy
 
 		std::shared_ptr<BufferInterface> _virtual_shadow_page_buffer;
 
-		std::unique_ptr<BindingLayoutInterface> _binding_layout;
+		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 
 		std::unique_ptr<Shader> _cs;
 		std::unique_ptr<ComputePipelineInterface> _pipeline;

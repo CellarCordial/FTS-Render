@@ -43,7 +43,7 @@ namespace fantasy
 		std::shared_ptr<TextureInterface> _blue_noise_texture;
         std::shared_ptr<TextureInterface> _shadow_map_texture;
 		
-		std::unique_ptr<BindingLayoutInterface> _binding_layout;
+		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 
 		std::unique_ptr<Shader> _ray_gen_shader;
 		std::unique_ptr<Shader> _miss_shader;

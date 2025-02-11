@@ -19,7 +19,7 @@ namespace fantasy
         uint2 _brdf_lut_resolution = { 64, 64 };
 		std::shared_ptr<TextureInterface> _brdf_lut_texture;
 
-		std::unique_ptr<BindingLayoutInterface> _binding_layout;
+		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 
 		std::unique_ptr<Shader> _cs;
 		std::unique_ptr<ComputePipelineInterface> _pipeline;

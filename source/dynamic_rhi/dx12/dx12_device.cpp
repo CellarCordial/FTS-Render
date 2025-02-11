@@ -320,7 +320,7 @@ namespace fantasy
         }
     }
 
-    void DX12Device::run_garbage_collection()
+    void DX12Device::collect_garbage()
     {
         for (auto& queue : cmd_queues)
         {

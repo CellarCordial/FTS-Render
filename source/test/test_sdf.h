@@ -42,10 +42,10 @@ namespace fantasy
         
         std::shared_ptr<TextureInterface> _sdf_texture;
 
-        std::unique_ptr<BindingLayoutInterface> _binding_layout;
+        std::shared_ptr<BindingLayoutInterface> _binding_layout;
         
-        std::unique_ptr<Shader> _vs;
-        std::unique_ptr<Shader> _ps;
+        std::shared_ptr<Shader> _vs;
+        std::shared_ptr<Shader> _ps;
         
         std::unique_ptr<FrameBufferInterface> _frame_buffer;
         std::unique_ptr<GraphicsPipelineInterface> _pipeline;

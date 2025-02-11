@@ -28,10 +28,10 @@ namespace fantasy
 		std::shared_ptr<ray_tracing::AccelStructInterface> _top_level_accel_struct;
 		std::shared_ptr<ray_tracing::AccelStructInterface> _bottom_level_accel_struct;
 		
-		std::unique_ptr<BindingLayoutInterface> _binding_layout;
+		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 
-		std::unique_ptr<Shader> _ray_gen_shader;
-		std::unique_ptr<Shader> _miss_shader;
+		std::shared_ptr<Shader> _ray_gen_shader;
+		std::shared_ptr<Shader> _miss_shader;
 
 		std::unique_ptr<ray_tracing::PipelineInterface> _pipeline;
 

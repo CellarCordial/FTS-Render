@@ -18,7 +18,7 @@ cbuffer gPassConstant : register(b1)
     float pad;
 };
 
-Texture2D<float3> gMultiScatteringTexture : register(t0);
+Texture2D<float3> gmulti_scattering_texture : register(t0);
 Texture2D<float3> transmittance_texture : register(t1);
 SamplerState gMTSampler : register(s0);
 
@@ -55,7 +55,7 @@ void RayMarching(float fPhaseU, float3 o, float3 d, float t, float dt, inout flo
 
     if (bool(bEnableMultiScattering))
     {
-        float3 MultiScattering = gMultiScatteringTexture.SampleLevel(gMTSampler, uv, 0);
+        float3 MultiScattering = gmulti_scattering_texture.SampleLevel(gMTSampler, uv, 0);
         InScatteringSum += dt * EyeTransmittance * InScatter * MultiScattering;
     }
 

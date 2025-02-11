@@ -19,7 +19,6 @@ namespace fantasy
 		void init(GLFWwindow* window, DeviceInterface* device) { gui::initialize(window, device); }
 
 	private:
-		std::unique_ptr<FrameBufferInterface> _frame_buffer;
 		std::shared_ptr<TextureInterface> _final_texture = nullptr;
 	};
 
