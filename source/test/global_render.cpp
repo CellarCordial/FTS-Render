@@ -1,13 +1,13 @@
 #include "global_render.h"
 
-#include "core/tools/log.h"
-#include "dynamic_rhi/dynamic_rhi.h"
-#include "dynamic_rhi/resource.h"
-#include "gui/gui_pass.h"
-#include "shader/shader_compiler.h"
-#include "core/parallel/parallel.h"
-#include "scene/scene.h"
-#include "scene/camera.h"
+#include "../core/tools/log.h"
+#include "../dynamic_rhi/dynamic_rhi.h"
+#include "../dynamic_rhi/resource.h"
+#include "../gui/gui_pass.h"
+#include "../shader/shader_compiler.h"
+#include "../core/parallel/parallel.h"
+#include "../scene/scene.h"
+#include "../scene/camera.h"
 #include <d3d12.h>
 #include <memory>
 
@@ -109,7 +109,7 @@ namespace fantasy
 		swap_chain_desc.BufferDesc.RefreshRate.Denominator = 1;
 		swap_chain_desc.BufferDesc.Scaling = DXGI_MODE_SCALING_UNSPECIFIED;
 		swap_chain_desc.BufferDesc.ScanlineOrdering = DXGI_MODE_SCANLINE_ORDER_UNSPECIFIED;
-		swap_chain_desc.BufferCount = NUM_FRAMES_IN_FLIGHT;
+		swap_chain_desc.BufferCount = FLIGHT_FRAME_NUM;
 		swap_chain_desc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 		swap_chain_desc.OutputWindow = glfwGetWin32Window(_window);
 		swap_chain_desc.SampleDesc = { 1, 0 };
@@ -119,8 +119,8 @@ namespace fantasy
 
 		ReturnIfFailed(dxgi_factory->CreateSwapChain(d3d12_graphics_cmd_queue, &swap_chain_desc, _swap_chain.GetAddressOf()));
 
-		ID3D12Resource* swap_chain_buffers[NUM_FRAMES_IN_FLIGHT];
-		for (uint32_t ix = 0; ix < NUM_FRAMES_IN_FLIGHT; ++ix)
+		ID3D12Resource* swap_chain_buffers[FLIGHT_FRAME_NUM];
+		for (uint32_t ix = 0; ix < FLIGHT_FRAME_NUM; ++ix)
 		{
 			_swap_chain->GetBuffer(ix, IID_PPV_ARGS(&swap_chain_buffers[ix]));
 		}
@@ -134,7 +134,7 @@ namespace fantasy
 
 		_render_graph = std::make_unique<RenderGraph>(
 			_device,
-			[this]() { _swap_chain->Present(0, 0); _current_back_buffer_index = (_current_back_buffer_index + 1) % NUM_FRAMES_IN_FLIGHT; }
+			[this]() { _swap_chain->Present(0, 0); _current_back_buffer_index = (_current_back_buffer_index + 1) % FLIGHT_FRAME_NUM; }
 		);
 		ReturnIfFalse(_render_graph->initialize(&_world));
 
@@ -148,7 +148,7 @@ namespace fantasy
 		back_buffer_desc.use_clear_value = true;
 		back_buffer_desc.clear_value = Color(0.0f, 0.0f, 0.0f, 1.0f);
 
-		for (uint32_t ix = 0; ix < NUM_FRAMES_IN_FLIGHT; ++ix)
+		for (uint32_t ix = 0; ix < FLIGHT_FRAME_NUM; ++ix)
 		{
 			back_buffer_desc.name = "BackBuffer" + std::to_string(ix);
 			ReturnIfFalse(_back_buffers[ix] = std::shared_ptr<TextureInterface>(_device->create_texture_from_native(swap_chain_buffers[ix], back_buffer_desc)));

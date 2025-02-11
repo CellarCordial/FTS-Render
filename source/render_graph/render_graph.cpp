@@ -2,12 +2,9 @@
 #include "render_pass.h"
 #include "render_resource_cache.h"
 #include <cstdint>
-#include <imgui.h>
 
 #include <d3d12.h>
 #include <dxgiformat.h>
-#include <backends/imgui_impl_dx12.h>
-#include <backends/imgui_impl_glfw.h>
 #include <memory>
 #include <minwindef.h>
 #include <queue>

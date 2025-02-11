@@ -585,9 +585,9 @@ namespace fantasy
     {
         static_assert(sizeof(dxgi_format_mappings) / sizeof(DxgiFormatMapping) == size_t(Format::NUM));
 
-        const auto& crMapping = dxgi_format_mappings[static_cast<uint32_t>(format)];
-        assert(crMapping.Format == format); 
-        return crMapping;
+        const auto& mapping = dxgi_format_mappings[static_cast<uint32_t>(format)];
+        assert(mapping.format == format); 
+        return mapping;
     }
 
 }

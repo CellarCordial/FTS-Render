@@ -52,7 +52,7 @@ namespace fantasy
 
                     ReturnIfFalse(ImGui_ImplDX12_Init(
                         reinterpret_cast<ID3D12Device*>(device->get_native_object()), 
-                        NUM_FRAMES_IN_FLIGHT, 
+                        FLIGHT_FRAME_NUM, 
                         DXGI_FORMAT_R8G8B8A8_UNORM, 
                         srv_font_descriptor_heap, 
                         descriptor_heap->get_shader_visible_cpu_handle(view_index),
@@ -97,7 +97,7 @@ namespace fantasy
                     // init_info.RenderPass = VK_NULL_HANDLE;
                     // init_info.Subpass = 0;
                     // init_info.MinImageCount = 1;
-                    // init_info.ImageCount = NUM_FRAMES_IN_FLIGHT;
+                    // init_info.ImageCount = FLIGHT_FRAME_NUM;
                     // init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
                     // init_info.Allocator = (VkAllocationCallbacks*)(vk_device->context.allocation_callbacks);
                     // init_info.CheckVkResultFn = check_vk_result;

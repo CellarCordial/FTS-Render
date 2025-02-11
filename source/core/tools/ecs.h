@@ -246,7 +246,7 @@ namespace fantasy
 		template <typename T>
 		void subscribe(EventSubscriber<T>* subscriber)
 		{
-			assert(pSubscriber != nullptr);
+			assert(subscriber != nullptr);
 
 			auto type_index = std::type_index(typeid(T));
 			auto iter = _subscribers.find(type_index);

@@ -124,7 +124,6 @@ namespace fantasy
 
     const VertexAttributeDesc& VKInputLayout::get_attribute_desc(uint32_t attribute_index) const 
     {
-        assert(attribute_index < input_desc.size());
         return attribute_desc[attribute_index];
     }
 

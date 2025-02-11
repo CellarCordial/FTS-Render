@@ -412,7 +412,7 @@ namespace fantasy
         if (desc.depth != 1)
         {
             assert(array_slice == 0);
-            assert(z < desc.depth);
+            assert(depth_index < desc.depth);
 
             uint32_t depth = std::max(desc.depth, uint32_t(1));
 
@@ -423,7 +423,7 @@ namespace fantasy
         }
         else if (desc.array_size != 1)
         {
-            assert(z == 0);
+            assert(depth_index == 0);
             assert(array_slice < desc.array_size);
             assert(slice_regions.size() == desc.mip_levels * desc.array_size);
             return slice_regions[mip_level * desc.array_size + array_slice];
@@ -431,7 +431,7 @@ namespace fantasy
         else
         {
             assert(array_slice == 0);
-            assert(z == 0);
+            assert(depth_index == 0);
             assert(slice_regions.size() == desc.mip_levels);
             return slice_regions[mip_level];
         }

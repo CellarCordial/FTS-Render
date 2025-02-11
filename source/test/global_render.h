@@ -5,13 +5,13 @@
 #include <memory>
 #include <wrl.h>
 #include <dxgi.h>
-#include "core/tools/timer.h"
-#include "core/tools/ecs.h"
-#include "gui/gui_pass.h"
-#include "render_graph/render_graph.h"
-#include "test/test_atmosphere.h"
-#include "test/test_sdf.h"
-#include "test/test_restir.h"
+#include "../core/tools/timer.h"
+#include "../core/tools/ecs.h"
+#include "../gui/gui_pass.h"
+#include "../render_graph/render_graph.h"
+#include "test_atmosphere.h"
+#include "test_sdf.h"
+#include "test_restir.h"
 
 namespace fantasy
 {
@@ -39,7 +39,7 @@ namespace fantasy
 
 		std::shared_ptr<DeviceInterface> _device;
 		std::shared_ptr<TextureInterface> _final_texture;
-		std::shared_ptr<TextureInterface> _back_buffers[NUM_FRAMES_IN_FLIGHT];
+		std::shared_ptr<TextureInterface> _back_buffers[FLIGHT_FRAME_NUM];
 		std::unique_ptr<RenderGraph> _render_graph;
 		std::shared_ptr<GuiPass> _gui_pass;
 

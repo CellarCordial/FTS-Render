@@ -121,7 +121,6 @@ namespace fantasy
 
         void set_page(uint2 page_id, uint2 page_pos)
         {
-            assert(uv < resolution);
             page_pointers[page_id.y * resolution.x + page_id.x] = page_pos;
         }
 

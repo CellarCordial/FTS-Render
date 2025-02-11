@@ -37,7 +37,7 @@ namespace fantasy
 
 	World::~World()
     {
-        for (auto& system : _systems) assert(system->Destroy());
+        for (auto& system : _systems) assert(system->destroy());
 
         for (auto& entity : _entities)
         {

@@ -798,7 +798,7 @@ namespace fantasy
 
     void DX12StagingTexture::unmap()
     {
-        assert(_mapped_region.size != 0);
+        assert(_d3d12_mapped_range.End - _d3d12_mapped_range.Begin != 0);
 
         check_cast<DX12Buffer*>(_buffer.get())->d3d12_resource->Unmap(0, &_d3d12_mapped_range);
 

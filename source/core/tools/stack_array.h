@@ -29,18 +29,18 @@ namespace fantasy
         
         StackArray(uint32_t init_size) : _Base(), _current_size(init_size)
         {
-            assert(dwInitSize <= dwMaxSize);
+            assert(init_size <= dwMaxSize);
         }
 
         _Base::reference operator[](uint32_t pos)
         {
-            assert(pos < m_dwCurrSize);
+            assert(pos < _current_size);
             return _Base::operator[](pos);
         }
 
         _Base::const_reference operator[](uint32_t pos) const
         {
-            assert(pos < m_dwCurrSize);
+            assert(pos < _current_size);
             return _Base::operator[](pos);
         }
 
@@ -73,21 +73,21 @@ namespace fantasy
 
         void push_back(const T& value)
         {
-            assert(m_dwCurrSize < dwMaxSize);
+            assert(_current_size < dwMaxSize);
             *(data() + _current_size) = value;
             _current_size++;
         }
 
         void push_back(T&& rrValue)
         {
-            assert(m_dwCurrSize < dwMaxSize);
+            assert(_current_size < dwMaxSize);
             *(data() + _current_size) = std::move(rrValue);
             _current_size++;
         }
 
         void pop_back()
         {
-            assert(m_dwCurrSize > 0);
+            assert(_current_size > 0);
             _current_size--;
         }
 

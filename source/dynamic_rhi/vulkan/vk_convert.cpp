@@ -645,7 +645,7 @@ namespace fantasy
     vk::Format convert_format(Format format)
     {
         assert(format < Format::NUM);
-        assert(c_FormatMap[uint32_t(format)].rhiFormat == format);
+        assert(format_map[uint32_t(format)].format == format);
 
         return static_cast<vk::Format>(format_map[uint32_t(format)].vk_format);
     }

@@ -28,7 +28,7 @@ static std::string log_string(std::string str, std::string file_name, uint32_t l
 #ifdef DEBUG 
 #define ReturnIfFalse(bool)      \
         if (!(bool)) { LOG_ERROR(#bool); return false; }
-#elif RELEASE  
+#else
 #define ReturnIfFalse(bool) (void)(bool)
 #endif
 
