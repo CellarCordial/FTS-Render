@@ -39,8 +39,7 @@ namespace fantasy
 			vertex_attributes[3].element_stride = sizeof(Vertex);
 			ReturnIfFalse(_input_layout = std::unique_ptr<InputLayoutInterface>(device->create_input_layout(
 				vertex_attributes.data(), 
-				vertex_attributes.size(), 
-				nullptr
+				vertex_attributes.size()
 			)));
 		}
 
@@ -95,11 +94,11 @@ namespace fantasy
 		// Buffer.
 		{
 			ReturnIfFalse(_vertex_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_vertex(sizeof(Vertex) * _vertices.size(), "GeometryVertexBuffer")
+				BufferDesc::create_vertex_buffer(sizeof(Vertex) * _vertices.size(), "GeometryVertexBuffer")
 			)));
 
 			ReturnIfFalse(_index_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_index(sizeof(uint32_t) * _indices.size(), "GeometryIndexBuffer")
+				BufferDesc::create_index_buffer(sizeof(uint32_t) * _indices.size(), "GeometryIndexBuffer")
 			)));
 
 			cache->collect(_vertex_buffer, ResourceType::Buffer);
@@ -109,7 +108,7 @@ namespace fantasy
 		// Texture.
 		{
 			ReturnIfFalse(_shadow_map_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_depth_stencil(CLIENT_WIDTH, CLIENT_HEIGHT, Format::D32, "shadow_map_texture")
+				TextureDesc::create_depth_stencil_texture(CLIENT_WIDTH, CLIENT_HEIGHT, Format::D32, "shadow_map_texture")
 			)));
 			cache->collect(_shadow_map_texture, ResourceType::Texture);
 		}
@@ -124,9 +123,9 @@ namespace fantasy
 		// Pipeline.
 		{
 			GraphicsPipelineDesc pipeline_desc;
-			pipeline_desc.vertex_shader = _vs.get();
-			pipeline_desc.input_layout = _input_layout.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.vertex_shader = _vs;
+			pipeline_desc.input_layout = _input_layout;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			pipeline_desc.render_state.depth_stencil_state.enable_depth_test = true;
 			pipeline_desc.render_state.depth_stencil_state.enable_depth_write = true;
 			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(device->create_graphics_pipeline(pipeline_desc, _frame_buffer.get())));
@@ -178,17 +177,12 @@ namespace fantasy
 				{
 					_pass_constant.world_matrix = mesh->submeshes[ix].world_matrix;
 
-					ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
-					ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::ShadowMapPassConstant)));
-
-					ReturnIfFalse(cmdlist->draw_indexed(_draw_arguments[submesh_index++]));
+					ReturnIfFalse(cmdlist->draw_indexed(_graphics_state, _draw_arguments[submesh_index++], &_pass_constant));
 				}
 				return true;
 			}
 		));
 		ReturnIfFalse(submesh_index == _draw_arguments.size());
-
-		ReturnIfFalse(cmdlist->set_texture_state(_shadow_map_texture.get(), TextureSubresourceSet{}, ResourceStates::NonPixelShaderResource));
 
 		ReturnIfFalse(cmdlist->close());
 

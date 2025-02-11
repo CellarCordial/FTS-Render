@@ -11,7 +11,7 @@ namespace fantasy
 	{
 	public:
 		GuiPass() { type = RenderPassType::Graphics; }
-		~GuiPass() { gui::destroy(); }
+		~GuiPass() { assert(_device); gui::destroy(_device); }
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache);
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache);
@@ -19,6 +19,7 @@ namespace fantasy
 		void init(GLFWwindow* window, DeviceInterface* device) { gui::initialize(window, device); }
 
 	private:
+		DeviceInterface* _device = nullptr;
 		std::shared_ptr<TextureInterface> _final_texture = nullptr;
 	};
 

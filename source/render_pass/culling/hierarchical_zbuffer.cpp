@@ -49,8 +49,8 @@ namespace fantasy
 		// Pipeline.
 		{
 			ComputePipelineDesc pipeline_desc;
-			pipeline_desc.compute_shader = _cs.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.compute_shader = _cs;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
 		}
 
@@ -74,7 +74,7 @@ namespace fantasy
             }
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
-				_binding_layout.get()
+				_binding_layout
 			)));
 		}
 
@@ -102,12 +102,7 @@ namespace fantasy
 
         for (uint32_t ix = 0; ix < _pass_constants.size(); ++ix)
         {
-            ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
-            ReturnIfFalse(cmdlist->set_push_constants(
-                &_pass_constants[ix], 
-                sizeof(constant::HierarchicalZBufferPassConstant)
-            ));
-            ReturnIfFalse(cmdlist->dispatch(thread_group_num.x, thread_group_num.y));
+            ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constants[ix]));
         }
 
 		ReturnIfFalse(cmdlist->close());

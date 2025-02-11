@@ -118,10 +118,9 @@ namespace fantasy
 				_model_sdf_data_default_count = static_cast<uint32_t>(_model_sdf_datas.size());
 
 				ReturnIfFalse(_model_sdf_data_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-					BufferDesc::create_structured(
+					BufferDesc::create_structured_buffer(
 						_model_sdf_datas.size() * sizeof(constant::ModelSdfData),
-						sizeof(constant::ModelSdfData),
-						true
+						sizeof(constant::ModelSdfData)
 					)
 				)));
 
@@ -131,7 +130,7 @@ namespace fantasy
 				dynamic_binding_set_items[0] = BindingSetItem::create_structured_buffer_srv(0, _model_sdf_data_buffer);
 				ReturnIfFalse(_dynamic_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 					BindingSetDesc{ .binding_items = dynamic_binding_set_items },
-					_dynamic_binding_layout.get()
+					_dynamic_binding_layout
 				)));
 
 				// Compute state.
@@ -170,16 +169,19 @@ namespace fantasy
 						};
 						pass_constants.voxel_offset = (pass_constants.voxel_offset) * VOXEL_NUM_PER_CHUNK;
 
-						ReturnIfFalse(cmdlist->set_compute_state(_clear_pass_compute_state));
-						ReturnIfFalse(cmdlist->set_push_constants(&pass_constants, sizeof(constant::GlobalSdfConstants)));
-
 						uint3 thread_group_num = {
 							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
 							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
 							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
 						};
 
-						ReturnIfFalse(cmdlist->dispatch(thread_group_num.x, thread_group_num.y, thread_group_num.z));
+						ReturnIfFalse(cmdlist->dispatch(
+							_clear_pass_compute_state, 
+							thread_group_num.x, 
+							thread_group_num.y, 
+							thread_group_num.z,
+							&pass_constants
+						));
 						chunk.model_moved = false;
 					}
 				}
@@ -222,16 +224,18 @@ namespace fantasy
 							offset,	offset,	offset,	1.0f
 						};
 
-						ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
-						ReturnIfFalse(cmdlist->set_push_constants(&pass_constants, sizeof(constant::GlobalSdfConstants)));
-
 						uint3 thread_group_num = {
 							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_X)) / THREAD_GROUP_SIZE_X,
 							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y,
 							align(VOXEL_NUM_PER_CHUNK, static_cast<uint32_t>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z
 						};
 
-						ReturnIfFalse(cmdlist->dispatch(thread_group_num.x, thread_group_num.y, thread_group_num.z));
+						ReturnIfFalse(cmdlist->dispatch(_compute_state, 
+							thread_group_num.x, 
+							thread_group_num.y, 
+							thread_group_num.z,
+							&pass_constants
+						));
 
 						chunk.model_moved = false;
 					}
@@ -274,11 +278,11 @@ namespace fantasy
 			)));
 
 			BindingLayoutItemArray bindless_layout_items(1);
-			bindless_layout_items[0] = BindingLayoutItem::create_bindless_srv();
+			bindless_layout_items[0] = BindingLayoutItem::create_bindless_texture_srv();
 			ReturnIfFalse(_bindingless_layout = std::unique_ptr<BindingLayoutInterface>(device->create_bindless_layout(
 				BindlessLayoutDesc{
-					.binding_layout_items = bindless_layout_items,
-					.first_slot = 1
+					.first_slot = 1,
+					.binding_layout_items = bindless_layout_items
 				}
 			)));
 
@@ -315,15 +319,15 @@ namespace fantasy
 		// Pipeline.
 		{
 			ComputePipelineDesc pipeline_desc;
-			pipeline_desc.compute_shader = _cs.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
-			pipeline_desc.binding_layouts.push_back(_dynamic_binding_layout.get());
-			pipeline_desc.binding_layouts.push_back(_bindingless_layout.get());
+			pipeline_desc.compute_shader = _cs;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
+			pipeline_desc.binding_layouts.push_back(_dynamic_binding_layout);
+			pipeline_desc.binding_layouts.push_back(_bindingless_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
 
 			ComputePipelineDesc clear_pass_pipeline_desc;
-			clear_pass_pipeline_desc.compute_shader = _clear_pass_cs.get();
-			clear_pass_pipeline_desc.binding_layouts.push_back(clear_pass_binding_layout.get());
+			clear_pass_pipeline_desc.compute_shader = _clear_pass_cs;
+			clear_pass_pipeline_desc.binding_layouts.push_back(clear_pass_binding_layout);
 			ReturnIfFalse(_clear_pass_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(clear_pass_pipeline_desc)));
 		}
 
@@ -335,10 +339,9 @@ namespace fantasy
 		// Buffer.
 		{
 			ReturnIfFalse(_model_sdf_data_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_structured(
+				BufferDesc::create_structured_buffer(
 					_model_sdf_data_default_count * sizeof(constant::ModelSdfData),
-					sizeof(constant::ModelSdfData),
-					true
+					sizeof(constant::ModelSdfData)
 				)
 			)));
 		}
@@ -346,7 +349,7 @@ namespace fantasy
 		// Texture.
 		{
 			ReturnIfFalse(_global_sdf_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_read_write(
+				TextureDesc::create_read_write_texture(
 					GLOBAL_SDF_RESOLUTION,
 					GLOBAL_SDF_RESOLUTION,
 					GLOBAL_SDF_RESOLUTION,
@@ -365,17 +368,17 @@ namespace fantasy
 			binding_set_items[2] = BindingSetItem::create_texture_uav(0, _global_sdf_texture);
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
-				_binding_layout.get()
+				_binding_layout
 			)));
 
 			BindingSetItemArray dynamic_binding_set_items(1);
 			dynamic_binding_set_items[0] = BindingSetItem::create_structured_buffer_srv(0, _model_sdf_data_buffer);
 			ReturnIfFalse(_dynamic_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = dynamic_binding_set_items },
-				_dynamic_binding_layout.get()
+				_dynamic_binding_layout
 			)));
 
-			ReturnIfFalse(_bindless_set = std::unique_ptr<BindlessSetInterface>(device->create_bindless_set(_bindingless_layout.get())));
+			ReturnIfFalse(_bindless_set = std::unique_ptr<BindlessSetInterface>(device->create_bindless_set(_bindingless_layout)));
 
 
 			BindingSetItemArray clear_pass_binding_set_items(2);
@@ -383,7 +386,7 @@ namespace fantasy
 			clear_pass_binding_set_items[1] = BindingSetItem::create_texture_uav(0, _global_sdf_texture);
 			ReturnIfFalse(_clear_pass_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = clear_pass_binding_set_items },
-				clear_pass_binding_layout.get()
+				clear_pass_binding_layout
 			)));
 		}
 

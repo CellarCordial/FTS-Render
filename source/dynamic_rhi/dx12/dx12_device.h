@@ -49,7 +49,7 @@ namespace fantasy
         void wait_for_idle() override;
         void collect_garbage() override;
 
-        uint64_t queue_get_completed_id(CommandQueueType queue);
+        uint64_t queue_get_completed_id(CommandQueueType type);
         DX12CommandQueue* get_queue(CommandQueueType type) const;
 
     public:
@@ -58,7 +58,7 @@ namespace fantasy
         DX12Context context;
         DX12DescriptorManager descriptor_manager;
         
-        std::array<std::unique_ptr<DX12CommandQueue>, static_cast<uint8_t>(CommandQueueType::Count)> cmd_queues;
+        std::array<std::unique_ptr<DX12CommandQueue>, static_cast<uint8_t>(CommandQueueType::Count)> cmdqueues;
 
     private:
         std::mutex _mutex;

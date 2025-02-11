@@ -53,8 +53,8 @@ namespace fantasy
 		// Pipeline.
 		{
 			ComputePipelineDesc pipeline_desc;
-			pipeline_desc.compute_shader = _cs.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.compute_shader = _cs;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
 		}
 
@@ -65,7 +65,7 @@ namespace fantasy
                                    _ddgi_volume_data.probe_count.z;
             
 			ReturnIfFalse(_ddgi_radiance_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_read_write(
+				TextureDesc::create_read_write_texture(
 					_ddgi_volume_data.ray_count,
 					probe_count,
 					Format::RGBA32_FLOAT,
@@ -74,7 +74,7 @@ namespace fantasy
 			)));
 
 			ReturnIfFalse(_ddgi_direction_distance_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_read_write(
+				TextureDesc::create_read_write_texture(
 					_ddgi_volume_data.ray_count,
 					probe_count,
 					Format::RGBA32_FLOAT,
@@ -103,7 +103,7 @@ namespace fantasy
 			binding_set_items[11] = BindingSetItem::create_sampler(1, check_cast<SamplerInterface>(cache->require("linear_wrap_sampler")));
             ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
                 BindingSetDesc{ .binding_items = binding_set_items },
-                _binding_layout.get()
+                _binding_layout
             )));
 		}
 
@@ -133,9 +133,7 @@ namespace fantasy
 			static_cast<uint32_t>((align(_ddgi_volume_data.ray_count, static_cast<uint32_t>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y)),
 		};
 
-		ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
-        ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::ProbeSoftRayPassConstant)));
-		ReturnIfFalse(cmdlist->dispatch(thread_group_num.x, thread_group_num.y));
+		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constant));
 
 		ReturnIfFalse(cmdlist->close());
         return true;

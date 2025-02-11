@@ -69,8 +69,8 @@ namespace fantasy
         // Pipeline.
 		{
 			ComputePipelineDesc pipeline_desc;
-			pipeline_desc.compute_shader = _cs.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.compute_shader = _cs;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
 		}
 
@@ -96,7 +96,7 @@ namespace fantasy
 			// Texture.
 			{
 				ReturnIfFalse(_sdf_output_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-					TextureDesc::create_read_write(
+					TextureDesc::create_read_write_texture(
 						SDF_RESOLUTION,
 						SDF_RESOLUTION,
 						SDF_RESOLUTION,
@@ -112,17 +112,15 @@ namespace fantasy
 				// Buffer.
 				{
 					ReturnIfFalse(_bvh_node_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-						BufferDesc::create_structured(
+						BufferDesc::create_structured_buffer(
 							mesh_df.bvh.GetNodes().size() * sizeof(Bvh::Node),
-							sizeof(Bvh::Node),
-							true
+							sizeof(Bvh::Node)
 						)
 					)));
 					ReturnIfFalse(_bvh_vertex_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-						BufferDesc::create_structured(
+						BufferDesc::create_structured_buffer(
 							mesh_df.bvh.GetVertices().size() * sizeof(Bvh::Vertex),
-							sizeof(Bvh::Vertex),
-							true
+							sizeof(Bvh::Vertex)
 						)
 					)));
 				}
@@ -130,7 +128,7 @@ namespace fantasy
 				// Texture.
 				{
 					ReturnIfFalse(_read_back_texture = std::unique_ptr<StagingTextureInterface>(device->create_staging_texture(
-						TextureDesc::create_read_back(
+						TextureDesc::create_read_back_texture(
 							SDF_RESOLUTION,
 							SDF_RESOLUTION,
 							SDF_RESOLUTION,
@@ -149,7 +147,7 @@ namespace fantasy
 					binding_set_items[3] = BindingSetItem::create_texture_uav(0, _sdf_output_texture);
 					ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 						BindingSetDesc{ .binding_items = binding_set_items },
-						_binding_layout.get()
+						_binding_layout
 					)));
 				}
 
@@ -164,10 +162,10 @@ namespace fantasy
 				_pass_constants.sdf_upper = mesh_df.sdf_box._upper;
 				_pass_constants.sdf_extent = _pass_constants.sdf_upper - _pass_constants.sdf_lower;
 
-				const auto& crNodes = mesh_df.bvh.GetNodes();
-				const auto& crVertices = mesh_df.bvh.GetVertices();
-				ReturnIfFalse(cmdlist->write_buffer(_bvh_node_buffer.get(), crNodes.data(), crNodes.size() * sizeof(Bvh::Node)));
-				ReturnIfFalse(cmdlist->write_buffer(_bvh_vertex_buffer.get(), crVertices.data(), crVertices.size() * sizeof(Bvh::Vertex)));
+				const auto& nodes = mesh_df.bvh.GetNodes();
+				const auto& vertices = mesh_df.bvh.GetVertices();
+				ReturnIfFalse(cmdlist->write_buffer(_bvh_node_buffer.get(), nodes.data(), nodes.size() * sizeof(Bvh::Node)));
+				ReturnIfFalse(cmdlist->write_buffer(_bvh_vertex_buffer.get(), vertices.data(), vertices.size() * sizeof(Bvh::Vertex)));
 			}
 
 			_resource_writed = true;
@@ -175,26 +173,25 @@ namespace fantasy
 
 		if (!_distance_field->check_sdf_cache_exist())
 		{
-			ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
-
 			_pass_constants.x_begin = _begin_x;
 			_pass_constants.x_end = _begin_x + X_SLICE_SIZE;
-			ReturnIfFalse(cmdlist->set_push_constants(&_pass_constants, sizeof(constant::SdfGeneratePassConstants)));
 			ReturnIfFalse(cmdlist->dispatch(
+				_compute_state,
 				1,
 				static_cast<uint32_t>(align(SDF_RESOLUTION, static_cast<uint32_t>(THREAD_GROUP_SIZE_Y)) / THREAD_GROUP_SIZE_Y),
-				static_cast<uint32_t>(align(SDF_RESOLUTION, static_cast<uint32_t>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z)
+				static_cast<uint32_t>(align(SDF_RESOLUTION, static_cast<uint32_t>(THREAD_GROUP_SIZE_Z)) / THREAD_GROUP_SIZE_Z),
+				&_pass_constants
 			));
 
 			_begin_x += X_SLICE_SIZE;
 			if (_begin_x == SDF_RESOLUTION)
 			{
-				ReturnIfFalse(cmdlist->copy_texture(
+				cmdlist->copy_texture(
 					_read_back_texture.get(), 
 					TextureSlice{}, 
 					_sdf_output_texture.get(), 
 					TextureSlice{}
-				));
+				);
 
 				if (_current_mesh_sdf_index + 1 == static_cast<uint32_t>(_distance_field->mesh_distance_fields.size()))
 				{
@@ -204,14 +201,13 @@ namespace fantasy
 		}
 		else
 		{
-			uint32_t dwPixelSize = get_format_info(Format::R32_FLOAT).size;
+			uint32_t pixel_size = get_format_info(Format::R32_FLOAT).size;
 			ReturnIfFalse(cmdlist->write_texture(
 				_sdf_output_texture.get(),
 				0,
 				0,
 				mesh_df.sdf_data.data(),
-				SDF_RESOLUTION * dwPixelSize,
-				SDF_RESOLUTION * SDF_RESOLUTION* dwPixelSize
+				SDF_RESOLUTION * SDF_RESOLUTION* pixel_size
 			));
 
 			if (_current_mesh_sdf_index + 1 == static_cast<uint32_t>(_distance_field->mesh_distance_fields.size()))
@@ -242,7 +238,7 @@ namespace fantasy
 
 			uint64_t row_pitch = 0;
 			uint64_t row_size = sizeof(float) * SDF_RESOLUTION;
-			uint8_t* mapped_data = static_cast<uint8_t*>(_read_back_texture->map(TextureSlice{}, CpuAccessMode::Read, fence_event, &row_pitch));
+			uint8_t* mapped_data = static_cast<uint8_t*>(_read_back_texture->map(TextureSlice{}, CpuAccessMode::Read, &row_pitch));
 			ReturnIfFalse(mapped_data && row_pitch == row_size);
 
 			uint8_t* dst = reinterpret_cast<uint8_t*>(sdf_data.data());
@@ -276,8 +272,8 @@ namespace fantasy
 
 			if (++_current_mesh_sdf_index == static_cast<uint32_t>(_distance_field->mesh_distance_fields.size()))
 			{
-				std::string strSdfName = mesh_df.sdf_texture_name.substr(0, mesh_df.sdf_texture_name.find("SdfTexture")) + ".sdf";
-				gui::notify_message(gui::ENotifyType::Info, strSdfName + " bake finished.");
+				std::string sdf_name = mesh_df.sdf_texture_name.substr(0, mesh_df.sdf_texture_name.find("SdfTexture")) + ".sdf";
+				gui::notify_message(gui::ENotifyType::Info, sdf_name + " bake finished.");
 				_distance_field = nullptr;
 				_binary_output.reset();
 				_current_mesh_sdf_index = 0;
@@ -291,8 +287,8 @@ namespace fantasy
 		{
 			if (++_current_mesh_sdf_index == static_cast<uint32_t>(_distance_field->mesh_distance_fields.size()))
 			{
-				std::string strSdfName = mesh_df.sdf_texture_name.substr(0, mesh_df.sdf_texture_name.find("SdfTexture")) + ".sdf";
-				gui::notify_message(gui::ENotifyType::Info, strSdfName + " bake finished.");
+				std::string sdf_name = mesh_df.sdf_texture_name.substr(0, mesh_df.sdf_texture_name.find("SdfTexture")) + ".sdf";
+				gui::notify_message(gui::ENotifyType::Info, sdf_name + " bake finished.");
 
 				// finished_task_num++;
 				(*_modle_entity->get_component<uint32_t>())++;

@@ -315,8 +315,8 @@ namespace fantasy
         vk_depth_stencil_info.minDepthBounds = 0.0f;
 
 
-        auto frame_buffer = check_cast<VKFrameBuffer>(frame_buffer_);
-        uint32_t color_attachment_count = frame_buffer.desc.color_attachments.size();
+        VKFrameBuffer* frame_buffer = check_cast<VKFrameBuffer*>(frame_buffer_);
+        uint32_t color_attachment_count = frame_buffer->desc.color_attachments.size();
 
         const auto& blend_state = desc.render_state.blend_state;
 
@@ -373,7 +373,7 @@ namespace fantasy
         vk_pipeline_info.pColorBlendState = &vk_color_blend_info;
         vk_pipeline_info.pDynamicState = &vk_dynamic_state_info;
         vk_pipeline_info.layout = vk_pipeline_layout;
-        vk_pipeline_info.renderPass = frame_buffer.vk_render_pass;
+        vk_pipeline_info.renderPass = frame_buffer->vk_render_pass;
         vk_pipeline_info.subpass = 0;
         vk_pipeline_info.basePipelineHandle = nullptr;
         vk_pipeline_info.basePipelineIndex = -1;

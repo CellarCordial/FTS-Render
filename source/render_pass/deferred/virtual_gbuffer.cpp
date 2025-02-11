@@ -59,7 +59,7 @@ namespace fantasy
 		// Buffer
 		{
 			ReturnIfFalse(_vt_page_info_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_rwstructured(
+				BufferDesc::create_read_write_structured_buffer(
 					sizeof(VTPageInfo) * CLIENT_WIDTH * CLIENT_HEIGHT, 
 					sizeof(VTPageInfo),
 					"vt_page_info_buffer"
@@ -71,7 +71,7 @@ namespace fantasy
 		// Texture.
 		{
 			ReturnIfFalse(_world_position_view_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target(
+				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA32_FLOAT,
@@ -81,7 +81,7 @@ namespace fantasy
 			cache->collect(_world_position_view_depth_texture, ResourceType::Texture);
 
 			ReturnIfFalse(_view_space_velocity_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target(
+				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGB32_FLOAT,
@@ -91,7 +91,7 @@ namespace fantasy
 			cache->collect(_view_space_velocity_texture, ResourceType::Texture);
 
 			ReturnIfFalse(_tile_uv_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target(
+				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RG32_FLOAT,
@@ -101,7 +101,7 @@ namespace fantasy
 			cache->collect(_tile_uv_texture, ResourceType::Texture);
 
 			ReturnIfFalse(_world_space_normal_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target(
+				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGB32_FLOAT,
@@ -111,7 +111,7 @@ namespace fantasy
 			cache->collect(_world_space_normal_texture, ResourceType::Texture);
 
 			ReturnIfFalse(_world_space_tangent_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target(
+				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGB32_FLOAT,
@@ -121,7 +121,7 @@ namespace fantasy
 			cache->collect(_world_space_tangent_texture, ResourceType::Texture);
 
 			ReturnIfFalse(_base_color_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target(
+				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA16_FLOAT,
@@ -131,7 +131,7 @@ namespace fantasy
 			cache->collect(_base_color_texture, ResourceType::Texture);
 
 			ReturnIfFalse(_pbr_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target(
+				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA8_UNORM,
@@ -141,7 +141,7 @@ namespace fantasy
 			cache->collect(_pbr_texture, ResourceType::Texture);
 
 			ReturnIfFalse(_emmisive_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target(
+				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA16_FLOAT,
@@ -168,10 +168,10 @@ namespace fantasy
 		// Pipeline.
 		{
 			GraphicsPipelineDesc pipeline_desc;
-			pipeline_desc.vertex_shader = _vs.get();
-			pipeline_desc.pixel_shader = _ps.get();
-			pipeline_desc.input_layout = _input_layout.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.vertex_shader = _vs;
+			pipeline_desc.pixel_shader = _ps;
+			pipeline_desc.input_layout = _input_layout;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(
 				device->create_graphics_pipeline(pipeline_desc, _frame_buffer.get())
 			));
@@ -251,28 +251,25 @@ namespace fantasy
 			DeviceInterface* device = cmdlist->get_deivce();
 
 			ReturnIfFalse(_cluster_vertex_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-					BufferDesc::create_structured(
+					BufferDesc::create_structured_buffer(
 						sizeof(Vertex) * _cluster_vertices.size(), 
 						sizeof(Vertex),
-						false,
 						"cluster_vertex_buffer"
 					)
 				)
 			));
 			ReturnIfFalse(_cluster_triangle_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-					BufferDesc::create_structured(
+					BufferDesc::create_structured_buffer(
 						sizeof(uint32_t) * _cluster_triangles.size(), 
 						sizeof(uint32_t),
-						false,
 						"cluster_triangle_buffer"
 					)
 				)
 			));
 			ReturnIfFalse(_geometry_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-					BufferDesc::create_structured(
+					BufferDesc::create_structured_buffer(
 						sizeof(GeometryConstantGpu) * _geometry_constants.size(), 
 						sizeof(GeometryConstantGpu),
-						false,
 						"geometry_constant_buffer"
 					)
 				)
@@ -290,7 +287,7 @@ namespace fantasy
 			_binding_set_items[5] = BindingSetItem::create_structured_buffer_srv(4, _cluster_triangle_buffer);
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = _binding_set_items },
-				_binding_layout.get()
+				_binding_layout
 			)));
 
 			_graphics_state.binding_sets[0] = _binding_set.get();
@@ -299,9 +296,7 @@ namespace fantasy
 			_resource_writed = true;
 		}
 
-		ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
-		ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::VirtualGBufferPassConstant)));
-		ReturnIfFalse(cmdlist->draw_indirect());
+		ReturnIfFalse(cmdlist->draw_indirect(_graphics_state, 0, 1, &_pass_constant));
 
 		ReturnIfFalse(cmdlist->close());
 		return true;

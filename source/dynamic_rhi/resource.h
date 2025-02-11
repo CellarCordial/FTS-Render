@@ -98,6 +98,39 @@ namespace fantasy
         
         bool is_virtual = false;
 
+
+        static TextureDesc create_shader_resource_texture(
+            uint32_t width, 
+            uint32_t height, 
+            Format format, 
+            std::string name = ""
+        )
+        {
+            TextureDesc ret;
+            ret.name = name;
+            ret.width = width;
+            ret.height = height;
+            ret.format = format;
+            return ret;
+        }
+
+        static TextureDesc create_shader_resource_texture(
+            uint32_t width, 
+            uint32_t height, 
+            uint32_t depth, 
+            Format format, 
+            std::string name = ""
+        )
+        {
+            TextureDesc ret;
+            ret.name = name;
+            ret.width = width;
+            ret.height = height;
+            ret.depth = depth;
+            ret.format = format;
+            ret.dimension = TextureDimension::Texture3D;
+            return ret;
+        }
         
         static TextureDesc create_read_write_texture(
             uint32_t width, 
@@ -107,10 +140,10 @@ namespace fantasy
         )
         {
             TextureDesc ret;
+            ret.name = name;
             ret.width = width;
             ret.height = height;
             ret.format = format;
-            ret.dimension = TextureDimension::Texture3D;
             ret.allow_unordered_access = true;
             return ret;
         }
@@ -124,6 +157,7 @@ namespace fantasy
         )
         {
             TextureDesc ret;
+            ret.name = name;
             ret.width = width;
             ret.height = height;
             ret.depth = depth;
@@ -141,6 +175,7 @@ namespace fantasy
         )
         {
             TextureDesc ret;
+            ret.name = name;
             ret.width = width;
             ret.height = height;
             ret.format = format;
@@ -156,11 +191,34 @@ namespace fantasy
         )
         {
             TextureDesc ret;
+            ret.name = name;
             ret.width = width;
             ret.height = height;
             ret.format = format;
             ret.allow_depth_stencil = true;
             return ret;
+        }
+
+        static TextureDesc create_read_back_texture(
+            uint32_t width, 
+            uint32_t height, 
+            Format format, 
+            std::string name = ""
+        )
+        {
+            return create_shader_resource_texture(width, height, format, name);
+        }
+
+        
+        static TextureDesc create_read_back_texture(
+            uint32_t width, 
+            uint32_t height, 
+            uint32_t depth,
+            Format format, 
+            std::string name = ""
+        )
+        {
+            return create_shader_resource_texture(width, height, depth, format, name);
         }
     };
     
@@ -283,7 +341,34 @@ namespace fantasy
 			ret.name = name;
 			ret.byte_size = size;
             ret.struct_stride = stride;
+            return ret;
+        }
+
+        static BufferDesc create_read_write_structured_buffer(uint64_t size, uint32_t stride, std::string name = "")
+        {
+            BufferDesc ret;
+			ret.name = name;
+			ret.byte_size = size;
+            ret.struct_stride = stride;
 			ret.allow_unordered_access = true;
+            return ret;
+        }
+
+        static BufferDesc create_vertex_buffer(uint64_t size, std::string name = "")
+        {
+            BufferDesc ret;
+			ret.name = name;
+			ret.byte_size = size;
+            ret.is_vertex_buffer = true;
+            return ret;
+        }
+
+        static BufferDesc create_index_buffer(uint64_t size, std::string name = "")
+        {
+            BufferDesc ret;
+			ret.name = name;
+			ret.byte_size = size;
+            ret.is_index_buffer = true;
             return ret;
         }
     };
@@ -299,6 +384,11 @@ namespace fantasy
                     byte_size == static_cast<uint64_t>(-1) ||
                     byte_size == desc.byte_size;
 
+        }
+
+        bool operator==(const BufferRange& other) const 
+        {
+            return byte_offset == other.byte_offset && byte_size == other.byte_size;
         }
     };
     

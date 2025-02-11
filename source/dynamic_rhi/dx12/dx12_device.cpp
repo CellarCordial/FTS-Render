@@ -1,5 +1,6 @@
 #include "dx12_device.h"
 #include <combaseapi.h>
+#include <cstdint>
 #include <d3d12.h>
 #include <d3dcommon.h>
 #include <memory>
@@ -22,6 +23,18 @@
 
 namespace fantasy
 {
+
+    DeviceInterface* CreateDevice(const DX12DeviceDesc& desc)
+    {
+        DX12Device* device = new DX12Device(desc);
+        if (!device->initialize())
+        {
+            delete device;
+            return nullptr;
+        }
+        return device;
+    }
+
 
     DX12Device::DX12Device(const DX12DeviceDesc& desc_) : 
         descriptor_manager(&context), desc(desc_)
@@ -48,9 +61,9 @@ namespace fantasy
             desc.d3d12_device->QueryInterface(context.device5.GetAddressOf());
 
 
-        if (desc.d3d12_graphics_cmd_queue) cmd_queues[static_cast<uint8_t>(CommandQueueType::Graphics)] = 
+        if (desc.d3d12_graphics_cmd_queue) cmdqueues[static_cast<uint8_t>(CommandQueueType::Graphics)] = 
             std::make_unique<DX12CommandQueue>(&context, CommandQueueType::Graphics, desc.d3d12_graphics_cmd_queue);
-        if (desc.d3d12_compute_cmd_queue) cmd_queues[static_cast<uint8_t>(CommandQueueType::Compute)] = 
+        if (desc.d3d12_compute_cmd_queue) cmdqueues[static_cast<uint8_t>(CommandQueueType::Compute)] = 
             std::make_unique<DX12CommandQueue>(&context, CommandQueueType::Compute, desc.d3d12_compute_cmd_queue);
 
         
@@ -314,19 +327,30 @@ namespace fantasy
 
 	void DX12Device::wait_for_idle()
     {
-        for (const auto& queue : cmd_queues)
+        for (const auto& queue : cmdqueues)
         {
             queue->wait_for_idle();
         }
     }
 
+    uint64_t DX12Device::queue_get_completed_id(CommandQueueType type)
+    {
+        return get_queue(type)->get_last_finished_id();
+    }
+
     void DX12Device::collect_garbage()
     {
-        for (auto& queue : cmd_queues)
+        for (auto& queue : cmdqueues)
         {
             queue->retire_command_lists();
         }
     }
+
+    DX12CommandQueue* DX12Device::get_queue(CommandQueueType type) const
+    {
+        return cmdqueues[static_cast<uint32_t>(type)].get();
+    }
+
 	// ray_tracing::PipelineInterface* DX12Device::create_ray_tracing_pipline(const ray_tracing::PipelineDesc& desc)
 	// {
     //     ray_tracing::DX12Pipeline* dx12_pipeline = new ray_tracing::DX12Pipeline(&context, desc);

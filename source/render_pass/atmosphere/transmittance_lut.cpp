@@ -16,7 +16,7 @@ namespace fantasy
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(2);
-			binding_layout_items[0] = BindingLayoutItem::create_constant_buffer(0, false);
+			binding_layout_items[0] = BindingLayoutItem::create_constant_buffer(0);
 			binding_layout_items[1] = BindingLayoutItem::create_texture_uav(0);
 
 			_binding_layout = std::unique_ptr<BindingLayoutInterface>(
@@ -45,17 +45,16 @@ namespace fantasy
         // Pipeline.
         {
 			ComputePipelineDesc pipeline_desc;
-			pipeline_desc.compute_shader = _cs.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.compute_shader = _cs;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
         }
 
 		// Buffer.
 		{
 			ReturnIfFalse(_atomsphere_properties_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_constant(
+				BufferDesc::create_constant_buffer(
 					sizeof(constant::AtmosphereProperties), 
-					false, 
 					"atmosphere_properties_buffer"
 				)
 			)));
@@ -64,7 +63,7 @@ namespace fantasy
         
         // Texture.
 		{
-			TextureDesc texture_desc = TextureDesc::create_read_write(
+			TextureDesc texture_desc = TextureDesc::create_read_write_texture(
 				TRANSMITTANCE_LUT_RES,
 				TRANSMITTANCE_LUT_RES,
 				Format::RGBA32_FLOAT,
@@ -81,7 +80,7 @@ namespace fantasy
 			binding_set_items[1] = BindingSetItem::create_texture_uav(0, _transmittance_texture);
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
-				_binding_layout.get()
+				_binding_layout
 			)));
 		}
 
@@ -120,8 +119,7 @@ namespace fantasy
 			static_cast<uint32_t>(align(TRANSMITTANCE_LUT_RES, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y),
 		};
 
-		ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
-		ReturnIfFalse(cmdlist->dispatch(thread_group_num.x, thread_group_num.y));
+		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y));
 
 		ReturnIfFalse(cmdlist->close());
         return true;

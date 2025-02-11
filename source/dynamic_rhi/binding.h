@@ -55,6 +55,14 @@ namespace fantasy
         ResourceViewType type   : 16;
         uint16_t size           : 16;
 
+        static BindingLayoutItem create_bindless_texture_srv(uint32_t register_space = 0)
+        {
+            BindingLayoutItem ret;
+            ret.register_space = register_space;
+            ret.type = ResourceViewType::Texture_SRV;
+            return ret;
+        }
+
         static BindingLayoutItem create_texture_srv(uint32_t slot)
         {
             BindingLayoutItem ret;

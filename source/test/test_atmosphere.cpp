@@ -14,8 +14,8 @@ namespace fantasy
 		{
 			BindingLayoutItemArray binding_layout_items(10);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::AtmosphereDebugPassConstant0));
-			binding_layout_items[1] = BindingLayoutItem::create_constant_buffer(1, false);
-			binding_layout_items[2] = BindingLayoutItem::create_constant_buffer(2);
+			binding_layout_items[1] = BindingLayoutItem::create_constant_buffer(1);
+			binding_layout_items[2] = BindingLayoutItem::create_volatile_constant_buffer(2);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[4] = BindingLayoutItem::create_texture_srv(1);
 			binding_layout_items[5] = BindingLayoutItem::create_texture_srv(2);
@@ -49,8 +49,7 @@ namespace fantasy
 			vertex_attribute_descs[3].element_stride = sizeof(Vertex);
 			ReturnIfFalse(_input_layout = std::unique_ptr<InputLayoutInterface>(device->create_input_layout(
 				vertex_attribute_descs.data(), 
-				vertex_attribute_descs.size(), 
-				nullptr
+				vertex_attribute_descs.size()
 			)));
 		}
 
@@ -79,7 +78,7 @@ namespace fantasy
 		// Frame Buffer.
 		{
 			FrameBufferDesc FrameBufferDesc;
-			FrameBufferDesc.color_attachments.push_back(FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("FinalTexture"))));
+			FrameBufferDesc.color_attachments.push_back(FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("final_texture"))));
 			FrameBufferDesc.depth_stencil_attachment = FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("depth_texture")));
 			ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(FrameBufferDesc)));
 		}
@@ -87,10 +86,10 @@ namespace fantasy
 		// Pipeline.
 		{
 			GraphicsPipelineDesc pipeline_desc;
-			pipeline_desc.vertex_shader = _vs.get();
-			pipeline_desc.pixel_shader = _ps.get();
-			pipeline_desc.input_layout = _input_layout.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.vertex_shader = _vs;
+			pipeline_desc.pixel_shader = _ps;
+			pipeline_desc.input_layout = _input_layout;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			pipeline_desc.render_state.depth_stencil_state.enable_depth_test = true;
 			pipeline_desc.render_state.depth_stencil_state.enable_depth_write = true;
 			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(device->create_graphics_pipeline(
@@ -102,7 +101,7 @@ namespace fantasy
 		// Buffer.
 		{
 			ReturnIfFalse(_pass_constant1_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_constant(sizeof(constant::AtmosphereDebugPassConstant1))
+				BufferDesc::create_constant_buffer(sizeof(constant::AtmosphereDebugPassConstant1))
 			)));
 		}
 
@@ -111,7 +110,7 @@ namespace fantasy
 			std::string image_path = std::string(PROJ_DIR) + "asset/image/BlueNoise.png";
 			_blue_noise_image = Image::load_image_from_file(image_path.c_str());
 			ReturnIfFalse(_blue_noise_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_shader_resource(
+				TextureDesc::create_shader_resource_texture(
 					_blue_noise_image.width,
 					_blue_noise_image.height,
 					_blue_noise_image.format
@@ -124,7 +123,7 @@ namespace fantasy
 			_transmittance_texture = check_cast<TextureInterface>(cache->require("transmittance_texture"));
 			_aerial_lut_texture = check_cast<TextureInterface>(cache->require("aerial_lut_texture"));
 			_multi_scattering_texture = check_cast<TextureInterface>(cache->require("multi_scattering_texture"));
-			_final_texture = check_cast<TextureInterface>(cache->require("FinalTexture"));
+			_final_texture = check_cast<TextureInterface>(cache->require("final_texture"));
 
 			BindingSetItemArray binding_set_items(10);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::AtmosphereDebugPassConstant0));
@@ -139,7 +138,7 @@ namespace fantasy
 			binding_set_items[9] = BindingSetItem::create_sampler(2, check_cast<SamplerInterface>(cache->require("point_wrap_sampler")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
-				_binding_layout.get()
+				_binding_layout
 			)));
 		}
 
@@ -216,10 +215,7 @@ namespace fantasy
 					{
 						_pass_constant0.world_matrix = pMesh->submeshes[ix].world_matrix;
 
-						ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
-						ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant0, sizeof(constant::AtmosphereDebugPassConstant0)));
-
-						ReturnIfFalse(cmdlist->draw_indexed(_draw_arguments[stSubmeshIndex++]));
+						ReturnIfFalse(cmdlist->draw_indexed(_graphics_state, _draw_arguments[stSubmeshIndex++], &_pass_constant0));
 					}
 					return true;
 				}
@@ -232,10 +228,6 @@ namespace fantasy
 			ReturnIfFalse(cmdlist->write_texture(_blue_noise_texture.get(), 0, 0, _blue_noise_image.data.get(), _blue_noise_image.size / _blue_noise_image.height));
 			_writed_resource = true;
 		}
-
-		ReturnIfFalse(cmdlist->set_texture_state(_aerial_lut_texture.get(), TextureSubresourceSet{}, ResourceStates::Common));
-		ReturnIfFalse(cmdlist->set_texture_state(_transmittance_texture.get(), TextureSubresourceSet{}, ResourceStates::Common));
-		ReturnIfFalse(cmdlist->set_texture_state(_multi_scattering_texture.get(), TextureSubresourceSet{}, ResourceStates::UnorderedAccess));
 
 		ReturnIfFalse(cmdlist->close());
 		return true;

@@ -90,7 +90,7 @@ namespace fantasy
 
         struct Hash
         {
-            std::size_t operator()(SubrangeViewKey const& s) const noexcept
+            std::size_t operator()(const SubrangeViewKey& s) const noexcept
             {
                 const auto& [range, view_type] = s;
 

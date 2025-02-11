@@ -55,8 +55,8 @@ namespace fantasy
 		// Pipeline.
 		{
 			ComputePipelineDesc pipeline_desc;
-			pipeline_desc.compute_shader = _cs.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.compute_shader = _cs;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
 		}
 
@@ -117,14 +117,14 @@ namespace fantasy
 			// Buffer
 			{
 				ReturnIfFalse(_point_light_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-					BufferDesc::create_rwstructured(
+					BufferDesc::create_read_write_structured_buffer(
 						sizeof(PointLight) * _point_lights.size(), 
 						sizeof(PointLight),
 						"point_light_buffer"
 					)
 				)));
 				ReturnIfFalse(_spot_light_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-					BufferDesc::create_rwstructured(
+					BufferDesc::create_read_write_structured_buffer(
 						sizeof(SpotLight) * _spot_lights.size(), 
 						sizeof(SpotLight),
 						"spot_light_buffer"
@@ -135,14 +135,14 @@ namespace fantasy
 				ReturnIfFalse(cmdlist->write_buffer(_spot_light_buffer.get(), _spot_lights.data(), _spot_lights.size()));
 
 				ReturnIfFalse(_light_index_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-					BufferDesc::create_rwstructured(
+					BufferDesc::create_read_write_structured_buffer(
 						sizeof(uint32_t) * (_point_lights.size() + _spot_lights.size()) * max_cluster_light_num, 
 						sizeof(uint32_t),
 						"light_index_buffer"
 					)
 				)));
 				ReturnIfFalse(_light_cluster_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-					BufferDesc::create_rwstructured(
+					BufferDesc::create_read_write_structured_buffer(
 						sizeof(uint2) * _pass_constant.divide_count.x * _pass_constant.divide_count.y * _pass_constant.divide_count.z, 
 						sizeof(uint2),
 						"light_cluster_buffer"
@@ -157,7 +157,7 @@ namespace fantasy
 			_binding_set_items[5] = BindingSetItem::create_structured_buffer_uav(1, _light_cluster_buffer);
             ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
                 BindingSetDesc{ .binding_items = _binding_set_items },
-                _binding_layout.get()
+                _binding_layout
             )));
 
 			_compute_state.binding_sets[0] = _binding_set.get();
@@ -168,9 +168,7 @@ namespace fantasy
 			static_cast<uint32_t>((align(CLIENT_HEIGHT, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
 		};
 
-		ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
-		ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::ClusterLightCullingPassConstant)));
-		ReturnIfFalse(cmdlist->dispatch(thread_group_num.x, thread_group_num.y));
+		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constant));
 
 		ReturnIfFalse(cmdlist->close());
         return true;

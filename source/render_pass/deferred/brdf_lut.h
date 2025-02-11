@@ -3,6 +3,7 @@
 #define RENDER_PASS_BRDF_LUT_H
 
 #include "../../render_graph/render_pass.h"
+#include "../../core/math/vector.h"
 #include <memory>
 
 namespace fantasy
@@ -21,7 +22,7 @@ namespace fantasy
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 
-		std::unique_ptr<Shader> _cs;
+		std::shared_ptr<Shader> _cs;
 		std::unique_ptr<ComputePipelineInterface> _pipeline;
 
 		std::unique_ptr<BindingSetInterface> _binding_set;

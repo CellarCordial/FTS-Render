@@ -2,8 +2,6 @@
 #define RENDER_PASS_H
  
 #include "../render_graph/render_pass.h"
-#include "../core/math/matrix.h"
-#include "../scene/geometry.h"
  
 namespace fantasy
 {
@@ -30,7 +28,7 @@ namespace fantasy
 		std::shared_ptr<TextureInterface> _texture;
 		
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
-		std::unique_ptr<InputLayoutInterface> _input_layout;
+		std::shared_ptr<InputLayoutInterface> _input_layout;
 
 		std::shared_ptr<Shader> _vs;
 		std::shared_ptr<Shader> _ps;

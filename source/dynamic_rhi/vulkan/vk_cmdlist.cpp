@@ -244,7 +244,7 @@ namespace fantasy
 
     std::shared_ptr<VKBufferChunk> VKUploadManager::create_chunk(uint64_t size)
     {
-        std::shared_ptr<VKBufferChunk> chunk = std::make_shared<VKBufferChunk>();
+        std::shared_ptr<VKBufferChunk> chunk;
 
         if (_is_scratch_buffer)
         {
@@ -253,10 +253,7 @@ namespace fantasy
             desc.byte_size = size;
             desc.cpu_access = CpuAccessMode::None;
             desc.allow_unordered_access = true;
-
-            chunk->buffer = std::shared_ptr<BufferInterface>(_device->create_buffer(desc));
-            chunk->mapped_memory = nullptr;
-            chunk->buffer_size = size;
+            chunk = std::make_shared<VKBufferChunk>(_device, desc, false);
         }
         else
         {
@@ -264,10 +261,7 @@ namespace fantasy
             desc.name = "upload buffer chunk";
             desc.byte_size = size;
             desc.cpu_access = CpuAccessMode::Write;
-
-            chunk->buffer = std::shared_ptr<BufferInterface>(_device->create_buffer(desc));
-            chunk->mapped_memory = chunk->buffer->map(CpuAccessMode::Write);
-            chunk->buffer_size = size;
+            chunk = std::make_shared<VKBufferChunk>(_device, desc, true);
         }
 
         return chunk;

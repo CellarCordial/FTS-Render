@@ -8,12 +8,25 @@
 
 namespace fantasy 
 {
+
+    DeviceInterface* CreateDevice(const VKDeviceDesc& desc)
+    {
+        VKDevice* device = new VKDevice(desc);
+        if (!device->initialize())
+        {
+            delete device;
+            return nullptr;
+        }
+        return device;
+    }
+
     VKDevice::VKDevice(const VKDeviceDesc& desc_) : _allocator(&context), desc(desc_)
     {        
         context.device = desc.vk_device;
         context.vk_instance = desc.vk_instance;
         context.vk_physical_device = desc.vk_physical_device;
         context.allocation_callbacks = desc.vk_allocation_callbacks;
+        context.vk_loader = vk::DispatchLoaderDynamic(context.vk_instance, vkGetInstanceProcAddr, context.device, vkGetDeviceProcAddr);
 
         cmd_queues[uint32_t(CommandQueueType::Graphics)] = 
             std::make_unique<VKCommandQueue>(&context, CommandQueueType::Graphics, desc.vk_graphics_queue, desc.graphics_queue_index);

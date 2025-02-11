@@ -285,7 +285,7 @@ namespace fantasy
         const VKContext* _context;
         DeviceInterface* _device;
 
-        static ResourceStateTracker _resource_state_tracker;
+        inline static ResourceStateTracker _resource_state_tracker;
         
         CommandListDesc _desc;
         std::shared_ptr<VKCommandBuffer> _current_cmdbuffer;

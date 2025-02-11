@@ -14,12 +14,12 @@ namespace fantasy
 	{
 		for (uint32_t ix = 0; ix < SUN_DISK_SEGMENT_NUM; ++ix)
 		{
-			const float cfPhiBegin = lerp(0.0f, 2.0f * PI, static_cast<float>(ix) / SUN_DISK_SEGMENT_NUM);
-			const float cfPhiEnd = lerp(0.0f, 2.0f * PI, static_cast<float>(ix + 1) / SUN_DISK_SEGMENT_NUM);
+			const float phi_begin = lerp(0.0f, 2.0f * PI, static_cast<float>(ix) / SUN_DISK_SEGMENT_NUM);
+			const float phi_end = lerp(0.0f, 2.0f * PI, static_cast<float>(ix + 1) / SUN_DISK_SEGMENT_NUM);
 
 			const float2 A = {};
-			const float2 B = { std::cos(cfPhiBegin), std::sin(cfPhiBegin) };
-			const float2 C = { std::cos(cfPhiEnd), std::sin(cfPhiEnd) };
+			const float2 B = { std::cos(phi_begin), std::sin(phi_begin) };
+			const float2 C = { std::cos(phi_end), std::sin(phi_end) };
 
 			_sun_disk_vertices.push_back(Vertex{ .position = A });
 			_sun_disk_vertices.push_back(Vertex{ .position = B });
@@ -33,7 +33,7 @@ namespace fantasy
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(4);
-			binding_layout_items[0] = BindingLayoutItem::create_constant_buffer(0, false);
+			binding_layout_items[0] = BindingLayoutItem::create_volatile_constant_buffer(0);
 			binding_layout_items[1] = BindingLayoutItem::create_push_constants(1, sizeof(constant::SunDiskPassConstant));
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[3] = BindingLayoutItem::create_sampler(0);
@@ -51,8 +51,7 @@ namespace fantasy
 			vertex_attribute_desc[0].offset = offsetof(Vertex, position);
 			ReturnIfFalse(_input_layout = std::unique_ptr<InputLayoutInterface>(device->create_input_layout(
 				vertex_attribute_desc.data(),
-				vertex_attribute_desc.size(),
-				nullptr
+				vertex_attribute_desc.size()
 			)));
 		}
 
@@ -83,9 +82,9 @@ namespace fantasy
 		{
 			GenerateSunDiskVertices();
 			ReturnIfFalse(_vertex_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_vertex(
+				BufferDesc::create_vertex_buffer(
 					sizeof(Vertex) * SUN_DISK_SEGMENT_NUM * 3, 
-					"SunDiskVertexBuffer"
+					"sun_disk_vertex_buffer"
 				)
 			)));
 		}
@@ -95,7 +94,7 @@ namespace fantasy
 			FrameBufferDesc frame_buffer_desc;
 			frame_buffer_desc.color_attachments.push_back(
 				FrameBufferAttachment::create_attachment(
-					check_cast<TextureInterface>(cache->require("FinalTexture"))
+					check_cast<TextureInterface>(cache->require("final_texture"))
 				)
 			);
 			frame_buffer_desc.depth_stencil_attachment = 
@@ -109,10 +108,10 @@ namespace fantasy
 			pipeline_desc.render_state.depth_stencil_state.enable_depth_test = true;
 			pipeline_desc.render_state.depth_stencil_state.enable_depth_write = false;
 			pipeline_desc.render_state.depth_stencil_state.depth_func = ComparisonFunc::LessOrEqual;
-			pipeline_desc.vertex_shader = _vs.get();
-			pipeline_desc.pixel_shader = _ps.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
-			pipeline_desc.input_layout = _input_layout.get();
+			pipeline_desc.vertex_shader = _vs;
+			pipeline_desc.pixel_shader = _ps;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
+			pipeline_desc.input_layout = _input_layout;
 			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(
 				device->create_graphics_pipeline(pipeline_desc, _frame_buffer.get())
 			));
@@ -127,7 +126,7 @@ namespace fantasy
 			binding_set_items[3] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
-				_binding_layout.get()
+				_binding_layout
 			)));
 		}
 
@@ -189,9 +188,11 @@ namespace fantasy
 			));
 		}
 
-		ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
-		ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::SunDiskPassConstant)));
-		ReturnIfFalse(cmdlist->draw(DrawArguments{ .index_count = SUN_DISK_SEGMENT_NUM * 3 }));
+		ReturnIfFalse(cmdlist->draw(
+			_graphics_state, 
+			DrawArguments{ .index_count = SUN_DISK_SEGMENT_NUM * 3 },
+			&_pass_constant
+		));
 
 		ReturnIfFalse(cmdlist->close());
 

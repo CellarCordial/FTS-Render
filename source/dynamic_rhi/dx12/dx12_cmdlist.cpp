@@ -381,7 +381,7 @@ namespace fantasy
 
     std::shared_ptr<DX12BufferChunk> DX12UploadManager::create_chunk(uint64_t size) const
     {
-        std::shared_ptr<DX12BufferChunk> chunk = std::make_shared<DX12BufferChunk>();
+        std::shared_ptr<DX12BufferChunk> chunk;
 
         if (_is_scratch_buffer)
         {
@@ -390,10 +390,7 @@ namespace fantasy
             desc.byte_size = size;
             desc.cpu_access = CpuAccessMode::None;
             desc.allow_unordered_access = true;
-
-            chunk->buffer = std::shared_ptr<BufferInterface>(_device->create_buffer(desc));
-            chunk->mapped_memory = nullptr;
-            chunk->buffer_size = size;
+            chunk = std::make_shared<DX12BufferChunk>(_device, desc, false);
         }
         else
         {
@@ -402,9 +399,7 @@ namespace fantasy
             desc.byte_size = size;
             desc.cpu_access = CpuAccessMode::Write;
 
-            chunk->buffer = std::shared_ptr<BufferInterface>(_device->create_buffer(desc));
-            chunk->mapped_memory = chunk->buffer->map(CpuAccessMode::Write);
-            chunk->buffer_size = size;
+            chunk = std::make_shared<DX12BufferChunk>(_device, desc, true);
         }
 
         return chunk;
@@ -1504,6 +1499,11 @@ namespace fantasy
             make_version(recording_id, queue_type, false),
             make_version(submit_id, queue_type, true)
         );
+    }
+
+    std::shared_ptr<DX12InternalCommandList> DX12CommandList::get_current_command_list()
+    {
+        return _current_cmdlist;
     }
 
 

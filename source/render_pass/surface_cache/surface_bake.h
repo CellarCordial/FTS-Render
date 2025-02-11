@@ -35,7 +35,7 @@ namespace fantasy
         std::shared_ptr<BufferInterface> _index_buffer;
 		
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
-		std::unique_ptr<InputLayoutInterface> _input_layout;
+		std::shared_ptr<InputLayoutInterface> _input_layout;
 
 		std::shared_ptr<Shader> _vs;
 		std::shared_ptr<Shader> _ps;

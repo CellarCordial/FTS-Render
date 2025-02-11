@@ -10,7 +10,8 @@ namespace fantasy
 {
 	bool GuiPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
-		ReturnIfFalse(_final_texture = check_cast<TextureInterface>(cache->require("FinalTexture")));
+		_device = device;
+		ReturnIfFalse(_final_texture = check_cast<TextureInterface>(cache->require("final_texture")));
 
 		return true;
 	}
@@ -49,7 +50,7 @@ namespace fantasy
 			break;
 		}
 
-		gui::execution(cmdlist);
+		gui::execution(cmdlist, device->get_graphics_api());
 
 		uint32_t* back_buffer_index;
 		ReturnIfFalse(cache->require_constants("BackBufferIndex", reinterpret_cast<void**>(&back_buffer_index)));

@@ -7,12 +7,12 @@
 namespace fantasy::gui 
 {
     bool initialize(GLFWwindow* window, DeviceInterface* device);
-    void destroy();
+    void destroy(DeviceInterface* device);
 
     void add(std::function<void()>&& InFunction);
     void reset(); 
     
-    bool execution(CommandListInterface* cmdlist);
+    bool execution(CommandListInterface* cmdlist, GraphicsAPI api);
 
     void menu_setup();
     bool has_file_selected();

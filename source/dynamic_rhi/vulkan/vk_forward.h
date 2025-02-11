@@ -17,10 +17,12 @@ namespace fantasy
         vk::PhysicalDevice vk_physical_device;
         vk::PipelineCache vk_pipeline_cache;
         vk::PhysicalDeviceProperties vk_physical_device_properties;
+        vk::DispatchLoaderDynamic vk_loader;
         
         vk::Device device;
         vk::AllocationCallbacks* allocation_callbacks = nullptr;
-
+        
+        
         void name_object(
             const void* object, 
             const vk::ObjectType object_type,
@@ -33,23 +35,19 @@ namespace fantasy
             info.objectType = object_type;
             info.objectHandle = reinterpret_cast<uint64_t>(object);
             info.pObjectName = name;
-            device.setDebugUtilsObjectNameEXT(info);
+            device.setDebugUtilsObjectNameEXT(info, vk_loader);
         }
     };
 
     class VKHeap: public HeapInterface
     {
     public:
-        explicit VKHeap(const VKContext* context, const VKMemoryAllocator* allocator, const HeapDesc& desc_)
-            : _context(context), _allocator(allocator), desc(desc_)
-        {
-        }
-
+        explicit VKHeap(const VKContext* context, VKMemoryAllocator* allocator, const HeapDesc& desc_);
         ~VKHeap() override;
 
-        bool initialize() { return true; }
+        bool initialize();
 
-        const HeapDesc& get_desc() const override { return desc; }
+        const HeapDesc& get_desc() const override;
 
     public:
         HeapDesc desc;
@@ -58,7 +56,7 @@ namespace fantasy
 
     private:
         const VKContext* _context;
-        const VKMemoryAllocator* _allocator;
+        VKMemoryAllocator* _allocator;
     };
 
 

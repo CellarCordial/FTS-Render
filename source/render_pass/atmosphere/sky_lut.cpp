@@ -144,9 +144,6 @@ namespace fantasy
 
 		ReturnIfFalse(cmdlist->draw(_graphics_state, DrawArguments{ .index_count = 6 }));
 
-		ReturnIfFalse(cmdlist->set_texture_state(_transmittance_texture.get(), TextureSubresourceSet{}, ResourceStates::NonPixelShaderResource));
-		ReturnIfFalse(cmdlist->set_texture_state(_multi_scattering_texture.get(), TextureSubresourceSet{}, ResourceStates::NonPixelShaderResource));
-
 		ReturnIfFalse(cmdlist->close());
 
 		return true;

@@ -55,15 +55,15 @@ namespace fantasy
 		// Pipeline.
 		{
 			ComputePipelineDesc pipeline_desc;
-			pipeline_desc.compute_shader = _cs.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.compute_shader = _cs;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
 		}
 
 		// Buffer.
 		{
 			ReturnIfFalse(_virtual_gbuffer_indirect_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_rwstructured(
+				BufferDesc::create_read_write_structured_buffer(
 					sizeof(DrawIndexedIndirectArguments), 
 					sizeof(DrawIndexedIndirectArguments),
 					"virtual_gbuffer_indirect_buffer"
@@ -75,7 +75,7 @@ namespace fantasy
         uint32_t hzb_mip_levels = search_most_significant_bit(_hzb_resolution) + 1;
 		// Texture.
 		{
-            TextureDesc desc = TextureDesc::create_shader_resource(
+            TextureDesc desc = TextureDesc::create_shader_resource_texture(
                 _hzb_resolution,
                 _hzb_resolution,
                 Format::R32_FLOAT,
@@ -169,26 +169,24 @@ namespace fantasy
             ));
             
             ReturnIfFalse(_mesh_cluster_group_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-                BufferDesc::create_structured(
+                BufferDesc::create_structured_buffer(
                     sizeof(MeshClusterGroupGpu) * _mesh_cluster_groups.size(), 
                     sizeof(MeshClusterGroupGpu),
-                    true,
                     "mesh_cluster_group_buffer"
                 )
             )));
             
             ReturnIfFalse(_mesh_cluster_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-                BufferDesc::create_structured(
+                BufferDesc::create_structured_buffer(
                     sizeof(MeshClusterGpu) * _mesh_clusters.size(), 
                     sizeof(MeshClusterGpu),
-                    true,
                     "mesh_cluster_buffer"
                 )
             )));
             cache->collect(_mesh_cluster_buffer, ResourceType::Buffer);
 
             ReturnIfFalse(_visible_cluster_id_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-                BufferDesc::create_rwstructured(
+                BufferDesc::create_read_write_structured_buffer(
                     sizeof(uint32_t) * cluster_index_offset, 
                     sizeof(uint32_t),
                     "visible_cluster_id_buffer"
@@ -214,7 +212,7 @@ namespace fantasy
 			_binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(1, _mesh_cluster_buffer);
             ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
                 BindingSetDesc{ .binding_items = _binding_set_items },
-                _binding_layout.get()
+                _binding_layout
             )));
             _compute_state.binding_sets[0] = _binding_set.get();
 
@@ -224,9 +222,7 @@ namespace fantasy
 		uint32_t thread_group_num = 
             static_cast<uint32_t>((align(_pass_constant.group_count, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X));
 
-		ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
-        ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::MeshClusterCullingPassConstant)));
-		ReturnIfFalse(cmdlist->dispatch(thread_group_num));
+		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num, 1, 1, &_pass_constant));
 
 		ReturnIfFalse(cmdlist->close());
 

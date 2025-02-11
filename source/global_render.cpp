@@ -144,7 +144,6 @@ namespace fantasy
 		TextureDesc back_buffer_desc;
 		back_buffer_desc.width = CLIENT_WIDTH;
 		back_buffer_desc.height = CLIENT_HEIGHT;
-		back_buffer_desc.initial_state = ResourceStates::Present;
 		back_buffer_desc.format = Format::RGBA8_UNORM;
 		back_buffer_desc.use_clear_value = true;
 		back_buffer_desc.clear_value = Color(0.0f, 0.0f, 0.0f, 1.0f);
@@ -157,7 +156,7 @@ namespace fantasy
 		}
 
 		ReturnIfFalse(_final_texture = std::shared_ptr<TextureInterface>(_device->create_texture(
-			TextureDesc::create_render_target(CLIENT_WIDTH, CLIENT_HEIGHT, Format::RGBA8_UNORM, "FinalTexture")
+			TextureDesc::create_render_target_texture(CLIENT_WIDTH, CLIENT_HEIGHT, Format::RGBA8_UNORM, "final_texture")
 		)));
 		cache->collect(_final_texture, ResourceType::Texture);
 

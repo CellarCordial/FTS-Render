@@ -1,9 +1,7 @@
 #include "test_sdf.h"
 #include "../shader/shader_compiler.h"
 #include "../core/tools/check_cast.h"
-#include "../scene/scene.h"
 #include "../scene/camera.h"
-#include "../scene/scene.h"
 #include <memory>
 
 namespace fantasy
@@ -49,7 +47,7 @@ namespace fantasy
 		{
 			FrameBufferDesc FrameBufferDesc;
 			FrameBufferDesc.color_attachments.push_back(FrameBufferAttachment::create_attachment(
-				check_cast<TextureInterface>(cache->require("FinalTexture"))
+				check_cast<TextureInterface>(cache->require("final_texture"))
 			));
 			ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(FrameBufferDesc)));
 		}
@@ -57,9 +55,9 @@ namespace fantasy
 		// Pipeline.
 		{
 			GraphicsPipelineDesc PipelineDesc;
-			PipelineDesc.vertex_shader = _vs.get();
-			PipelineDesc.pixel_shader = _ps.get();
-			PipelineDesc.binding_layouts.push_back(_binding_layout.get());
+			PipelineDesc.vertex_shader = _vs;
+			PipelineDesc.pixel_shader = _ps;
+			PipelineDesc.binding_layouts.push_back(_binding_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(device->create_graphics_pipeline(
 				PipelineDesc, 
 				_frame_buffer.get()
@@ -76,7 +74,7 @@ namespace fantasy
 			binding_set_items[2] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
-				_binding_layout.get()
+				_binding_layout
 			)));
 		}
 
@@ -119,12 +117,7 @@ namespace fantasy
 		
 		ReturnIfFalse(cmdlist->open());
 
-		ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
-		ReturnIfFalse(cmdlist->set_push_constants(&_pass_constants, sizeof(constant::SdfDebugPassConstants)));
-
-		ReturnIfFalse(cmdlist->draw(DrawArguments{ .index_count = 6 }));
-
-		ReturnIfFalse(cmdlist->set_texture_state(_sdf_texture.get(), TextureSubresourceSet{}, ResourceStates::UnorderedAccess));
+		ReturnIfFalse(cmdlist->draw(_graphics_state, DrawArguments{ .index_count = 6 }, &_pass_constants));
 
 		ReturnIfFalse(cmdlist->close());
 		return true;

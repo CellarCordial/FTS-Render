@@ -51,7 +51,7 @@ namespace fantasy
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 
-		std::unique_ptr<Shader> _cs;
+		std::shared_ptr<Shader> _cs;
 		std::unique_ptr<ComputePipelineInterface> _pipeline;
 
 		BindingSetItemArray _binding_set_items;

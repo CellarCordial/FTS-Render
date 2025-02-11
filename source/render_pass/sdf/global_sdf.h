@@ -57,15 +57,16 @@ namespace fantasy
 		std::vector<const DistanceField::MeshDistanceField*> _mesh_sdfs;
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
-		std::unique_ptr<BindingLayoutInterface> _dynamic_binding_layout;
-		std::unique_ptr<BindingLayoutInterface> _bindingless_layout;
+		std::shared_ptr<BindingLayoutInterface> 
+		_dynamic_binding_layout;
+		std::shared_ptr<BindingLayoutInterface> _bindingless_layout;
 
-		std::unique_ptr<BindingLayoutInterface> clear_pass_binding_layout;
+		std::shared_ptr<BindingLayoutInterface> clear_pass_binding_layout;
 
-		std::unique_ptr<Shader> _cs;
+		std::shared_ptr<Shader> _cs;
 		std::unique_ptr<ComputePipelineInterface> _pipeline;
 
-		std::unique_ptr<Shader> _clear_pass_cs;
+		std::shared_ptr<Shader> _clear_pass_cs;
 		std::unique_ptr<ComputePipelineInterface> _clear_pass_pipeline;
 
 		std::unique_ptr<BindingSetInterface> _binding_set;

@@ -5,7 +5,6 @@
 #include "../gui/gui_panel.h"
 #include "../render_pass/deferred/gbuffer.h"
 #include "../render_pass/deferred/brdf_lut.h"
-#include "../render_pass/shadow/ray_tracing_shadow_map.h"
 #include <memory>
 
 namespace fantasy
@@ -56,7 +55,7 @@ namespace fantasy
 		{
 			FrameBufferDesc frame_buffer_desc;
 			frame_buffer_desc.color_attachments.push_back(
-                FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("FinalTexture")))
+                FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("final_texture")))
             );
 			ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
 		}
@@ -64,9 +63,9 @@ namespace fantasy
 		// Pipeline.
 		{
 			GraphicsPipelineDesc pipeline_desc;
-			pipeline_desc.vertex_shader = _vs.get();
-			pipeline_desc.pixel_shader = _ps.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.vertex_shader = _vs;
+			pipeline_desc.pixel_shader = _ps;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(
 				device->create_graphics_pipeline(pipeline_desc, _frame_buffer.get())
 			));
@@ -85,7 +84,7 @@ namespace fantasy
 			binding_set_items[6] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_wrap_sampler")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
-				_binding_layout.get()
+				_binding_layout
 			)));
 		}
 
@@ -115,9 +114,7 @@ namespace fantasy
 	{
 		ReturnIfFalse(cmdlist->open());
 
-		ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
-		ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::RestirTestPassConstant)));
-		ReturnIfFalse(cmdlist->draw(DrawArguments::full_screen_quad()));
+		ReturnIfFalse(cmdlist->draw(_graphics_state, DrawArguments::full_screen_quad(), &_pass_constant));
 
 		ReturnIfFalse(cmdlist->close());
 		return true;
@@ -130,11 +127,11 @@ namespace fantasy
 		RenderPassInterface* brdf_lut_pass = render_graph->add_pass(std::make_shared<BrdfLUTPass>());
 
 		RenderPassInterface* gbuffer_pass = render_graph->add_pass(std::make_shared<GBufferPass>());
-		RenderPassInterface* ray_tracing_shadow_map_pass = render_graph->add_pass(std::make_shared<RayTracingShadowMapPass>());
+		// RenderPassInterface* ray_tracing_shadow_map_pass = render_graph->add_pass(std::make_shared<RayTracingShadowMapPass>());
 		RenderPassInterface* test_pass = render_graph->add_pass(std::make_shared<RestirTestPass>());
 
-		gbuffer_pass->precede(ray_tracing_shadow_map_pass);
-		ray_tracing_shadow_map_pass->precede(test_pass);
+		// gbuffer_pass->precede(ray_tracing_shadow_map_pass);
+		// ray_tracing_shadow_map_pass->precede(test_pass);
 
 
 		_last_pass= test_pass;

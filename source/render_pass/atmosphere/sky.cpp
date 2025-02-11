@@ -71,7 +71,7 @@ namespace fantasy
 		{
 			FrameBufferDesc frame_buffer_desc;
 			frame_buffer_desc.color_attachments.push_back(
-				FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("FinalTexture")))
+				FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("final_texture")))
 			);
 			frame_buffer_desc.depth_stencil_attachment = FrameBufferAttachment::create_attachment(_depth_texture);
 			ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
@@ -129,8 +129,7 @@ namespace fantasy
 		ReturnIfFalse(cmdlist->draw(
 			_graphics_state, 
 			DrawArguments{ .index_count = 6 },
-			&_pass_constant, 
-			sizeof(constant::SkyPassConstant)
+			&_pass_constant
 		));
 
 		ReturnIfFalse(cmdlist->close());

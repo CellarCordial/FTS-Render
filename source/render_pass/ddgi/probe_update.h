@@ -39,9 +39,10 @@ namespace fantasy
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 
-		std::unique_ptr<Shader> _depth_update_cs;
-		std::unique_ptr<Shader> _irradiance_update_cs;
-		std::unique_ptr<ComputePipelineInterface> _pipeline;
+		std::shared_ptr<Shader> _depth_update_cs;
+		std::shared_ptr<Shader> _irradiance_update_cs;
+		std::unique_ptr<ComputePipelineInterface> _depth_update_pipeline;
+		std::unique_ptr<ComputePipelineInterface> _irradiance_update_pipeline;
 
 		std::unique_ptr<BindingSetInterface> _depth_update_binding_set;
 		std::unique_ptr<BindingSetInterface> _irradiance_update_binding_set;

@@ -58,16 +58,22 @@ namespace fantasy
 
 		// Pipeline.
 		{
-			ComputePipelineDesc pipeline_desc;
-			pipeline_desc.compute_shader = _depth_update_cs.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
-			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
+			ComputePipelineDesc depth_update_pipeline_desc;
+			depth_update_pipeline_desc.compute_shader = _depth_update_cs;
+			depth_update_pipeline_desc.binding_layouts.push_back(_binding_layout);
+			ReturnIfFalse(_depth_update_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(depth_update_pipeline_desc)));
+
+			
+			ComputePipelineDesc irradiance_update_pipeline_desc;
+			irradiance_update_pipeline_desc.compute_shader = _irradiance_update_cs;
+			irradiance_update_pipeline_desc.binding_layouts.push_back(_binding_layout);
+			ReturnIfFalse(_depth_update_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(irradiance_update_pipeline_desc)));
 		}
 
 		// Texture
 		{
 			ReturnIfFalse(_ddgi_volume_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_read_write(
+				TextureDesc::create_read_write_texture(
 					_volume_data->volume_texture_resolution.x, 
 					_volume_data->volume_texture_resolution.y, 
 					Format::RG32_FLOAT,
@@ -75,7 +81,7 @@ namespace fantasy
 				)
 			)));
 			ReturnIfFalse(_ddgi_volume_irradiance_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_read_write(
+				TextureDesc::create_read_write_texture(
 					_volume_data->volume_texture_resolution.x, 
 					_volume_data->volume_texture_resolution.y, 
 					Format::RGBA16_FLOAT,
@@ -97,7 +103,7 @@ namespace fantasy
 			binding_set_items[2] = BindingSetItem::create_texture_uav(0, check_cast<TextureInterface>(cache->require("ddgi_volume_depth_texture")));
             ReturnIfFalse(_depth_update_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
                 BindingSetDesc{ .binding_items = binding_set_items },
-                _binding_layout.get()
+                _binding_layout
             )));
 
 
@@ -108,14 +114,13 @@ namespace fantasy
 			binding_set_items[3] = BindingSetItem::create_texture_uav(0, check_cast<TextureInterface>(cache->require("ddgi_volume_irradiance_texture")));
 			ReturnIfFalse(_irradiance_update_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
                 BindingSetDesc{ .binding_items = binding_set_items },
-                _binding_layout.get()
+                _binding_layout
             )));
 		}
 
 		// Compute state.
 		{
 			_compute_state.binding_sets.resize(1);
-			_compute_state.pipeline = _pipeline.get();
 		}
 
 		return true;
@@ -135,17 +140,15 @@ namespace fantasy
 		};
 
 		_compute_state.binding_sets[0] = _depth_update_binding_set.get();
+		_compute_state.pipeline = _depth_update_pipeline.get();
 		ReturnIfFalse(cmdlist->open());
-		ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
-		ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::ProbeUpdatePassConstant)));
-		ReturnIfFalse(cmdlist->dispatch(thread_group_num.x, thread_group_num.y));
+		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constant));
 		ReturnIfFalse(cmdlist->close());
 		
 		_compute_state.binding_sets[0] = _irradiance_update_binding_set.get();
+		_compute_state.pipeline = _irradiance_update_pipeline.get();
 		ReturnIfFalse(cmdlist->open());
-		ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
-		ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::ProbeUpdatePassConstant)));
-		ReturnIfFalse(cmdlist->dispatch(thread_group_num.x, thread_group_num.y));
+		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constant));
 		ReturnIfFalse(cmdlist->close());
 
         return true;

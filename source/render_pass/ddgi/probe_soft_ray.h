@@ -3,6 +3,7 @@
 
 #include "../../render_graph/render_pass.h"
 #include "../sdf/global_sdf_info.h"
+#include "../../core/math/matrix.h"
 #include "ddgi_volume.h"
 #include <memory>
 
@@ -44,7 +45,7 @@ namespace fantasy
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 
-		std::unique_ptr<Shader> _cs;
+		std::shared_ptr<Shader> _cs;
 		std::unique_ptr<ComputePipelineInterface> _pipeline;
 
 		std::unique_ptr<BindingSetInterface> _binding_set;

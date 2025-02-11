@@ -53,8 +53,8 @@ namespace fantasy
 		// Pipeline.
 		{
 			ComputePipelineDesc pipeline_desc;
-			pipeline_desc.compute_shader = _cs.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.compute_shader = _cs;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
 		}
 
@@ -86,11 +86,10 @@ namespace fantasy
 			_textures.resize(mip_levels);
 
 			ReturnIfFalse(_textures[0] = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_shader_resource(
+				TextureDesc::create_shader_resource_texture(
 					image.width, 
 					image.height,
 					image.format,
-					true,
 					get_geometry_texture_name(
 						_current_submaterial_index, 
 						_current_image_index, 
@@ -109,11 +108,10 @@ namespace fantasy
 				texture_resolution.x >>= 1;
 				texture_resolution.y >>= 1;
 				ReturnIfFalse(_textures[mip_level] = std::shared_ptr<TextureInterface>(device->create_texture(
-					TextureDesc::create_shader_resource(
+					TextureDesc::create_shader_resource_texture(
 						texture_resolution.x, 
 						texture_resolution.y,
 						image.format,
-						true,
 						get_geometry_texture_name(
 							_current_submaterial_index, 
 							_current_image_index, 
@@ -132,7 +130,7 @@ namespace fantasy
 					binding_set_items[2] = BindingSetItem::create_sampler(0, _linear_clamp_sampler);
 					ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 						BindingSetDesc{ .binding_items = binding_set_items },
-						_binding_layout.get()
+						_binding_layout
 					)));
 				}
 
@@ -141,8 +139,7 @@ namespace fantasy
 					static_cast<uint32_t>((align(texture_resolution.y, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
 				};
 
-				ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
-				ReturnIfFalse(cmdlist->dispatch(thread_group_num.x, thread_group_num.y));
+				ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y));
 			}
 
 			ReturnIfFalse(cmdlist->close());

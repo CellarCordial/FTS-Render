@@ -54,8 +54,7 @@ namespace fantasy
 			vertex_attribute_desc[3].element_stride = sizeof(Vertex);
 			ReturnIfFalse(_input_layout = std::unique_ptr<InputLayoutInterface>(device->create_input_layout(
 				vertex_attribute_desc.data(),
-				vertex_attribute_desc.size(),
-				nullptr
+				vertex_attribute_desc.size()
 			)));
 		}
 
@@ -84,10 +83,10 @@ namespace fantasy
 
 		// Pipeline.
 		{
-			_pipeline_desc.vertex_shader = _vs.get();
-			_pipeline_desc.pixel_shader = _ps.get();
-			_pipeline_desc.input_layout = _input_layout.get();
-			_pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			_pipeline_desc.vertex_shader = _vs;
+			_pipeline_desc.pixel_shader = _ps;
+			_pipeline_desc.input_layout = _input_layout;
+			_pipeline_desc.binding_layouts.push_back(_binding_layout);
 		}
 
 		// Binding Set.
@@ -120,8 +119,8 @@ namespace fantasy
                 {
                     uint64_t vertices_size = sizeof(Vertex) * submesh.vertices.size();
                     uint64_t indices_size = sizeof(uint32_t) * submesh.indices.size();
-                    ReturnIfFalse(device->create_buffer(BufferDesc::create_vertex(vertices_size)));
-                    ReturnIfFalse(device->create_buffer(BufferDesc::create_index(indices_size)));
+                    ReturnIfFalse(device->create_buffer(BufferDesc::create_vertex_buffer(vertices_size)));
+                    ReturnIfFalse(device->create_buffer(BufferDesc::create_index_buffer(indices_size)));
                     ReturnIfFalse(cmdlist->write_buffer(_vertex_buffer.get(), submesh.vertices.data(), vertices_size));
                     ReturnIfFalse(cmdlist->write_buffer(_index_buffer.get(), submesh.indices.data(), indices_size));
                 }
@@ -137,7 +136,7 @@ namespace fantasy
                 {
 
                     ReturnIfFalse(surface_base_color_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-                        TextureDesc::create_render_target(
+                        TextureDesc::create_render_target_texture(
                             SURFACE_RESOLUTION, 
                             SURFACE_RESOLUTION, 
                             Format::RGBA32_FLOAT,
@@ -145,7 +144,7 @@ namespace fantasy
                         )
                     )));
                     ReturnIfFalse(surface_normal_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-                        TextureDesc::create_render_target(
+                        TextureDesc::create_render_target_texture(
                             SURFACE_RESOLUTION, 
                             SURFACE_RESOLUTION, 
                             Format::RGB32_FLOAT,
@@ -153,7 +152,7 @@ namespace fantasy
                         )
                     )));
                     ReturnIfFalse(surface_pbr_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-                        TextureDesc::create_render_target(
+                        TextureDesc::create_render_target_texture(
                             SURFACE_RESOLUTION, 
                             SURFACE_RESOLUTION, 
                             Format::RGB32_FLOAT,
@@ -161,7 +160,7 @@ namespace fantasy
                         )
                     )));
                     ReturnIfFalse(surface_emissive_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-                        TextureDesc::create_render_target(
+                        TextureDesc::create_render_target_texture(
                             SURFACE_RESOLUTION, 
                             SURFACE_RESOLUTION, 
                             Format::RGBA32_FLOAT,
@@ -169,7 +168,7 @@ namespace fantasy
                         )
                     )));
                     ReturnIfFalse(surface_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-                        TextureDesc::create_depth_stencil(
+                        TextureDesc::create_depth_stencil_texture(
                             SURFACE_RESOLUTION, 
                             SURFACE_RESOLUTION, 
                             Format::D32,
@@ -177,7 +176,7 @@ namespace fantasy
                         )
                     )));
                     ReturnIfFalse(surface_light_cache_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-                        TextureDesc::create_render_target(
+                        TextureDesc::create_render_target_texture(
                             SURFACE_RESOLUTION, 
                             SURFACE_RESOLUTION, 
                             Format::RGBA32_FLOAT,
@@ -216,7 +215,7 @@ namespace fantasy
                 _binding_set_items[4] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require(get_geometry_texture_name(ix, Material::TextureType_Emissive, 0, model_name).c_str())));
                 ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
                 	BindingSetDesc{ .binding_items = _binding_set_items },
-                	_binding_layout.get()
+                	_binding_layout
                 )));
 
                 _graphics_state.pipeline = _pipeline.get();
@@ -245,9 +244,7 @@ namespace fantasy
 
                 ReturnIfFalse(cmdlist->open());
 
-                ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
-                ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::SurfaceBakePassConstant)));
-                ReturnIfFalse(cmdlist->draw_indexed(_draw_arguments));
+                ReturnIfFalse(cmdlist->draw_indexed(_graphics_state, _draw_arguments, &_pass_constant));
 
                 ReturnIfFalse(cmdlist->close());
             }

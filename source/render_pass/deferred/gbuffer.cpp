@@ -56,8 +56,7 @@ namespace fantasy
 			vertex_attribute_desc[3].element_stride = sizeof(Vertex);
 			ReturnIfFalse(_input_layout = std::unique_ptr<InputLayoutInterface>(device->create_input_layout(
 				vertex_attribute_desc.data(),
-				vertex_attribute_desc.size(),
-				nullptr
+				vertex_attribute_desc.size()
 			)));
 		}
 
@@ -92,7 +91,7 @@ namespace fantasy
 			_black_image = Image::load_image_from_file(path.c_str());
 			ReturnIfFalse(_black_image.is_valid());
 			ReturnIfFalse(_black_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_shader_resource(
+				TextureDesc::create_shader_resource_texture(
 					_black_image.width,
 					_black_image.height,
 					_black_image.format,
@@ -102,7 +101,7 @@ namespace fantasy
 			cache->collect(_black_texture, ResourceType::Texture);
 
             ReturnIfFalse(_world_position_view_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target(
+				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA32_FLOAT,
@@ -110,7 +109,7 @@ namespace fantasy
 				)
 			)));
             ReturnIfFalse(_world_space_normal_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target(
+				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA32_FLOAT,
@@ -118,7 +117,7 @@ namespace fantasy
 				)
 			)));
             ReturnIfFalse(_base_color_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target(
+				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA32_FLOAT,
@@ -126,7 +125,7 @@ namespace fantasy
 				)
 			)));
             ReturnIfFalse(_pbr_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target(
+				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA32_FLOAT,
@@ -134,7 +133,7 @@ namespace fantasy
 				)
 			)));
             ReturnIfFalse(_emissive_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target(
+				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA32_FLOAT,
@@ -142,7 +141,7 @@ namespace fantasy
 				)
 			)));
             ReturnIfFalse(_view_space_velocity_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target(
+				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA32_FLOAT,
@@ -150,13 +149,13 @@ namespace fantasy
 				)
 			)));
             ReturnIfFalse(_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-                TextureDesc::create_depth_stencil(
+                TextureDesc::create_depth_stencil_texture(
                     CLIENT_WIDTH, 
                     CLIENT_HEIGHT, 
                     Format::D32,
                     "depth_texture"
                 )
-            )))
+            )));
             
 			cache->collect(_world_position_view_depth_texture, ResourceType::Texture);
 			cache->collect(_world_space_normal_texture, ResourceType::Texture);
@@ -183,10 +182,10 @@ namespace fantasy
 		// Pipeline.
 		{
 			GraphicsPipelineDesc pipeline_desc;
-			pipeline_desc.vertex_shader = _vs.get();
-			pipeline_desc.pixel_shader = _ps.get();
-			pipeline_desc.input_layout = _input_layout.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.vertex_shader = _vs;
+			pipeline_desc.pixel_shader = _ps;
+			pipeline_desc.input_layout = _input_layout;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			pipeline_desc.render_state.depth_stencil_state.enable_depth_test = true;
 			pipeline_desc.render_state.depth_stencil_state.enable_depth_write = true;
 			pipeline_desc.render_state.depth_stencil_state.depth_func = ComparisonFunc::LessOrEqual;
@@ -222,9 +221,7 @@ namespace fantasy
         {
 			_pass_constant.geometry_constant_index = ix;
 			_graphics_state.binding_sets[0] = _binding_sets[ix].get();
-            ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
-            ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant::GBufferPassConstant)));
-            ReturnIfFalse(cmdlist->draw_indexed(_draw_arguments[ix]));
+            ReturnIfFalse(cmdlist->draw_indexed(_graphics_state, _draw_arguments[ix], &_pass_constant));
         }
 
 		ReturnIfFalse(cmdlist->close());
@@ -339,7 +336,7 @@ namespace fantasy
 								if (image.is_valid())
 								{
 									ReturnIfFalse(material_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-										TextureDesc::create_shader_resource(
+										TextureDesc::create_shader_resource_texture(
 											image.width,
 											image.height,
 											image.format
@@ -375,7 +372,7 @@ namespace fantasy
             ReturnIfFalse(res);
 
             ReturnIfFalse(_vertex_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_vertex(
+				BufferDesc::create_vertex_buffer(
 					sizeof(Vertex) * _vertices.size(), 
 					"geometry_vertex_buffer"
 				)
@@ -383,7 +380,7 @@ namespace fantasy
 			cache->collect(_vertex_buffer, ResourceType::Buffer);
 
             ReturnIfFalse(_index_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-                BufferDesc::create_index(
+                BufferDesc::create_index_buffer(
                     sizeof(uint32_t) * _indices.size(),
                     "geometry_index_buffer"
                 )
@@ -391,7 +388,7 @@ namespace fantasy
 			cache->collect(_index_buffer, ResourceType::Buffer);
 
 			ReturnIfFalse(_geometry_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_structured(
+				BufferDesc::create_structured_buffer(
 					_geometry_constants.size() * sizeof(constant::GeometryConstant), 
 					sizeof(constant::GeometryConstant),
 					"geometry_constant_buffer"
@@ -422,7 +419,7 @@ namespace fantasy
 					BindingSetItem::create_sampler(0, _anisotropic_warp_sampler);
 				ReturnIfFalse(_binding_sets[ix] = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 					BindingSetDesc{ .binding_items = binding_set_item_array },
-					_binding_layout.get()
+					_binding_layout
 				)));
 
 			}
