@@ -1,5 +1,7 @@
+#include "global_render.h"
 
 int main()
 {
-    return 0;
+    fantasy::GlobalRender render;
+    return render.Init() && render.run();
 }

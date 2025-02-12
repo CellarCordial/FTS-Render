@@ -27,8 +27,8 @@ namespace fantasy
         void fix_triangle(uint32_t triangle_index);
 
         float evaluate(const Vertex& p0, const Vertex& p1, bool bMerge);
-        void merge_begin(const Vertex& p);
-        void mergen_end();
+        void removed_vertex(const Vertex& p);
+        void readd_vertex();
 
         class BinaryHeap
         {
@@ -58,7 +58,7 @@ namespace fantasy
         std::vector<Vertex>& _vertices;
         std::vector<uint32_t>& _indices;
         uint32_t _remain_vertex_num;
-        uint32_t _remain_triangle_num;
+        uint32_t _remain_triangle_count;
 
         enum
         {
@@ -69,51 +69,51 @@ namespace fantasy
         std::vector<uint32_t> _vertex_ref_count;
         std::vector<QuadricSurface> _triangle_surfaces;
 
-        BitSetAllocator _triangle_removed_array;
+        BitSetAllocator _triangle_removed_set;
 
         HashTable _vertex_table;    // key: vertex_position; hash value: vertex_index.
         HashTable _index_table;     // key: vertex_position; hash value: index_index.
 
-
         std::vector<std::pair<Vertex, Vertex>> _edges;
         HashTable _edges_begin_table;   // key: vertex_position; hash value: edge_index.   
         HashTable _edges_end_table;     // key: vertex_position; hash value: edge_index.
+        
         BinaryHeap _heap;
 
-
-        std::vector<uint32_t> moved_vertex_indices;
-        std::vector<uint32_t> moved_index_indices;
-        std::vector<uint32_t> moved_edge_indices;
+        std::vector<uint32_t> removed_vertex_indices;
+        std::vector<uint32_t> removed_index_indices;
+        std::vector<uint32_t> removed_edge_indices;
         std::vector<uint32_t> edge_need_reevaluate_indices;
     };
 
     struct MeshCluster
     {
         static const uint32_t cluster_size = 128;
-
+        
+        uint32_t geometry_id = 0;
         std::vector<Vertex> vertices;
         std::vector<uint32_t> indices;
-        std::vector<uint32_t> external_edges;   // edge_index essentially corresponds to the vertex_index of the edge's starting point.
+        std::vector<uint32_t> external_edges;
+
+        uint32_t group_id = 0;
+        uint32_t mip_level = 0;
+        float lod_error = 0.0f;
 
         Bounds3F bounding_box;
         Sphere bounding_sphere;
         Sphere lod_bounding_sphere;
-        float lod_error = 0.0f;
-        uint32_t mip_level = 0;
-        uint32_t group_id = 0;
-        uint32_t geometry_id = 0;
     };
 
     struct MeshClusterGroup
     {
         static const uint32_t group_size = 32;
 
+        uint32_t mip_level = 0;
         std::vector<uint32_t> cluster_indices;
         std::vector<std::pair<uint32_t,uint32_t>> external_edges;
+        
         Sphere bounding_sphere;
-        Sphere lod_bounding_sphere;
         float parent_lod_error = 0.0f;
-        uint32_t mip_level = 0;
     };
 
     class VirtualMesh
@@ -145,7 +145,7 @@ namespace fantasy
     private:
 		std::vector<uint32_t> _indices;
         std::vector<Vertex> _vertices;
-        uint32_t _current_geometry_id = 0;
+        uint32_t _geometry_id = 0;      // 0-15: submesh id; 16-31: mesh id.
     };
 
 
@@ -210,10 +210,10 @@ namespace fantasy
     {
         MeshClusterGroupGpu ret;
         ret.lod_bounding_sphere = float4(
-            group.lod_bounding_sphere.center.x,
-            group.lod_bounding_sphere.center.y,
-            group.lod_bounding_sphere.center.z,
-            group.lod_bounding_sphere.radius
+            group.bounding_sphere.center.x,
+            group.bounding_sphere.center.y,
+            group.bounding_sphere.center.z,
+            group.bounding_sphere.radius
         );
         ret.cluster_count = static_cast<uint32_t>(group.cluster_indices.size());
         ret.max_parent_lod_error = group.parent_lod_error;

@@ -45,7 +45,7 @@ namespace fantasy
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(6);
-			binding_layout_items[0] = BindingLayoutItem::create_volatile_constant_buffer(0);
+			binding_layout_items[0] = BindingLayoutItem::create_constant_buffer(0);
 			binding_layout_items[1] = BindingLayoutItem::create_constant_buffer(1);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[3] = BindingLayoutItem::create_structured_buffer_srv(1);
@@ -115,7 +115,7 @@ namespace fantasy
 		// Binding Set.
 		{
 			BindingSetItemArray binding_set_items(6);
-			binding_set_items[0] = BindingSetItem::create_volatile_constant_buffer(0, check_cast<BufferInterface>(cache->require("atmosphere_properties_buffer")));
+			binding_set_items[0] = BindingSetItem::create_constant_buffer(0, check_cast<BufferInterface>(cache->require("atmosphere_properties_buffer")));
 			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, _pass_constant_buffer);
 			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("transmittance_texture")));
 			binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(1, _dir_sample_buffer);

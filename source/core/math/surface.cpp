@@ -41,9 +41,8 @@ namespace fantasy
         return normalize(tangent);
     }
 
-    bool QuadricSurface::get_vertex(float3& position, float3& normal, float3& tangent)
+    bool QuadricSurface::get_vertex(float3& position)
     {
-        // TODO: is it right?
         double4x4 m(
             a2,   ab,   ac,   0.0f,
             ab,   b2,   bc,   0.0f,
@@ -58,8 +57,6 @@ namespace fantasy
             static_cast<float>(inv[3][1]), 
             static_cast<float>(inv[3][2]) 
         };
-        normal = calculate_normal(position);
-        tangent = calculate_tangent(position);
         return true;
     }
 

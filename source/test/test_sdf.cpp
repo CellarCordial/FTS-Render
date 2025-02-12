@@ -24,7 +24,7 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc ShaderCompileDesc;
-			ShaderCompileDesc.shader_name = "full_screen_quad_vs.slang";
+			ShaderCompileDesc.shader_name = "common/full_screen_quad_vs.slang";
 			ShaderCompileDesc.entry_point = "main";
 			ShaderCompileDesc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = shader_compile::compile_shader(ShaderCompileDesc);

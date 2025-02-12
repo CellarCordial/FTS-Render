@@ -15,7 +15,7 @@ namespace fantasy
 			BindingLayoutItemArray binding_layout_items(10);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::AtmosphereDebugPassConstant0));
 			binding_layout_items[1] = BindingLayoutItem::create_constant_buffer(1);
-			binding_layout_items[2] = BindingLayoutItem::create_volatile_constant_buffer(2);
+			binding_layout_items[2] = BindingLayoutItem::create_constant_buffer(2);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[4] = BindingLayoutItem::create_texture_srv(1);
 			binding_layout_items[5] = BindingLayoutItem::create_texture_srv(2);
@@ -242,7 +242,7 @@ namespace fantasy
 		_multi_scattering_lut_pass = std::make_shared<MultiScatteringLUTPass>();
 		_shadow_map_pass = std::make_shared<ShadowMapPass>();
 		_sky_lut_pass = std::make_shared<SkyLUTPass>();
-		_aerial_lut_pass = std::make_shared<FAerialLUTPass>();
+		_aerial_lut_pass = std::make_shared<AerialLUTPass>();
 		_sky_pass = std::make_shared<SkyPass>();
 		_sun_disk_pass = std::make_shared<SunDiskPass>();
 		_atmosphere_debug_pass = std::make_shared<AtmosphereDebugPass>();

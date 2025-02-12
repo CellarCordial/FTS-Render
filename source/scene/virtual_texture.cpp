@@ -56,7 +56,7 @@ namespace fantasy
 
     MipmapLUT::QuadTree::QuadTree(const QuadTree& other)
     {
-        _root = std::make_unique<Node>(*other._root);
+        if (other._root) _root = std::make_unique<Node>(*other._root);
     }
 
     MipmapLUT::QuadTree& MipmapLUT::QuadTree::operator=(const QuadTree& other)

@@ -100,7 +100,7 @@ namespace fantasy
 		std::shared_ptr<MultiScatteringLUTPass> _multi_scattering_lut_pass;
 		std::shared_ptr<ShadowMapPass> _shadow_map_pass;
 		std::shared_ptr<SkyLUTPass> _sky_lut_pass;
-		std::shared_ptr<FAerialLUTPass> _aerial_lut_pass;
+		std::shared_ptr<AerialLUTPass> _aerial_lut_pass;
 		std::shared_ptr<SkyPass> _sky_pass;
 		std::shared_ptr<SunDiskPass> _sun_disk_pass;
 		std::shared_ptr<AtmosphereDebugPass> _atmosphere_debug_pass;

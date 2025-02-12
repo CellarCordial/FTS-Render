@@ -15,7 +15,7 @@ namespace fantasy
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(5);
-			binding_layout_items[0] = BindingLayoutItem::create_volatile_constant_buffer(0);
+			binding_layout_items[0] = BindingLayoutItem::create_constant_buffer(0);
 			binding_layout_items[1] = BindingLayoutItem::create_constant_buffer(1);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(1);
@@ -28,7 +28,7 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc shader_compile_desc;
-			shader_compile_desc.shader_name = "full_screen_quad_vs.slang";
+			shader_compile_desc.shader_name = "common/full_screen_quad_vs.slang";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = shader_compile::compile_shader(shader_compile_desc);
@@ -65,7 +65,7 @@ namespace fantasy
 					SKY_LUT_RES,
 					SKY_LUT_RES,
 					Format::RGBA32_FLOAT,
-					"SkyLUTTexture"
+					"sky_lut_texture"
 				)
 			)));
 			cache->collect(_sky_lut_texture, ResourceType::Texture);

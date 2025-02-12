@@ -33,7 +33,7 @@ namespace fantasy
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(4);
-			binding_layout_items[0] = BindingLayoutItem::create_volatile_constant_buffer(0);
+			binding_layout_items[0] = BindingLayoutItem::create_constant_buffer(0);
 			binding_layout_items[1] = BindingLayoutItem::create_push_constants(1, sizeof(constant::SunDiskPassConstant));
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[3] = BindingLayoutItem::create_sampler(0);

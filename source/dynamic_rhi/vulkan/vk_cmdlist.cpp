@@ -393,9 +393,7 @@ namespace fantasy
     bool VKCommandList::close()
     {
         commit_barriers();
-
         _current_cmdbuffer->vk_cmdbuffer.end();
-
         flush_volatile_buffer_mapped_memory();
         return true;
     }
@@ -1185,7 +1183,7 @@ namespace fantasy
             binding_items.insert(binding_items.end(), bindings.begin(), bindings.end());
         }
 
-        for (auto binding : binding_items)
+        for (const auto& binding : binding_items)
         {
             switch(binding.type)
             {
@@ -1458,12 +1456,12 @@ namespace fantasy
 
     void VKCommandList::set_texture_state(TextureInterface* texture, const TextureSubresourceSet& subresource_set, ResourceStates states)
     {
-        set_texture_state(texture, subresource_set, states);
+        _resource_state_tracker.set_texture_state(texture, subresource_set, states);
     }
 
     void VKCommandList::set_buffer_state(BufferInterface* buffer, ResourceStates states)
     {
-        set_buffer_state(buffer, states);
+        _resource_state_tracker.set_buffer_state(buffer, states);
     }
 
     void VKCommandList::commit_barriers()

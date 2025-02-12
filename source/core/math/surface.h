@@ -15,7 +15,7 @@ namespace fantasy
         QuadricSurface() = default;
         QuadricSurface(const Vector3<double>& p0, const Vector3<double>& p1, const Vector3<double>& p2);
 
-        bool get_vertex(float3& position, float3& normal, float3& tangent);
+        bool get_vertex(float3& position);
         float distance_to_surface(const float3& p);
         float3 calculate_normal(float3 p);
         float3 calculate_tangent(float3 p);

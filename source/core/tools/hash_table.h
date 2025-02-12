@@ -48,7 +48,7 @@ namespace fantasy
     private:
         uint32_t _hash_mask;
         std::vector<uint32_t> _hash;
-        std::vector<uint32_t> _next_index;
+        std::vector<uint32_t> _next_hash;
     };
 
     
@@ -58,7 +58,7 @@ namespace fantasy
         elememt = (elememt << 15) | (elememt >> (32 - 15));
         elememt *= 0x1b873593;
 
-        hash^=elememt;
+        hash ^= elememt;
         hash = (hash << 13) | (hash >> (32 - 13));
         hash = hash * 5 + 0xe6546b64;
         return hash;
@@ -85,9 +85,7 @@ namespace fantasy
 		x.f = (vec.x == 0.0f ? 0 : vec.x);
 		y.f = (vec.y == 0.0f ? 0 : vec.y);
 		z.f = (vec.z == 0.0f ? 0 : vec.z);
-        uint32_t a = murmur_add(x.u, y.u);
-        uint32_t b = murmur_add(a, z.u);
-		return murmur_mix(b);
+		return murmur_mix(murmur_add(murmur_add(x.u, y.u), z.u));
 	}
 }
 

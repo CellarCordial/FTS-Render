@@ -180,6 +180,8 @@ namespace fantasy
             ret.height = height;
             ret.format = format;
             ret.allow_render_target = true;
+            ret.use_clear_value = true;
+            ret.clear_value = Color{ 0.0f, 0.0f, 0.0f, 0.0f };
             return ret;
         }
 
@@ -196,6 +198,8 @@ namespace fantasy
             ret.height = height;
             ret.format = format;
             ret.allow_depth_stencil = true;
+            ret.use_clear_value = true;
+            ret.clear_value = Color{};
             return ret;
         }
 
@@ -259,13 +263,6 @@ namespace fantasy
             }
             return true;
         }
-    };
-
-    inline const TextureSubresourceSet entire_subresource_set = TextureSubresourceSet{
-        .base_mip_level     = 0,
-        .mip_level_count   = ~0u,
-        .base_array_slice  = 0,
-        .array_slice_count = ~0u
     };
 
     struct TextureInterface : public ResourceInterface

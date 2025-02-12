@@ -2,6 +2,7 @@
 #define DYNAMIC_RHI_BINDING_H
 
 #include "../core/tools/stack_array.h"
+#include "format.h"
 #include "resource.h"
 #include "shader.h"
 #include <memory>
@@ -202,8 +203,9 @@ namespace fantasy
     {
         std::shared_ptr<ResourceInterface> resource;
 
-        ResourceViewType type = ResourceViewType::None;
         uint32_t slot = 0;
+        Format format = Format::UNKNOWN;
+        ResourceViewType type = ResourceViewType::None;
 
         union 
         {
@@ -214,7 +216,7 @@ namespace fantasy
         static BindingSetItem create_texture_srv(
             uint32_t slot,
             std::shared_ptr<TextureInterface> texture,
-            TextureSubresourceSet subresource = entire_subresource_set
+            TextureSubresourceSet subresource = TextureSubresourceSet{}
         )
         {
             BindingSetItem ret;
@@ -241,113 +243,129 @@ namespace fantasy
 
         static BindingSetItem create_typed_buffer_srv(
             uint32_t slot,
-            std::shared_ptr<BufferInterface> buffer,
-            BufferRange range = entire_buffer_range
+            std::shared_ptr<BufferInterface> buffer
         )
         {
             BindingSetItem ret;
             ret.resource = buffer;
             ret.type = ResourceViewType::TypedBuffer_SRV;
             ret.slot = slot;
-            ret.range = range;
+            ret.range = BufferRange{
+                .byte_offset = 0,
+                .byte_size = buffer->get_desc().byte_size
+            };
             return ret;
         }
 
         static BindingSetItem create_typed_buffer_uav(
             uint32_t slot,
-            std::shared_ptr<BufferInterface> buffer,
-            BufferRange range = entire_buffer_range
+            std::shared_ptr<BufferInterface> buffer
         )
         {
 			BindingSetItem ret;
             ret.resource = buffer;
             ret.type = ResourceViewType::TypedBuffer_UAV;
             ret.slot = slot;
-            ret.range = range;
+            ret.range = BufferRange{
+                .byte_offset = 0,
+                .byte_size = buffer->get_desc().byte_size
+            };
             return ret;
         }
 
         static BindingSetItem create_constant_buffer(
             uint32_t slot,
-            std::shared_ptr<BufferInterface> buffer,
-            BufferRange range = entire_buffer_range
+            std::shared_ptr<BufferInterface> buffer
         )
         {
             BindingSetItem ret;
             ret.resource = buffer;
             ret.type = ResourceViewType::ConstantBuffer;
             ret.slot = slot;
-            ret.range = range;
+            ret.range = BufferRange{
+                .byte_offset = 0,
+                .byte_size = buffer->get_desc().byte_size
+            };
             return ret;
         }
 
         static BindingSetItem create_volatile_constant_buffer(
             uint32_t slot,
-            std::shared_ptr<BufferInterface> buffer,
-            BufferRange range = entire_buffer_range
+            std::shared_ptr<BufferInterface> buffer
         )
         {
             BindingSetItem ret;
             ret.resource = buffer;
             ret.type = ResourceViewType::VolatileConstantBuffer;
             ret.slot = slot;
-            ret.range = range;
+            ret.range = BufferRange{
+                .byte_offset = 0,
+                .byte_size = buffer->get_desc().byte_size
+            };
             return ret;
         }
 
         static BindingSetItem create_structured_buffer_srv(
             uint32_t slot,
-            std::shared_ptr<BufferInterface> buffer,
-            BufferRange range = entire_buffer_range
+            std::shared_ptr<BufferInterface> buffer
         )
         {
             BindingSetItem ret;
             ret.resource = buffer;
             ret.type = ResourceViewType::StructuredBuffer_SRV;
             ret.slot = slot;
-            ret.range = range;
+            ret.range = BufferRange{
+                .byte_offset = 0,
+                .byte_size = buffer->get_desc().byte_size
+            };
             return ret;
         }
 
         static BindingSetItem create_structured_buffer_uav(
             uint32_t slot,
-            std::shared_ptr<BufferInterface> buffer,
-            BufferRange range = entire_buffer_range
+            std::shared_ptr<BufferInterface> buffer
         )
         {
             BindingSetItem ret;
             ret.resource = buffer;
             ret.type = ResourceViewType::StructuredBuffer_UAV;
             ret.slot = slot;
-            ret.range = range;
+            ret.range = BufferRange{
+                .byte_offset = 0,
+                .byte_size = buffer->get_desc().byte_size
+            };
             return ret;
         }
 
         static BindingSetItem create_raw_buffer_srv(
             uint32_t slot,
-            std::shared_ptr<BufferInterface> buffer,
-            BufferRange range = entire_buffer_range
+            std::shared_ptr<BufferInterface> buffer
         )
         {
             BindingSetItem ret;
             ret.resource = buffer;
             ret.type = ResourceViewType::RawBuffer_SRV;
             ret.slot = slot;
-            ret.range = range;
+            ret.range = BufferRange{
+                .byte_offset = 0,
+                .byte_size = buffer->get_desc().byte_size
+            };
             return ret;
         }
 
         static BindingSetItem create_raw_buffer_uav(
             uint32_t slot,
-            std::shared_ptr<BufferInterface> buffer,
-            BufferRange range = entire_buffer_range
+            std::shared_ptr<BufferInterface> buffer
         )
         {
             BindingSetItem ret;
             ret.resource = buffer;
             ret.type = ResourceViewType::RawBuffer_UAV;
             ret.slot = slot;
-            ret.range = range;
+            ret.range = BufferRange{
+                .byte_offset = 0,
+                .byte_size = buffer->get_desc().byte_size
+            };
             return ret;
         }
 

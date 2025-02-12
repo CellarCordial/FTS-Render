@@ -20,7 +20,7 @@ namespace fantasy
 
         static FrameBufferAttachment create_attachment(
             const std::shared_ptr<TextureInterface>& texture,
-            TextureSubresourceSet subresource = entire_subresource_set
+            TextureSubresourceSet subresource = TextureSubresourceSet{}
         )
         {
             FrameBufferAttachment ret;

@@ -18,27 +18,27 @@ namespace fantasy
 		_world->subscribe<event::OnModelTransform>(this);
 		_world->subscribe<event::OnComponentAssigned<Mesh>>(this);
 		_world->subscribe<event::OnComponentAssigned<Material>>(this);
-		_world->subscribe<event::OnComponentAssigned<SurfaceCache>>(this);
-		_world->subscribe<event::OnComponentAssigned<DistanceField>>(this);
-		_world->subscribe<event::OnComponentAssigned<VirtualMesh>>(this);
+		// _world->subscribe<event::OnComponentAssigned<SurfaceCache>>(this);
+		// _world->subscribe<event::OnComponentAssigned<DistanceField>>(this);
+		// _world->subscribe<event::OnComponentAssigned<VirtualMesh>>(this);
 
 		_global_entity = _world->get_global_entity();
 
-		_global_entity->assign<SDFGrid>();
-		_global_entity->assign<event::GenerateSdf>();
-		_global_entity->assign<event::ModelLoaded>();
-		_global_entity->assign<event::AddSpotLight>();
-		_global_entity->assign<event::AddPointLight>();
-		_global_entity->assign<event::UpdateGlobalSdf>();
-		_global_entity->assign<event::GenerateSurfaceCache>();
+		// _global_entity->assign<SDFGrid>();
+		// _global_entity->assign<event::GenerateSdf>();
+		// _global_entity->assign<event::ModelLoaded>();
+		// _global_entity->assign<event::AddSpotLight>();
+		// _global_entity->assign<event::AddPointLight>();
+		// _global_entity->assign<event::UpdateGlobalSdf>();
+		// _global_entity->assign<event::GenerateSurfaceCache>();
 
 		
-		uint32_t current_resolution = lowest_texture_resolution;
-		while (current_resolution < highest_texture_resolution)
-		{
-			_world->create_entity()->assign<MipmapLUT>()->initialize(current_resolution);
-			current_resolution <<= 1;
-		}
+		// uint32_t current_resolution = lowest_texture_resolution;
+		// while (current_resolution < highest_texture_resolution)
+		// {
+		// 	_world->create_entity()->assign<MipmapLUT>()->initialize(current_resolution);
+		// 	current_resolution <<= 1;
+		// }
 
 		return true;
 	}
@@ -92,7 +92,7 @@ namespace fantasy
 			if (model_entity && parallel::thread_finished(thread_id) && parallel::thread_success(thread_id))
 			{
 				_world->add_delay_entity(model_entity);
-				ReturnIfFalse(_global_entity->get_component<event::ModelLoaded>()->broadcast());
+				// ReturnIfFalse(_global_entity->get_component<event::ModelLoaded>()->broadcast());
 
 				thread_id = INVALID_SIZE_64;
 				model_entity = nullptr;

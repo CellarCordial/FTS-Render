@@ -11,9 +11,9 @@ namespace fantasy
 	public:
 		bool partition_graph(const SimpleGraph& graph, uint32_t min_part_size, uint32_t max_part_size);
 
-		std::vector<std::pair<uint32_t, uint32_t>> _part_ranges;
-		std::vector<uint32_t> _node_indices;
-		std::vector<uint32_t> _node_map;
+		std::vector<std::pair<uint32_t, uint32_t>> part_ranges;
+		std::vector<uint32_t> node_indices;	// new index.
+		std::vector<uint32_t> node_map;		// [new index] = old index.
 	
 	private:
 		struct MetisGraph

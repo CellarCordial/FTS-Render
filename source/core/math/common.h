@@ -121,15 +121,15 @@ inline bool operator!=(T a, uint32_t b) { return uint32_t(a) != b; }
         return (size + alignment - 1) & ~(alignment - 1);
     }
 
-    inline uint32_t triangle_index_cycle3(uint32_t dw)
+    inline uint32_t triangle_edge_index_cycle(uint32_t ix)
     {
-        uint32_t mod3 = dw % 3;
-        return dw - mod3 + ((1 << mod3) & 3);
+        uint32_t mod3 = ix % 3;
+        return ix - mod3 + ((1 << mod3) & 3);
     }
 
-    inline uint32_t triangle_index_cycle3(uint32_t dw, uint32_t dwOfs)
+    inline uint32_t triangle_edge_index_cycle(uint32_t ix, uint32_t ofs)
     {
-        return dw - dw % 3 + (dw + dwOfs) % 3;
+        return ix - ix % 3 + (ix + ofs) % 3;
     }
 
     inline uint32_t search_most_significant_bit(uint32_t x)

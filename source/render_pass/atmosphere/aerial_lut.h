@@ -24,10 +24,10 @@ namespace fantasy
 	}
 
 
-	class FAerialLUTPass : public RenderPassInterface
+	class AerialLUTPass : public RenderPassInterface
 	{
 	public:
-		FAerialLUTPass() { type = RenderPassType::Compute; }
+		AerialLUTPass() { type = RenderPassType::Compute; }
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
@@ -40,6 +40,8 @@ namespace fantasy
 
 		std::shared_ptr<BufferInterface> _pass_constant_buffer;
 		std::shared_ptr<TextureInterface> _aerial_lut_texture;
+		std::shared_ptr<TextureInterface> _shadow_map_texture;
+		std::shared_ptr<TextureInterface> _shadow_map_depth_texture;
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 

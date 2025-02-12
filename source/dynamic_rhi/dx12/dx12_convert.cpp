@@ -320,7 +320,7 @@ namespace fantasy
     {
         const DxgiFormatMapping& format_mapping = get_dxgi_format_mapping(desc.format);
 
-        D3D12_RESOURCE_DIMENSION d3d12_resource_dimension;
+        D3D12_RESOURCE_DIMENSION d3d12_resource_dimension{};
         UINT16 depth_or_array_size;
         
         switch(desc.dimension)
@@ -347,7 +347,7 @@ namespace fantasy
             assert(!"Invalid enum");
         }
         
-        D3D12_RESOURCE_FLAGS d3d12_resource_flags;
+        D3D12_RESOURCE_FLAGS d3d12_resource_flags = D3D12_RESOURCE_FLAG_NONE;
         if (!desc.allow_shader_resource) d3d12_resource_flags |= D3D12_RESOURCE_FLAG_DENY_SHADER_RESOURCE;
         if (desc.allow_unordered_access) d3d12_resource_flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
         if (desc.allow_render_target)    d3d12_resource_flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
@@ -429,14 +429,6 @@ namespace fantasy
     D3D12_RESOURCE_STATES get_buffer_initial_state(const BufferDesc& desc)
     {
         D3D12_RESOURCE_STATES ret = D3D12_RESOURCE_STATE_COMMON;
-        if (desc.struct_stride != 0) ret |= D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
-        if (desc.is_vertex_buffer) ret |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-        if (desc.is_index_buffer) ret |= D3D12_RESOURCE_STATE_INDEX_BUFFER;
-        if (desc.is_indirect_buffer) ret |= D3D12_RESOURCE_STATE_INDIRECT_ARGUMENT;
-        if (desc.is_constant_buffer) ret |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-        // if (desc.is_accel_struct_storage) usage_flags |= D3D12_RESOURCE_STATE_RAYTRACING_ACCELERATION_STRUCTURE;
-        // if (desc.is_shader_binding_table) usage_flags |= ;
-
         if (desc.cpu_access == CpuAccessMode::Read) ret |= D3D12_RESOURCE_STATE_COPY_DEST;
         if (desc.cpu_access == CpuAccessMode::Write) ret |= D3D12_RESOURCE_STATE_GENERIC_READ;
         return ret;

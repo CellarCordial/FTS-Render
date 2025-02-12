@@ -53,6 +53,8 @@ namespace fantasy
         ReturnIfFalse(SUCCEEDED(d3d12_cmdlist->QueryInterface(IID_PPV_ARGS(d3d12_cmdlist4.GetAddressOf()))));
         ReturnIfFalse(SUCCEEDED(d3d12_cmdlist->QueryInterface(IID_PPV_ARGS(d3d12_cmdlist6.GetAddressOf()))));
 
+        d3d12_cmdlist->Close();
+
         return true;
     }
 
@@ -139,7 +141,7 @@ namespace fantasy
 
         d3d12_cmdqueue->ExecuteCommandLists(static_cast<uint32_t>(d3d12_cmdlists.size()), d3d12_cmdlists.data());
 
-        for (uint32_t ix = 0; ix < _d3d12_wait_fences.size(); ++ix)
+        for (uint32_t ix = 0; ix < _d3d12_signal_fences.size(); ++ix)
         {
             ReturnIfFalse(SUCCEEDED(d3d12_cmdqueue->Signal(_d3d12_signal_fences[ix].Get(), _signal_fence_values[ix])));
         }
@@ -555,7 +557,7 @@ namespace fantasy
         uint8_t stencil
     )
     {
-        assert(!clear_depth && !clear_stencil);
+        assert(clear_depth || clear_stencil);
         
         DX12Texture* dx12_texture = check_cast<DX12Texture*>(texture);
         const auto& texture_desc = dx12_texture->get_desc();
@@ -564,8 +566,8 @@ namespace fantasy
         commit_barriers();
 
         D3D12_CLEAR_FLAGS d3d12_clear_flags = D3D12_CLEAR_FLAGS(0);
-        if (!clear_depth) d3d12_clear_flags |= D3D12_CLEAR_FLAG_STENCIL;
-        if (!clear_stencil) d3d12_clear_flags |= D3D12_CLEAR_FLAG_DEPTH;
+        if (clear_depth) d3d12_clear_flags |= D3D12_CLEAR_FLAG_DEPTH;
+        if (clear_stencil) d3d12_clear_flags |= D3D12_CLEAR_FLAG_STENCIL;
 
         for (uint32_t mip = subresource.base_mip_level; mip < subresource.base_mip_level + subresource.mip_level_count; ++mip)
         {
@@ -613,6 +615,25 @@ namespace fantasy
         d3d12_src_texture_location.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
         d3d12_src_texture_location.SubresourceIndex = src_subresource_index;
 
+		set_texture_state(dst, TextureSubresourceSet{ dst_slice.mip_level, 1, dst_slice.array_slice, 1 }, ResourceStates::CopyDst);
+		set_texture_state(src, TextureSubresourceSet{ src_slice.mip_level, 1, src_slice.array_slice, 1 }, ResourceStates::CopySrc);
+        commit_barriers();
+        
+        if (
+            dst_slice.width == 0 || src_slice.width == 0 ||
+            dst_slice.height == 0 || src_slice.height == 0 ||
+            dst_slice.depth == 0 || src_slice.depth == 0
+        )
+        {
+            _current_cmdlist->d3d12_cmdlist->CopyTextureRegion(
+                &d3d12_dst_texture_location,
+                0, 0, 0,
+                &d3d12_src_texture_location,
+                nullptr
+            );
+            return;
+        }
+
         D3D12_BOX d3d12_src_box;
         d3d12_src_box.left   = src_slice.x;
         d3d12_src_box.top    = src_slice.y;
@@ -620,10 +641,6 @@ namespace fantasy
         d3d12_src_box.right  = src_slice.x + src_slice.width;
         d3d12_src_box.bottom = src_slice.y + src_slice.height;
         d3d12_src_box.back   = src_slice.z + src_slice.depth;
-
-		set_texture_state(dst, TextureSubresourceSet{ dst_slice.mip_level, 1, dst_slice.array_slice, 1 }, ResourceStates::CopyDst);
-		set_texture_state(src, TextureSubresourceSet{ src_slice.mip_level, 1, src_slice.array_slice, 1 }, ResourceStates::CopySrc);
-        commit_barriers();
 
         _current_cmdlist->d3d12_cmdlist->CopyTextureRegion(
             &d3d12_dst_texture_location,
@@ -654,6 +671,25 @@ namespace fantasy
         d3d12_src_texture_location.Type             = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
         d3d12_src_texture_location.SubresourceIndex = src_subresource_index;
 
+		set_buffer_state(check_cast<DX12StagingTexture*>(dst)->get_buffer(), ResourceStates::CopyDst);
+		set_texture_state(src, TextureSubresourceSet{ src_slice.mip_level, 1, src_slice.array_slice, 1 }, ResourceStates::CopySrc);
+        commit_barriers();
+
+        if (
+            dst_slice.width == 0 || src_slice.width == 0 ||
+            dst_slice.height == 0 || src_slice.height == 0 ||
+            dst_slice.depth == 0 || src_slice.depth == 0
+        )
+        {
+            _current_cmdlist->d3d12_cmdlist->CopyTextureRegion(
+                &d3d12_dst_texture_location,
+                0, 0, 0,
+                &d3d12_src_texture_location,
+                nullptr
+            );
+            return;
+        }
+
         D3D12_BOX d3d12_src_box;
         d3d12_src_box.left   = src_slice.x;
         d3d12_src_box.top    = src_slice.y;
@@ -661,10 +697,6 @@ namespace fantasy
         d3d12_src_box.right  = src_slice.x + src_slice.width;
         d3d12_src_box.bottom = src_slice.y + src_slice.height;
         d3d12_src_box.back   = src_slice.z + src_slice.depth;
-
-		set_buffer_state(check_cast<DX12StagingTexture*>(dst)->get_buffer(), ResourceStates::CopyDst);
-		set_texture_state(src, TextureSubresourceSet{ src_slice.mip_level, 1, src_slice.array_slice, 1 }, ResourceStates::CopySrc);
-        commit_barriers();
 
         _current_cmdlist->d3d12_cmdlist->CopyTextureRegion(
             &d3d12_dst_texture_location,
@@ -695,6 +727,25 @@ namespace fantasy
         d3d12_src_texture_location.PlacedFootprint = 
             check_cast<DX12StagingTexture*>(src)->get_slice_region(src_slice.mip_level, src_slice.array_slice).d3d12_foot_print;
 
+		set_texture_state(dst, TextureSubresourceSet{ dst_slice.mip_level, 1, dst_slice.array_slice, 1 }, ResourceStates::CopyDst);
+		set_buffer_state(check_cast<DX12StagingTexture*>(src)->get_buffer(), ResourceStates::CopySrc);
+        commit_barriers();
+
+        if (
+            dst_slice.width == 0 || src_slice.width == 0 ||
+            dst_slice.height == 0 || src_slice.height == 0 ||
+            dst_slice.depth == 0 || src_slice.depth == 0
+        )
+        {
+            _current_cmdlist->d3d12_cmdlist->CopyTextureRegion(
+                &d3d12_dst_texture_location,
+                0, 0, 0,
+                &d3d12_src_texture_location,
+                nullptr
+            );
+            return;
+        }
+
         D3D12_BOX d3d12_src_box;
         d3d12_src_box.left   = src_slice.x;
         d3d12_src_box.top    = src_slice.y;
@@ -702,10 +753,6 @@ namespace fantasy
         d3d12_src_box.right  = src_slice.x + src_slice.width;
         d3d12_src_box.bottom = src_slice.y + src_slice.height;
         d3d12_src_box.back   = src_slice.z + src_slice.depth;
-
-		set_texture_state(dst, TextureSubresourceSet{ dst_slice.mip_level, 1, dst_slice.array_slice, 1 }, ResourceStates::CopyDst);
-		set_buffer_state(check_cast<DX12StagingTexture*>(src)->get_buffer(), ResourceStates::CopySrc);
-        commit_barriers();
 
         _current_cmdlist->d3d12_cmdlist->CopyTextureRegion(
             &d3d12_dst_texture_location,
@@ -727,9 +774,6 @@ namespace fantasy
     { 
 		set_texture_state(dst, TextureSubresourceSet{ mip_level, 1, array_slice, 1 }, ResourceStates::CopyDst);
         commit_barriers();
-        
-        DX12SliceRegion slice = check_cast<DX12StagingTexture*>(dst)->get_slice_region(mip_level, array_slice);
-        D3D12_PLACED_SUBRESOURCE_FOOTPRINT d3d12_foot_print = slice.d3d12_foot_print;
 
         uint32_t subresource_index = calculate_texture_subresource(
             mip_level,
@@ -737,10 +781,20 @@ namespace fantasy
             dst->get_desc().mip_levels
         );
 
+        ID3D12Resource* d3d12_resource = reinterpret_cast<ID3D12Resource*>(dst->get_native_object());
+
+        D3D12_RESOURCE_DESC d3d12_resource_desc = d3d12_resource->GetDesc();
+        D3D12_PLACED_SUBRESOURCE_FOOTPRINT d3d12_foot_print;
+        uint32_t row_num;
+        uint64_t row_size_in_byte;
+        uint64_t total_bytes;
+
+        _context->device->GetCopyableFootprints(&d3d12_resource_desc, subresource_index, 1, 0, &d3d12_foot_print, &row_num, &row_size_in_byte, &total_bytes);
+
         BufferInterface* upload_buffer;
         void* mapped_address;
         ReturnIfFalse(_upload_manager.suballocate_buffer(
-            slice.size, 
+            total_bytes, 
             &upload_buffer, 
             &d3d12_foot_print.Offset, 
             &mapped_address, 
@@ -749,8 +803,8 @@ namespace fantasy
         ));
 
         uint32_t pixel_size = get_format_info(dst->get_desc().format).size;
-        uint32_t row_pitch = slice.d3d12_foot_print.Footprint.RowPitch;
-        uint32_t height = (slice.d3d12_foot_print.Footprint.Height * pixel_size) / row_pitch;
+        uint32_t row_pitch = d3d12_foot_print.Footprint.RowPitch;
+        uint32_t height = (d3d12_foot_print.Footprint.Height * pixel_size) / row_pitch;
         uint32_t depth = d3d12_foot_print.Footprint.Depth;
         uint32_t depth_pitch = row_pitch * d3d12_foot_print.Footprint.Height;
         
@@ -796,7 +850,7 @@ namespace fantasy
 
         memcpy(mapped_address, data, data_size);
 
-        ID3D12Resource* d3d12_upload_resource = reinterpret_cast<ID3D12Resource*>(upload_buffer);
+        ID3D12Resource* d3d12_upload_resource = reinterpret_cast<ID3D12Resource*>(upload_buffer->get_native_object());
 
         if (buffer->get_desc().is_volatile_constant_buffer)
         {
@@ -1123,7 +1177,7 @@ namespace fantasy
             binding_items.insert(binding_items.end(), bindings.begin(), bindings.end());
         }
 
-        for (auto binding : binding_items)
+        for (const auto& binding : binding_items)
         {
             switch(binding.type)
             {
@@ -1161,7 +1215,7 @@ namespace fantasy
     {
         _current_compute_state = state;
 
-        DX12GraphicsPipeline* pipeline = check_cast<DX12GraphicsPipeline*>(_current_compute_state.pipeline);
+        DX12ComputePipeline* pipeline = check_cast<DX12ComputePipeline*>(_current_compute_state.pipeline);
 
         for (uint32_t ix = 0; ix < _current_compute_state.binding_sets.size(); ++ix)
         {
@@ -1195,13 +1249,16 @@ namespace fantasy
     {
         ReturnIfFalse(set_graphics_state(state));
 
-        DX12GraphicsPipeline* pipeline = check_cast<DX12GraphicsPipeline*>(_current_graphics_state.pipeline);
-        _current_cmdlist->d3d12_cmdlist->SetGraphicsRoot32BitConstants(
-            pipeline->push_constant_root_param_index, 
-            static_cast<uint32_t>(pipeline->push_constant_size / 4), 
-            push_constant, 
-            0
-        );
+        if (push_constant)
+        {
+            DX12GraphicsPipeline* pipeline = check_cast<DX12GraphicsPipeline*>(_current_graphics_state.pipeline);
+            _current_cmdlist->d3d12_cmdlist->SetGraphicsRoot32BitConstants(
+                pipeline->push_constant_root_param_index, 
+                static_cast<uint32_t>(pipeline->push_constant_size / 4), 
+                push_constant, 
+                0
+            );
+        }
 
         _current_cmdlist->d3d12_cmdlist->DrawInstanced(
             arguments.index_count, 
@@ -1221,13 +1278,16 @@ namespace fantasy
     {
         ReturnIfFalse(set_graphics_state(state));
 
-        DX12GraphicsPipeline* pipeline = check_cast<DX12GraphicsPipeline*>(_current_graphics_state.pipeline);
-        _current_cmdlist->d3d12_cmdlist->SetGraphicsRoot32BitConstants(
-            pipeline->push_constant_root_param_index, 
-            static_cast<uint32_t>(pipeline->push_constant_size / 4), 
-            push_constant, 
-            0
-        );
+        if (push_constant)
+        {
+            DX12GraphicsPipeline* pipeline = check_cast<DX12GraphicsPipeline*>(_current_graphics_state.pipeline);
+            _current_cmdlist->d3d12_cmdlist->SetGraphicsRoot32BitConstants(
+                pipeline->push_constant_root_param_index, 
+                static_cast<uint32_t>(pipeline->push_constant_size / 4), 
+                push_constant, 
+                0
+            );
+        }
 
         _current_cmdlist->d3d12_cmdlist->DrawIndexedInstanced(
             arguments.index_count, 
@@ -1250,13 +1310,16 @@ namespace fantasy
     {
         ReturnIfFalse(set_compute_state(state));
         
-        DX12GraphicsPipeline* pipeline = check_cast<DX12GraphicsPipeline*>(_current_compute_state.pipeline);
-        _current_cmdlist->d3d12_cmdlist->SetComputeRoot32BitConstants(
-            pipeline->push_constant_root_param_index, 
-            static_cast<uint32_t>(pipeline->push_constant_size / 4), 
-            push_constant, 
-            0
-        );
+        if (push_constant)
+        {
+            DX12ComputePipeline* pipeline = check_cast<DX12ComputePipeline*>(_current_compute_state.pipeline);
+            _current_cmdlist->d3d12_cmdlist->SetComputeRoot32BitConstants(
+                pipeline->push_constant_root_param_index, 
+                static_cast<uint32_t>(pipeline->push_constant_size / 4), 
+                push_constant, 
+                0
+            );
+        }
 
         _current_cmdlist->d3d12_cmdlist->Dispatch(thread_group_num_x, thread_group_num_y, thread_group_num_z);
         return true;
@@ -1271,13 +1334,16 @@ namespace fantasy
     {
         ReturnIfFalse(set_graphics_state(state));
 
-        DX12GraphicsPipeline* pipeline = check_cast<DX12GraphicsPipeline*>(_current_graphics_state.pipeline);
-        _current_cmdlist->d3d12_cmdlist->SetGraphicsRoot32BitConstants(
-            pipeline->push_constant_root_param_index, 
-            static_cast<uint32_t>(pipeline->push_constant_size / 4), 
-            push_constant, 
-            0
-        );
+        if (push_constant)
+        {
+            DX12GraphicsPipeline* pipeline = check_cast<DX12GraphicsPipeline*>(_current_graphics_state.pipeline);
+            _current_cmdlist->d3d12_cmdlist->SetGraphicsRoot32BitConstants(
+                pipeline->push_constant_root_param_index, 
+                static_cast<uint32_t>(pipeline->push_constant_size / 4), 
+                push_constant, 
+                0
+            );
+        }
 
         _current_cmdlist->d3d12_cmdlist->ExecuteIndirect(
             _context->draw_indirect_signature.Get(), 
@@ -1299,13 +1365,16 @@ namespace fantasy
     {
         ReturnIfFalse(set_graphics_state(state));
 
-        DX12GraphicsPipeline* pipeline = check_cast<DX12GraphicsPipeline*>(_current_graphics_state.pipeline);
-        _current_cmdlist->d3d12_cmdlist->SetGraphicsRoot32BitConstants(
-            pipeline->push_constant_root_param_index, 
-            static_cast<uint32_t>(pipeline->push_constant_size / 4), 
-            push_constant, 
-            0
-        );
+        if (push_constant)
+        {
+            DX12GraphicsPipeline* pipeline = check_cast<DX12GraphicsPipeline*>(_current_graphics_state.pipeline);
+            _current_cmdlist->d3d12_cmdlist->SetGraphicsRoot32BitConstants(
+                pipeline->push_constant_root_param_index, 
+                static_cast<uint32_t>(pipeline->push_constant_size / 4), 
+                push_constant, 
+                0
+            );
+        }
 
         _current_cmdlist->d3d12_cmdlist->ExecuteIndirect(
             _context->draw_indexed_indirect_signature.Get(), 
@@ -1326,13 +1395,16 @@ namespace fantasy
     {
         ReturnIfFalse(set_compute_state(state));
         
-        DX12GraphicsPipeline* pipeline = check_cast<DX12GraphicsPipeline*>(_current_compute_state.pipeline);
-        _current_cmdlist->d3d12_cmdlist->SetComputeRoot32BitConstants(
-            pipeline->push_constant_root_param_index, 
-            static_cast<uint32_t>(pipeline->push_constant_size / 4), 
-            push_constant, 
-            0
-        );
+        if (push_constant)
+        {
+            DX12ComputePipeline* pipeline = check_cast<DX12ComputePipeline*>(_current_compute_state.pipeline);
+            _current_cmdlist->d3d12_cmdlist->SetComputeRoot32BitConstants(
+                pipeline->push_constant_root_param_index, 
+                static_cast<uint32_t>(pipeline->push_constant_size / 4), 
+                push_constant, 
+                0
+            );
+        }
 
         _current_cmdlist->d3d12_cmdlist->ExecuteIndirect(
             _context->draw_indexed_indirect_signature.Get(), 

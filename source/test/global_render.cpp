@@ -139,7 +139,7 @@ namespace fantasy
 		ReturnIfFalse(_render_graph->initialize(&_world));
 
 		RenderResourceCache* cache = _render_graph->GetResourceCache();
-		cache->collect_constants("BackBufferIndex", &_current_back_buffer_index);
+		cache->collect_constants("back_buffer_index", &_current_back_buffer_index);
 
 		TextureDesc back_buffer_desc;
 		back_buffer_desc.width = CLIENT_WIDTH;
@@ -150,7 +150,7 @@ namespace fantasy
 
 		for (uint32_t ix = 0; ix < FLIGHT_FRAME_NUM; ++ix)
 		{
-			back_buffer_desc.name = "BackBuffer" + std::to_string(ix);
+			back_buffer_desc.name = "back_buffer" + std::to_string(ix);
 			ReturnIfFalse(_back_buffers[ix] = std::shared_ptr<TextureInterface>(_device->create_texture_from_native(swap_chain_buffers[ix], back_buffer_desc)));
 			cache->collect(_back_buffers[ix], ResourceType::Texture);
 		}

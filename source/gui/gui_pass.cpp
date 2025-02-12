@@ -33,7 +33,7 @@ namespace fantasy
 				
 				uint32_t rtv_index = check_cast<DX12Texture>(_final_texture)->get_view_index(
 					ResourceViewType::Texture_RTV, 
-					entire_subresource_set
+					TextureSubresourceSet{}
 				);
 				D3D12_CPU_DESCRIPTOR_HANDLE rtv = descriptor_manager->render_target_heap.get_cpu_handle(rtv_index);
 				
@@ -53,17 +53,19 @@ namespace fantasy
 		gui::execution(cmdlist, device->get_graphics_api());
 
 		uint32_t* back_buffer_index;
-		ReturnIfFalse(cache->require_constants("BackBufferIndex", reinterpret_cast<void**>(&back_buffer_index)));
-		std::string back_buffer_name = "BackBuffer" + std::to_string(*back_buffer_index);
+		ReturnIfFalse(cache->require_constants("back_buffer_index", reinterpret_cast<void**>(&back_buffer_index)));
+		std::string back_buffer_name = "back_buffer" + std::to_string(*back_buffer_index);
 
 		std::shared_ptr<TextureInterface> back_buffer = check_cast<TextureInterface>(cache->require(back_buffer_name.c_str()));
 
+		const TextureDesc& back_buffer_desc = back_buffer->get_desc();
+		const TextureDesc& final_texture_desc = _final_texture->get_desc();
 		cmdlist->copy_texture(back_buffer.get(), TextureSlice{}, _final_texture.get(), TextureSlice{});
 		cmdlist->set_texture_state(back_buffer.get(), TextureSubresourceSet{}, ResourceStates::Present);
 
 		cmdlist->clear_texture_float(
 			_final_texture.get(), 
-			entire_subresource_set, 
+			TextureSubresourceSet{}, 
 			_final_texture->get_desc().clear_value
 		);
 

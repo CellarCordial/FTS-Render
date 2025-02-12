@@ -12,13 +12,15 @@ namespace fantasy
     
 	bool GraphPartitionar::partition_graph(const SimpleGraph& graph, uint32_t min_part_size, uint32_t max_part_size)
 	{
+        // 根据图的边权重, 将图划分为一个个分区, 每个分区所容纳的节点数量规定在 [min_part_size, max_part_size]内.
+        
 		uint32_t node_count = static_cast<uint32_t>(graph.size());
-		_node_indices.resize(node_count);
-		_node_map.resize(node_count);
-		std::iota(_node_indices.begin(), _node_indices.end(), 0);
-		std::iota(_node_map.begin(), _node_map.end(), 0);
+		node_indices.resize(node_count);
+		node_map.resize(node_count);
+		std::iota(node_indices.begin(), node_indices.end(), 0);
+		std::iota(node_map.begin(), node_map.end(), 0);
 
-		_part_ranges.clear();
+		part_ranges.clear();
 		_min_part_size = min_part_size;
 		_max_part_size = max_part_size;
 
@@ -36,10 +38,11 @@ namespace fantasy
 		metis_graph->node_adjacency_start_index.push_back(static_cast<int32_t>(metis_graph->adjandency_nodes.size()));
 
         ReturnIfFalse(bisect_graph_resursive(metis_graph, 0, metis_graph->node_count));
-        std::sort(_part_ranges.begin(), _part_ranges.end());
-        for (uint32_t ix = 0; ix < _node_indices.size(); ++ix)
+
+        std::sort(part_ranges.begin(), part_ranges.end());
+        for (uint32_t ix = 0; ix < node_indices.size(); ++ix)
         {
-            _node_map[_node_indices[ix]] = ix;
+            node_map[node_indices[ix]] = ix;
         }
 
 		return true;
@@ -47,6 +50,8 @@ namespace fantasy
 
 	bool GraphPartitionar::bisect_graph_resursive(MetisGraph* metis_graph, uint32_t range_start, uint32_t range_end)
 	{
+        // 递归分割图.
+     
         MetisGraph* child_metis_graphs[2] = { nullptr };
         uint32_t split_pos = bisect_graph(metis_graph, child_metis_graphs, range_start, range_end);
         delete metis_graph;
@@ -74,7 +79,7 @@ namespace fantasy
 
         if (metis_graph->node_count <= _max_part_size)
         {
-            _part_ranges.push_back(std::make_pair(range_start, range_end));
+            part_ranges.push_back(std::make_pair(range_start, range_end));
             return range_end;
         }
 
@@ -83,10 +88,16 @@ namespace fantasy
 
         std::vector<int32_t> partition_result(metis_graph->node_count);
         int32_t node_weight_dimension = 1, part_num = 2, edge_cut_num = 0;
+
+        // 若 part_count_expectation 为偶数, 则 part_weight = { 0.5, 0.5 };
+        // 若为奇数, 则当 part_count_expectation = 3 时, part_weight = { 1 / 3, 2 / 3 }, 
+        // 随着 part_count_expectation 增大, part_weight 越来越接近 { 0.5, 0.5 }.
         double part_weight[]={
-            float(part_count_expectation >> 1) / part_count_expectation,
-            1.0 - float(part_count_expectation >> 1) / part_count_expectation
+            static_cast<double>(part_count_expectation >> 1) / part_count_expectation,
+            1.0 - static_cast<double>(part_count_expectation >> 1) / part_count_expectation
         };
+
+        // 其结果存储在 partition_result 内, 若为 0, 则属于左区, 为 1 属于右区.
         ReturnIfFalse(
             METIS_PartGraphRecursive(
                 &metis_graph->node_count, 
@@ -124,7 +135,7 @@ namespace fantasy
 
             if (left < right)
             {
-                std::swap(_node_indices[range_start + left], _node_indices[range_start + right]);
+                std::swap(node_indices[range_start + left], node_indices[range_start + right]);
                 swap_node_map[left] = right;
                 swap_node_map[right] = left;
                 left++;
@@ -137,10 +148,11 @@ namespace fantasy
         uint32_t child_graph_size[2] = { split_pos, metis_graph->node_count - split_pos };
         ReturnIfFalse(child_graph_size[0] >= 1 && child_graph_size[1] >= 1);
 
+
         if (child_graph_size[0] <= _max_part_size && child_graph_size[1] <= _max_part_size)
         {
-            _part_ranges.push_back(std::make_pair(range_start, range_start + split_pos));
-            _part_ranges.push_back(std::make_pair(range_start + split_pos, range_end));
+            part_ranges.push_back(std::make_pair(range_start, range_start + split_pos));
+            part_ranges.push_back(std::make_pair(range_start + split_pos, range_end));
         }
         else 
         {
@@ -153,11 +165,13 @@ namespace fantasy
                 child_metis_graph[ix]->adjandency_node_weights.reserve(metis_graph->adjandency_node_weights.size() >> 1);
             }
 
+            // 填充 child_metis_graph.
             for (uint32_t ix = 0; ix < metis_graph->node_count; ++ix)
             {
+                // 判断左区还是右区.
                 uint32_t current_child_graph_index = ix >= child_graph_size[0] ? 1 : 0;
+                
                 uint32_t mapped_index = swap_node_map[ix];
-
                 MetisGraph* current_child_graph = child_metis_graph[current_child_graph_index];
                 current_child_graph->node_adjacency_start_index.push_back(current_child_graph->adjandency_nodes.size());
                 for (

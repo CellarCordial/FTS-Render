@@ -42,7 +42,7 @@ namespace fantasy
         {
             std::shared_ptr<DX12Texture> texture = check_cast<DX12Texture>(desc.depth_stencil_attachment.texture);
 
-            uint32_t rtv_index = texture->get_view_index(
+            dsv_index = texture->get_view_index(
                 ResourceViewType::Texture_DSV, 
                 desc.depth_stencil_attachment.subresource
             );

@@ -26,7 +26,7 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc shader_compile_desc;
-			shader_compile_desc.shader_name = "full_screen_quad_vs.slang";
+			shader_compile_desc.shader_name = "common/full_screen_quad_vs.slang";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = shader_compile::compile_shader(shader_compile_desc);
@@ -90,7 +90,7 @@ namespace fantasy
 		{
 			BindingSetItemArray binding_set_items(3);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::SkyPassConstant));
-			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("SkyLUTTexture")));
+			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("sky_lut_texture")));
 			binding_set_items[2] = BindingSetItem::create_sampler(0, _sampler);
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },

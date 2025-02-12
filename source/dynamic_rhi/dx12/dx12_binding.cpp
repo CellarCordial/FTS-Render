@@ -65,7 +65,7 @@ namespace fantasy
         {
             if (binding.type == ResourceViewType::PushConstants)
             {
-                ReturnIfFalse(push_constant_size != 0);
+                ReturnIfFalse(push_constant_size == 0);
 
                 d3d12_root_constants.ShaderRegister = binding.slot;
                 d3d12_root_constants.RegisterSpace = _desc.register_space;

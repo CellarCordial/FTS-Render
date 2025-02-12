@@ -100,9 +100,9 @@ namespace fantasy
 		// Update constant.
 		{
 			ReturnIfFalse(cache->get_world()->each<constant::AtmosphereProperties>(
-				[this](Entity* entity, constant::AtmosphereProperties* pProperties) -> bool
+				[this](Entity* entity, constant::AtmosphereProperties* properties) -> bool
 				{
-					_standard_atomsphere_properties = pProperties->to_standard_unit();
+					_standard_atomsphere_properties = properties->to_standard_unit();
 					return true;
 				}
 			));

@@ -190,7 +190,7 @@ namespace fantasy
             d3d12_root_signature
         ));
 
-        D3D12_SHADER_BYTECODE vs, hs, ds, gs, ps;
+        D3D12_SHADER_BYTECODE vs{}, hs{}, ds{}, gs{}, ps{};
 
         if (desc.vertex_shader)
         {

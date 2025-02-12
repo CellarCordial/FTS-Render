@@ -108,7 +108,7 @@ namespace fantasy
 		// Texture.
 		{
 			ReturnIfFalse(_shadow_map_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_depth_stencil_texture(CLIENT_WIDTH, CLIENT_HEIGHT, Format::D32, "shadow_map_texture")
+				TextureDesc::create_depth_stencil_texture(CLIENT_WIDTH, CLIENT_HEIGHT, Format::D32, "shadow_map_depth_texture")
 			)));
 			cache->collect(_shadow_map_texture, ResourceType::Texture);
 		}

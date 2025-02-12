@@ -60,11 +60,13 @@ namespace fantasy
         if (feature_support_data.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED) 
             desc.d3d12_device->QueryInterface(context.device5.GetAddressOf());
 
-
-        if (desc.d3d12_graphics_cmd_queue) cmdqueues[static_cast<uint8_t>(CommandQueueType::Graphics)] = 
+        ReturnIfFalse(desc.d3d12_graphics_cmd_queue && desc.d3d12_compute_cmd_queue);
+        cmdqueues[static_cast<uint8_t>(CommandQueueType::Graphics)] = 
             std::make_unique<DX12CommandQueue>(&context, CommandQueueType::Graphics, desc.d3d12_graphics_cmd_queue);
-        if (desc.d3d12_compute_cmd_queue) cmdqueues[static_cast<uint8_t>(CommandQueueType::Compute)] = 
+        cmdqueues[static_cast<uint8_t>(CommandQueueType::Compute)] = 
             std::make_unique<DX12CommandQueue>(&context, CommandQueueType::Compute, desc.d3d12_compute_cmd_queue);
+        ReturnIfFalse(cmdqueues[static_cast<uint8_t>(CommandQueueType::Graphics)]->initialize());
+        ReturnIfFalse(cmdqueues[static_cast<uint8_t>(CommandQueueType::Compute)]->initialize());
 
         
         D3D12_INDIRECT_ARGUMENT_DESC d3d12_indirect_argument_desc{};

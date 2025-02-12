@@ -186,12 +186,7 @@ namespace fantasy
 			_begin_x += X_SLICE_SIZE;
 			if (_begin_x == SDF_RESOLUTION)
 			{
-				cmdlist->copy_texture(
-					_read_back_texture.get(), 
-					TextureSlice{}, 
-					_sdf_output_texture.get(), 
-					TextureSlice{}
-				);
+				cmdlist->copy_texture(_read_back_texture.get(), TextureSlice{}, _sdf_output_texture.get(), TextureSlice{});
 
 				if (_current_mesh_sdf_index + 1 == static_cast<uint32_t>(_distance_field->mesh_distance_fields.size()))
 				{
