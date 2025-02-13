@@ -16,9 +16,9 @@ namespace fantasy
 
     void HashTable::insert(uint32_t key, uint32_t hash)
     {
-        if (hash > _next_hash.size())
+        if (hash >= _next_hash.size())
         {
-            _next_hash.resize(next_power_of_2(hash));
+            _next_hash.resize(next_power_of_2(hash + 1));
         }
         key &= _hash_mask;
         _next_hash[hash] = _hash[key];
@@ -27,7 +27,7 @@ namespace fantasy
 
     void HashTable::remove(uint32_t key, uint32_t hash)
     {
-        assert(hash >= _next_hash.size());
+        assert(hash < _next_hash.size());
 
         key &= _hash_mask;
         if (_hash[key] == hash)
@@ -55,8 +55,8 @@ namespace fantasy
     void HashTable::reset()
     {
         _hash_mask = 0;
-        _hash.clear();
-        _next_hash.clear();
+        _hash.resize(0);
+        _next_hash.resize(0);
     }
 
     void HashTable::resize(uint32_t index_count)

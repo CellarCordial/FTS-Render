@@ -76,7 +76,7 @@ namespace fantasy
         }
 
         const std::string proj_path = PROJ_DIR;
-        const std::string cache_path = proj_path + "asset/shader_cache/" + remove_file_extension(desc.shader_name.c_str()) + "_" + desc.entry_point + "_DEBUG.bin";
+        const std::string cache_path = proj_path + "asset/cache/shader/" + remove_file_extension(desc.shader_name.c_str()) + "_" + desc.entry_point + "_DEBUG.bin";
         const std::string shader_path = proj_path + "source/shader/" + desc.shader_name;
 
         if (check_cache(cache_path.c_str(), shader_path.c_str()))

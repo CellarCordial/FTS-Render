@@ -5,20 +5,21 @@
 #include "distance_field.h"
 #include "surface_cache.h"
 #include "virtual_mesh.h"
+#include <assimp/scene.h>
 
 namespace fantasy
 {
-	static const uint32_t max_mesh_num = sizeof(uint16_t);
-
+	static const uint32_t MAX_MESH_NUM = sizeof(uint16_t);
+	
 	class SceneSystem :
 		public EntitySystemInterface,
 		public EventSubscriber<event::OnModelLoad>,
 		public EventSubscriber<event::OnModelTransform>,
 		public EventSubscriber<event::OnComponentAssigned<Mesh>>,
 		public EventSubscriber<event::OnComponentAssigned<Material>>,
+		public EventSubscriber<event::OnComponentAssigned<VirtualMesh>>,
 		public EventSubscriber<event::OnComponentAssigned<SurfaceCache>>,
-		public EventSubscriber<event::OnComponentAssigned<DistanceField>>,
-		public EventSubscriber<event::OnComponentAssigned<VirtualMesh>>
+		public EventSubscriber<event::OnComponentAssigned<DistanceField>>
 	{
 	public:
 		bool initialize(World* world) override;
@@ -30,9 +31,9 @@ namespace fantasy
 		bool publish(World* world, const event::OnModelTransform& event) override;
 		bool publish(World* world, const event::OnComponentAssigned<Mesh>& event) override;
 		bool publish(World* world, const event::OnComponentAssigned<Material>& event) override;
+		bool publish(World* world, const event::OnComponentAssigned<VirtualMesh>& event) override;
 		bool publish(World* world, const event::OnComponentAssigned<SurfaceCache>& event) override;
 		bool publish(World* world, const event::OnComponentAssigned<DistanceField>& event) override;
-		bool publish(World* world, const event::OnComponentAssigned<VirtualMesh>& event) override;
 
 	private:
 		World* _world = nullptr;
@@ -43,6 +44,8 @@ namespace fantasy
 		uint32_t _current_mesh_count = 0;
 
 		std::unordered_set<std::string> _loaded_model_names;
+
+		const aiScene* assimp_scene = nullptr;
 	};
 }
 

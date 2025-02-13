@@ -93,8 +93,8 @@ namespace fantasy
         // 若为奇数, 则当 part_count_expectation = 3 时, part_weight = { 1 / 3, 2 / 3 }, 
         // 随着 part_count_expectation 增大, part_weight 越来越接近 { 0.5, 0.5 }.
         double part_weight[]={
-            static_cast<double>(part_count_expectation >> 1) / part_count_expectation,
-            1.0 - static_cast<double>(part_count_expectation >> 1) / part_count_expectation
+            static_cast<float>(part_count_expectation >> 1) / part_count_expectation,
+            1.0 - static_cast<float>(part_count_expectation >> 1) / part_count_expectation
         };
 
         // 其结果存储在 partition_result 内, 若为 0, 则属于左区, 为 1 属于右区.

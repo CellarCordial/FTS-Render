@@ -111,9 +111,7 @@ namespace fantasy
 	bool FinalTestPass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
 		ReturnIfFalse(cmdlist->open());
-
 		ReturnIfFalse(cmdlist->draw(_graphics_state, DrawArguments::full_screen_quad(), &_pass_constant));
-
 		ReturnIfFalse(cmdlist->close());
 		return true;
 	}

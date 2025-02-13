@@ -29,7 +29,7 @@ namespace fantasy
 				{
 					const auto& crMeshDF = _distance_field->mesh_distance_fields[0];
 					std::string strSdfName = *entity->get_component<std::string>() + ".sdf";
-					_binary_output = std::make_unique<serialization::BinaryOutput>(std::string(PROJ_DIR) + "asset/sdf/" + strSdfName);
+					_binary_output = std::make_unique<serialization::BinaryOutput>(std::string(PROJ_DIR) + "asset/cache/distance_field/" + strSdfName);
 				}
 				return true;
 			}

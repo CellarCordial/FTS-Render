@@ -9,96 +9,11 @@
 #include "assimp/types.h"
 #include <assimp/scene.h>
 #include "assimp/material.h"
-#include <assimp/Importer.hpp>
-#include <assimp/postprocess.h>
-
 #include "../core/parallel/parallel.h"
-#include "../core/tools/file.h"
 
 
 namespace fantasy
 {
-	static const aiScene* assimp_scene = nullptr;
-
-
-	bool SceneSystem::publish(World* world, const event::OnModelLoad& event)
-	{
-		std::string proj_dir = PROJ_DIR;
-
-		Assimp::Importer assimp_importer;
-
-        assimp_scene = assimp_importer.ReadFile(
-			proj_dir + event.model_path, 
-			aiProcess_Triangulate | 
-			aiProcess_GenSmoothNormals | 
-			aiProcess_FlipUVs |
-			aiProcess_CalcTangentSpace |
-			aiProcess_ConvertToLeftHanded
-		);
-
-        if(!assimp_scene || assimp_scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !assimp_scene->mRootNode)
-        {
-			LOG_ERROR("Failed to load model.");
-			LOG_ERROR(assimp_importer.GetErrorString());
-			return false;
-        }
-
-		std::string model_name = remove_file_extension(event.model_path.c_str());
-
-		_model_directory = event.model_path.substr(0, event.model_path.find_last_of('/') + 1);
-		_sdf_data_path = proj_dir + "asset/sdf/" + model_name + ".sdf";
-		_surface_cache_path = proj_dir + "asset/SurfaceCache/" + model_name + ".sc";
-
-		event.entity->assign<std::string>(model_name);
-		event.entity->assign<Mesh>();
-		event.entity->assign<Material>();
-		event.entity->assign<Transform>();
-		event.entity->assign<SurfaceCache>();
-		event.entity->assign<VirtualMesh>();
-		// event.entity->assign<DistanceField>();
-		uint32_t* finished_task_num = event.entity->assign<uint32_t>(0);
-
-		_sdf_data_path.clear();
-		_model_directory.clear();
-
-		_loaded_model_names.insert(event.model_path);
-
-		// ReturnIfFalse(_global_entity->get_component<event::GenerateSdf>()->broadcast(event.entity));
-		// ReturnIfFalse(_global_entity->get_component<event::GenerateMipmap>()->broadcast(event.entity));
-		// ReturnIfFalse(_global_entity->get_component<event::GenerateSurfaceCache>()->broadcast(event.entity));
-
-		// if (*finished_task_num < 3) std::this_thread::yield();
-		// gui::notify_message(gui::ENotifyType::Info, "Loaded " + event.model_path);
-
-		ReturnIfFalse(_current_mesh_count++ < max_mesh_num);
-		
-		// Entity* tmp_model_entity = event.entity;
-		// gui::add(
-		// 	[tmp_model_entity, this]()
-		// 	{
-		// 		std::string model_name = *tmp_model_entity->get_component<std::string>();
-		// 		model_name += " Transform";
-		// 		if (ImGui::TreeNode(model_name.c_str()))
-		// 		{
-		// 			bool changed = false;
-
-		// 			Transform tmp_trans = *tmp_model_entity->get_component<Transform>();
-		// 			changed |= ImGui::SliderFloat3("position", reinterpret_cast<float*>(&tmp_trans.position), -32.0f, 32.0f);		
-		// 			changed |= ImGui::SliderFloat3("rotation", reinterpret_cast<float*>(&tmp_trans.rotation), -180.0f, 180.0f);
-		// 			changed |= ImGui::SliderFloat3("scale", reinterpret_cast<float*>(&tmp_trans.scale), 0.1f, 8.0f);
-		// 			if (changed)
-		// 			{
-		// 				_world->broadcast(event::OnModelTransform{ .entity = tmp_model_entity, .transform = tmp_trans });
-		// 			}
-
-		// 			ImGui::TreePop();
-		// 		}
-		// 	}
-		// );
-
-		return true;
-	}
-
 	bool SceneSystem::publish(World* world, const event::OnComponentAssigned<Mesh>& event)
 	{
 		if (!assimp_scene)
@@ -155,9 +70,11 @@ namespace fantasy
 				for(uint32_t jx = 0; jx < assimp_meshes[ix]->mNumFaces; jx++)
 				{
 					aiFace face = assimp_meshes[ix]->mFaces[jx];
-					for(uint32_t kx = 0; kx < face.mNumIndices; kx++)
+					for(uint32_t kx = 0; kx < face.mNumIndices; kx += 3)
 					{
-						submesh.indices.push_back(face.mIndices[kx]);
+						submesh.indices.push_back(face.mIndices[kx + 2]);
+						submesh.indices.push_back(face.mIndices[kx + 1]);
+						submesh.indices.push_back(face.mIndices[kx + 0]);
 					}
 				}
 
@@ -218,7 +135,7 @@ namespace fantasy
 		material->submaterials.resize(assimp_scene->mNumMaterials);
 		
 		parallel::parallel_for(
-			[&material, &file_path](uint64_t ix)
+			[&material, &file_path, this](uint64_t ix)
 			{
 				auto& submaterial = material->submaterials[ix];
 				aiMaterial* assimp_material = assimp_scene->mMaterials[ix];

@@ -24,9 +24,8 @@ namespace fantasy
 			std::string model_path;
 		};
 
-		DELCARE_MULTI_DELEGATE_EVENT(ModelLoaded);
+		DELCARE_MULTI_DELEGATE_EVENT(AddModel);
 	};
-
 
 
     struct Vertex

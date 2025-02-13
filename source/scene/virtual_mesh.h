@@ -4,7 +4,7 @@
 #include <cstdint>
 
 #include "../core/math/bounds.h"
-#include "../core/math/surface.h"
+#include "../core/Math/surface.h"
 #include "../core/tools/hash_table.h"
 #include "../core/tools/bit_allocator.h"
 #include "geometry.h"
@@ -15,7 +15,7 @@ namespace fantasy
     class MeshOptimizer
     {
     public:
-        MeshOptimizer(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices);
+        MeshOptimizer(std::vector<float3>& vertices, std::vector<uint32_t>& indices);
 
         bool optimize(uint32_t target_triangle_num);
         void lock_position(const float3& position);
@@ -26,9 +26,9 @@ namespace fantasy
         bool compact();
         void fix_triangle(uint32_t triangle_index);
 
-        float evaluate(const Vertex& p0, const Vertex& p1, bool bMerge);
-        void removed_vertex(const Vertex& p);
-        void readd_vertex();
+        float evaluate(const float3& p0, const float3& p1, bool bMerge);
+        void merge_begin(const float3& p);
+        void mergen_end();
 
         class BinaryHeap
         {
@@ -55,9 +55,9 @@ namespace fantasy
         };
 
     private:
-        std::vector<Vertex>& _vertices;
+        std::vector<float3>& _vertices;
         std::vector<uint32_t>& _indices;
-        uint32_t _remain_vertex_num;
+        uint32_t _remain_vertex_count;
         uint32_t _remain_triangle_count;
 
         enum
@@ -74,11 +74,12 @@ namespace fantasy
         HashTable _vertex_table;    // key: vertex_position; hash value: vertex_index.
         HashTable _index_table;     // key: vertex_position; hash value: index_index.
 
-        std::vector<std::pair<Vertex, Vertex>> _edges;
+
+        std::vector<std::pair<float3, float3>> _edges;
         HashTable _edges_begin_table;   // key: vertex_position; hash value: edge_index.   
         HashTable _edges_end_table;     // key: vertex_position; hash value: edge_index.
-        
         BinaryHeap _heap;
+
 
         std::vector<uint32_t> removed_vertex_indices;
         std::vector<uint32_t> removed_index_indices;
@@ -89,12 +90,12 @@ namespace fantasy
     struct MeshCluster
     {
         static const uint32_t cluster_size = 128;
-        
+
         uint32_t geometry_id = 0;
-        std::vector<Vertex> vertices;
+        std::vector<float3> vertices;
         std::vector<uint32_t> indices;
         std::vector<uint32_t> external_edges;
-
+        
         uint32_t group_id = 0;
         uint32_t mip_level = 0;
         float lod_error = 0.0f;
@@ -111,7 +112,7 @@ namespace fantasy
         uint32_t mip_level = 0;
         std::vector<uint32_t> cluster_indices;
         std::vector<std::pair<uint32_t,uint32_t>> external_edges;
-        
+
         Sphere bounding_sphere;
         float parent_lod_error = 0.0f;
     };
@@ -120,12 +121,12 @@ namespace fantasy
     {
     public:
         bool build(const Mesh* mesh);
-
+        
         struct VirtualSubmesh
         {
             std::vector<MeshCluster> clusters;
             std::vector<MeshClusterGroup> cluster_groups;
-            uint32_t mip_level_num;
+            uint32_t mip_levels;
         };
 
         std::vector<VirtualSubmesh> _submeshes;
@@ -135,7 +136,7 @@ namespace fantasy
         bool build_cluster_groups(VirtualSubmesh& submesh, uint32_t level_offset, uint32_t level_cluster_count, uint32_t mip_level);
         bool build_parent_clusters(VirtualSubmesh& submesh, uint32_t cluster_group_index);
         void build_adjacency_graph(
-            const std::vector<Vertex>& vertices, 
+            const std::vector<float3>& vertices, 
             const std::vector<uint32_t>& indices, 
             SimpleGraph& edge_link_graph, 
             SimpleGraph& adjacency_graph
@@ -144,11 +145,10 @@ namespace fantasy
 
     private:
 		std::vector<uint32_t> _indices;
-        std::vector<Vertex> _vertices;
-        uint32_t _geometry_id = 0;      // 0-15: submesh id; 16-31: mesh id.
+        std::vector<float3> _vertices;
+        uint32_t _geometry_id = 0;
     };
-
-
+    
     struct MeshClusterGpu
     {
         float4 bounding_sphere;

@@ -36,7 +36,7 @@ namespace fantasy
             std::span<uint32_t> next_index;
 
             void operator++() { index = next_index[index]; }
-            bool operator!=(const Iterator& crIter) const { return index != crIter.index; }
+            bool operator!=(const Iterator& iter) const { return index != iter.index; }
             uint32_t operator*() { return index; }
 
             Iterator begin() const { return *this; }

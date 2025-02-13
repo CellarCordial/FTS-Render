@@ -10,7 +10,7 @@ namespace fantasy
 {
 	bool GBufferPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
-		cache->get_world()->get_global_entity()->get_component<event::ModelLoaded>()->add_event(
+		cache->get_world()->get_global_entity()->get_component<event::AddModel>()->add_event(
             [this]() -> bool
             {
 				_update_gbuffer = true;
