@@ -329,7 +329,7 @@ namespace fantasy
                         if (type == ResourceViewType::TypedBuffer_SRV && range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV)
                         {
                             DX12Buffer* dx12_buffer = check_cast<DX12Buffer*>(binding.resource.get());
-                            dx12_buffer->create_srv(d3d12_descriptor_handle, binding.range, binding.type);
+                            dx12_buffer->create_srv(d3d12_descriptor_handle, binding.range, binding.type, binding.format);
 
                             found = true;
                             break;
@@ -338,7 +338,7 @@ namespace fantasy
                         {
                             
                             DX12Buffer* dx12_buffer = check_cast<DX12Buffer*>(binding.resource.get());
-                            dx12_buffer->create_uav(d3d12_descriptor_handle, binding.range, binding.type);
+                            dx12_buffer->create_uav(d3d12_descriptor_handle, binding.range, binding.type, binding.format);
 
                             found = true;
                             break;
@@ -346,7 +346,7 @@ namespace fantasy
                         else if (type == ResourceViewType::Texture_SRV && range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_SRV)
                         {
                             DX12Texture* dx12_texture = check_cast<DX12Texture*>(binding.resource.get());
-                            dx12_texture->create_srv(d3d12_descriptor_handle, binding.subresource);
+                            dx12_texture->create_srv(d3d12_descriptor_handle, binding.subresource, binding.format);
 
                             found = true;
                             break;
@@ -354,7 +354,7 @@ namespace fantasy
                         else if (type == ResourceViewType::Texture_UAV && range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_UAV)
                         {
                             DX12Texture* dx12_texture = check_cast<DX12Texture*>(binding.resource.get());
-                            dx12_texture->create_uav(d3d12_descriptor_handle, binding.subresource);
+                            dx12_texture->create_uav(d3d12_descriptor_handle, binding.subresource, binding.format);
 
                             found = true;
                             break;
@@ -444,13 +444,13 @@ namespace fantasy
 		case ResourceViewType::Texture_SRV:
 		{
 			DX12Texture* dx12_texture = check_cast<DX12Texture*>(binding.resource.get());
-			dx12_texture->create_srv(descriptor_handle, binding.subresource);
+			dx12_texture->create_srv(descriptor_handle, binding.subresource, binding.format);
 			break;
 		}
 		case ResourceViewType::Texture_UAV:
 		{
 			DX12Texture* dx12_texture = check_cast<DX12Texture*>(binding.resource.get());
-			dx12_texture->create_uav(descriptor_handle, binding.subresource);
+			dx12_texture->create_uav(descriptor_handle, binding.subresource, binding.format);
 			break;
 		}
 		case ResourceViewType::TypedBuffer_SRV:
@@ -458,7 +458,7 @@ namespace fantasy
 		case ResourceViewType::RawBuffer_SRV:
 		{
 			DX12Buffer* dx12_buffer = check_cast<DX12Buffer*>(binding.resource.get());
-			dx12_buffer->create_srv(descriptor_handle, binding.range, binding.type);
+			dx12_buffer->create_srv(descriptor_handle, binding.range, binding.type, binding.format);
 			break;
 		}
 		case ResourceViewType::TypedBuffer_UAV:
@@ -466,7 +466,7 @@ namespace fantasy
 		case ResourceViewType::RawBuffer_UAV:
 		{
 			DX12Buffer* dx12_buffer = check_cast<DX12Buffer*>(binding.resource.get());
-			dx12_buffer->create_uav(descriptor_handle, binding.range, binding.type);
+			dx12_buffer->create_uav(descriptor_handle, binding.range, binding.type, binding.format);
 			break;
 		}
 		case ResourceViewType::ConstantBuffer:

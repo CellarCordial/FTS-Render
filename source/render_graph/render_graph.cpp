@@ -9,6 +9,7 @@
 #include <minwindef.h>
 #include <queue>
 #include <span>
+#include <string>
 #include <synchapi.h>
 #include <unordered_map>
 
@@ -130,7 +131,10 @@ namespace fantasy
 		for (uint32_t ix = 0; ix < _precompute_passes.size(); ++ix)
 		{
 			_precompute_cmdlists[ix] = std::unique_ptr<CommandListInterface>(_device->create_command_list(
-				CommandListDesc{ .queue_type = CommandQueueType::Graphics }
+				CommandListDesc{ 
+					.name = std::string("precompute_commandlist") + std::to_string(ix), 
+					.queue_type = CommandQueueType::Graphics 
+				}
 			));
 			ReturnIfFalse(
 				_precompute_cmdlists[ix] != nullptr && 
@@ -148,13 +152,19 @@ namespace fantasy
             if ((_passes[ix]->type & RenderPassType::Graphics) == RenderPassType::Graphics)
             {
                 _cmdlists[ix] = std::unique_ptr<CommandListInterface>(_device->create_command_list(
-                    CommandListDesc{ .queue_type = CommandQueueType::Graphics }
+                    CommandListDesc{ 
+						.name = std::string("commandlist") + std::to_string(ix), 
+						.queue_type = CommandQueueType::Graphics 
+					}
                 ));
             }
             else if ((_passes[ix]->type & RenderPassType::Compute) == RenderPassType::Compute)
             {
                 _cmdlists[ix] = std::unique_ptr<CommandListInterface>(_device->create_command_list(
-                    CommandListDesc{ .queue_type = CommandQueueType::Compute } 
+                    CommandListDesc{ 
+						.name = std::string("commandlist") + std::to_string(ix), 
+						.queue_type = CommandQueueType::Compute 
+					} 
                 ));
             }
             else 

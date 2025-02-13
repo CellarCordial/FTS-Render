@@ -303,7 +303,7 @@ namespace fantasy
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Z=" + std::to_string(THREAD_GROUP_SIZE_Z));
-			ShaderData cs_data = shader_compile::compile_shader(cs_compile_desc);
+			ShaderData cs_data = compile_shader(cs_compile_desc);
 
 			ShaderDesc cs_desc;
 			cs_desc.shader_type = ShaderType::Compute;
@@ -312,7 +312,7 @@ namespace fantasy
 
 
 			cs_compile_desc.shader_name = "sdf/sdf_clear_cs.slang";
-			ShaderData clear_pass_cs_data = shader_compile::compile_shader(cs_compile_desc);
+			ShaderData clear_pass_cs_data = compile_shader(cs_compile_desc);
 			ReturnIfFalse(_clear_pass_cs = std::unique_ptr<Shader>(create_shader(cs_desc, clear_pass_cs_data.data(), clear_pass_cs_data.size())));
 		}
 

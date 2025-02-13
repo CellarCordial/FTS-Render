@@ -2,6 +2,7 @@
 #define TEST_RESTIR_H
 
 #include "../render_graph/render_graph.h"
+#include "test_base.h"
 #include <cstdint>
 #include <memory>
 
@@ -10,22 +11,22 @@ namespace fantasy
 {
     namespace constant 
     {
-        struct RestirTestPassConstant
+        struct FinalTestPassConstant
         {
             int32_t show_type;
         };
     }
 
-    class RestirTestPass : public RenderPassInterface
+    class FinalTestPass : public RenderPassInterface
     {
     public:
-		RestirTestPass() { type = RenderPassType::Graphics; }
+		FinalTestPass() { type = RenderPassType::Graphics; }
 
         bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
         bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
     private:
-		constant::RestirTestPassConstant _pass_constant;
+		constant::FinalTestPassConstant _pass_constant;
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 		std::shared_ptr<InputLayoutInterface> _input_layout;
@@ -42,14 +43,12 @@ namespace fantasy
     };
 
 
-    class RestirTest
+    class FinalTest : public TestBase
     {
     public:
-        bool setup(RenderGraph* render_graph);
-        RenderPassInterface* get_last_pass() { return _last_pass; }
+        RenderPassInterface* init_render_pass(RenderGraph* render_graph) override;
 
     private:
-        RenderPassInterface* _last_pass; 
     };
 
 }

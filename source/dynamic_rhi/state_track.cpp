@@ -43,7 +43,7 @@ namespace fantasy
         TextureState* track_state = get_texture_state_track(texture);
         if (subresource_set.is_entire_texture(desc) && track_state->subresource_states.size() == 1)
         {
-            bool is_transition_necessary = track_state->state != state;
+            bool is_transition_necessary = (track_state->state & state) != state;
             bool is_uav_necessary = ((state & ResourceStates::UnorderedAccess) == ResourceStates::UnorderedAccess) &&
                                    (track_state->enable_uav_barriers && !track_state->uav_barrier_placed);
             if (is_transition_necessary || is_uav_necessary)
@@ -56,7 +56,7 @@ namespace fantasy
                 _texture_barriers.push_back(barrier);
             }
             
-            track_state->state = state;
+            if (is_transition_necessary) track_state->state = state;
 
             if (!is_transition_necessary && is_uav_necessary)
             {
@@ -73,7 +73,7 @@ namespace fantasy
                     uint32_t subresource_index = calculate_texture_subresource(mip, slice, desc.mip_levels);
                     ResourceStates prior_state = track_state->subresource_states[subresource_index];
                     
-                    bool is_transition_necessary = prior_state != state;
+                    bool is_transition_necessary = (prior_state & state) != state;
                     bool is_uav_necessary = ((state & ResourceStates::UnorderedAccess) != 0) && 
                                             (track_state->enable_uav_barriers && !track_state->uav_barrier_placed) &&
                                             !any_uav_barrier;
@@ -90,7 +90,7 @@ namespace fantasy
                         _texture_barriers.push_back(barrier);
                     }
                     
-                    track_state->subresource_states[subresource_index] = state;
+                    if (is_transition_necessary) track_state->subresource_states[subresource_index] = state;
 
                     if (!is_transition_necessary && is_uav_necessary)
                     {
@@ -108,7 +108,7 @@ namespace fantasy
 
         BufferState* track = get_buffer_state_track(buffer);
 
-        bool is_transition_necessary = track->state != state;
+        bool is_transition_necessary = (track->state & state) != state;
         if (is_transition_necessary)
         {
             for (auto& barrier : _buffer_barriers)
@@ -132,13 +132,13 @@ namespace fantasy
             barrier.state_after = state;
             _buffer_barriers.push_back(barrier);
         }
+        
+        if (is_transition_necessary) track->state = state;
 
         if (!is_transition_necessary && is_uav_necessary)
         {
             track->uav_barrier_placed = true;
         }
-
-        track->state = state;
 	}
 
     

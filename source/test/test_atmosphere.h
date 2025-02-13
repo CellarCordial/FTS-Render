@@ -10,6 +10,7 @@
 #include "../render_pass/atmosphere/sky_lut.h"
 #include "../render_pass/atmosphere/sky.h"
 #include "../render_pass/shadow/shadow_map.h"
+#include "test_base.h"
 #include <memory>
 
 namespace fantasy
@@ -85,12 +86,10 @@ namespace fantasy
 		uint64_t _draw_argument_count = 0;
 	};
 
-	class AtmosphereTest
+	class AtmosphereTest : public TestBase
 	{
 	public:
-		bool setup(RenderGraph* render_graph);
-
-		RenderPassInterface* get_last_pass() { return _atmosphere_debug_pass.get(); }
+		RenderPassInterface* init_render_pass(RenderGraph* render_graph) override;
 
 	private:
 		float _world_scale = 200.0f;

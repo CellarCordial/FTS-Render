@@ -38,7 +38,7 @@ namespace fantasy
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
-			cs_data = shader_compile::compile_shader(cs_compile_desc);
+			cs_data = compile_shader(cs_compile_desc);
 
 			cs_desc.entry = "compute_shader";
 			cs_desc.shader_type = ShaderType::Compute;
@@ -49,7 +49,7 @@ namespace fantasy
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
-			cs_data = shader_compile::compile_shader(cs_compile_desc);
+			cs_data = compile_shader(cs_compile_desc);
 
 			cs_desc.entry = "compute_shader";
 			cs_desc.shader_type = ShaderType::Compute;

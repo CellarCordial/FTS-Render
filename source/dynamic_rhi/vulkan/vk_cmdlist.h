@@ -148,6 +148,12 @@ namespace fantasy
             uint32_t clear_color
         ) override;
         
+        void clear_render_target_texture(
+            TextureInterface* texture, 
+            const TextureSubresourceSet& subresource_set, 
+            const Color& clear_color
+        ) override;
+
         void clear_depth_stencil_texture(
             TextureInterface* texture,
             const TextureSubresourceSet& subresource,

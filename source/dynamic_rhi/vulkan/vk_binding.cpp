@@ -230,10 +230,10 @@ namespace fantasy
 
         StackArray<vk::WriteDescriptorSet, MAX_BINDINGS_PER_LAYOUT> descriptor_write_info;
 
-        for (size_t bindingIndex = 0; bindingIndex < desc.binding_items.size(); bindingIndex++)
+        for (size_t ix = 0; ix < desc.binding_items.size(); ix++)
         {
-            const BindingSetItem& binding = desc.binding_items[bindingIndex];
-            const vk::DescriptorSetLayoutBinding& layout_binding = binding_layout->vk_descriptor_set_layout_bindings[bindingIndex];
+            const BindingSetItem& binding = desc.binding_items[ix];
+            const vk::DescriptorSetLayoutBinding& layout_binding = binding_layout->vk_descriptor_set_layout_bindings[ix];
 
             ReturnIfFalse(binding.resource == nullptr && binding.type != ResourceViewType::PushConstants);
 
@@ -247,7 +247,7 @@ namespace fantasy
 
                 vk::DescriptorImageInfo vk_descriptor_image_info{};
                 vk_descriptor_image_info.sampler = VK_NULL_HANDLE;
-                vk_descriptor_image_info.imageView = texture->get_view(ResourceViewType::Texture_SRV, binding.subresource);
+                vk_descriptor_image_info.imageView = texture->get_view(ResourceViewType::Texture_SRV, binding.subresource, binding.format);
                 vk_descriptor_image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 
                 descriptor_image_info.push_back(vk_descriptor_image_info);
@@ -273,7 +273,7 @@ namespace fantasy
 
                 vk::DescriptorImageInfo vk_descriptor_image_info{};
                 vk_descriptor_image_info.sampler = VK_NULL_HANDLE;
-                vk_descriptor_image_info.imageView = texture->get_view(ResourceViewType::Texture_UAV, binding.subresource);
+                vk_descriptor_image_info.imageView = texture->get_view(ResourceViewType::Texture_UAV, binding.subresource, binding.format);
                 vk_descriptor_image_info.imageLayout = vk::ImageLayout::eGeneral;
 
                 descriptor_image_info.push_back(vk_descriptor_image_info);
@@ -298,7 +298,7 @@ namespace fantasy
             {
                 const auto buffer = check_cast<VKBuffer>(binding.resource);
 
-                vk::BufferView buffer_view = buffer->get_typed_buffer_view(binding.range, binding.type);
+                vk::BufferView buffer_view = buffer->get_typed_buffer_view(binding.range, binding.type, binding.format);
 
                 vk::WriteDescriptorSet vk_write_descriptor_set{};
                 vk_write_descriptor_set.pNext = nullptr;
@@ -477,7 +477,7 @@ namespace fantasy
 
                     vk::DescriptorImageInfo vk_descriptor_image_info{};
                     vk_descriptor_image_info.sampler = VK_NULL_HANDLE;
-                    vk_descriptor_image_info.imageView = texture->get_view(ResourceViewType::Texture_SRV, binding.subresource);
+                    vk_descriptor_image_info.imageView = texture->get_view(ResourceViewType::Texture_SRV, binding.subresource, binding.format);
                     vk_descriptor_image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 
                     descriptor_image_info.push_back(vk_descriptor_image_info);
@@ -503,7 +503,7 @@ namespace fantasy
 
                     vk::DescriptorImageInfo vk_descriptor_image_info{};
                     vk_descriptor_image_info.sampler = VK_NULL_HANDLE;
-                    vk_descriptor_image_info.imageView = texture->get_view(ResourceViewType::Texture_UAV, binding.subresource);
+                    vk_descriptor_image_info.imageView = texture->get_view(ResourceViewType::Texture_UAV, binding.subresource, binding.format);
                     vk_descriptor_image_info.imageLayout = vk::ImageLayout::eGeneral;
 
                     descriptor_image_info.push_back(vk_descriptor_image_info);
@@ -528,7 +528,7 @@ namespace fantasy
                 {
                     const auto buffer = check_cast<VKBuffer>(binding.resource);
 
-                    vk::BufferView buffer_view = buffer->get_typed_buffer_view(binding.range, binding.type);
+                    vk::BufferView buffer_view = buffer->get_typed_buffer_view(binding.range, binding.type, binding.format);
 
                     vk::WriteDescriptorSet vk_write_descriptor_set{};
                     vk_write_descriptor_set.pNext = nullptr;

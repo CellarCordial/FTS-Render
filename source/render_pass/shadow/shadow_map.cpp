@@ -49,7 +49,7 @@ namespace fantasy
 			vs_compile_desc.shader_name = "shadow/shadow_map_vs.slang";
 			vs_compile_desc.entry_point = "main";
 			vs_compile_desc.target = ShaderTarget::Vertex;
-			ShaderData vs_data = shader_compile::compile_shader(vs_compile_desc);
+			ShaderData vs_data = compile_shader(vs_compile_desc);
 
 			ShaderDesc vs_desc;
 			vs_desc.entry = "main";
@@ -108,9 +108,15 @@ namespace fantasy
 		// Texture.
 		{
 			ReturnIfFalse(_shadow_map_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_depth_stencil_texture(CLIENT_WIDTH, CLIENT_HEIGHT, Format::D32, "shadow_map_depth_texture")
+				TextureDesc::create_depth_stencil_texture(
+					CLIENT_WIDTH, 
+					CLIENT_HEIGHT, 
+					Format::D32, 
+					"shadow_map_texture"
+				)
 			)));
 			cache->collect(_shadow_map_texture, ResourceType::Texture);
+
 		}
 
 		// Frame Buffer.
@@ -183,7 +189,8 @@ namespace fantasy
 			}
 		));
 		ReturnIfFalse(submesh_index == _draw_arguments.size());
-
+		
+		cmdlist->set_texture_state(_shadow_map_texture.get(), TextureSubresourceSet{}, ResourceStates::ShaderResource | ResourceStates::DepthRead);
 		ReturnIfFalse(cmdlist->close());
 
 		return true;

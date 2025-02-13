@@ -36,13 +36,13 @@ namespace fantasy
     class VKTexture : public TextureInterface
     {
     public:
-        using SubresourceViewKey = std::pair<TextureSubresourceSet, ResourceViewType>;
+        using SubresourceViewKey = std::tuple<TextureSubresourceSet, Format, ResourceViewType>;
 
         struct Hash
         {
             std::size_t operator()(SubresourceViewKey const& s) const noexcept
             {
-                const auto& [subresources, view_type] = s;
+                const auto& [subresources, format, view_type] = s;
 
                 size_t hash = 0;
 
@@ -50,6 +50,7 @@ namespace fantasy
                 hash_combine(hash, subresources.mip_level_count);
                 hash_combine(hash, subresources.base_array_slice);
                 hash_combine(hash, subresources.array_slice_count);
+                hash_combine(hash, format);
                 hash_combine(hash, view_type);
 
                 return hash;
@@ -67,7 +68,7 @@ namespace fantasy
         MemoryRequirements get_memory_requirements() override;
         void* get_native_object() override;
 
-		vk::ImageView get_view(ResourceViewType view_type, const TextureSubresourceSet& subresource);
+		vk::ImageView get_view(ResourceViewType view_type, const TextureSubresourceSet& subresource, Format format = Format::UNKNOWN);
 
     public:
         TextureDesc desc;
@@ -107,7 +108,7 @@ namespace fantasy
         bool bind_memory(std::shared_ptr<HeapInterface> heap, uint64_t offset) override;
         void* get_native_object() override;
 
-        vk::BufferView get_typed_buffer_view(const BufferRange& range, ResourceViewType type);
+        vk::BufferView get_typed_buffer_view(const BufferRange& range, ResourceViewType type, Format format = Format::UNKNOWN);
 
     public:
         BufferDesc desc;

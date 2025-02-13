@@ -1,20 +1,18 @@
-#include "test_restir.h"
+#include "final_test.h"
 
 #include "../shader/shader_compiler.h"
 #include "../core/tools/check_cast.h"
 #include "../gui/gui_panel.h"
-#include "../render_pass/deferred/gbuffer.h"
-#include "../render_pass/deferred/brdf_lut.h"
 #include <memory>
 
 namespace fantasy
 {
-	bool RestirTestPass::compile(DeviceInterface* device, RenderResourceCache* cache)
+	bool FinalTestPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(7);
-			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::RestirTestPassConstant));
+			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::FinalTestPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(1);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(2);
@@ -33,11 +31,11 @@ namespace fantasy
 			shader_compile_desc.shader_name = "common/full_screen_quad_vs.slang";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Vertex;
-			ShaderData vs_data = shader_compile::compile_shader(shader_compile_desc);
+			ShaderData vs_data = compile_shader(shader_compile_desc);
 			shader_compile_desc.shader_name = "test/restir_test_ps.slang";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Pixel;
-			ShaderData ps_data = shader_compile::compile_shader(shader_compile_desc);
+			ShaderData ps_data = compile_shader(shader_compile_desc);
 
 			ShaderDesc vs_desc;
 			vs_desc.entry = "main";
@@ -74,7 +72,7 @@ namespace fantasy
 		// Binding Set.
 		{
 			BindingSetItemArray binding_set_items(7);
-			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::RestirTestPassConstant));
+			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::FinalTestPassConstant));
 			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
 			binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("world_space_normal_texture")));
 			binding_set_items[3] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("base_color_texture")));
@@ -110,7 +108,7 @@ namespace fantasy
 		return true;
 	}
 
-	bool RestirTestPass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
+	bool FinalTestPass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
 		ReturnIfFalse(cmdlist->open());
 
@@ -120,23 +118,17 @@ namespace fantasy
 		return true;
 	}
 
-    bool RestirTest::setup(RenderGraph* render_graph)
+    RenderPassInterface* FinalTest::init_render_pass(RenderGraph* render_graph)
     {
-        ReturnIfFalse(render_graph != nullptr);
+		RenderPassInterface* test_pass = render_graph->add_pass(std::make_shared<FinalTestPass>());
 
-		RenderPassInterface* brdf_lut_pass = render_graph->add_pass(std::make_shared<BrdfLUTPass>());
-
-		RenderPassInterface* gbuffer_pass = render_graph->add_pass(std::make_shared<GBufferPass>());
-		// RenderPassInterface* ray_tracing_shadow_map_pass = render_graph->add_pass(std::make_shared<RayTracingShadowMapPass>());
-		RenderPassInterface* test_pass = render_graph->add_pass(std::make_shared<RestirTestPass>());
-
-		// gbuffer_pass->precede(ray_tracing_shadow_map_pass);
-		// ray_tracing_shadow_map_pass->precede(test_pass);
-
-
-		_last_pass= test_pass;
-		return true;
+		return test_pass; 
     }
-
 }
 
+
+// int main()
+// {
+// 	fantasy::FinalTest test;
+// 	return test.initialize(fantasy::GraphicsAPI::D3D12) && test.run();
+// }

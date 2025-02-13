@@ -49,6 +49,8 @@ namespace fantasy
 
     struct CommandListDesc
     {
+        std::string name;
+        
         uint64_t upload_chunk_size = 64 * 1024;
         CommandQueueType queue_type = CommandQueueType::Graphics;
 
@@ -70,9 +72,15 @@ namespace fantasy
         virtual void clear_texture_uint(
             TextureInterface* texture,
             const TextureSubresourceSet& subresource_set,
-            uint32_t dwClearColor
+            uint32_t clear_color
         ) = 0;
         
+        virtual void clear_render_target_texture(
+            TextureInterface* texture, 
+            const TextureSubresourceSet& subresource_set, 
+            const Color& clear_color
+        ) = 0;
+
         virtual void clear_depth_stencil_texture(
             TextureInterface* texture,
             const TextureSubresourceSet& subresource_set,
@@ -214,7 +222,7 @@ namespace fantasy
         const auto& attachment = frame_buffer->get_desc().color_attachments[attachment_index];
         if (attachment.is_valid())
         {
-            cmdlist->clear_texture_float(
+            cmdlist->clear_render_target_texture(
                 attachment.texture.get(), 
                 attachment.subresource, 
                 attachment.texture->get_desc().clear_value

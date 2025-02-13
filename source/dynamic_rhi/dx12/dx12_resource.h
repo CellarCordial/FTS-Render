@@ -6,6 +6,7 @@
 #include "../../core/tools/hash_table.h"
 #include <functional>
 #include <memory>
+#include <tuple>
 #include <unordered_map>
 
 namespace std 
@@ -28,13 +29,13 @@ namespace fantasy
     class DX12Texture : public TextureInterface
     {
     public:
-        using SubresourceViewKey = std::pair<TextureSubresourceSet, ResourceViewType>;
+        using SubresourceViewKey = std::tuple<TextureSubresourceSet, Format, ResourceViewType>;
 
         struct Hash
         {
             std::size_t operator()(SubresourceViewKey const& s) const noexcept
             {
-                const auto& [subresources, view_type] = s;
+                const auto& [subresources, format, view_type] = s;
 
                 size_t hash = 0;
 
@@ -42,6 +43,7 @@ namespace fantasy
                 hash_combine(hash, subresources.mip_level_count);
                 hash_combine(hash, subresources.base_array_slice);
                 hash_combine(hash, subresources.array_slice_count);
+                hash_combine(hash, format);
                 hash_combine(hash, view_type);
 
                 return hash;
@@ -59,11 +61,11 @@ namespace fantasy
 		bool bind_memory(std::shared_ptr<HeapInterface> heap, uint64_t offset) override;
         void* get_native_object() override;
 
-		uint32_t get_view_index(ResourceViewType view_type, const TextureSubresourceSet& subresource);
-        void create_srv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const TextureSubresourceSet& subresource_set);
-        void create_uav(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const TextureSubresourceSet& subresource_set);
-        void create_rtv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const TextureSubresourceSet& subresource_set);
-        void create_dsv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const TextureSubresourceSet& subresource_set);
+		uint32_t get_view_index(ResourceViewType view_type, const TextureSubresourceSet& subresource, Format format = Format::UNKNOWN);
+        void create_srv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const TextureSubresourceSet& subresource_set, Format format = Format::UNKNOWN);
+        void create_uav(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const TextureSubresourceSet& subresource_set, Format format = Format::UNKNOWN);
+        void create_rtv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const TextureSubresourceSet& subresource_set, Format format = Format::UNKNOWN);
+        void create_dsv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const TextureSubresourceSet& subresource_set, Format format = Format::UNKNOWN);
 
     public:
         TextureDesc desc;
@@ -86,18 +88,19 @@ namespace fantasy
     class DX12Buffer : public BufferInterface
     {
     public:
-        using SubrangeViewKey = std::pair<BufferRange, ResourceViewType>;
+        using SubrangeViewKey = std::tuple<BufferRange, Format, ResourceViewType>;
 
         struct Hash
         {
             std::size_t operator()(const SubrangeViewKey& s) const noexcept
             {
-                const auto& [range, view_type] = s;
+                const auto& [range, format, view_type] = s;
 
                 size_t hash = 0;
 
                 hash_combine(hash, range.byte_offset);
                 hash_combine(hash, range.byte_size);
+                hash_combine(hash, format);
                 hash_combine(hash, view_type);
 
                 return hash;
@@ -117,10 +120,10 @@ namespace fantasy
         bool bind_memory(std::shared_ptr<HeapInterface> heap, uint64_t offset) override;
         void* get_native_object() override { return d3d12_resource.Get(); }
 
-		uint32_t get_view_index(ResourceViewType view_type, const BufferRange& range);
+		uint32_t get_view_index(ResourceViewType view_type, const BufferRange& range, Format format = Format::UNKNOWN);
         void create_cbv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const BufferRange& range);
-        void create_srv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const BufferRange& range, ResourceViewType type);
-        void create_uav(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const BufferRange& range, ResourceViewType type);
+        void create_srv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const BufferRange& range, ResourceViewType type, Format format = Format::UNKNOWN);
+        void create_uav(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const BufferRange& range, ResourceViewType type, Format format = Format::UNKNOWN);
         
         uint32_t get_clear_uav_index();
 

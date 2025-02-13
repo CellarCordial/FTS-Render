@@ -27,11 +27,11 @@ namespace fantasy
 			ShaderCompileDesc.shader_name = "common/full_screen_quad_vs.slang";
 			ShaderCompileDesc.entry_point = "main";
 			ShaderCompileDesc.target = ShaderTarget::Vertex;
-			ShaderData vs_data = shader_compile::compile_shader(ShaderCompileDesc);
+			ShaderData vs_data = compile_shader(ShaderCompileDesc);
 			ShaderCompileDesc.shader_name = "test/sdf_test_ps.slang";
 			ShaderCompileDesc.entry_point = "main";
 			ShaderCompileDesc.target = ShaderTarget::Pixel;
-			ShaderData ps_data = shader_compile::compile_shader(ShaderCompileDesc);
+			ShaderData ps_data = compile_shader(ShaderCompileDesc);
 
 			ShaderDesc shader_desc;
 			shader_desc.shader_type = ShaderType::Vertex;

@@ -63,7 +63,7 @@ namespace fantasy
 		cmdlist->copy_texture(back_buffer.get(), TextureSlice{}, _final_texture.get(), TextureSlice{});
 		cmdlist->set_texture_state(back_buffer.get(), TextureSubresourceSet{}, ResourceStates::Present);
 
-		cmdlist->clear_texture_float(
+		cmdlist->clear_render_target_texture(
 			_final_texture.get(), 
 			TextureSubresourceSet{}, 
 			_final_texture->get_desc().clear_value

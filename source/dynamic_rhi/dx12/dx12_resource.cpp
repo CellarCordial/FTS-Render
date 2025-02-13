@@ -7,6 +7,7 @@
 #include <dxgiformat.h>
 #include <intsafe.h>
 #include <memory>
+#include <tuple>
 #include <utility>
 #include <winerror.h>
 #include "../forward.h"
@@ -24,14 +25,15 @@ namespace fantasy
 
     DX12Texture::~DX12Texture() noexcept
     {
-        for (const auto& pair : view_cache)
+        for (const auto& iter : view_cache)
         {
-            switch (pair.first.second) 
+            const auto& [subresource, format, view_type] = iter.first;
+            switch (view_type) 
             {
-            case ResourceViewType::Texture_RTV: _descriptor_manager->render_target_heap.release_descriptor(pair.second); break;
-            case ResourceViewType::Texture_DSV: _descriptor_manager->depth_stencil_heap.release_descriptor(pair.second); break;
+            case ResourceViewType::Texture_RTV: _descriptor_manager->render_target_heap.release_descriptor(iter.second); break;
+            case ResourceViewType::Texture_DSV: _descriptor_manager->depth_stencil_heap.release_descriptor(iter.second); break;
             default:
-                _descriptor_manager->shader_resource_heap.release_descriptor(pair.second); break;
+                _descriptor_manager->shader_resource_heap.release_descriptor(iter.second); break;
             }
         }
 
@@ -118,11 +120,13 @@ namespace fantasy
         return true;
     }
 
-    uint32_t DX12Texture::get_view_index(ResourceViewType view_type, const TextureSubresourceSet& subresource)
+    uint32_t DX12Texture::get_view_index(ResourceViewType view_type, const TextureSubresourceSet& subresource, Format format_)
     {
         uint32_t descriptor_index = INVALID_SIZE_32;
 
-        auto iter = view_cache.find(std::make_pair(subresource, view_type));
+        Format format = format_ == Format::UNKNOWN ? desc.format : format_;
+        
+        auto iter = view_cache.find(std::make_tuple(subresource, format, view_type));
         if (iter == view_cache.end())
         {
             switch (view_type)
@@ -134,7 +138,7 @@ namespace fantasy
                     const D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor = 
                         _descriptor_manager->shader_resource_heap.get_cpu_handle(descriptor_index);
 
-                    create_srv(d3d12_cpu_descriptor, subresource);
+                    create_srv(d3d12_cpu_descriptor, subresource, format);
                     _descriptor_manager->shader_resource_heap.copy_to_shader_visible_heap(descriptor_index);
                 }
                 break;
@@ -145,7 +149,7 @@ namespace fantasy
                     const D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor = 
                         _descriptor_manager->shader_resource_heap.get_cpu_handle(descriptor_index);
 
-                    create_uav(d3d12_cpu_descriptor, subresource);
+                    create_uav(d3d12_cpu_descriptor, subresource, format);
                     _descriptor_manager->shader_resource_heap.copy_to_shader_visible_heap(descriptor_index);
                 }
                 break;
@@ -156,7 +160,7 @@ namespace fantasy
                     const D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor = 
                         _descriptor_manager->render_target_heap.get_cpu_handle(descriptor_index);
 
-                    create_rtv(d3d12_cpu_descriptor, subresource);
+                    create_rtv(d3d12_cpu_descriptor, subresource, format);
                     
                 }
                 break;
@@ -167,7 +171,7 @@ namespace fantasy
                     const D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor = 
                         _descriptor_manager->depth_stencil_heap.get_cpu_handle(descriptor_index);
 
-                    create_dsv(d3d12_cpu_descriptor, subresource);
+                    create_dsv(d3d12_cpu_descriptor, subresource, format);
                 }
                 break;
             default:
@@ -185,10 +189,10 @@ namespace fantasy
         return descriptor_index;
     }
 
-    void DX12Texture::create_srv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const TextureSubresourceSet& subresource)
+    void DX12Texture::create_srv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const TextureSubresourceSet& subresource, Format format)
     {
         D3D12_SHADER_RESOURCE_VIEW_DESC view_desc{};
-        view_desc.Format = d3d12_resource_desc.Format;
+        view_desc.Format = format == Format::UNKNOWN ? d3d12_resource_desc.Format : get_dxgi_format_mapping(format).srv_format;
         view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
 
         switch (desc.dimension)
@@ -248,10 +252,10 @@ namespace fantasy
         );
     }
 
-    void DX12Texture::create_uav(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const TextureSubresourceSet& subresource)
+    void DX12Texture::create_uav(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const TextureSubresourceSet& subresource, Format format)
     {
         D3D12_UNORDERED_ACCESS_VIEW_DESC view_desc{};
-        view_desc.Format = d3d12_resource_desc.Format;
+        view_desc.Format = format == Format::UNKNOWN ? d3d12_resource_desc.Format : get_dxgi_format_mapping(format).srv_format;
 
         switch (desc.dimension)
         {
@@ -296,10 +300,10 @@ namespace fantasy
         );
     }
 
-    void DX12Texture::create_rtv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const TextureSubresourceSet& subresource)
+    void DX12Texture::create_rtv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const TextureSubresourceSet& subresource, Format format)
     {
         D3D12_RENDER_TARGET_VIEW_DESC view_desc{};
-        view_desc.Format = d3d12_resource_desc.Format;
+        view_desc.Format = format == Format::UNKNOWN ? d3d12_resource_desc.Format : get_dxgi_format_mapping(format).rtv_dsv_format;
 
         switch (desc.dimension)
         {
@@ -343,10 +347,10 @@ namespace fantasy
         );
     }
 
-    void DX12Texture::create_dsv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const TextureSubresourceSet& subresource)
+    void DX12Texture::create_dsv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const TextureSubresourceSet& subresource, Format format)
     {
         D3D12_DEPTH_STENCIL_VIEW_DESC view_desc{};
-        view_desc.Format = d3d12_resource_desc.Format;
+        view_desc.Format = format == Format::UNKNOWN ? d3d12_resource_desc.Format : get_dxgi_format_mapping(format).rtv_dsv_format;
         view_desc.Flags = D3D12_DSV_FLAG_NONE;
 
         FormatInfo format_info = get_format_info(desc.format);
@@ -495,9 +499,11 @@ namespace fantasy
     }
 
     
-	uint32_t DX12Buffer::get_view_index(ResourceViewType view_type, const BufferRange& range)
+	uint32_t DX12Buffer::get_view_index(ResourceViewType view_type, const BufferRange& range, Format format_)
 	{
-        auto iter = view_cache.find(std::make_pair(range, view_type));
+        auto iter = view_cache.find(std::make_tuple(range, format_, view_type));
+
+        Format format = format_ == Format::UNKNOWN ? desc.format : format_;
 
         if (iter != view_cache.end())
         {
@@ -517,12 +523,12 @@ namespace fantasy
             case ResourceViewType::TypedBuffer_SRV:
             case ResourceViewType::StructuredBuffer_SRV:
             case ResourceViewType::RawBuffer_SRV:
-                create_srv(cpu_descriptor_handle, range, view_type);
+                create_srv(cpu_descriptor_handle, range, view_type, format);
                 break;
             case ResourceViewType::TypedBuffer_UAV:
             case ResourceViewType::StructuredBuffer_UAV:
             case ResourceViewType::RawBuffer_UAV:
-                create_uav(cpu_descriptor_handle, range, view_type);
+                create_uav(cpu_descriptor_handle, range, view_type, format);
                 break;
             default:
                 assert(!"invalid enum.");
@@ -542,7 +548,7 @@ namespace fantasy
         _context->device->CreateConstantBufferView(&view_desc, d3d12_cpu_descriptor);
     }
 
-    void DX12Buffer::create_srv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const BufferRange& range, ResourceViewType ResourceViewType)
+    void DX12Buffer::create_srv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const BufferRange& range, ResourceViewType ResourceViewType, Format format)
     {
         D3D12_SHADER_RESOURCE_VIEW_DESC view_desc{};
         view_desc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
@@ -561,7 +567,7 @@ namespace fantasy
             {
                 uint8_t size_per_element = get_format_info(desc.format).size;
 
-                view_desc.Format = d3d12_resource_desc.Format;
+                view_desc.Format = format == Format::UNKNOWN ? d3d12_resource_desc.Format : get_dxgi_format_mapping(format).srv_format;
                 view_desc.Buffer.FirstElement = range.byte_offset / size_per_element;
                 view_desc.Buffer.NumElements = static_cast<uint32_t>(range.byte_size / size_per_element);
                 view_desc.Buffer.StructureByteStride = 0;
@@ -583,7 +589,7 @@ namespace fantasy
         _context->device->CreateShaderResourceView(d3d12_resource.Get(), &view_desc, d3d12_cpu_descriptor);
     }
     
-    void DX12Buffer::create_uav(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const BufferRange& range, ResourceViewType view_type)
+    void DX12Buffer::create_uav(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const BufferRange& range, ResourceViewType view_type, Format format)
     {
         D3D12_UNORDERED_ACCESS_VIEW_DESC view_desc{};
         view_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;

@@ -59,11 +59,11 @@ namespace fantasy
 			shader_compile_desc.shader_name = "test/atmosphere_test_vs.slang";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Vertex;
-			ShaderData vs_data = shader_compile::compile_shader(shader_compile_desc);
+			ShaderData vs_data = compile_shader(shader_compile_desc);
 			shader_compile_desc.shader_name = "test/atmosphere_test_ps.slang";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Pixel;
-			ShaderData ps_data = shader_compile::compile_shader(shader_compile_desc);
+			ShaderData ps_data = compile_shader(shader_compile_desc);
 
 			ShaderDesc vs_desc;
 			vs_desc.entry = "main";
@@ -131,7 +131,7 @@ namespace fantasy
 			binding_set_items[2] = BindingSetItem::create_constant_buffer(2, _pass_constant1_buffer);
 			binding_set_items[3] = BindingSetItem::create_texture_srv(0, _transmittance_texture);
 			binding_set_items[4] = BindingSetItem::create_texture_srv(1, _aerial_lut_texture);
-			binding_set_items[5] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("shadow_map_texture")));
+			binding_set_items[5] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("shadow_map_texture")), TextureSubresourceSet{}, Format::R32_FLOAT);
 			binding_set_items[6] = BindingSetItem::create_texture_srv(3, _blue_noise_texture);
 			binding_set_items[7] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
 			binding_set_items[8] = BindingSetItem::create_sampler(1, check_cast<SamplerInterface>(cache->require("point_clamp_sampler")));
@@ -229,15 +229,15 @@ namespace fantasy
 			_writed_resource = true;
 		}
 
+		cmdlist->set_texture_state(_aerial_lut_texture.get(), TextureSubresourceSet{}, ResourceStates::UnorderedAccess);
+
 		ReturnIfFalse(cmdlist->close());
 		return true;
 	}
 
 
-	bool AtmosphereTest::setup(RenderGraph* render_graph)
+	RenderPassInterface* AtmosphereTest::init_render_pass(RenderGraph* render_graph)
 	{
-		ReturnIfFalse(render_graph != nullptr);
-
 		_transmittance_lut_pass = std::make_shared<TransmittanceLUTPass>();
 		_multi_scattering_lut_pass = std::make_shared<MultiScatteringLUTPass>();
 		_shadow_map_pass = std::make_shared<ShadowMapPass>();
@@ -277,10 +277,13 @@ namespace fantasy
 		constant::AtmosphereProperties* properties = entity->assign<constant::AtmosphereProperties>();
 
 
-		ReturnIfFalse(world->broadcast(event::OnModelLoad{ 
-			.entity = world->create_entity(),
-			.model_path = "asset/model/Mountain/terrain.gltf" 
-		}));
+		if (
+			!world->broadcast(event::OnModelLoad{ 
+				.entity = world->create_entity(),
+				.model_path = "asset/model/Mountain/terrain.gltf" 
+			})
+		)
+			return nullptr;
 
 
 		DirectionalLight light;
@@ -449,6 +452,14 @@ namespace fantasy
 				}
 			}
 		);
-		return true;
+		return _atmosphere_debug_pass.get();
 	}
+
+}
+
+
+int main()
+{
+	fantasy::AtmosphereTest test;
+	return test.initialize(fantasy::GraphicsAPI::Vulkan) && test.run() ? 1 : 0;
 }

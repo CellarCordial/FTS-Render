@@ -67,11 +67,11 @@ namespace fantasy
 			shader_compile_desc.shader_name = "deferred/gbuffer_vs.slang";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Vertex;
-			ShaderData vs_data = shader_compile::compile_shader(shader_compile_desc);
+			ShaderData vs_data = compile_shader(shader_compile_desc);
 			shader_compile_desc.shader_name = "deferred/gbuffer_ps.slang";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Pixel;
-			ShaderData ps_data = shader_compile::compile_shader(shader_compile_desc);
+			ShaderData ps_data = compile_shader(shader_compile_desc);
 
 			ShaderDesc vs_desc;
 			vs_desc.entry = "main";

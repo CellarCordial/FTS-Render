@@ -41,7 +41,7 @@ namespace fantasy
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
-			ShaderData cs_data = shader_compile::compile_shader(cs_compile_desc);
+			ShaderData cs_data = compile_shader(cs_compile_desc);
 
 			ShaderDesc cs_desc;
 			cs_desc.entry = "main";
@@ -79,18 +79,6 @@ namespace fantasy
 				)
 			)));
 			cache->collect(_aerial_lut_texture, ResourceType::Texture);
-
-			ReturnIfFalse(_shadow_map_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_shader_resource_texture(
-					CLIENT_WIDTH, 
-					CLIENT_HEIGHT, 
-					Format::R32_FLOAT, 
-					"shadow_map_texture"
-				)
-			)));
-			cache->collect(_shadow_map_texture, ResourceType::Texture);
-
-			_shadow_map_depth_texture = check_cast<TextureInterface>(cache->require("shadow_map_depth_texture"));
 		}
 
 		// Binding Set.
@@ -100,7 +88,7 @@ namespace fantasy
 			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, _pass_constant_buffer);
 			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("multi_scattering_texture")));
 			binding_set_items[3] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("transmittance_texture")));
-			binding_set_items[4] = BindingSetItem::create_texture_srv(2, _shadow_map_texture);
+			binding_set_items[4] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("shadow_map_texture")), TextureSubresourceSet{}, Format::R32_FLOAT);
 			binding_set_items[5] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
 			binding_set_items[6] = BindingSetItem::create_sampler(1, check_cast<SamplerInterface>(cache->require("point_clamp_sampler")));
 			binding_set_items[7] = BindingSetItem::create_texture_uav(0, _aerial_lut_texture);
@@ -155,8 +143,6 @@ namespace fantasy
 
 			ReturnIfFalse(cmdlist->write_buffer(_pass_constant_buffer.get(), &_pass_constant, sizeof(constant::AerialLUTPassConstant)));
 		}
-
-		cmdlist->copy_texture(_shadow_map_texture.get(), TextureSlice{}, _shadow_map_depth_texture.get(), TextureSlice{});
 
 		uint2 thread_group_num = {
 			static_cast<uint32_t>(align(AERIAL_LUT_RES_X, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X),

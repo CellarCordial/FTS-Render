@@ -1,11 +1,11 @@
 #include "scene.h"
 
-#include "light.h"
+// #include "light.h"
 #include "camera.h"
 #include "../core/parallel/parallel.h"
 #include "../core/tools/file.h"
 #include "../gui/gui_panel.h"
-#include "virtual_texture.h"
+// #include "virtual_texture.h"
 
 
 namespace fantasy

@@ -5,6 +5,7 @@
 #include "../../core/tools/check_cast.h"
 #include <cstdint>
 #include <memory>
+#include <tuple>
 #include <utility>
 
 namespace fantasy 
@@ -88,17 +89,19 @@ namespace fantasy
         return vk_image; 
     }
 
-    vk::ImageView VKTexture::get_view(ResourceViewType view_type, const TextureSubresourceSet& subresource)
+    vk::ImageView VKTexture::get_view(ResourceViewType view_type, const TextureSubresourceSet& subresource, Format format_)
     {
         std::lock_guard lock(_mutex);
 
-        auto cache_key = std::make_pair(subresource, view_type);
+        Format format = format_ == Format::UNKNOWN ? desc.format : format_;
+
+        auto cache_key = std::make_tuple(subresource, format, view_type);
         
         auto iter = view_cache.find(cache_key);
         if (iter != view_cache.end()) return iter->second.vk_view;
 
 
-        FormatInfo format_info = get_format_info(desc.format);
+        FormatInfo format_info = get_format_info(format);
 
         vk::ImageAspectFlags vk_aspect_flags = vk::ImageAspectFlags();
         if (view_type == ResourceViewType::Texture_RTV) 
@@ -122,7 +125,7 @@ namespace fantasy
 
         vk::ImageViewCreateInfo view_info{};
         view_info.image = vk_image;
-        view_info.format = vk_image_info.format;
+        view_info.format = convert_format(format);
         view_info.subresourceRange = view.vk_subresource_range;
         view_info.viewType = convert_texture_dimension_to_image_view_type(desc.dimension);
 
@@ -259,9 +262,9 @@ namespace fantasy
         _context->device.unmapMemory(vk_device_memory);
     }
 
-    vk::BufferView VKBuffer::get_typed_buffer_view(const BufferRange& range, ResourceViewType type)
+    vk::BufferView VKBuffer::get_typed_buffer_view(const BufferRange& range, ResourceViewType type, Format format)
     {
-        vk::Format vk_format = convert_format(desc.format);
+        vk::Format vk_format = convert_format(format == Format::UNKNOWN ? desc.format : format);
 
         size_t view_info_hash = 0;
         hash_combine(view_info_hash, range.byte_offset);

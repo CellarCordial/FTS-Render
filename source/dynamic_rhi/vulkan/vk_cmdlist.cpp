@@ -7,6 +7,7 @@
 #include "vk_convert.h"
 #include "vk_frame_buffer.h"
 #include "../device.h"
+#include "vulkan/vulkan_enums.hpp"
 #include <cstdint>
 #include <memory>
 
@@ -381,6 +382,8 @@ namespace fantasy
     {
         _current_cmdbuffer = check_cast<VKDevice*>(_device)->get_queue(_desc.queue_type)->get_command_buffer();
 
+        _context->name_object(&_current_cmdbuffer->vk_cmdbuffer, vk::ObjectType::eCommandBuffer, _desc.name.c_str());
+
         vk::CommandBufferBeginInfo vk_cmd_buffer_beginInfo{};
         vk_cmd_buffer_beginInfo.pNext = nullptr;
         vk_cmd_buffer_beginInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
@@ -471,6 +474,15 @@ namespace fantasy
         );
     }
     
+    void VKCommandList::clear_render_target_texture(
+        TextureInterface* texture, 
+        const TextureSubresourceSet& subresource_set, 
+        const Color& clear_color
+    )
+    {
+        clear_texture_float(texture, subresource_set, clear_color);
+    }
+
     void VKCommandList::clear_depth_stencil_texture(
         TextureInterface* texture_,
         const TextureSubresourceSet& subresource,

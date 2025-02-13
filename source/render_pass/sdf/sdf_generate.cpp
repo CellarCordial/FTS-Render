@@ -58,7 +58,7 @@ namespace fantasy
 			cs_compile_desc.defines.push_back("GROUP_THREAD_NUM_Z=" + std::to_string(THREAD_GROUP_SIZE_Z));
 			cs_compile_desc.defines.push_back("UPPER_BOUND_ESTIMATE_PRECISON=" + std::to_string(UPPER_BOUND_ESTIMATE_PRESION));
 			cs_compile_desc.defines.push_back("BVH_STACK_SIZE=" + std::to_string(BVH_STACK_SIZE));
-			ShaderData cs_data = shader_compile::compile_shader(cs_compile_desc);
+			ShaderData cs_data = compile_shader(cs_compile_desc);
 
 			ShaderDesc cs_desc;
 			cs_desc.shader_type = ShaderType::Compute;

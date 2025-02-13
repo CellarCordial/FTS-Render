@@ -8,6 +8,12 @@
 
 namespace fantasy 
 {
+    enum class ShaderPlatform : uint8_t
+    {
+        DXIL,
+        SPIRV
+    };
+
     enum class ShaderTarget : uint16_t
     {
         None            = 0x0000,
@@ -51,13 +57,8 @@ namespace fantasy
         bool invalid() const { return _data.empty(); }
     };
 
-    namespace shader_compile
-    {
-        void initialize();
-        void destroy();
-        ShaderData compile_shader(const ShaderCompileDesc& desc);
-    };
-
+    void set_shader_platform(ShaderPlatform platform);
+    ShaderData compile_shader(const ShaderCompileDesc& desc);
 }
 
 

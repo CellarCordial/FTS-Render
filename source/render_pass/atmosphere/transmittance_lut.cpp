@@ -34,7 +34,7 @@ namespace fantasy
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
 			cs_compile_desc.defines.push_back("STEP_COUNT=" + std::to_string(RAY_STEP_COUNT));
-			ShaderData cs_data = shader_compile::compile_shader(cs_compile_desc);
+			ShaderData cs_data = compile_shader(cs_compile_desc);
 
 			ShaderDesc cs_desc;
 			cs_desc.entry = "main";

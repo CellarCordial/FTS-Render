@@ -31,11 +31,11 @@ namespace fantasy
 			shader_compile_desc.shader_name = "common/full_screen_quad_vs.slang";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Vertex;
-			ShaderData vs_data = shader_compile::compile_shader(shader_compile_desc);
+			ShaderData vs_data = compile_shader(shader_compile_desc);
 			shader_compile_desc.shader_name = "atmosphere/sky_lut_ps.slang";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Pixel;
-			ShaderData ps_data = shader_compile::compile_shader(shader_compile_desc);
+			ShaderData ps_data = compile_shader(shader_compile_desc);
 
 			ShaderDesc vs_desc;
 			vs_desc.entry = "main";
@@ -64,7 +64,7 @@ namespace fantasy
 				TextureDesc::create_render_target_texture(
 					SKY_LUT_RES,
 					SKY_LUT_RES,
-					Format::RGBA32_FLOAT,
+					Format::RGBA8_UNORM,
 					"sky_lut_texture"
 				)
 			)));
@@ -143,7 +143,7 @@ namespace fantasy
 		}
 
 		ReturnIfFalse(cmdlist->draw(_graphics_state, DrawArguments{ .index_count = 6 }));
-
+		
 		ReturnIfFalse(cmdlist->close());
 
 		return true;

@@ -20,7 +20,7 @@ namespace fantasy
     {
         if (!is_file_exist(cache_path)) return false;
         if (compare_file_write_time(shader_path, cache_path)) return false;
-        return true; 
+        return true;
     }
 
     void save_to_cache(const char* cache_path, const ShaderData& data)
@@ -51,25 +51,24 @@ namespace fantasy
     }
 
 
-namespace shader_compile
-{
-    namespace
+
+    Slang::ComPtr<slang::IGlobalSession> global_session;
+    ShaderPlatform platform = ShaderPlatform::DXIL;
+
+    void set_shader_platform(ShaderPlatform in_platform)
     {
-        Slang::ComPtr<slang::IGlobalSession> global_session;
+        platform = in_platform;
     }
 
-    void initialize()
-    {
-        SlangResult res = createGlobalSession(global_session.writeRef());
-        assert(res == SLANG_OK);
-    }
-
-    void destroy()
-    {
-    }
 
     ShaderData compile_shader(const ShaderCompileDesc& desc)
     { 
+        if (global_session == nullptr)
+        {
+            SlangResult res = createGlobalSession(global_session.writeRef());
+            assert(res == SLANG_OK);
+        }
+
         if (global_session == nullptr)
         {
             LOG_ERROR("Please call fantasy::StaticShaderCompiler::initialize() first.");
@@ -77,7 +76,7 @@ namespace shader_compile
         }
 
         const std::string proj_path = PROJ_DIR;
-        const std::string cache_path = proj_path + "asset/shader_cache/" + remove_file_extension(desc.shader_name.c_str()) + "_DEBUG.bin";
+        const std::string cache_path = proj_path + "asset/shader_cache/" + remove_file_extension(desc.shader_name.c_str()) + "_" + desc.entry_point + "_DEBUG.bin";
         const std::string shader_path = proj_path + "source/shader/" + desc.shader_name;
 
         if (check_cache(cache_path.c_str(), shader_path.c_str()))
@@ -85,20 +84,30 @@ namespace shader_compile
             return load_from_cache(cache_path.c_str());
         }
 
-		size_t pos = shader_path.find_last_of('/');
-		if (pos == std::string::npos)
-		{
-			LOG_ERROR("Find hlsl file's Directory failed.");
-			return ShaderData{};
-		}
-		const std::string file_directory = shader_path.substr(0, pos);
+        size_t pos = shader_path.find_last_of('/');
+        if (pos == std::string::npos)
+        {
+            LOG_ERROR("Find hlsl file's Directory failed.");
+            return ShaderData{};
+        }
+        const std::string file_directory = shader_path.substr(0, pos);
 
 
         slang::SessionDesc session_desc{};
 
         slang::TargetDesc target_desc = {};
-        target_desc.format = SLANG_DXIL;
-        target_desc.profile = global_session->findProfile("sm_6_5");
+        switch (platform)
+        {
+        case ShaderPlatform::DXIL:
+            target_desc.format = SLANG_DXIL;
+            target_desc.profile = global_session->findProfile("sm_6_5");
+            break;
+        case ShaderPlatform::SPIRV:
+            target_desc.format = SLANG_SPIRV;
+            target_desc.profile = global_session->findProfile("spirv_1_0");
+            break;        
+        }
+        
 
         session_desc.targets = &target_desc;
         session_desc.targetCount = 1;
@@ -194,7 +203,6 @@ namespace shader_compile
 
         return shader_data;
     }
-}
 }
 
 

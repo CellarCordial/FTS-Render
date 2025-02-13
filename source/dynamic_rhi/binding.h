@@ -216,7 +216,8 @@ namespace fantasy
         static BindingSetItem create_texture_srv(
             uint32_t slot,
             std::shared_ptr<TextureInterface> texture,
-            TextureSubresourceSet subresource = TextureSubresourceSet{}
+            TextureSubresourceSet subresource = TextureSubresourceSet{},
+            Format format = Format::UNKNOWN
         )
         {
             BindingSetItem ret;
@@ -224,13 +225,15 @@ namespace fantasy
             ret.type = ResourceViewType::Texture_SRV;
             ret.slot = slot;
             ret.subresource = subresource;
+            ret.format = format;
             return ret;
         }
 
         static BindingSetItem create_texture_uav(
             uint32_t slot,
             std::shared_ptr<TextureInterface> texture,
-            TextureSubresourceSet subresource = TextureSubresourceSet{}
+            TextureSubresourceSet subresource = TextureSubresourceSet{},
+            Format format = Format::UNKNOWN
         )
         {
 			BindingSetItem ret;
@@ -238,12 +241,14 @@ namespace fantasy
             ret.type = ResourceViewType::Texture_UAV;
             ret.slot = slot;
             ret.subresource = subresource;
+            ret.format = format;
             return ret;
         }
 
         static BindingSetItem create_typed_buffer_srv(
             uint32_t slot,
-            std::shared_ptr<BufferInterface> buffer
+            std::shared_ptr<BufferInterface> buffer,
+            Format format = Format::UNKNOWN
         )
         {
             BindingSetItem ret;
@@ -254,12 +259,14 @@ namespace fantasy
                 .byte_offset = 0,
                 .byte_size = buffer->get_desc().byte_size
             };
+            ret.format = format;
             return ret;
         }
 
         static BindingSetItem create_typed_buffer_uav(
             uint32_t slot,
-            std::shared_ptr<BufferInterface> buffer
+            std::shared_ptr<BufferInterface> buffer,
+            Format format = Format::UNKNOWN
         )
         {
 			BindingSetItem ret;
@@ -270,6 +277,7 @@ namespace fantasy
                 .byte_offset = 0,
                 .byte_size = buffer->get_desc().byte_size
             };
+            ret.format = format;
             return ret;
         }
 

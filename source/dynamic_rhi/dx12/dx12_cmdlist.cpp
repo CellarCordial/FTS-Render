@@ -432,6 +432,8 @@ namespace fantasy
     {
         _current_cmdlist = check_cast<DX12Device*>(_device)->get_queue(_desc.queue_type)->get_command_list();
 
+        _current_cmdlist->d3d12_cmdlist->SetName(std::wstring(_desc.name.begin(), _desc.name.end()).c_str());
+        
         _current_cmdlist->d3d12_cmd_allocator->Reset();
         _current_cmdlist->d3d12_cmdlist->Reset(_current_cmdlist->d3d12_cmd_allocator.Get(), nullptr);
 
@@ -447,63 +449,34 @@ namespace fantasy
     }
 
 
-    void DX12CommandList::clear_texture_float(TextureInterface* texture, const TextureSubresourceSet& subresource, const Color& clear_color)
+    void DX12CommandList::clear_texture_float(TextureInterface* texture_, const TextureSubresourceSet& subresource, const Color& clear_color)
     {
-        DX12Texture* dx12_texture = check_cast<DX12Texture*>(texture);
+        DX12Texture* texture = check_cast<DX12Texture*>(texture_);
 
-        ResourceStates state = get_texture_state(texture, subresource.base_array_slice, subresource.base_mip_level);
+        set_texture_state(texture_, subresource, ResourceStates::UnorderedAccess);
+        commit_barriers();
+        commit_descriptor_heaps();
 
-        if ((state & ResourceStates::RenderTarget) != 0)
+        for (uint32_t mip = subresource.base_mip_level; mip < subresource.base_mip_level + subresource.mip_level_count; ++mip)
         {
-            set_texture_state(texture, subresource, ResourceStates::RenderTarget);
-            commit_barriers();
+            TextureSubresourceSet subresource_mip{
+                .base_mip_level = mip,
+                .mip_level_count = 1,
+                .base_array_slice = subresource.base_array_slice,
+                .array_slice_count = subresource.array_slice_count
+            };
+            
 
-            for (uint32_t mip = subresource.base_mip_level; mip < subresource.base_mip_level + subresource.mip_level_count; ++mip)
-            {
-                TextureSubresourceSet subresource_mip{
-                    .base_mip_level = mip,
-                    .mip_level_count = 1,
-                    .base_array_slice = subresource.base_array_slice,
-                    .array_slice_count = subresource.array_slice_count
-                };
-                
-                uint32_t view_index = dx12_texture->get_view_index(ResourceViewType::Texture_RTV, subresource_mip);
+            uint32_t view_index = texture->get_view_index(ResourceViewType::Texture_UAV, subresource_mip);
 
-                _current_cmdlist->d3d12_cmdlist->ClearRenderTargetView(
-                    _descriptor_manager->render_target_heap.get_cpu_handle(view_index), 
-                    &clear_color.r, 
-                    0, 
-                    nullptr
-                );
-            }
-        }
-        else
-        {
-            set_texture_state(texture, subresource, ResourceStates::UnorderedAccess);
-            commit_barriers();
-            commit_descriptor_heaps();
-
-            for (uint32_t mip = subresource.base_mip_level; mip < subresource.base_mip_level + subresource.mip_level_count; ++mip)
-            {
-                TextureSubresourceSet subresource_mip{
-                    .base_mip_level = mip,
-                    .mip_level_count = 1,
-                    .base_array_slice = subresource.base_array_slice,
-                    .array_slice_count = subresource.array_slice_count
-                };
-                
-
-                uint32_t view_index = dx12_texture->get_view_index(ResourceViewType::Texture_UAV, subresource_mip);
-
-                _current_cmdlist->d3d12_cmdlist->ClearUnorderedAccessViewFloat(
-                    _descriptor_manager->shader_resource_heap.get_gpu_handle(view_index), 
-                    _descriptor_manager->shader_resource_heap.get_cpu_handle(view_index), 
-                    reinterpret_cast<ID3D12Resource*>(dx12_texture->get_native_object()), 
-                    &clear_color.r, 
-                    0, 
-                    nullptr
-                );
-            }
+            _current_cmdlist->d3d12_cmdlist->ClearUnorderedAccessViewFloat(
+                _descriptor_manager->shader_resource_heap.get_gpu_handle(view_index), 
+                _descriptor_manager->shader_resource_heap.get_cpu_handle(view_index), 
+                reinterpret_cast<ID3D12Resource*>(texture->get_native_object()), 
+                &clear_color.r, 
+                0, 
+                nullptr
+            );
         }
     }
 
@@ -542,6 +515,37 @@ namespace fantasy
                 _descriptor_manager->shader_resource_heap.get_cpu_handle(view_index), 
                 reinterpret_cast<ID3D12Resource*>(dx12_texture->get_native_object()), 
                 clear_colors, 
+                0, 
+                nullptr
+            );
+        }
+    }
+
+    void DX12CommandList::clear_render_target_texture(
+        TextureInterface* texture_, 
+        const TextureSubresourceSet& subresource, 
+        const Color& clear_color
+    )
+    {
+        DX12Texture* texture = check_cast<DX12Texture*>(texture_);
+
+        set_texture_state(texture_, subresource, ResourceStates::RenderTarget);
+        commit_barriers();
+
+        for (uint32_t mip = subresource.base_mip_level; mip < subresource.base_mip_level + subresource.mip_level_count; ++mip)
+        {
+            TextureSubresourceSet subresource_mip{
+                .base_mip_level = mip,
+                .mip_level_count = 1,
+                .base_array_slice = subresource.base_array_slice,
+                .array_slice_count = subresource.array_slice_count
+            };
+            
+            uint32_t view_index = texture->get_view_index(ResourceViewType::Texture_RTV, subresource_mip);
+
+            _current_cmdlist->d3d12_cmdlist->ClearRenderTargetView(
+                _descriptor_manager->render_target_heap.get_cpu_handle(view_index), 
+                &clear_color.r, 
                 0, 
                 nullptr
             );

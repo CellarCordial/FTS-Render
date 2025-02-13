@@ -11,7 +11,7 @@ namespace fantasy
 	{
 	public:
 		GuiPass() { type = RenderPassType::Graphics; }
-		~GuiPass() { assert(_device); gui::destroy(_device); }
+		~GuiPass() { gui::destroy(_device); }
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache);
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache);
