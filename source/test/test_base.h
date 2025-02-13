@@ -33,11 +33,8 @@ namespace fantasy
         bool create_samplers();
 
         
-		bool create_instance();
-		bool check_validation_layer_support();
 		bool enumerate_support_extension();
 
-		bool create_debug_utils_messager();
 		bool destroy_debug_utils_messager();
 
 		bool pick_physical_device();
@@ -54,39 +51,19 @@ namespace fantasy
         GLFWwindow* _window = nullptr;
 
         // D3D12.
-        Microsoft::WRL::ComPtr<IDXGISwapChain> _swap_chain;
+        Microsoft::WRL::ComPtr<IDXGISwapChain> _d3d12_swap_chain;
         uint32_t _current_back_buffer_index = 0;
 
+
         // Vulkan
-        vk::Instance _vk_instance;
 
 		vk::DebugUtilsMessengerEXT _vk_debug_messager;
-		std::vector<const char*> _vk_validation_layers;
-		std::vector<const char*> _vk_instance_extensions;
 		VkDebugUtilsMessengerEXT _vk_debug_callback;
 
-		vk::SurfaceKHR _surface;
 
-		std::vector<const char*> _vk_device_extensions;
-		vk::PhysicalDevice _vk_physical_device = VK_NULL_HANDLE;
-		vk::PhysicalDeviceMemoryProperties _vk_memory_properties;
 
-		struct 
-		{
-			uint32_t graphics_index = INVALID_SIZE_32;
-			uint32_t present_index = INVALID_SIZE_32;
-		} _queue_family_index;
 
-		vk::Device _vk_device;
-		vk::Queue _vk_graphics_queue;
-		vk::Queue _vk_present_queue;
 
-		struct
-		{
-			vk::SurfaceCapabilitiesKHR surface_capabilities;
-			std::vector<vk::SurfaceFormatKHR> surface_formats;
-			std::vector<vk::PresentModeKHR> present_modes;
-		} _vk_swapchain_info;
 
 		vk::Extent2D _vk_client_resolution;
 		vk::SwapchainKHR _vk_swapchain;

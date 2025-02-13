@@ -132,12 +132,12 @@ namespace fantasy
 		swap_chain_desc.Windowed = true;
 		swap_chain_desc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
-		ReturnIfFalse(SUCCEEDED(dxgi_factory->CreateSwapChain(d3d12_graphics_cmd_queue, &swap_chain_desc, _swap_chain.GetAddressOf())));
+		ReturnIfFalse(SUCCEEDED(dxgi_factory->CreateSwapChain(d3d12_graphics_cmd_queue, &swap_chain_desc, _d3d12_swap_chain.GetAddressOf())));
 
 		ID3D12Resource* swap_chain_buffers[FLIGHT_FRAME_NUM];
 		for (uint32_t ix = 0; ix < FLIGHT_FRAME_NUM; ++ix)
 		{
-			_swap_chain->GetBuffer(ix, IID_PPV_ARGS(&swap_chain_buffers[ix]));
+			_d3d12_swap_chain->GetBuffer(ix, IID_PPV_ARGS(&swap_chain_buffers[ix]));
 		}
 
 
@@ -151,7 +151,7 @@ namespace fantasy
 			_device,
 			[this]() 
             { 
-                _swap_chain->Present(0, 0); 
+                _d3d12_swap_chain->Present(0, 0); 
                 _current_back_buffer_index = (_current_back_buffer_index + 1) % FLIGHT_FRAME_NUM; 
             }
 		);
@@ -233,207 +233,180 @@ namespace fantasy
 
     bool TestBase::init_vulkan()
     {
-        VKDeviceDesc desc;
+		vk::ApplicationInfo vk_app_info{};
+		vk_app_info.pApplicationName = "Vulkan Test";
+		vk_app_info.applicationVersion = VK_MAKE_VERSION(1, 3, 0);
+		vk_app_info.engineVersion = VK_MAKE_VERSION(1, 3, 0);
+		vk_app_info.apiVersion = VK_API_VERSION_1_3;	
 		
-        return true;
-    }
-	bool TestBase::create_instance()
-	{
-		// Instance info 需要 layers 和 extensions.
-		vk::InstanceCreateInfo instance_info{};
 		
-		vk::ApplicationInfo app_info{};
-		app_info.pApplicationName = "Vulkan Test";
-
-		// 和 SPIR-V 版本有关.
-		app_info.applicationVersion = VK_MAKE_VERSION(1, 3, 0);
-		app_info.engineVersion = VK_MAKE_VERSION(1, 3, 0);
-		app_info.apiVersion = VK_API_VERSION_1_3;	
+		std::vector<const char*> validation_layers;
+		std::vector<const char*> instance_extensions;
 		
-		instance_info.pApplicationInfo = &app_info;
-
-
 		uint32_t glfw_extension_count = 0;
 		const CHAR** glfw_extensions = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
-		_vk_instance_extensions.insert(_vk_instance_extensions.end(), glfw_extensions, glfw_extensions + glfw_extension_count);
-
-#ifdef DEBUG
-		_vk_validation_layers.push_back("VK_LAYER_KHRONOS_validation");
-
-		ReturnIfFalse(check_validation_layer_support());
+		instance_extensions.insert(instance_extensions.end(), glfw_extensions, glfw_extensions + glfw_extension_count);
 		
-		instance_info.enabledLayerCount = static_cast<uint32_t>(_vk_validation_layers.size());
-		instance_info.ppEnabledLayerNames = _vk_validation_layers.data();
-
-
-		_vk_instance_extensions.push_back("VK_EXT_debug_utils");
+#ifdef DEBUG
+		validation_layers.push_back("VK_LAYER_KHRONOS_validation");
+		instance_extensions.push_back("VK_EXT_debug_utils");
 #endif
+		
+		vk::InstanceCreateInfo instance_info{};
+		instance_info.pApplicationInfo = &vk_app_info;
+		instance_info.enabledLayerCount = static_cast<uint32_t>(validation_layers.size());
+		instance_info.ppEnabledLayerNames = validation_layers.data();
+		instance_info.enabledExtensionCount = static_cast<uint32_t>(instance_extensions.size());
+		instance_info.ppEnabledExtensionNames = instance_extensions.data();
 
-		instance_info.enabledExtensionCount = static_cast<uint32_t>(_vk_instance_extensions.size());
-		instance_info.ppEnabledExtensionNames = _vk_instance_extensions.data();
+        vk::Instance vk_instance;
+		ReturnIfFalse(vk::createInstance(&instance_info, nullptr, &vk_instance) == vk::Result::eSuccess);
 
-		return vk::createInstance(&instance_info, nullptr, &_vk_instance) == vk::Result::eSuccess;
-	}
+		VkDebugUtilsMessengerCreateInfoEXT vk_debug_util_info{};
+		vk_debug_util_info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+		vk_debug_util_info.messageSeverity = 
+			VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+			VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+			VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+		vk_debug_util_info.messageType = 
+			VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+			VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+			VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+		vk_debug_util_info.pfnUserCallback = debug_call_back;
 
-	bool TestBase::check_validation_layer_support()
-	{
-		uint32_t layer_count = 0;
-		ReturnIfFalse(vk::enumerateInstanceLayerProperties(&layer_count, nullptr) == vk::Result::eSuccess);
-		std::vector<vk::LayerProperties> properties(layer_count);
-		ReturnIfFalse(vk::enumerateInstanceLayerProperties(&layer_count, properties.data()) == vk::Result::eSuccess);
+		auto func_vk_create_debug_utils_messenger = 
+			(PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(vk_instance, "vkCreateDebugUtilsMessengerEXT");
+		func_vk_create_debug_utils_messenger(vk_instance, &vk_debug_util_info, nullptr, &_vk_debug_callback);
 
-		for (const auto& layer : _vk_validation_layers)
+		VkSurfaceKHR vk_surface;
+		ReturnIfFalse(glfwCreateWindowSurface(vk_instance, _window, nullptr, &vk_surface) == VK_SUCCESS);
+
+		
+		uint32_t physical_device_count = 0;
+		ReturnIfFalse(vk_instance.enumeratePhysicalDevices(&physical_device_count, nullptr) == vk::Result::eSuccess);
+		ReturnIfFalse(physical_device_count != 0);
+		std::vector<vk::PhysicalDevice> physical_devices(physical_device_count);
+		ReturnIfFalse(vk_instance.enumeratePhysicalDevices(&physical_device_count, physical_devices.data()) == vk::Result::eSuccess);
+
+		struct 
 		{
-			bool found = false;
-			for (const auto& property : properties)
+			uint32_t graphics_index = INVALID_SIZE_32;
+			uint32_t present_index = INVALID_SIZE_32;
+		} _queue_family_index;
+
+		std::vector<const char*> device_extensions;
+		device_extensions.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+		struct
+		{
+			vk::SurfaceCapabilitiesKHR surface_capabilities;
+			std::vector<vk::SurfaceFormatKHR> surface_formats;
+			std::vector<vk::PresentModeKHR> present_modes;
+		} vk_swapchain_info;
+
+		vk::PhysicalDevice vk_physical_device;
+		vk::PhysicalDeviceMemoryProperties vk_memory_properties;
+
+		for (const auto& physical_device : physical_devices)
+		{
+			vk::PhysicalDeviceProperties vk_physical_device_properties;
+			vk::PhysicalDeviceFeatures vk_physical_device_features;
+			physical_device.getProperties(&vk_physical_device_properties);
+			physical_device.getFeatures(&vk_physical_device_features);
+
+			bool device_type_support = 
+				vk_physical_device_properties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu || 
+				vk_physical_device_properties.deviceType == vk::PhysicalDeviceType::eIntegratedGpu;
+			
+			uint32_t queue_family_count = 0;
+			physical_device.getQueueFamilyProperties(&queue_family_count, nullptr);
+			std::vector<vk::QueueFamilyProperties> vk_queue_family_properties(queue_family_count);
+			physical_device.getQueueFamilyProperties(&queue_family_count, vk_queue_family_properties.data());
+
+			for (uint32_t ix = 0; ix < vk_queue_family_properties.size(); ++ix)
 			{
-				if (strcmp(layer, property.layerName) == 0)
+				vk::Bool32 present_support = false;
+	
+				if (physical_device.getSurfaceSupportKHR(ix, vk_surface, &present_support) == vk::Result::eSuccess && present_support) 
 				{
-					found = true;
+					_queue_family_index.present_index = ix;
+				}
+				if (vk_queue_family_properties[ix].queueCount > 0 && vk_queue_family_properties[ix].queueFlags & vk::QueueFlagBits::eGraphics)
+				{
+					_queue_family_index.graphics_index = ix;
+				}
+	
+				if (_queue_family_index.graphics_index != INVALID_SIZE_32 && _queue_family_index.graphics_index != INVALID_SIZE_32) 
+				{
 					break;
 				}
 			}
-			if (!found)
+
+			uint32_t extension_count = 0;
+			ReturnIfFalse(physical_device.enumerateDeviceExtensionProperties(nullptr, &extension_count, nullptr) == vk::Result::eSuccess);
+			std::vector<vk::ExtensionProperties> vk_extension_properties(extension_count);
+			ReturnIfFalse(physical_device.enumerateDeviceExtensionProperties(nullptr, &extension_count, vk_extension_properties.data()) == vk::Result::eSuccess);
+	
+			bool support_device_extension = false;
+			for (const auto& property : vk_extension_properties)
 			{
-				LOG_ERROR("Extension " + std::string(layer) + " is not support.");
-				return false;
+				if (strcmp(property.extensionName, device_extensions[0]) == 0)
+				{
+					support_device_extension = true;
+				}
 			}
-		}
-		return true;
-	}
 
-	bool TestBase::enumerate_support_extension()
-	{
-		uint32_t extension_count = 0;
-		ReturnIfFalse(vk::enumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr) == vk::Result::eSuccess);
-		std::vector<vk::ExtensionProperties> extension_properties(extension_count);
-		ReturnIfFalse(vk::enumerateInstanceExtensionProperties(nullptr, &extension_count, extension_properties.data()) == vk::Result::eSuccess);
-		for (uint32_t ix = 0; ix < extension_count; ++ix)
-		{
-			LOG_INFO(extension_properties[ix].extensionName);
-		}
-		return true;
-	}
+			bool support_swapchain = false;
 
-	bool TestBase::create_debug_utils_messager()
-	{
-		vk::DebugUtilsMessengerCreateInfoEXT debug_util_info{};
-		debug_util_info.messageSeverity = 
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose |
-			vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
-			vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
-		debug_util_info.messageType = 
-			vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral |
-			vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
-			vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
-		debug_util_info.pfnUserCallback = debug_call_back;
-
-		// 于 vkCreateDebugUtilsMessengerEXT 函数是一个扩展函数, 不会被 Vulkan 库自动加载, 
-		// 所以需要我们自己使用 vkGetInstanceProcAddr 函数来加载它.
-		auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_vk_instance, "vkCreateDebugUtilsMessengerEXT");
-		
-		if (func)
-		{
-			VkDebugUtilsMessengerCreateInfoEXT create_info = (VkDebugUtilsMessengerCreateInfoEXT)debug_util_info;
-			func(_vk_instance, &create_info, nullptr, &_vk_debug_callback);
-		}
-		else
-		{
-			LOG_ERROR("Get vkCreateDebugUtilsMessengerEXT process address failed.");
-			return false;
-		}
-		return true;
-	}
-
-	bool TestBase::destroy_debug_utils_messager()
-	{
-		auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_vk_instance, "vkDestroyDebugUtilsMessengerEXT");
-		if (func)
-		{
-			func(_vk_instance, _vk_debug_callback, nullptr);
-		}
-		else
-		{
-			LOG_ERROR("Get vkDestroyDebugUtilsMessengerEXT process address failed.");
-			return false; 
-		}
-		return true;
-	}
-
-	bool TestBase::pick_physical_device()
-	{
-		uint32_t physical_device_count = 0;
-		ReturnIfFalse(_vk_instance.enumeratePhysicalDevices(&physical_device_count, nullptr) == vk::Result::eSuccess);
-		ReturnIfFalse(physical_device_count != 0);
-		std::vector<vk::PhysicalDevice> physical_devices(physical_device_count);
-		ReturnIfFalse(_vk_instance.enumeratePhysicalDevices(&physical_device_count, physical_devices.data()) == vk::Result::eSuccess);
-
-		for (const auto& device : physical_devices)
-		{
-			vk::PhysicalDeviceProperties properties;
-			vk::PhysicalDeviceFeatures features;
-			device.getProperties(&properties);
-			device.getFeatures(&features);
-
-			bool device_type_support = 
-				properties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu || 
-				properties.deviceType == vk::PhysicalDeviceType::eIntegratedGpu;
+			ReturnIfFalse(vk::Result::eSuccess == physical_device.getSurfaceCapabilitiesKHR(
+				vk_surface, &vk_swapchain_info.surface_capabilities
+			));
+	
+			uint32_t surface_format_count = 0;
+			ReturnIfFalse(vk::Result::eSuccess == physical_device.getSurfaceFormatsKHR(
+				vk_surface, 
+				&surface_format_count, 
+				nullptr
+			));
+			support_swapchain = surface_format_count > 0;
+	
+			vk_swapchain_info.surface_formats.resize(surface_format_count);
+			ReturnIfFalse(vk::Result::eSuccess == physical_device.getSurfaceFormatsKHR(
+				vk_surface, 
+				&surface_format_count, 
+				vk_swapchain_info.surface_formats.data()
+			));
+	
+			uint32_t present_mode_count = 0;
+			ReturnIfFalse(vk::Result::eSuccess == physical_device.getSurfacePresentModesKHR(
+				vk_surface, 
+				&present_mode_count, 
+				nullptr
+			));
+			support_swapchain = present_mode_count > 0;
+	
+			vk_swapchain_info.present_modes.resize(present_mode_count);
+			ReturnIfFalse(vk::Result::eSuccess == physical_device.getSurfacePresentModesKHR(
+				vk_surface, 
+				&present_mode_count, 
+				vk_swapchain_info.present_modes.data()
+			));
 			
+	
 			if (
 				device_type_support && 
-				find_queue_family(device) &&
-				check_device_extension(device) && 
-				check_swapchain_support(device)
+				_queue_family_index.graphics_index != INVALID_SIZE_32 && 
+				_queue_family_index.graphics_index != INVALID_SIZE_32 &&
+				support_device_extension && 
+				support_swapchain
 			)
 			{
-				_vk_physical_device = device;
-				_vk_physical_device.getMemoryProperties(&_vk_memory_properties);
-
+				vk_physical_device = physical_device;
+				vk_physical_device.getMemoryProperties(&vk_memory_properties);
 				break;
 			}
 		}
 
-		return true;
-	}
-
-	bool TestBase::find_queue_family(const auto& physical_device)
-	{
-		// 需要先确立 queue 的需求再创建 vkdevice.
-		uint32_t queue_family_count = 0;
-		physical_device.getQueueFamilyProperties(&queue_family_count, nullptr);
-		std::vector<vk::QueueFamilyProperties> properties(queue_family_count);
-		physical_device.getQueueFamilyProperties(&queue_family_count, properties.data());
-
-		for (uint32_t ix = 0; ix < properties.size(); ++ix)
-		{
-			vk::Bool32 present_support = false;
-
-			// 验证所获取的 surface 能否支持该物理设备的 queue family 进行 present.
-			if (physical_device.getSurfaceSupportKHR(ix, _surface, &present_support) == vk::Result::eSuccess && present_support) 
-			{
-				_queue_family_index.present_index = ix;
-			}
-			if (properties[ix].queueCount > 0 && properties[ix].queueFlags & vk::QueueFlagBits::eGraphics)
-			{
-				_queue_family_index.graphics_index = ix;
-			}
-
-
-			if (
-				_queue_family_index.graphics_index != INVALID_SIZE_32 && 
-				_queue_family_index.graphics_index != INVALID_SIZE_32
-			) 
-			{
-				break;
-			}
-		}
-		return true;
-	}
-
-
-	bool TestBase::create_device()
-	{
-		vk::DeviceCreateInfo device_create_info{};
 
 		std::set<uint32_t> queue_family_indices = { _queue_family_index.graphics_index, _queue_family_index.present_index };
 		std::vector<vk::DeviceQueueCreateInfo> queue_create_infos;
@@ -447,108 +420,45 @@ namespace fantasy
 			create_info.pQueuePriorities = &queue_priority;
 		}
 
-		device_create_info.pQueueCreateInfos = queue_create_infos.data();
-		device_create_info.queueCreateInfoCount = 1;
-		
-		// 暂时不设立 features.
+		vk::DeviceCreateInfo vk_device_info{};
+		vk_device_info.pQueueCreateInfos = queue_create_infos.data();
+		vk_device_info.queueCreateInfoCount = 1;
 		vk::PhysicalDeviceFeatures device_features{};
-		device_create_info.pEnabledFeatures = &device_features;
-
-		device_create_info.enabledExtensionCount = static_cast<uint32_t>(_vk_device_extensions.size());
-		device_create_info.ppEnabledExtensionNames = _vk_device_extensions.data();
+		vk_device_info.pEnabledFeatures = &device_features;
+		vk_device_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions.size());
+		vk_device_info.ppEnabledExtensionNames = device_extensions.data();
 #if DEBUG
-		device_create_info.ppEnabledLayerNames = _vk_validation_layers.data();
-		device_create_info.enabledLayerCount = static_cast<uint32_t>(_vk_validation_layers.size());
+		vk_device_info.ppEnabledLayerNames = validation_layers.data();
+		vk_device_info.enabledLayerCount = static_cast<uint32_t>(validation_layers.size());
 #endif
 
-		ReturnIfFalse(_vk_physical_device.createDevice(&device_create_info, nullptr, &_vk_device) == vk::Result::eSuccess);
-		_vk_device.getQueue(_queue_family_index.graphics_index, 0, &_vk_graphics_queue);
-		_vk_device.getQueue(_queue_family_index.present_index, 0, &_vk_present_queue);
-		
-		return true;  
-	}
 
-	bool TestBase::check_device_extension(const auto& physical_device)
-	{
-		_vk_device_extensions.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-		
-		// 检查物理设备是否支持所需扩展, 现在就只有交换链这一个设备扩展.
-		uint32_t extension_count = 0;
-		ReturnIfFalse(physical_device.enumerateDeviceExtensionProperties(nullptr, &extension_count, nullptr) == vk::Result::eSuccess);
-		std::vector<vk::ExtensionProperties> extension_properties(extension_count);
-		ReturnIfFalse(physical_device.enumerateDeviceExtensionProperties(nullptr, &extension_count, extension_properties.data()) == vk::Result::eSuccess);
+		vk::Device vk_device;
+		vk::Queue vk_graphics_queue;
+		vk::Queue vk_present_queue;
 
-		std::set<std::string> unavailble_extensions(_vk_device_extensions.begin(), _vk_device_extensions.end());
-		for (const auto& property : extension_properties)
-		{
-			unavailble_extensions.erase(property.extensionName);
-		}
-
-		return unavailble_extensions.empty();
-	}
-
-	bool TestBase::check_swapchain_support(const auto& physical_device)
-	{
-		ReturnIfFalse(vk::Result::eSuccess == physical_device.getSurfaceCapabilitiesKHR(
-			_surface, &_vk_swapchain_info.surface_capabilities
-		));
-
-		uint32_t surface_format_count = 0;
-		ReturnIfFalse(vk::Result::eSuccess == physical_device.getSurfaceFormatsKHR(
-			_surface, 
-			&surface_format_count, 
-			nullptr
-		));
-		ReturnIfFalse(surface_format_count > 0);
-
-		_vk_swapchain_info.surface_formats.resize(surface_format_count);
-		ReturnIfFalse(vk::Result::eSuccess == physical_device.getSurfaceFormatsKHR(
-			_surface, 
-			&surface_format_count, 
-			_vk_swapchain_info.surface_formats.data()
-		));
-
-		uint32_t present_mode_count = 0;
-		ReturnIfFalse(vk::Result::eSuccess == physical_device.getSurfacePresentModesKHR(
-			_surface, 
-			&present_mode_count, 
-			nullptr
-		));
-		ReturnIfFalse(present_mode_count > 0);
-
-		_vk_swapchain_info.present_modes.resize(present_mode_count);
-		ReturnIfFalse(vk::Result::eSuccess == physical_device.getSurfacePresentModesKHR(
-			_surface, 
-			&present_mode_count, 
-			_vk_swapchain_info.present_modes.data()
-		));
-		
-		return true;
-	}
+		ReturnIfFalse(vk_physical_device.createDevice(&vk_device_info, nullptr, &vk_device) == vk::Result::eSuccess);
+		vk_device.getQueue(_queue_family_index.graphics_index, 0, &vk_graphics_queue);
+		vk_device.getQueue(_queue_family_index.present_index, 0, &vk_present_queue);
 
 
-	bool TestBase::create_swapchain()
-	{
-		// 确定缓冲区个数.
-		// 若 maxImageCount 的值为 0 表明，只要内存可以满足，我们可以使用任意数量的图像.
-		uint32_t frames_in_flight_count = std::min(_vk_swapchain_info.surface_capabilities.minImageCount + 1, static_cast<uint32_t>(FLIGHT_FRAME_NUM));
+		uint32_t frames_in_flight_count = std::min(vk_swapchain_info.surface_capabilities.minImageCount + 1, static_cast<uint32_t>(FLIGHT_FRAME_NUM));
 		
 		if (
-			_vk_swapchain_info.surface_capabilities.maxImageCount > 0 &&
-			frames_in_flight_count > _vk_swapchain_info.surface_capabilities.maxImageCount
+			vk_swapchain_info.surface_capabilities.maxImageCount > 0 &&
+			frames_in_flight_count > vk_swapchain_info.surface_capabilities.maxImageCount
 		)
 		{
-			frames_in_flight_count = _vk_swapchain_info.surface_capabilities.maxImageCount;
+			frames_in_flight_count = vk_swapchain_info.surface_capabilities.maxImageCount;
 		}
 
 		vk::SwapchainCreateInfoKHR swapchain_create_info{};
-		swapchain_create_info.surface = _surface;
+		swapchain_create_info.surface = vk_surface;
 		swapchain_create_info.minImageCount = frames_in_flight_count;
 
-		// 确定缓冲区 format.
 		if (
-			_vk_swapchain_info.surface_formats.size() == 1 &&
-			_vk_swapchain_info.surface_formats[0].format == vk::Format::eUndefined
+			vk_swapchain_info.surface_formats.size() == 1 &&
+			vk_swapchain_info.surface_formats[0].format == vk::Format::eUndefined
 		)
 		{
 			swapchain_create_info.imageFormat = vk::Format::eR8G8B8A8Unorm;
@@ -557,7 +467,7 @@ namespace fantasy
 		else 
 		{
 			bool found = false;
-			for (const auto& surface_format : _vk_swapchain_info.surface_formats)
+			for (const auto& surface_format : vk_swapchain_info.surface_formats)
 			{
 				if (
 					surface_format.format == vk::Format::eR8G8B8A8Unorm &&
@@ -571,58 +481,47 @@ namespace fantasy
 			}
 			if (!found)
 			{
-				swapchain_create_info.imageFormat = _vk_swapchain_info.surface_formats[0].format;
-				swapchain_create_info.imageColorSpace = _vk_swapchain_info.surface_formats[0].colorSpace; 
+				swapchain_create_info.imageFormat = vk_swapchain_info.surface_formats[0].format;
+				swapchain_create_info.imageColorSpace = vk_swapchain_info.surface_formats[0].colorSpace; 
 			}
 		}
 		_vk_swapchain_format = swapchain_create_info.imageFormat;
 
-		for (const auto& present_mode : _vk_swapchain_info.present_modes)
+		for (const auto& present_mode : vk_swapchain_info.present_modes)
 		{
 			if (present_mode == vk::PresentModeKHR::eMailbox) { swapchain_create_info.presentMode = present_mode; break; }
 			else if (present_mode == vk::PresentModeKHR::eImmediate) { swapchain_create_info.presentMode = present_mode; break; }
 			else if (present_mode == vk::PresentModeKHR::eFifo) { swapchain_create_info.presentMode = present_mode; break; }
 		}
 
-		// 确定缓冲区分辨率.
 		swapchain_create_info.imageExtent = vk::Extent2D{ CLIENT_WIDTH, CLIENT_HEIGHT };
 		swapchain_create_info.imageArrayLayers = 1;
 		swapchain_create_info.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;
 		swapchain_create_info.clipped = VK_TRUE;
 
-		uint32_t queue_family_indices[] = { _queue_family_index.graphics_index, _queue_family_index.present_index };
+		uint32_t queue_indices[] = { _queue_family_index.graphics_index, _queue_family_index.present_index };
 		if (_queue_family_index.graphics_index != _queue_family_index.present_index)
 		{
 			swapchain_create_info.imageSharingMode = vk::SharingMode::eConcurrent;
 			swapchain_create_info.queueFamilyIndexCount = 2;
-			swapchain_create_info.pQueueFamilyIndices = queue_family_indices;
+			swapchain_create_info.pQueueFamilyIndices = queue_indices;
 		}
 		else 
 		{
-			// 一张图像同一时间只能被一个队列族所拥有, 在另一队列族使用它之前, 必须显式地改变图像所有权.
 			swapchain_create_info.imageSharingMode = vk::SharingMode::eExclusive;
 			swapchain_create_info.queueFamilyIndexCount = 0;
 			swapchain_create_info.pQueueFamilyIndices = nullptr;
 		}
-
-		// 我们可以为交换链中的图像指定一个固定的变换操作 (需要交换链具有 supportedTransforms 特性),
-		// 比如顺时针旋转 90 度或是水平翻转. 
-		// 如果读者不需要进行任何变换操作, 指定使用 currentTransform 变换即可.
-		swapchain_create_info.preTransform = _vk_swapchain_info.surface_capabilities.currentTransform;
-
-		// compositeAlpha 成员变量用于指定alpha通道是否被用来和窗口系统中的其它窗口进行混合操作.
-		// 设置为 VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR 来忽略掉 alpha 通道.
+		swapchain_create_info.preTransform = vk_swapchain_info.surface_capabilities.currentTransform;
 		swapchain_create_info.compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
-
 		swapchain_create_info.oldSwapchain = VK_NULL_HANDLE;
 
-		ReturnIfFalse(_vk_device.createSwapchainKHR(&swapchain_create_info, nullptr, &_vk_swapchain) == vk::Result::eSuccess);
+		ReturnIfFalse(vk_device.createSwapchainKHR(&swapchain_create_info, nullptr, &_vk_swapchain) == vk::Result::eSuccess);
 
-		// 获取缓冲区 buffer.
 		uint32_t back_buffer_count = 0;
-		ReturnIfFalse(_vk_device.getSwapchainImagesKHR(_vk_swapchain, &back_buffer_count, nullptr) == vk::Result::eSuccess);
+		ReturnIfFalse(vk_device.getSwapchainImagesKHR(_vk_swapchain, &back_buffer_count, nullptr) == vk::Result::eSuccess);
 		ReturnIfFalse(back_buffer_count == FLIGHT_FRAME_NUM);
-		ReturnIfFalse(_vk_device.getSwapchainImagesKHR(_vk_swapchain, &back_buffer_count, _vk_back_buffers.data()) == vk::Result::eSuccess);
+		ReturnIfFalse(vk_device.getSwapchainImagesKHR(_vk_swapchain, &back_buffer_count, _vk_back_buffers.data()) == vk::Result::eSuccess);
 		
 		_back_buffer_views.resize(back_buffer_count);
 		for (uint32_t ix = 0; ix < back_buffer_count; ++ix)
@@ -631,28 +530,19 @@ namespace fantasy
 			view_create_info.viewType = vk::ImageViewType::e2D;
 			view_create_info.image = _vk_back_buffers[ix];
 			view_create_info.format = swapchain_create_info.imageFormat;
-			
-			// components 成员变量用于进行图像颜色通道的映射.
-			// 比如, 对于单色纹理, 我们可以将所有颜色通道映射到红色通道. 我们也可以直接将颜色通道的值映射为常数 0 或 1.
-			// 这里使用默认的 VK_COMPONENT_SWIZZLE_IDENTITY.
 			view_create_info.components.r = vk::ComponentSwizzle::eIdentity;
 			view_create_info.components.g = vk::ComponentSwizzle::eIdentity;
 			view_create_info.components.b = vk::ComponentSwizzle::eIdentity;
 			view_create_info.components.a = vk::ComponentSwizzle::eIdentity;
-
-			// subresourceRange 成员变量用于指定图像的用途和图像的哪一部分可以被访问.
-			// 这里图像被用作渲染目标, 并且没有细分级别, 只存在一个图层.
-			// VK_IMAGE_ASPECT_COLOR_BIT: 表示图像的颜色方面，用于颜色附件或纹理.
-			// VK_IMAGE_ASPECT_DEPTH_BIT: 表示图像的深度方面，用于深度缓冲区.
-			// VK_IMAGE_ASPECT_STENCIL_BIT: 表示图像的模板方面，用于模板缓冲区.
 			view_create_info.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
 			view_create_info.subresourceRange.baseMipLevel = 0;
 			view_create_info.subresourceRange.levelCount = 1;
 			view_create_info.subresourceRange.baseArrayLayer = 0;
 			view_create_info.subresourceRange.layerCount = 1;
 
-			ReturnIfFalse(_vk_device.createImageView(&view_create_info, nullptr, &_back_buffer_views[ix]) == vk::Result::eSuccess);
+			ReturnIfFalse(vk_device.createImageView(&view_create_info, nullptr, &_back_buffer_views[ix]) == vk::Result::eSuccess);
 		}
-		return true;
-	}
+
+        return true;
+    }
 }
