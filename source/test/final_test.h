@@ -46,6 +46,7 @@ namespace fantasy
     class FinalTest : public TestBase
     {
     public:
+        FinalTest(GraphicsAPI api) : TestBase(api) {}
         RenderPassInterface* init_render_pass(RenderGraph* render_graph) override;
 
     private:

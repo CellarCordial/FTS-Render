@@ -458,8 +458,8 @@ namespace fantasy
 }
 
 
-int main()
-{
-	fantasy::AtmosphereTest test;
-	return test.initialize(fantasy::GraphicsAPI::Vulkan) && test.run() ? 1 : 0;
-}
+// int main()
+// {
+// 	fantasy::AtmosphereTest test;
+// 	return test.initialize(fantasy::GraphicsAPI::D3D12) && test.run() ? 1 : 0;
+// }

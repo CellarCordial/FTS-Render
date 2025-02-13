@@ -16,10 +16,10 @@ namespace fantasy
     class TestBase
     {
     public:
-        TestBase();
+        explicit TestBase(GraphicsAPI api);
         ~TestBase();
 
-        bool initialize(GraphicsAPI api);
+        bool initialize();
         bool run();
 
         virtual RenderPassInterface* init_render_pass(RenderGraph* render_graph) = 0;
@@ -49,6 +49,7 @@ namespace fantasy
         Timer _timer;
         World _world;
         GLFWwindow* _window = nullptr;
+        GraphicsAPI _api;
 
         // D3D12.
         Microsoft::WRL::ComPtr<IDXGISwapChain> _d3d12_swap_chain;
@@ -56,14 +57,8 @@ namespace fantasy
 
 
         // Vulkan
-
 		vk::DebugUtilsMessengerEXT _vk_debug_messager;
 		VkDebugUtilsMessengerEXT _vk_debug_callback;
-
-
-
-
-
 
 		vk::Extent2D _vk_client_resolution;
 		vk::SwapchainKHR _vk_swapchain;

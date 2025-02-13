@@ -120,15 +120,16 @@ namespace fantasy
 
     RenderPassInterface* FinalTest::init_render_pass(RenderGraph* render_graph)
     {
-		RenderPassInterface* test_pass = render_graph->add_pass(std::make_shared<FinalTestPass>());
+		// RenderPassInterface* test_pass = render_graph->add_pass(std::make_shared<FinalTestPass>());
 
-		return test_pass; 
+		return nullptr; 
     }
 }
 
 
-// int main()
-// {
-// 	fantasy::FinalTest test;
-// 	return test.initialize(fantasy::GraphicsAPI::D3D12) && test.run();
-// }
+int main()
+{
+	fantasy::FinalTest test(fantasy::GraphicsAPI::D3D12);
+	if (!test.initialize() || !test.run()) return -1;
+	return 0;
+}

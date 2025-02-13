@@ -41,6 +41,7 @@ namespace fantasy
 
         _pass_async_types.clear();
         _cmdlists.clear();
+		_precompute_cmdlists.clear();
     }
 
     RenderPassInterface* RenderGraph::add_pass(const std::shared_ptr<RenderPassInterface>& pass)

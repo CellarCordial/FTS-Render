@@ -17,10 +17,6 @@
 #include "dx12_ray_tracing.h"
 #include "dx12_resource.h"
 
-#pragma comment(lib, "d3d12.lib")
-#pragma comment(lib, "dxgi.lib")
-#pragma comment(lib, "d3dcompiler.lib")
-
 namespace fantasy
 {
 

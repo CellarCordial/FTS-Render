@@ -1,11 +1,8 @@
-#include "vulkan/vulkan_core.h"
-#include <cstdint>
 #define GLFW_INCLUDE_VULKAN
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3.h>
 
 #include "test_base.h"
-
 #include "../core/tools/log.h"
 #include "../dynamic_rhi/dynamic_rhi.h"
 #include "../dynamic_rhi/resource.h"
@@ -14,15 +11,24 @@
 #include "../scene/scene.h"
 #include "../scene/camera.h"
 #include <d3d12.h>
+#include <dxgi1_3.h>
+#include <dxgidebug.h>
 #include <memory>
 #include <set>
 
 #define VK_USE_PLATFORM_WIN32_KHR
 #include <GLFW/glfw3native.h>
 
+
+#pragma comment(lib, "dxgi.lib")
+#pragma comment(lib, "d3d12.lib")
+#pragma comment(lib, "dxguid.lib")
+#pragma comment(lib, "d3dcompiler.lib")
+
+
 namespace fantasy 
 {
-    TestBase::TestBase()
+    TestBase::TestBase(GraphicsAPI api) : _api(api)
     {
         parallel::initialize();
     }
@@ -32,13 +38,29 @@ namespace fantasy
         parallel::destroy();
 		glfwDestroyWindow(_window);
 		glfwTerminate();
+
+		switch (_api) 
+		{
+		case GraphicsAPI::D3D12:
+			{
+				Microsoft::WRL::ComPtr<IDXGIDebug1> dxgi_debug;
+				if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgi_debug))))
+				{
+					dxgi_debug->ReportLiveObjects(
+						DXGI_DEBUG_ALL, 
+						DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL)
+					);
+				}
+			}
+		case GraphicsAPI::Vulkan: break;
+		}
     }
 
-    bool TestBase::initialize(GraphicsAPI api)
+    bool TestBase::initialize()
     {
         ReturnIfFalse(init_window() && init_scene());
 
-        switch (api)
+        switch (_api)
         {
         case GraphicsAPI::D3D12: ReturnIfFalse(init_d3d12()); set_shader_platform(ShaderPlatform::DXIL); break;
         case GraphicsAPI::Vulkan: ReturnIfFalse(init_vulkan()); set_shader_platform(ShaderPlatform::SPIRV); break;
@@ -49,7 +71,8 @@ namespace fantasy
 
     bool TestBase::run()
     {
-        init_render_pass(_render_graph.get())->precede(_gui_pass.get());
+        RenderPassInterface* pass = init_render_pass(_render_graph.get());
+		if (pass) pass->precede(_gui_pass.get());
         
         ReturnIfFalse(_render_graph->compile());
 		while (!glfwWindowShouldClose(_window))
