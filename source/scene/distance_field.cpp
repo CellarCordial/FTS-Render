@@ -82,7 +82,7 @@ namespace fantasy
 		Mesh* mesh = event.entity->get_component<Mesh>();
 		distance_field->mesh_distance_fields.resize(mesh->submeshes.size());
 
-		bool load_from_file = false;
+		bool loaded_from_cache = false;
 		if (is_file_exist(_sdf_data_path.c_str()))
 		{
 			serialization::BinaryInput input(_sdf_data_path);
@@ -110,11 +110,11 @@ namespace fantasy
 					input.load_binary_data(mesh_df.sdf_data.data(), data_size);
 				}
 				gui::notify_message(gui::ENotifyType::Info, "Loaded " + _sdf_data_path.substr(_sdf_data_path.find("asset")));
-				load_from_file = true;
+				loaded_from_cache = true;
 			}
 		}
 
-		if (!load_from_file)
+		if (!loaded_from_cache)
 		{
 			std::string model_name = *event.entity->get_component<std::string>();
 			for (uint32_t ix = 0; ix < distance_field->mesh_distance_fields.size(); ++ix)

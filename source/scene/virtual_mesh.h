@@ -100,7 +100,6 @@ namespace fantasy
         uint32_t mip_level = 0;
         float lod_error = 0.0f;
 
-        Bounds3F bounding_box;
         Sphere bounding_sphere;
         Sphere lod_bounding_sphere;
     };
@@ -124,9 +123,9 @@ namespace fantasy
         
         struct VirtualSubmesh
         {
+            uint32_t mip_levels;
             std::vector<MeshCluster> clusters;
             std::vector<MeshClusterGroup> cluster_groups;
-            uint32_t mip_levels;
         };
 
         std::vector<VirtualSubmesh> _submeshes;
@@ -167,7 +166,7 @@ namespace fantasy
 
     struct MeshClusterGroupGpu
     {
-        float4 lod_bounding_sphere;
+        float4 bounding_sphere;
 
         uint32_t cluster_count;
         uint32_t cluster_index_offset;
@@ -209,7 +208,7 @@ namespace fantasy
     )
     {
         MeshClusterGroupGpu ret;
-        ret.lod_bounding_sphere = float4(
+        ret.bounding_sphere = float4(
             group.bounding_sphere.center.x,
             group.bounding_sphere.center.y,
             group.bounding_sphere.center.z,

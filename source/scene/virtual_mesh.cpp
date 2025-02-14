@@ -1,6 +1,7 @@
 #include "virtual_mesh.h"
 #include "geometry.h"
 #include "scene.h"
+#include "../core/tools/file.h"
 
 namespace fantasy
 {
@@ -776,7 +777,6 @@ namespace fantasy
 				vertex_positions[ix] = cluster.vertices[ix].position;
 			}
 
-			cluster.bounding_box = Bounds3F(vertex_positions);
 			cluster.bounding_sphere = Sphere(vertex_positions);
 			cluster.lod_bounding_sphere = cluster.bounding_sphere;
 		}
@@ -1021,7 +1021,6 @@ namespace fantasy
 			}
 
 			cluster.mip_level = cluster_group.mip_level + 1;
-			cluster.bounding_box = Bounds3F(vertex_positions);
 			cluster.bounding_sphere = Sphere(vertex_positions);
 
 			cluster.lod_bounding_sphere = cluster_group.bounding_sphere;
@@ -1033,8 +1032,179 @@ namespace fantasy
     bool SceneSystem::publish(World* world, const event::OnComponentAssigned<VirtualMesh>& event)
 	{
 		VirtualMesh* virtual_geometry = event.component;
-		Mesh* mesh = event.entity->get_component<Mesh>();
+		
+		std::string* name = event.entity->get_component<std::string>();
+		std::string cache_path = std::string(PROJ_DIR) + "asset/cache/virtual_mesh/" + *name + ".vm";
 
-		return virtual_geometry->build(mesh);
+		bool loaded_from_cache = false;
+
+		if (is_file_exist(cache_path.c_str()))
+		{
+			serialization::BinaryInput input(cache_path);
+			
+			uint32_t cluster_size = 0, group_size = 0;
+			input(cluster_size, group_size);
+			
+			if (cluster_size == MeshCluster::cluster_size && group_size == MeshClusterGroup::group_size)
+			{
+				uint64_t submesh_size = 0;
+				input(submesh_size);
+				virtual_geometry->_submeshes.resize(submesh_size);
+
+				for (auto& virtual_submesh : virtual_geometry->_submeshes)
+				{
+					uint64_t cluster_size = 0, cluster_group_size = 0;
+					input(virtual_submesh.mip_levels, cluster_size, cluster_group_size);
+
+					virtual_submesh.clusters.resize(cluster_size);
+					virtual_submesh.cluster_groups.resize(cluster_group_size);
+
+					for (auto& cluster : virtual_submesh.clusters)
+					{
+						input(cluster.geometry_id);
+
+						uint64_t vertex_count = 0;
+						input(vertex_count);
+						cluster.vertices.resize(vertex_count);
+						for (auto& vertex : cluster.vertices)
+						{
+							input(
+								vertex.position.x,
+								vertex.position.y,
+								vertex.position.z,
+								vertex.normal.x,
+								vertex.normal.y,
+								vertex.normal.z,
+								vertex.tangent.x,
+								vertex.tangent.y,
+								vertex.tangent.z,
+								vertex.uv.x,
+								vertex.uv.y
+							);
+						}
+
+						input(
+							cluster.indices,
+							cluster.external_edges,
+							cluster.group_id,
+							cluster.mip_level,
+							cluster.lod_error,
+							cluster.bounding_sphere.center.x,
+							cluster.bounding_sphere.center.y,
+							cluster.bounding_sphere.center.z,
+							cluster.bounding_sphere.radius,
+							cluster.lod_bounding_sphere.center.x,
+							cluster.lod_bounding_sphere.center.y,
+							cluster.lod_bounding_sphere.center.z,
+							cluster.lod_bounding_sphere.radius
+						);
+					}
+					for (auto& cluster_group : virtual_submesh.cluster_groups)
+					{
+						input(cluster_group.mip_level, cluster_group.cluster_indices);
+
+						uint64_t external_edge_count = 0;
+						input(external_edge_count);
+						cluster_group.external_edges.resize(external_edge_count);
+						for (auto& external_edge : cluster_group.external_edges)
+						{
+							input(external_edge.first, external_edge.second);
+						}
+
+						input(
+							cluster_group.bounding_sphere.center.x,
+							cluster_group.bounding_sphere.center.y,
+							cluster_group.bounding_sphere.center.z,
+							cluster_group.bounding_sphere.radius,
+							cluster_group.parent_lod_error
+						);
+					}
+				}
+				loaded_from_cache = true;
+			}
+		}
+
+		if (!loaded_from_cache)
+		{
+			Mesh* mesh = event.entity->get_component<Mesh>();
+			ReturnIfFalse(virtual_geometry->build(mesh));
+
+			serialization::BinaryOutput output(cache_path);
+
+			output(
+				MeshCluster::cluster_size, 
+				MeshClusterGroup::group_size,
+				virtual_geometry->_submeshes.size()
+			);
+
+			for (const auto& virtual_submesh : virtual_geometry->_submeshes)
+			{
+				output(
+					virtual_submesh.mip_levels, 
+					virtual_submesh.clusters.size(), 
+					virtual_submesh.cluster_groups.size()
+				);
+
+				for (const auto& cluster : virtual_submesh.clusters)
+				{
+					output(cluster.geometry_id, cluster.vertices.size());
+
+					for (const auto& vertex : cluster.vertices)
+					{
+						output(
+							vertex.position.x,
+							vertex.position.y,
+							vertex.position.z,
+							vertex.normal.x,
+							vertex.normal.y,
+							vertex.normal.z,
+							vertex.tangent.x,
+							vertex.tangent.y,
+							vertex.tangent.z,
+							vertex.uv.x,
+							vertex.uv.y
+						);
+					}
+
+					output(
+						cluster.indices,
+						cluster.external_edges,
+						cluster.group_id,
+						cluster.mip_level,
+						cluster.lod_error,
+						cluster.bounding_sphere.center.x,
+						cluster.bounding_sphere.center.y,
+						cluster.bounding_sphere.center.z,
+						cluster.bounding_sphere.radius,
+						cluster.lod_bounding_sphere.center.x,
+						cluster.lod_bounding_sphere.center.y,
+						cluster.lod_bounding_sphere.center.z,
+						cluster.lod_bounding_sphere.radius
+					);
+				}
+				for (auto& cluster_group : virtual_submesh.cluster_groups)
+				{
+					output(
+						cluster_group.mip_level, 
+						cluster_group.cluster_indices,
+						cluster_group.external_edges.size()
+					);
+
+					for (const auto& external_edge : cluster_group.external_edges)
+					{
+						output(external_edge.first, external_edge.second);
+					}
+
+					output(
+						cluster_group.bounding_sphere.center.x,
+						cluster_group.bounding_sphere.center.y,
+						cluster_group.bounding_sphere.center.z,
+						cluster_group.bounding_sphere.radius,
+						cluster_group.parent_lod_error
+					);
+				}
+			}
+		}
+		return true;
 	}
 }

@@ -27,7 +27,7 @@ namespace fantasy
 		_global_entity = _world->get_global_entity();
 
 		// _global_entity->assign<SDFGrid>();
-		// _global_entity->assign<event::AddModel>();
+		_global_entity->assign<event::AddModel>();
 		// _global_entity->assign<event::GenerateSdf>();
 		// _global_entity->assign<event::AddSpotLight>();
 		// _global_entity->assign<event::AddPointLight>();
@@ -99,7 +99,7 @@ namespace fantasy
 		if (model_entity && parallel::thread_finished(thread_id) && parallel::thread_success(thread_id))
 		{
 			_world->add_delay_entity(model_entity);
-			// ReturnIfFalse(_global_entity->get_component<event::AddModel>()->broadcast());
+			ReturnIfFalse(_global_entity->get_component<event::AddModel>()->broadcast());
 
 			thread_id = INVALID_SIZE_64;
 			model_entity = nullptr;
