@@ -44,7 +44,7 @@ namespace fantasy
 		std::shared_ptr<BufferInterface> _mesh_cluster_group_buffer;
 		std::shared_ptr<BufferInterface> _mesh_cluster_buffer;
 		std::shared_ptr<BufferInterface> _visible_cluster_id_buffer;
-		std::shared_ptr<BufferInterface> _virtual_gbuffer_indirect_buffer;
+		std::shared_ptr<BufferInterface> _virtual_gbuffer_draw_indirect_buffer;
 		std::shared_ptr<TextureInterface> _hierarchical_zbuffer_texture;
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;

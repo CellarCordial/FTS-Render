@@ -1,5 +1,6 @@
 #include "../common/gbuffer.slang"
 
+[vk_binding(0, 0)]
 cbuffer pass_constants : register(b0)
 {
     float4x4 view_proj;
@@ -43,7 +44,7 @@ struct PixelOutput
     float4 emmisive : SV_TARGET7;
 };
 
-StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
+[vk_binding(1, 0)] StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
 
 struct VTPageInfo
 {
@@ -51,7 +52,7 @@ struct VTPageInfo
     uint32_t page_id_mip_level;
 };
 
-RWStructuredBuffer<VTPageInfo> vt_page_info_buffer : register(u0);
+[vk_binding(6, 0)] RWStructuredBuffer<VTPageInfo> vt_page_info_buffer : register(u0);
 
 uint32_t estimate_mip_level(float2 texture_coordinate);
 
@@ -60,15 +61,15 @@ PixelOutput main(VertexOutput input)
 {
     GeometryConstant geometry = geometry_constant_buffer[input.geometry_id];
     uint2 page_id = (uint2)floor(input.uv * (geometry.texture_resolution / vt_page_size));
-    uint2 page_id_high_bit = (page_id >> 8) & 0xf;
+    uint2 page_id_high_bit = (page_id >> 8) & 0x0f;
     uint2 page_id_low_bit = page_id & 0xff;
 
-    uint2 geometry_texture_pixel_id = uint2(input.uv * geometry.texture_resolution);
+    uint2 geometry_texture_pixel_id = (uint2)(input.uv * geometry.texture_resolution);
     uint32_t mip_level = estimate_mip_level(geometry_texture_pixel_id);
 
     VTPageInfo info;
     info.geometry_id = input.geometry_id;
-    info.page_id_mip_level = uint32_t(
+    info.page_id_mip_level = (uint32_t)(
         (page_id_low_bit.x << 24) |
         (page_id_low_bit.y << 16) |
         (page_id_high_bit.x << 12) |
@@ -76,9 +77,10 @@ PixelOutput main(VertexOutput input)
         (mip_level & 0xff)
     );
 
-    uint2 pixel_id = (uint2)input.sv_position.xy;
+    uint2 pixel_id = (uint2)round(input.sv_position.xy);
     uint32_t pixel_index = pixel_id.x + pixel_id.y * client_width;
     vt_page_info_buffer[pixel_index] = info;
+    
 
     PixelOutput output;
     output.world_position_view_depth = float4(input.world_space_position, input.view_space_position.z);

@@ -129,7 +129,7 @@ namespace fantasy
         float4x4 world_matrix;
         bool moved = false;
         
-        uint32_t mesh_id = 0;
+        uint32_t submesh_base_id = 0;
     };
 
     struct GeometryConstantGpu
@@ -145,7 +145,6 @@ namespace fantasy
 
         uint2 texture_resolution;
     };
-
     
 	inline std::string get_geometry_texture_name(
         uint32_t submesh_index,

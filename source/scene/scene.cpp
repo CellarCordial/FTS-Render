@@ -153,8 +153,6 @@ namespace fantasy
 		// if (*finished_task_num < 3) std::this_thread::yield();
 		// gui::notify_message(gui::ENotifyType::Info, "Loaded " + event.model_path);
 
-		ReturnIfFalse(_current_mesh_count++ < MAX_MESH_NUM);
-		
 		// Entity* tmp_model_entity = event.entity;
 		// gui::add(
 		// 	[tmp_model_entity, this]()

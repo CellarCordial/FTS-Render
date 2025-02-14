@@ -36,22 +36,31 @@ namespace fantasy
 			cs_compile_desc.shader_name = "culling/hierarchical_zbuffer_ps.slang";
 			cs_compile_desc.entry_point = "main";
 			cs_compile_desc.target = ShaderTarget::Compute;
-			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
-			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
-			ShaderData cs_data = compile_shader(cs_compile_desc);
+			cs_compile_desc.defines.resize(3);
+			cs_compile_desc.defines[0] = "THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X);
+			cs_compile_desc.defines[1] = "THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y);
+
+			cs_compile_desc.defines[2] = "COPY_DEPTH=" + std::to_string(0);
+			ShaderData calc_mip_cs_data = compile_shader(cs_compile_desc);
+			cs_compile_desc.defines[2] = "COPY_DEPTH=" + std::to_string(1);
+			ShaderData copy_depth_cs_data = compile_shader(cs_compile_desc);
 
 			ShaderDesc cs_desc;
 			cs_desc.entry = "main";
 			cs_desc.shader_type = ShaderType::Compute;
-			ReturnIfFalse(_cs = std::unique_ptr<Shader>(create_shader(cs_desc, cs_data.data(), cs_data.size())));
+			ReturnIfFalse(_calc_mip_cs = std::unique_ptr<Shader>(create_shader(cs_desc, calc_mip_cs_data.data(), calc_mip_cs_data.size())));
+			ReturnIfFalse(_copy_depth_cs = std::unique_ptr<Shader>(create_shader(cs_desc, copy_depth_cs_data.data(), copy_depth_cs_data.size())));
 		}
 
 		// Pipeline.
 		{
 			ComputePipelineDesc pipeline_desc;
-			pipeline_desc.compute_shader = _cs;
 			pipeline_desc.binding_layouts.push_back(_binding_layout);
-			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
+
+			pipeline_desc.compute_shader = _calc_mip_cs;
+			ReturnIfFalse(_calc_mip_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
+			pipeline_desc.compute_shader = _copy_depth_cs;
+			ReturnIfFalse(_copy_depth_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
 		}
 
 		// Binding Set.
@@ -81,7 +90,6 @@ namespace fantasy
 		// Compute state.
 		{
 			_compute_state.binding_sets.push_back(_binding_set.get());
-			_compute_state.pipeline = _pipeline.get();
 		}
 
         uint32_t* ptr = &_pass_constants[0].hzb_resolution;
@@ -99,8 +107,12 @@ namespace fantasy
 			static_cast<uint32_t>((align(_pass_constants[0].hzb_resolution, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
 			static_cast<uint32_t>((align(_pass_constants[0].hzb_resolution, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
 		};
+		// TODO
+		_compute_state.pipeline = _copy_depth_pipeline.get();
+		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constants[0]));
 
-        for (uint32_t ix = 0; ix < _pass_constants.size(); ++ix)
+		_compute_state.pipeline = _calc_mip_pipeline.get();
+        for (uint32_t ix = 1; ix < _pass_constants.size(); ++ix)
         {
             ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constants[ix]));
         }

@@ -29,8 +29,10 @@ namespace fantasy
     
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 
-		std::shared_ptr<Shader> _cs;
-		std::unique_ptr<ComputePipelineInterface> _pipeline;
+		std::shared_ptr<Shader> _calc_mip_cs;
+		std::shared_ptr<Shader> _copy_depth_cs;
+		std::unique_ptr<ComputePipelineInterface> _calc_mip_pipeline;
+		std::unique_ptr<ComputePipelineInterface> _copy_depth_pipeline;
 
 		std::unique_ptr<BindingSetInterface> _binding_set;
 		ComputeState _compute_state;

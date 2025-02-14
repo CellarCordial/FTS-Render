@@ -4,12 +4,21 @@
 #include "../../render_graph/render_pass.h"
 #include "../../core/math/matrix.h"
 #include "../../scene/geometry.h"
+#include "../../scene/virtual_texture.h"
 #include <vector>
  
 namespace fantasy
 {
 	namespace constant
 	{
+		enum class VirtualGBufferViewMode : uint32_t
+		{
+			Triangle,
+			Cluster,
+			ClusterGroup,
+			ClusterMip
+		};
+
 		struct VirtualGBufferPassConstant
 		{
             float4x4 view_proj;
@@ -17,25 +26,11 @@ namespace fantasy
             float4x4 view_matrix;
             float4x4 prev_view_matrix;
 
-            uint32_t view_mode;
-            uint32_t mip_level;
-            uint32_t vt_page_size;
-            uint32_t client_width;
+            VirtualGBufferViewMode view_mode = VirtualGBufferViewMode::Triangle;
+            uint32_t mip_level = 0;
+            uint32_t vt_page_size = VT_PAGE_SIZE;
+            uint32_t client_width = CLIENT_WIDTH;
 		};
-
-		struct GeometryConstant
-        {
-            float4x4 world_matrix;
-            float4x4 inv_trans_world;
-
-            float4 diffuse;   
-            float4 emissive;
-            float roughness = 0.0f;
-            float metallic = 0.0f;
-            float occlusion = 0.0f;
-
-			uint2 texture_resolution;
-        };
 	}
 
 	class VirtualGBufferPass : public RenderPassInterface

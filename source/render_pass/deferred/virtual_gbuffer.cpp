@@ -3,6 +3,7 @@
 #include "../../core/tools/check_cast.h"
 #include "../../scene/virtual_mesh.h"
 #include "../../scene/virtual_texture.h"
+#include "../../scene/camera.h"
 #include <cstdint>
 #include <memory>
 
@@ -190,6 +191,7 @@ namespace fantasy
 			_graphics_state.frame_buffer = _frame_buffer.get();
 			_graphics_state.binding_sets.resize(1);
 			_graphics_state.viewport_state = ViewportState::create_default_viewport(CLIENT_WIDTH, CLIENT_HEIGHT);
+			_graphics_state.indirect_buffer = check_cast<BufferInterface>(cache->require("draw_indexed_indirect_arguments_buffer")).get();
 		}
 
 		return true;
@@ -201,7 +203,15 @@ namespace fantasy
 
 		if (!_resource_writed)
 		{
-			bool res = cache->get_world()->each<VirtualMesh, Mesh, Material>(
+			World* world = cache->get_world();
+
+			Camera* camera = world->get_global_entity()->get_component<Camera>();
+			_pass_constant.view_matrix = camera->view_matrix;
+			_pass_constant.view_proj = camera->get_view_proj();
+			_pass_constant.prev_view_matrix = camera->prev_view_matrix;
+
+
+			bool res = world->each<VirtualMesh, Mesh, Material>(
                 [&](Entity* entity, VirtualMesh* virtual_mesh, Mesh* mesh, Material* material) -> bool
                 {
                     for (const auto& submesh : virtual_mesh->_submeshes)
@@ -248,6 +258,7 @@ namespace fantasy
             );
 			ReturnIfFalse(res);
 
+
 			DeviceInterface* device = cmdlist->get_deivce();
 
 			ReturnIfFalse(_cluster_vertex_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
@@ -276,8 +287,8 @@ namespace fantasy
 			));
 
 			ReturnIfFalse(cmdlist->write_buffer(_cluster_vertex_buffer.get(), _cluster_vertices.data(), sizeof(Vertex) * _cluster_vertices.size()));
-			ReturnIfFalse(cmdlist->write_buffer(_cluster_triangle_buffer.get(), _cluster_triangles.data(), sizeof(Vertex) * _cluster_vertices.size()));
-			ReturnIfFalse(cmdlist->write_buffer(_geometry_constant_buffer.get(), _geometry_constants.data(), sizeof(Vertex) * _cluster_vertices.size()));
+			ReturnIfFalse(cmdlist->write_buffer(_cluster_triangle_buffer.get(), _cluster_triangles.data(), sizeof(uint32_t) * _cluster_triangles.size()));
+			ReturnIfFalse(cmdlist->write_buffer(_geometry_constant_buffer.get(), _geometry_constants.data(), sizeof(GeometryConstantGpu) * _geometry_constants.size()));
 
 			_binding_set.reset();
 			_binding_set_items[1] = BindingSetItem::create_structured_buffer_srv(0, _geometry_constant_buffer);
@@ -291,7 +302,6 @@ namespace fantasy
 			)));
 
 			_graphics_state.binding_sets[0] = _binding_set.get();
-			_graphics_state.indirect_buffer = check_cast<BufferInterface>(cache->require("draw_indexed_indirect_arguments_buffer")).get();
 
 			_resource_writed = true;
 		}

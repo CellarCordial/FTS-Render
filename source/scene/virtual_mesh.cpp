@@ -2,6 +2,7 @@
 #include "geometry.h"
 #include "scene.h"
 #include "../core/tools/file.h"
+#include <cstdint>
 
 namespace fantasy
 {
@@ -619,7 +620,9 @@ namespace fantasy
 
 	bool VirtualMesh::build(const Mesh* mesh)
 	{
-		_geometry_id = mesh->mesh_id << 16;
+        uint32_t current_geometry_id = mesh->submesh_base_id;
+		
+		uint32_t cluster_offset = 0;
 		for (const auto& submesh : mesh->submeshes)
 		{
 			_indices.insert(_indices.end(), submesh.indices.begin(), submesh.indices.end());
@@ -653,7 +656,13 @@ namespace fantasy
 			}
 			virtual_submesh.mip_levels = mip_level + 1;
 
-			_geometry_id++;
+			for (uint32_t ix = cluster_offset; ix < virtual_submesh.clusters.size(); ++ix)
+			{
+				virtual_submesh.clusters[ix].geometry_id = current_geometry_id;
+			}
+			cluster_offset += static_cast<uint32_t>(virtual_submesh.clusters.size());
+
+			current_geometry_id++;
 			_indices.clear();
 			_vertices.clear();
 		}

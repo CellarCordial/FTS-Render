@@ -82,7 +82,7 @@ namespace fantasy
 			const Material* material = _current_model->get_component<Material>();
 			const auto& image = material->submaterials[_current_submaterial_index].images[_current_image_index];
 
-			uint32_t mip_levels = std::log2( material->image_resolution / vt_page_size) + 1;
+			uint32_t mip_levels = std::log2( material->image_resolution / VT_PAGE_SIZE) + 1;
 			_textures.resize(mip_levels);
 
 			ReturnIfFalse(_textures[0] = std::shared_ptr<TextureInterface>(device->create_texture(

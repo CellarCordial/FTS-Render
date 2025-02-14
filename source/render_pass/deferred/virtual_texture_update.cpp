@@ -35,7 +35,7 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc cs_compile_desc;
-			cs_compile_desc.shader_name = "deferred/virtual_geometry_texture_cs.slang";
+			cs_compile_desc.shader_name = "deferred/virtual_texture_update_cs.slang";
 			cs_compile_desc.entry_point = "main";
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
@@ -113,7 +113,7 @@ namespace fantasy
 			_compute_state.pipeline = _pipeline.get();
 		}
 
-        _pass_constant.vt_page_size = vt_page_size;
+        _pass_constant.vt_page_size = VT_PAGE_SIZE;
         _pass_constant.vt_physical_texture_size = vt_physical_texture_resolution;
  
 		return true;
@@ -147,20 +147,19 @@ namespace fantasy
 			[&](uint64_t x, uint64_t y)
 			{
 				uint32_t offset = static_cast<uint32_t>(x + y * CLIENT_WIDTH);
-				const auto& info = *(data + offset);
+				const VTPageInfo& info = *(data + offset);
 
 				uint2 page_id;
 				uint32_t mip_level;
-				uint32_t mesh_id;
 				uint32_t submesh_id;
-				info.get_data(mesh_id, submesh_id, page_id, mip_level);
+				info.get_data(submesh_id, page_id, mip_level);
 
 				bool res = world->each<std::string, Mesh, Material>(
 					[&](Entity* mesh_entity, std::string* model_name, Mesh* mesh, Material* material) -> bool
 					{
-						if (mesh->mesh_id == mesh_id)
+						if (mesh->submesh_base_id <= submesh_id && submesh_id < mesh->submesh_base_id + mesh->submeshes.size())
 						{
-							const auto& submesh = mesh->submeshes[submesh_id];
+							const auto& submesh = mesh->submeshes[submesh_id - mesh->submesh_base_id];
 							
 							ReturnIfFalse(world->each<MipmapLUT>(
 								[&](Entity* entity, MipmapLUT* mipmap_lut) -> bool
@@ -178,12 +177,12 @@ namespace fantasy
 											std::lock_guard lock(info_mutex);
 
 											VTPage::LoadFlag flag = page->flag;
-											page_physical_pos = _vt_physical_table.add_page(page) * vt_page_size;
+											page_physical_pos = _vt_physical_table.add_page(page) * VT_PAGE_SIZE;
 
 											if (flag == VTPage::LoadFlag::Unload)
 											{
 												copy_infos.emplace_back(TextureCopyInfo{
-													.submesh_id = submesh_id,
+													.submesh_id = submesh_id - mesh->submesh_base_id,
 													.page = page,
 													.page_physical_pos = page_physical_pos,
 													.model_name = model_name
@@ -216,10 +215,10 @@ namespace fantasy
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
 			{
 				TextureSlice dst_slice = TextureSlice{
-					.x = info.page_physical_pos.x * vt_page_size,
-					.y = info.page_physical_pos.y * vt_page_size,
-					.width = vt_page_size,
-					.height = vt_page_size
+					.x = info.page_physical_pos.x * VT_PAGE_SIZE,
+					.y = info.page_physical_pos.y * VT_PAGE_SIZE,
+					.width = VT_PAGE_SIZE,
+					.height = VT_PAGE_SIZE
 				};
 				TextureSlice src_slice = TextureSlice{
 					.x = info.page->bounds._lower.x,

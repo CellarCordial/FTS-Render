@@ -9,8 +9,6 @@
 
 namespace fantasy
 {
-	static const uint32_t MAX_MESH_NUM = sizeof(uint16_t);
-	
 	class SceneSystem :
 		public EntitySystemInterface,
 		public EventSubscriber<event::OnModelLoad>,
@@ -41,7 +39,7 @@ namespace fantasy
 		std::string _model_directory;
 		std::string _sdf_data_path;
 		std::string _surface_cache_path;
-		uint32_t _current_mesh_count = 0;
+		uint32_t _current_submesh_count = 0;
 
 		std::unordered_set<std::string> _loaded_model_names;
 

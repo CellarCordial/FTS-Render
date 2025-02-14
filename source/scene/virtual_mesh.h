@@ -159,7 +159,7 @@ namespace fantasy
 
         uint32_t vertex_offset;
         uint32_t triangle_offset;
-        uint32_t triangle_count;
+        uint32_t vertex_index_count;
 
         uint32_t geometry_id;
     };
@@ -195,7 +195,7 @@ namespace fantasy
         ret.mip_level = cluster.mip_level;
         ret.group_id = cluster.group_id;
         ret.lod_error = cluster.lod_error;
-        ret.triangle_count = static_cast<uint32_t>(cluster.indices.size()) / 3;
+        ret.vertex_index_count = static_cast<uint32_t>(cluster.indices.size()) / 3;
         ret.geometry_id = cluster.geometry_id;
         ret.vertex_offset = vertex_offset;
         ret.triangle_offset = triangle_offset;

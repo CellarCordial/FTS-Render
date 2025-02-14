@@ -11,7 +11,7 @@
 
 namespace fantasy 
 {
-    const static uint32_t vt_page_size = 128u;
+    const static uint32_t VT_PAGE_SIZE = 128u;
 	const static uint32_t lowest_texture_resolution = 512u;
 	const static uint32_t highest_texture_resolution = 4096u;
     static const uint32_t vt_physical_texture_resolution = 4096u;
@@ -42,14 +42,13 @@ namespace fantasy
         uint32_t geometry_id;
         uint32_t page_id_mip_level;
 
-        void get_data(uint32_t& mesh_id, uint32_t& submesh_id, uint2& page_id, uint32_t& mip_level) const
+        void get_data(uint32_t& submesh_id, uint2& page_id, uint32_t& mip_level) const
         {
             page_id = uint2(
                 ((page_id_mip_level >> 12) & 0xf << 8) | (page_id_mip_level >> 24) & 0xff,
                 ((page_id_mip_level >> 8) & 0xf << 8) | (page_id_mip_level >> 16) & 0xff
             );
-            mesh_id = geometry_id >> 16;
-            submesh_id = geometry_id & 0xffff;
+            submesh_id = geometry_id;
         }
     };
 
@@ -58,8 +57,8 @@ namespace fantasy
     public:
         bool initialize(
             uint32_t mip0_resolution, 
-            uint32_t max_mip_resolution = vt_page_size, 
-            uint32_t page_size = vt_page_size
+            uint32_t max_mip_resolution = VT_PAGE_SIZE, 
+            uint32_t page_size = VT_PAGE_SIZE
         );
 
         VTPage* query_page(uint2 page_id, uint32_t mip_level);
@@ -151,7 +150,7 @@ namespace fantasy
         }
 
     public:
-        VTPhysicalTable(uint32_t resolution = vt_physical_texture_resolution, uint32_t tile_size = vt_page_size) : 
+        VTPhysicalTable(uint32_t resolution = vt_physical_texture_resolution, uint32_t tile_size = VT_PAGE_SIZE) : 
             _resolution(resolution),
             _resolution_in_tile(resolution / tile_size),
             _tiles((resolution / tile_size) * (resolution / tile_size), on_page_evict) 

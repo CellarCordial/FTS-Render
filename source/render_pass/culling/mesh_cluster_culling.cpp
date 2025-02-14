@@ -62,29 +62,27 @@ namespace fantasy
 
 		// Buffer.
 		{
-			ReturnIfFalse(_virtual_gbuffer_indirect_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+			ReturnIfFalse(_virtual_gbuffer_draw_indirect_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_read_write_structured_buffer(
 					sizeof(DrawIndexedIndirectArguments), 
 					sizeof(DrawIndexedIndirectArguments),
-					"virtual_gbuffer_indirect_buffer"
+					"virtual_gbuffer_draw_indirect_buffer"
 				)
 			)));
-            cache->collect(_virtual_gbuffer_indirect_buffer, ResourceType::Buffer);
+            cache->collect(_virtual_gbuffer_draw_indirect_buffer, ResourceType::Buffer);
 		}
 
         uint32_t hzb_mip_levels = search_most_significant_bit(_hzb_resolution) + 1;
+
 		// Texture.
 		{
-            TextureDesc desc = TextureDesc::create_shader_resource_texture(
-                _hzb_resolution,
-                _hzb_resolution,
-                Format::R32_FLOAT,
-                "hierarchical_zbuffer_texture"
-            );
+            TextureDesc desc;
+            desc.name = "hierarchical_zbuffer_texture";
+            desc.width = _hzb_resolution;
+            desc.height = _hzb_resolution;
+            desc.format = Format::R32_FLOAT;
             desc.mip_levels = hzb_mip_levels;
-			ReturnIfFalse(
-                _hierarchical_zbuffer_texture = std::shared_ptr<TextureInterface>(device->create_texture(desc))
-            );
+			ReturnIfFalse(_hierarchical_zbuffer_texture = std::shared_ptr<TextureInterface>(device->create_texture(desc)));
 			cache->collect(_hierarchical_zbuffer_texture, ResourceType::Texture);
 		}
  
@@ -92,14 +90,14 @@ namespace fantasy
 		{
 			_binding_set_items.resize(7);
 			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::MeshClusterCullingPassConstant));
-			_binding_set_items[1] = BindingSetItem::create_structured_buffer_uav(0, _virtual_gbuffer_indirect_buffer);
+			_binding_set_items[1] = BindingSetItem::create_structured_buffer_uav(0, _virtual_gbuffer_draw_indirect_buffer);
 
 			_binding_set_items[5] = BindingSetItem::create_texture_srv(
                 2, 
                 _hierarchical_zbuffer_texture,
                 TextureSubresourceSet{ 
-                    .base_mip_level = hzb_mip_levels - 1,
-                    .mip_level_count = 1,
+                    .base_mip_level = 0,
+                    .mip_level_count = hzb_mip_levels,
                     .base_array_slice = 0,
                     .array_slice_count = 1
                 }
@@ -136,9 +134,9 @@ namespace fantasy
             DeviceInterface* device = cmdlist->get_deivce();
             _pass_constant.group_count = 0;
 
+            uint32_t cluster_count = 0;
             uint32_t vertex_offset = 0;
             uint32_t triangle_offset = 0;
-            uint32_t cluster_index_offset = 0;
 
             ReturnIfFalse(world->each<VirtualMesh>(
                 [&](Entity* entity, VirtualMesh* virtual_mesh) -> bool
@@ -149,7 +147,7 @@ namespace fantasy
 
                         for (const auto& group : submesh.cluster_groups)
                         {
-                            _mesh_cluster_groups.emplace_back(convert_mesh_cluster_group(group, cluster_index_offset));
+                            _mesh_cluster_groups.emplace_back(convert_mesh_cluster_group(group, cluster_count));
 
                             for (auto ix : group.cluster_indices)
                             {
@@ -160,7 +158,7 @@ namespace fantasy
                                 triangle_offset += static_cast<uint32_t>(cluster.indices.size() / 3);
                             }
                             
-                            cluster_index_offset += static_cast<uint32_t>(group.cluster_indices.size());
+                            cluster_count += static_cast<uint32_t>(group.cluster_indices.size());
                         }
 
                     }  
@@ -187,7 +185,7 @@ namespace fantasy
 
             ReturnIfFalse(_visible_cluster_id_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
                 BufferDesc::create_read_write_structured_buffer(
-                    sizeof(uint32_t) * cluster_index_offset, 
+                    sizeof(uint32_t) * cluster_count, 
                     sizeof(uint32_t),
                     "visible_cluster_id_buffer"
                 )

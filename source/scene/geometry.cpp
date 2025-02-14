@@ -55,10 +55,11 @@ namespace fantasy
 
 
 		Mesh* mesh = event.component;
-		mesh->mesh_id = _current_mesh_count;
-		
 		auto& submeshes = mesh->submeshes;
 		submeshes.resize(assimp_meshes.size());
+
+		mesh->submesh_base_id = _current_submesh_count;
+		_current_submesh_count += static_cast<uint32_t>(submeshes.size());
 
 		parallel::parallel_for(
 			[&](uint64_t ix)

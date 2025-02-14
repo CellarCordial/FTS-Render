@@ -46,7 +46,7 @@ struct MeshCluster
 
 struct MeshClusterGroup
 {
-    float4 lod_bounding_sphere;
+    float4 bounding_sphere;
 
     uint32_t cluster_count;
     uint32_t cluster_index_offset;
