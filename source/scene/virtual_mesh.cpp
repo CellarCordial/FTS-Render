@@ -1,4 +1,5 @@
 #include "virtual_mesh.h"
+#include "geometry.h"
 #include "scene.h"
 
 namespace fantasy
@@ -118,7 +119,7 @@ namespace fantasy
 		_heap_indices[_heap[index]] = index;
 	}
 
-	MeshOptimizer::MeshOptimizer(std::vector<float3>& vertices, std::vector<uint32_t>& indices) :
+	MeshOptimizer::MeshOptimizer(std::vector<Vertex>& vertices, std::vector<uint32_t>& indices) :
 		_vertices(vertices), 
 		_indices(indices),
 		_vertex_ref_count(vertices.size()),
@@ -133,7 +134,7 @@ namespace fantasy
 
 		for (uint32_t ix = 0; ix < _vertices.size(); ++ix)
 		{
-			_vertex_table.insert(hash(_vertices[ix]), ix);
+			_vertex_table.insert(hash(_vertices[ix].position), ix);
 		}
 
 		uint64_t edge_num = std::min(std::min(_indices.size(), 3 * _vertices.size() - 6), _triangle_surfaces.size() + _vertices.size());
@@ -144,15 +145,15 @@ namespace fantasy
 		for (uint32_t ix = 0; ix < _indices.size(); ++ix)
 		{
 			_vertex_ref_count[_indices[ix]]++;
-			const auto& vertex_position = _vertices[_indices[ix]];
+			const auto& vertex = _vertices[_indices[ix]];
 
-			_index_table.insert(hash(vertex_position), ix);
+			_index_table.insert(hash(vertex.position), ix);
 			
-			float3 p0 = vertex_position;
-			float3 p1 = _vertices[_indices[triangle_edge_index_cycle(ix)]];
+			Vertex p0 = vertex;
+			Vertex p1 = _vertices[_indices[triangle_edge_index_cycle(ix)]];
 
-			uint32_t key0 = hash(p0);
-			uint32_t key1 = hash(p1);
+			uint32_t key0 = hash(p0.position);
+			uint32_t key1 = hash(p1.position);
 			if (key0 > key1)
 			{
 				std::swap(key0, key1);
@@ -163,7 +164,7 @@ namespace fantasy
 			for (uint32_t jx : _edges_begin_table[key0])
 			{
 				const auto& edge = _edges[jx];
-				if (edge.first == p0 && edge.second == p1) 
+				if (edge.first.position == p0.position && edge.second.position == p1.position) 
 				{
 					already_exist = true;
 					break;
@@ -213,8 +214,8 @@ namespace fantasy
 			_heap.pop();
 			
 			const auto& edge = _edges[edge_index];
-			_edges_begin_table.remove(hash(edge.first), edge_index);
-			_edges_end_table.remove(hash(edge.second), edge_index);
+			_edges_begin_table.remove(hash(edge.first.position), edge_index);
+			_edges_end_table.remove(hash(edge.second.position), edge_index);
 
 			_max_error = std::max(evaluate(edge.first, edge.second, true), _max_error);
 
@@ -242,7 +243,7 @@ namespace fantasy
 	{
 		for (uint32_t ix : _index_table[hash(position)])
 		{
-			if (_vertices[_indices[ix]] == position)
+			if (_vertices[_indices[ix]].position == position)
 			{
 				_flags[ix] |= LockFlag;
 			}
@@ -262,9 +263,9 @@ namespace fantasy
 		uint32_t vertex_index2 = _indices[triangle_index * 3 + 2];
 
 		// 第 triangle_index 个三角形的三个顶点.
-		const float3& p0 = _vertices[vertex_index0];	
-		const float3& p1 = _vertices[vertex_index1];	
-		const float3& p2 = _vertices[vertex_index2];
+		const float3& p0 = _vertices[vertex_index0].position;	
+		const float3& p1 = _vertices[vertex_index1].position;	
+		const float3& p2 = _vertices[vertex_index2].position;
 
 		bool need_removed = p0 == p1 || p1 == p2 || p2 == p0;
 		if (!need_removed)
@@ -274,7 +275,7 @@ namespace fantasy
 			for (uint32_t ix = 0; ix < 3; ++ix)
 			{
 				uint32_t& vertex_index = _indices[triangle_index * 3 + ix];
-				const auto& vertex_position = _vertices[vertex_index];
+				const auto& vertex_position = _vertices[vertex_index].position;
 				uint32_t key = hash(vertex_position);
 				for (uint32_t jx : _vertex_table[key])
 				{
@@ -282,7 +283,7 @@ namespace fantasy
 					{
 						break;
 					}
-					else if (vertex_position == _vertices[jx]) 
+					else if (vertex_position == _vertices[jx].position) 
 					{
 						assert(_vertex_ref_count[vertex_index] > 0);
 						if (--_vertex_ref_count[vertex_index] == 0)
@@ -315,7 +316,6 @@ namespace fantasy
 
 		if (need_removed)
 		{
-			// Remove the whole triangle.
 			_triangle_removed_set.set_true(triangle_index);
 			_remain_triangle_count--;
 
@@ -325,7 +325,7 @@ namespace fantasy
 			{
 				uint32_t index_index = triangle_index * 3 + ix;
 				uint32_t& vertex_index = _indices[index_index];
-				const auto& vertex_position = _vertices[vertex_index];
+				const auto& vertex_position = _vertices[vertex_index].position;
 
 				uint32_t key = hash(vertex_position);
 				_index_table.remove(key, index_index);
@@ -381,9 +381,9 @@ namespace fantasy
 		return count == _remain_triangle_count;
 	}
 
-	float MeshOptimizer::evaluate(const float3& p0, const float3& p1, bool if_merge)
+	float MeshOptimizer::evaluate(const Vertex& p0, const Vertex& p1, bool if_merge)
 	{
-		if (p0 == p1) return 0.0f;
+		if (p0.position == p1.position) return 0.0f;
 
 		// error 是一个综合误差值，用于量化合并两个顶点 (p0 和 p1) 的代价, 由以下几方面进行量化:
 		// 1. 如果合并后影响的邻接三角形数量超过 24 个，误差会增加, 防止合并导致过于密集的几何区域.
@@ -395,11 +395,11 @@ namespace fantasy
 		float error = 0.0f;
 
 		std::vector<uint32_t> adjacency_triangle_indices;
-		auto BuildAdjacencyTrianlges = [this, &adjacency_triangle_indices](const float3& vertex, bool& lock)
+		auto func_build_adjacency_triangles = [this, &adjacency_triangle_indices](const float3& vertex, bool& lock)
 		{
 			for (uint32_t ix : _index_table[hash(vertex)])
 			{
-				if (_vertices[_indices[ix]] == vertex)
+				if (_vertices[_indices[ix]].position == vertex)
 				{
 					uint32_t triangle_index = ix / 3;
 					if ((_flags[triangle_index * 3] & AdjacencyFlag) == 0)
@@ -414,8 +414,8 @@ namespace fantasy
 		};
 
 		bool lock0 = false, lock1 = false;
-		BuildAdjacencyTrianlges(p0, lock0);
-		BuildAdjacencyTrianlges(p1, lock1);
+		func_build_adjacency_triangles(p0.position, lock0);
+		func_build_adjacency_triangles(p1.position, lock1);
 
 		if (adjacency_triangle_indices.empty()) return 0.0f;
 		if (adjacency_triangle_indices.size() > 24u) error += 0.5f * (adjacency_triangle_indices.size() - 24u);
@@ -423,21 +423,26 @@ namespace fantasy
 		QuadricSurface surface;
 		for (uint32_t ix : adjacency_triangle_indices) surface = merge(surface, _triangle_surfaces[ix]);
 
-		float3 p = (p0 + p1) * 0.5f;
+		Vertex average_p;
+		average_p.position = (p0.position + p1.position) * 0.5f;
+		average_p.normal = normalize(p0.normal + p1.normal);
+		average_p.tangent = normalize(p0.tangent + p1.tangent);
+		average_p.uv = (p0.uv + p1.uv) * 0.5f;
+
+		Vertex p = average_p;
 		if (lock0 && lock1) error += 1e8;
 		if (lock0 && !lock1) p = p0;
 		else if (!lock0 && lock1) p = p1;
-		else if (!surface.get_vertex(p)) p = (p0 + p1) * 0.5f;
+		else if (!surface.get_vertex(p.position)) p = average_p;
 		
-		if (distance(p, p0) + distance(p, p1) > 2.0f * distance(p0, p1)) p = (p0 + p1) * 0.5f; 
+		if (distance(p.position, p0.position) + distance(p.position, p1.position) > 2.0f * distance(p0.position, p1.position)) p = average_p; 
 
-
-		error += surface.distance_to_surface(p);
+		error += surface.distance_to_surface(p.position);
 
 		if (if_merge)
 		{
-			merge_begin(p0);
-			merge_begin(p1);
+			merge_begin(p0.position);
+			merge_begin(p1.position);
 
 			// 将邻接的顶点全部合并.
 			for (uint32_t ix : adjacency_triangle_indices)
@@ -445,10 +450,10 @@ namespace fantasy
 				for (uint32_t jx = 0; jx < 3; ++jx)
 				{
 					uint32_t vertex_index = ix * 3 + jx;
-					float3& vertex_position = _vertices[_indices[vertex_index]];
-					if (vertex_position == p0 || vertex_position == p1)
+					Vertex& vertex = _vertices[_indices[vertex_index]];
+					if (vertex.position == p0.position || vertex.position == p1.position)
 					{
-						vertex_position = p;
+						vertex = p;
 						if (lock0 || lock1)
 						{
 							_flags[vertex_index] |= LockFlag;
@@ -460,8 +465,8 @@ namespace fantasy
 			for (uint32_t ix : removed_edge_indices)
 			{
 				auto& edge = _edges[ix];
-				if (edge.first == p0 || edge.first == p1) edge.first = p;
-				if (edge.second == p0 || edge.second == p1) edge.second = p;
+				if (edge.first.position == p0.position || edge.first.position == p1.position) edge.first = p;
+				if (edge.second.position == p0.position || edge.second.position == p1.position) edge.second = p;
 			}
 
 			mergen_end();
@@ -486,11 +491,11 @@ namespace fantasy
 
 			for (uint32_t vertex_index : adjacency_vertex_indices)
 			{
-				const auto& vertex_position = _vertices[vertex_index];
+				const auto& vertex_position = _vertices[vertex_index].position;
 				uint32_t key = hash(vertex_position);
 				for (uint32_t ix : _edges_begin_table[key])
 				{
-					if (_edges[ix].first == vertex_position && _heap.is_valid(ix))
+					if (_edges[ix].first.position == vertex_position && _heap.is_valid(ix))
 					{
 						_heap.remove(ix);
 						edge_need_reevaluate_indices.push_back(ix);
@@ -498,7 +503,7 @@ namespace fantasy
 				}
 				for (uint32_t ix : _edges_end_table[key])
 				{
-					if (_edges[ix].second == vertex_position && _heap.is_valid(ix))
+					if (_edges[ix].second.position == vertex_position && _heap.is_valid(ix))
 					{
 						_heap.remove(ix);
 						edge_need_reevaluate_indices.push_back(ix);
@@ -522,7 +527,7 @@ namespace fantasy
 		uint32_t key = hash(p);
 		for (uint32_t ix : _vertex_table[key])
 		{
-			if (_vertices[ix] == p)
+			if (_vertices[ix].position == p)
 			{
 				_vertex_table.remove(key, ix);
 				removed_vertex_indices.push_back(ix);
@@ -530,7 +535,7 @@ namespace fantasy
 		}
 		for (uint32_t ix : _index_table[key])
 		{
-			if (_vertices[_indices[ix]] == p)
+			if (_vertices[_indices[ix]].position == p)
 			{
 				_index_table.remove(key, ix);
 				removed_index_indices.push_back(ix);
@@ -538,18 +543,18 @@ namespace fantasy
 		}
 		for (uint32_t ix : _edges_begin_table[key])
 		{
-			if (_edges[ix].first == p)
+			if (_edges[ix].first.position == p)
 			{
 				_edges_begin_table.remove(key, ix);
-				_edges_end_table.remove(hash(_edges[ix].second), ix);
+				_edges_end_table.remove(hash(_edges[ix].second.position), ix);
 				removed_edge_indices.push_back(ix);
 			}
 		}
 		for (uint32_t ix : _edges_end_table[key])
 		{
-			if (_edges[ix].second == p)
+			if (_edges[ix].second.position == p)
 			{
-				_edges_begin_table.remove(hash(_edges[ix].first), ix);
+				_edges_begin_table.remove(hash(_edges[ix].first.position), ix);
 				_edges_end_table.remove(key, ix);
 				removed_edge_indices.push_back(ix);
 			}
@@ -560,18 +565,18 @@ namespace fantasy
 	{
 		for (uint32_t ix : removed_vertex_indices)
 		{
-			_vertex_table.insert(hash(_vertices[ix]), ix);
+			_vertex_table.insert(hash(_vertices[ix].position), ix);
 		}
 		for (uint32_t ix : removed_index_indices)
 		{
-			_index_table.insert(hash(_vertices[_indices[ix]]), ix);
+			_index_table.insert(hash(_vertices[_indices[ix]].position), ix);
 		}
 		for (uint32_t ix : removed_edge_indices)
 		{
 			auto& edge = _edges[ix];
 			
-			uint32_t h0 = hash(edge.first);
-			uint32_t h1 = hash(edge.second);
+			uint32_t h0 = hash(edge.first.position);
+			uint32_t h1 = hash(edge.second.position);
 			if (h0 > h1)
 			{
 				std::swap(h0, h1);
@@ -617,14 +622,7 @@ namespace fantasy
 		for (const auto& submesh : mesh->submeshes)
 		{
 			_indices.insert(_indices.end(), submesh.indices.begin(), submesh.indices.end());
-			
-			uint32_t start_index = _vertices.size();
-			_vertices.resize(_vertices.size() + submesh.vertices.size());
-
-			for (uint32_t ix = 0; ix < submesh.vertices.size(); ++ix)
-			{
-				_vertices[start_index + ix] = submesh.vertices[ix].position;
-			}
+			_vertices.insert(_vertices.end(), submesh.vertices.begin(), submesh.vertices.end());
 
 			auto& virtual_submesh = _submeshes.emplace_back();
 			
@@ -673,7 +671,7 @@ namespace fantasy
 
  
 	void VirtualMesh::build_adjacency_graph(
-		const std::vector<float3>& vertices, 
+		const std::vector<Vertex>& vertices, 
 		const std::vector<uint32_t>& indices, 
 		SimpleGraph& edge_link_graph, 
 		SimpleGraph& adjacency_graph
@@ -686,16 +684,16 @@ namespace fantasy
 
 		for (uint32_t edge_start_index = 0; edge_start_index < indices.size(); ++edge_start_index)
 		{
-			const float3& p0 = vertices[indices[edge_start_index]];
-			const float3& p1 = vertices[indices[triangle_edge_index_cycle(edge_start_index)]];
+			const float3& p0 = vertices[indices[edge_start_index]].position;
+			const float3& p1 = vertices[indices[triangle_edge_index_cycle(edge_start_index)]].position;
 
 			// 查找表示相邻三角形的共享顶点和相对边.
 			edge_table.insert(edge_hash(p0, p1), edge_start_index);
 			for (uint32_t edge_end_index : edge_table[edge_hash(p1, p0)])
 			{
 				if (
-					p1 == vertices[indices[edge_end_index]] && 
-					p0 == vertices[indices[triangle_edge_index_cycle(edge_end_index)]]
+					p1 == vertices[indices[edge_end_index]].position && 
+					p0 == vertices[indices[triangle_edge_index_cycle(edge_end_index)]].position
 				)
 				{
 					// 增加权重.
@@ -729,14 +727,14 @@ namespace fantasy
 		GraphPartitionar partitionar;
 		partitionar.partition_graph(triangle_adjacency_graph, MeshCluster::cluster_size - 4, MeshCluster::cluster_size);
 
-		for (const auto& [left, right] : partitionar.part_ranges)
+		for (const auto& [start, end] : partitionar.part_ranges)
 		{
 			auto& cluster = submesh.clusters.emplace_back();
 
 			// key: 在 _indices 中该 vertex 的 index 值; 
 			// hash value: 在 cluster.vertices 中该 vertex 所在的位置序号.
 			std::unordered_map<uint32_t, uint32_t> cluster_vertex_index_map;
-			for (uint32_t ix = left; ix < right; ++ix)
+			for (uint32_t ix = start; ix < end; ++ix)
 			{
 				uint32_t triangle_index = partitionar.node_indices[ix];
 				for (uint32_t jx = 0; jx < 3; ++jx)
@@ -758,7 +756,7 @@ namespace fantasy
 						uint32_t remapped_edge_end_index = partitionar.node_map[edge_end_index / 3];
 						
 						// Edge_end_index(remapped) in different partitions indicate a boundary
-						if (remapped_edge_end_index < left || remapped_edge_end_index >= right)
+						if (remapped_edge_end_index < start || remapped_edge_end_index >= end)
 						{
 							is_external = true;
 							break;
@@ -771,8 +769,15 @@ namespace fantasy
 					cluster.indices.push_back(cluster_vertex_index_map[vertex_index]);
 				}
 			}
-			cluster.bounding_box = Bounds3F(cluster.vertices);
-			cluster.bounding_sphere = Sphere(cluster.vertices);
+
+			std::vector<float3> vertex_positions(cluster.vertices.size());
+			for (uint32_t ix = 0; ix < vertex_positions.size(); ++ix) 
+			{
+				vertex_positions[ix] = cluster.vertices[ix].position;
+			}
+
+			cluster.bounding_box = Bounds3F(vertex_positions);
+			cluster.bounding_sphere = Sphere(vertex_positions);
 			cluster.lod_bounding_sphere = cluster.bounding_sphere;
 		}
 
@@ -812,8 +817,8 @@ namespace fantasy
 			const auto& vertices = clusters_view[cluster_index].vertices;
 			const auto& indices = clusters_view[cluster_index].indices;
 
-			const auto& p0 = vertices[indices[edge_start_index]];
-			const auto& p1 = vertices[indices[triangle_edge_index_cycle(edge_start_index)]];
+			const auto& p0 = vertices[indices[edge_start_index]].position;
+			const auto& p1 = vertices[indices[triangle_edge_index_cycle(edge_start_index)]].position;
 			edge_table.insert(edge_hash(p0, p1), ix);
 			for (uint32_t jx : edge_table[edge_hash(p1, p0)])
 			{
@@ -822,8 +827,8 @@ namespace fantasy
 				const auto& another_indices = clusters_view[another_cluster_index].indices;
 
 				if (
-					p1 == another_vertices[another_indices[another_edge_start_index]] && 
-					p0 == another_vertices[another_indices[triangle_edge_index_cycle(another_edge_start_index)]]
+					p1 == another_vertices[another_indices[another_edge_start_index]].position && 
+					p0 == another_vertices[another_indices[triangle_edge_index_cycle(another_edge_start_index)]].position
 				)
 				{
 					edge_link_graph[ix][jx]++;
@@ -849,12 +854,12 @@ namespace fantasy
 		GraphPartitionar partitionar;
 		partitionar.partition_graph(cluster_graph, MeshClusterGroup::group_size - 4, MeshClusterGroup::group_size);
 
-		for (auto [left, right] : partitionar.part_ranges)
+		for (auto [start, end] : partitionar.part_ranges)
 		{
 			auto& cluster_group = submesh.cluster_groups.emplace_back();
 			cluster_group.mip_level = mip_level;
 
-			for (uint32_t ix = left; ix < right; ++ix)
+			for (uint32_t ix = start; ix < end; ++ix)
 			{
 				uint32_t cluster_index = partitionar.node_indices[ix];
 				submesh.clusters[cluster_index + level_offset].group_id = static_cast<uint32_t>(submesh.cluster_groups.size() - 1);
@@ -872,7 +877,7 @@ namespace fantasy
 						uint32_t remapped_cluster_index = partitionar.node_map[edge_cluster_map[edge_end_index]];
 						
 						// Edge_end_index(remapped) in different partitions indicate a boundary
-						if (remapped_cluster_index < left || remapped_cluster_index >= right)
+						if (remapped_cluster_index < start || remapped_cluster_index >= end)
 						{
 							is_external = true;
 							break;
@@ -899,13 +904,13 @@ namespace fantasy
 		uint32_t index_offset = 0;
 		float parent_lod_error = 0.0f;
 		std::vector<Sphere> parent_lod_bounding_spheres;
-		std::vector<uint32_t> indices;
-		std::vector<float3> vertex_positions;
+		std::vector<uint32_t> cluster_indices;
+		std::vector<Vertex> cluster_vertices;
 		for (auto cluster_index : cluster_group.cluster_indices)
 		{
 			const auto& cluster = submesh.clusters[cluster_index];
-			for (const auto& p : cluster.vertices) vertex_positions.push_back(p);
-			for (const auto& i : cluster.indices) indices.push_back(i + index_offset);
+			for (const auto& p : cluster.vertices) cluster_vertices.push_back(p);
+			for (const auto& i : cluster.indices) cluster_indices.push_back(i + index_offset);
 			index_offset += static_cast<uint32_t>(cluster.vertices.size());
 
 			parent_lod_bounding_spheres.push_back(cluster.lod_bounding_sphere);
@@ -916,16 +921,16 @@ namespace fantasy
 		cluster_group.parent_lod_error = parent_lod_error;
 
 		// 将边界顶点加入 edge_table 中, 并在 optimizer 中锁住, 以进行 optimize().
-		MeshOptimizer optimizer(vertex_positions, indices);
+		MeshOptimizer optimizer(cluster_vertices, cluster_indices);
 		HashTable edge_table(static_cast<uint32_t>(cluster_group.external_edges.size()));
 		for (uint32_t ix = 0; ix < cluster_group.external_edges.size(); ++ix)
 		{
 			const auto& [cluster_index, edge_index] = cluster_group.external_edges[ix];
-			auto& positions = submesh.clusters[cluster_index].vertices;
-        	auto& vertex_indices = submesh.clusters[cluster_index].indices;
+			const auto& vertices = submesh.clusters[cluster_index].vertices;
+        	const auto& vertex_indices = submesh.clusters[cluster_index].indices;
 			
-			const float3& p0 = positions[vertex_indices[edge_index]];
-			const float3& p1 = positions[vertex_indices[triangle_edge_index_cycle(edge_index)]];
+			const float3& p0 = vertices[vertex_indices[edge_index]].position;
+			const float3& p1 = vertices[vertex_indices[triangle_edge_index_cycle(edge_index)]].position;
 			edge_table.insert(edge_hash(p0, p1), ix);
 			optimizer.lock_position(p0);
 			optimizer.lock_position(p1);
@@ -940,8 +945,8 @@ namespace fantasy
 		SimpleGraph edge_link_graph;
 		SimpleGraph triangle_adjacency_graph;
 		build_adjacency_graph(
-			vertex_positions,
-			indices,
+			cluster_vertices,
+			cluster_indices,
 			edge_link_graph, 
 			triangle_adjacency_graph
 		);
@@ -949,23 +954,23 @@ namespace fantasy
 		GraphPartitionar partitionar;
 		partitionar.partition_graph(triangle_adjacency_graph, MeshCluster::cluster_size - 4, MeshCluster::cluster_size);
 
-		for (const auto& [left, right] : partitionar.part_ranges)
+		for (const auto& [start, end] : partitionar.part_ranges)
 		{
 			auto& cluster = submesh.clusters.emplace_back();
 
 			// Map the vertices in _vertices to the _clusters.
 			std::unordered_map<uint32_t, uint32_t> cluster_vertex_index_map;
-			for (uint32_t ix = left; ix < right; ++ix)
+			for (uint32_t ix = start; ix < end; ++ix)
 			{
 				uint32_t triangle_index = partitionar.node_indices[ix];
 				for (uint32_t jx = 0; jx < 3; ++jx)
 				{
 					uint32_t edge_start_index = triangle_index * 3 + jx;
-					uint32_t vertex_index = indices[edge_start_index];
+					uint32_t vertex_index = cluster_indices[edge_start_index];
 					if (cluster_vertex_index_map.find(vertex_index) == cluster_vertex_index_map.end())
 					{
 						cluster_vertex_index_map[vertex_index] = static_cast<uint32_t>(cluster.vertices.size());
-						cluster.vertices.push_back(vertex_positions[vertex_index]);
+						cluster.vertices.push_back(cluster_vertices[vertex_index]);
 					}
 
 					bool is_external = false;
@@ -974,14 +979,14 @@ namespace fantasy
 						uint32_t remapped_triangle_index = partitionar.node_map[edge_end_index / 3];
 						
 						// Edge_end_index(remapped) in different partitions indicate a boundary
-						if (remapped_triangle_index < left || remapped_triangle_index >= right)
+						if (remapped_triangle_index < start || remapped_triangle_index >= end)
 						{
 							is_external = true;
 							break;
 						}
 					}
-					const float3& p0 = vertex_positions[vertex_index];
-					const float3& p1 = vertex_positions[indices[triangle_edge_index_cycle(edge_start_index)]];
+					const float3& p0 = cluster_vertices[vertex_index].position;
+					const float3& p1 = cluster_vertices[cluster_indices[triangle_edge_index_cycle(edge_start_index)]].position;
 					if (!is_external)
 					{
 						for (uint32_t jx : edge_table[edge_hash(p0, p1)])
@@ -991,8 +996,8 @@ namespace fantasy
         					auto& vertex_indices = submesh.clusters[cluster_index].indices;
 
 							if (
-								p0 == positions[vertex_indices[edge_index]] && 
-								p1 == positions[vertex_indices[triangle_edge_index_cycle(edge_index)]]
+								p0 == positions[vertex_indices[edge_index]].position && 
+								p1 == positions[vertex_indices[triangle_edge_index_cycle(edge_index)]].position
 							)
 							{
 								is_external = true;
@@ -1008,9 +1013,16 @@ namespace fantasy
 					cluster.indices.push_back(cluster_vertex_index_map[vertex_index]);
 				}
 			}
+
+			std::vector<float3> vertex_positions(cluster.vertices.size());
+			for (uint32_t ix = 0; ix < vertex_positions.size(); ++ix) 
+			{
+				vertex_positions[ix] = cluster.vertices[ix].position;
+			}
+
 			cluster.mip_level = cluster_group.mip_level + 1;
-			cluster.bounding_box = Bounds3F(cluster.vertices);
-			cluster.bounding_sphere = Sphere(cluster.vertices);
+			cluster.bounding_box = Bounds3F(vertex_positions);
+			cluster.bounding_sphere = Sphere(vertex_positions);
 
 			cluster.lod_bounding_sphere = cluster_group.bounding_sphere;
 			cluster.lod_error = parent_lod_error;
