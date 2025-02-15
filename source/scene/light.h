@@ -40,7 +40,8 @@ namespace fantasy
         float sun_angular_radius = 0.9999f;
 
         float3 direction;
-        float4x4 view_proj;
+        float4x4 view_matrix;
+        float4x4 proj_matrix;
 
         void update_direction_view_proj()
         {
@@ -53,11 +54,12 @@ namespace fantasy
                 std::sin(x) * std::cos(y)
             ));
 
-            view_proj = mul(
-                look_at_left_hand(-direction * 20.0f, float3{}, float3(0.0f, 1.0f, 0.0f)),
-                orthographic_left_hand(20.0f, 20.0f, 0.1f, 80.0f)
-            );
+            view_matrix = look_at_left_hand(get_position(), float3{}, float3(0.0f, 1.0f, 0.0f));
+            proj_matrix = orthographic_left_hand(20.0f, 20.0f, 0.1f, 50.0f);
         }
+
+        float3 get_position() const { return -direction * 20.0f; }
+        float4x4 get_view_proj() const { return mul(view_matrix, proj_matrix); }
     };
 }
 

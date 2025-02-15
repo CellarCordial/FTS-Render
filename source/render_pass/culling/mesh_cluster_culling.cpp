@@ -20,6 +20,8 @@ namespace fantasy
 				return true;
             }
         );
+
+		ReturnIfFalse(cache->collect_constants("cluster_group_count", &_cluster_group_count));
         
 		// Binding Layout.
 		{
@@ -43,7 +45,6 @@ namespace fantasy
 			cs_compile_desc.entry_point = "main";
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
-			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
 			ShaderData cs_data = compile_shader(cs_compile_desc);
 
 			ShaderDesc cs_desc;
@@ -128,6 +129,8 @@ namespace fantasy
         _pass_constant.camera_fov_y = camera->get_fov_y();
         _pass_constant.view_matrix = camera->view_matrix;
         _pass_constant.proj_matrix = camera->proj_matrix;
+        _pass_constant.near_plane = camera->get_near_z();
+        _pass_constant.far_plane = camera->get_far_z();
 
         if (!_resource_writed)
         {
@@ -147,7 +150,7 @@ namespace fantasy
 
                         for (const auto& group : submesh.cluster_groups)
                         {
-                            _mesh_cluster_groups.emplace_back(convert_mesh_cluster_group(group, cluster_count));
+                            _mesh_cluster_groups.emplace_back(convert_mesh_cluster_group(group, cluster_count, submesh.mip_levels - 1));
 
                             for (auto ix : group.cluster_indices)
                             {

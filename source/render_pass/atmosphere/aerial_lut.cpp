@@ -136,7 +136,7 @@ namespace fantasy
 				{
 					_pass_constant.sun_direction = pLight->direction;
 					_pass_constant.sun_theta = std::asin(-pLight->direction.y);
-					_pass_constant.shadow_view_proj = pLight->view_proj;
+					_pass_constant.shadow_view_proj = pLight->get_view_proj();
 					return true;
 				}
 			));

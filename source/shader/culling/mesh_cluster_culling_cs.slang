@@ -1,5 +1,4 @@
 // #define THREAD_GROUP_SIZE_X 1
-// #define THREAD_GROUP_SIZE_Y 1
 
 #include "../common/gbuffer.slang"
 #include "../common/math.slang"
@@ -18,6 +17,8 @@ cbuffer pass_constants : register(b0)
 
     uint32_t group_count;
     uint32_t cluster_size;
+    float near_plane;
+    float far_plane;
 };
 
 [vk_binding(1, 0)] RWStructuredBuffer<DrawIndirectArguments> virtual_gbuffer_draw_indirect_buffer : register(u0);
@@ -110,24 +111,25 @@ bool frustum_cull(float3 view_space_position, float radius, float4x4 proj_matrix
     float3 p2 = normalize(float3(0, proj_matrix[1][1], 1));
     float3 p3 = normalize(float3(0, -proj_matrix[1][1], 1));
 
-    bool visiable = dot(p0, view_space_position) < radius;
-    visiable = visiable && dot(p1, view_space_position) < radius;
-    visiable = visiable && dot(p2, view_space_position) < radius;
-    visiable = visiable && dot(p3, view_space_position) < radius;
-    return visiable;
+    bool visible = dot(p0, view_space_position) < radius;
+    visible = visible && dot(p1, view_space_position) < radius;
+    visible = visible && dot(p2, view_space_position) < radius;
+    visible = visible && dot(p3, view_space_position) < radius;
+    return visible;
 }
 
 bool check_lod(float3 view_space_position, float radius, float error)
 {
+    // 根据物体远近确定 LOD.
     float distance = max(length(view_space_position) - radius, 0.0f);   // 摄像机到物体包围球的最近距离.
     float theta = radians(camera_fov_y) / client_height;    // 每个像素点所占有的弧度值, 即像素的角分辨率.
     return distance * theta >= error;   // distance * theta 为半径乘以圆心角, 结果是弧长, 若弧长大于阈值, 则表明足够精细.
 }
 
-#if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y)
+#if defined(THREAD_GROUP_SIZE_X)
 
 [shader("compute")]
-[numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
+[numthreads(THREAD_GROUP_SIZE_X, 1, 1)]
 void main(uint3 thread_id: SV_DispatchThreadID)
 {
     uint32_t group_index = thread_id.x;
@@ -151,30 +153,35 @@ void main(uint3 thread_id: SV_DispatchThreadID)
             {
                 float3 cluster_view_space_position = mul(float4(cluster.bounding_sphere.xyz, 1.0f), view_matrix).yxz;
 
-                // 包围球在 z 轴上的最远端不超过近平面, 则将该 cluster 剔除.
-                if (cluster_view_space_position.z + cluster.bounding_sphere.w > 0.1f)
+                // 包围球在 z 轴上的最远端不超过近平面或最近端超过远平面, 则将该 cluster 剔除.
+                if (
+                    cluster_view_space_position.z + cluster.bounding_sphere.w < near_plane ||
+                    cluster_view_space_position.z - cluster.bounding_sphere.w > far_plane
+                )
+                    return;
+
+                // 判定是否在视锥体内, 以及从 hzb 中采样深度值进行比较.
+                visible = frustum_cull(cluster_view_space_position, cluster.bounding_sphere.w, proj_matrix) &&
+                          cluster_view_space_position.z - cluster.bounding_sphere.w > near_plane &&
+                          cluster_view_space_position.z + cluster.bounding_sphere.w < far_plane &&
+                          hierarchical_zbuffer_cull(
+                            cluster_view_space_position,
+                            cluster.bounding_sphere.w,
+                            proj_matrix
+                          );
+                
+                if (visible)
                 {
-                    // 判定是否在视锥体内, 以及从 hzb 中采样深度值进行比较.
-                    visible = frustum_cull(cluster_view_space_position, cluster.bounding_sphere.w, proj_matrix) &&
-                              cluster_view_space_position.z + cluster.bounding_sphere.w < -0.1f &&
-                              hierarchical_zbuffer_cull(
-                                  cluster_view_space_position, 
-                                  cluster.bounding_sphere.w, 
-                                  proj_matrix
-                              );
-                    if (visible)
-                    {
-                        uint32_t current_pos;
-                        InterlockedAdd(
-                            virtual_gbuffer_draw_indirect_buffer[0].instance_count,
-                            1,
-                            current_pos
+                    uint32_t current_pos;
+                    InterlockedAdd(
+                        virtual_gbuffer_draw_indirect_buffer[0].instance_count,
+                        1,
+                        current_pos
                         );
-                        current_pos++;
-                        
-                        virtual_gbuffer_draw_indirect_buffer[0].vertex_count = cluster_size;
-                        visible_cluster_id_buffer[current_pos] = cluster_id;
-                    }
+                    current_pos++;
+
+                    virtual_gbuffer_draw_indirect_buffer[0].vertex_count = cluster_size;
+                    visible_cluster_id_buffer[current_pos] = cluster_id;
                 }
             }
         }

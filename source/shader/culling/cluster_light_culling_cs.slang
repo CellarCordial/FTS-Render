@@ -1,3 +1,6 @@
+#define THREAD_GROUP_SIZE_X 1
+#define THREAD_GROUP_SIZE_Y 1
+
 #include "../common/light.slang"
 
 cbuffer pass_constant : register(b0)
@@ -18,7 +21,10 @@ StructuredBuffer<SpotLight> spot_light_buffer : register(t2);
 RWStructuredBuffer<uint32_t> light_index_buffer : register(u0);
 RWStructuredBuffer<uint2> light_cluster_buffer : register(u1);
 
+#if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y)
+
 [shader("compute")]
+[numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
 void main(uint3 thread_id: SV_DispatchThreadID)
 {
     uint2 pixel_id = thread_id.xy;
@@ -97,3 +103,5 @@ void main(uint3 thread_id: SV_DispatchThreadID)
         }
     }
 }
+
+#endif

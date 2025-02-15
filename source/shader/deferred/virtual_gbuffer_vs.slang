@@ -9,9 +9,14 @@ cbuffer pass_constants : register(b0)
     float4x4 view_matrix;
     float4x4 prev_view_matrix;
 
+    float4x4 shadow_view_proj;
+
     uint32_t view_mode;
-    uint32_t mip_level;
     uint32_t vt_page_size;
+    uint32_t virtual_shadow_resolution;
+    uint32_t virtual_shadow_page_size;
+
+    float3 camera_position;
     uint32_t client_width;
 };
 
@@ -98,6 +103,7 @@ VertexOutput main(uint32_t instance_id: SV_InstanceID, uint32_t vertex_index : S
     output.world_space_normal = normalize(mul(float4(vertex.normal, 1.0f), geometry.inv_trans_world)).xyz;
     output.world_space_tangent = normalize(mul(float4(vertex.tangent, 1.0f), geometry.inv_trans_world)).xyz;
     output.uv = vertex.uv;
+    output.geometry_id = cluster.geometry_id;
 
     return output;
 }

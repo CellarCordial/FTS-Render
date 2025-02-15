@@ -167,9 +167,12 @@ namespace fantasy
     {
         float4 bounding_sphere;
 
+        uint32_t mip_level;
         uint32_t cluster_count;
         uint32_t cluster_index_offset;
         float max_parent_lod_error;
+
+        uint32_t max_mip_level;
     };
 
     inline MeshClusterGpu convert_mesh_cluster(
@@ -203,7 +206,8 @@ namespace fantasy
 
     inline MeshClusterGroupGpu convert_mesh_cluster_group(
         const MeshClusterGroup& group,
-        uint32_t cluster_index_offset
+        uint32_t cluster_index_offset,
+        uint32_t max_mip_level
     )
     {
         MeshClusterGroupGpu ret;
@@ -216,6 +220,8 @@ namespace fantasy
         ret.cluster_count = static_cast<uint32_t>(group.cluster_indices.size());
         ret.max_parent_lod_error = group.parent_lod_error;
         ret.cluster_index_offset = cluster_index_offset;
+        ret.mip_level = group.mip_level;
+        ret.max_mip_level = max_mip_level;
         return ret;
     }
 }

@@ -21,6 +21,8 @@ namespace fantasy
 
             uint32_t group_count = 0;
 			uint32_t cluster_size = MeshCluster::cluster_size;
+			float near_plane;
+			float far_plane;
 		};
 	}
 
@@ -36,6 +38,7 @@ namespace fantasy
 	private:
 		bool _resource_writed = false;
         uint32_t _hzb_resolution = 1024u;
+		uint32_t _cluster_group_count = 0;
 		constant::MeshClusterCullingPassConstant _pass_constant;
 
         std::vector<MeshClusterGroupGpu> _mesh_cluster_groups;

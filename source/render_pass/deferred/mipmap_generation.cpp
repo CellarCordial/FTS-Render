@@ -157,8 +157,8 @@ namespace fantasy
 			_current_submaterial_index++;
 			if (_current_submaterial_index == _current_model->get_component<Material>()->submaterials.size()) 
 			{
-				// finished_task_num++.
-				(*_current_model->get_component<uint32_t>())++;
+				// available_task_num--.
+				(*_current_model->get_component<uint32_t>())--;
 				
 				std::string model_name = *_current_model->get_component<std::string>();
 				

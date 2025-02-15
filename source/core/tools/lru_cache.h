@@ -60,6 +60,12 @@ namespace fantasy
             return T{};
         }
 
+        void reset()
+        {
+            _map.clear();
+            _list.clear();
+        }
+
     private:
         OnEvict _on_evict;
         uint32_t _capacity;

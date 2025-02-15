@@ -7,10 +7,15 @@ cbuffer pass_constants : register(b0)
 
     float4x4 view_matrix;
     float4x4 prev_view_matrix;
+    
+    float4x4 shadow_view_proj;
 
-    uint32_t view_mode;
-    uint32_t mip_level;
+    uint32_t view_mode_mip_level;
     uint32_t vt_page_size;
+    uint32_t virtual_shadow_resolution;
+    uint32_t virtual_shadow_page_size;
+    
+    float3 camera_position;
     uint32_t client_width;
 };
 
@@ -53,12 +58,21 @@ struct VTPageInfo
 };
 
 [vk_binding(6, 0)] RWStructuredBuffer<VTPageInfo> vt_page_info_buffer : register(u0);
+[vk_binding(7, 0)] RWStructuredBuffer<uint2> virtual_shadow_page_buffer : register(u1);
 
-uint32_t estimate_mip_level(float2 texture_coordinate);
+uint32_t estimate_mip_level(float2 texture_coordinate)
+{
+    float2 dx_vtc = ddx(texture_coordinate);
+    float2 dy_vtc = ddy(texture_coordinate);
+    float delta_max_sqr = max(dot(dx_vtc, dx_vtc), dot(dy_vtc, dy_vtc));
+    float mml = 0.5 * log2(delta_max_sqr);
+    return (uint32_t)(max(0.0f, round(mml)));
+}
 
 [shader("pixel")]
 PixelOutput main(VertexOutput input)
 {
+    // 更新 virtual texture page info buffer.
     GeometryConstant geometry = geometry_constant_buffer[input.geometry_id];
     uint2 page_id = (uint2)floor(input.uv * (geometry.texture_resolution / vt_page_size));
     uint2 page_id_high_bit = (page_id >> 8) & 0x0f;
@@ -80,7 +94,25 @@ PixelOutput main(VertexOutput input)
     uint2 pixel_id = (uint2)round(input.sv_position.xy);
     uint32_t pixel_index = pixel_id.x + pixel_id.y * client_width;
     vt_page_info_buffer[pixel_index] = info;
+
     
+    // 更新 virtual shadow page buffer.
+    float4 shadow_view_proj_pos = mul(float4(input.world_space_position, 1.0f), shadow_view_proj);
+    shadow_view_proj_pos.xyz = shadow_view_proj_pos.xyz / shadow_view_proj_pos.z;
+
+    // 是否在太阳投影的裁剪空间内.
+    bool in_clip = shadow_view_proj_pos.w > 0.0f &&
+                   shadow_view_proj_pos.x >= -1.0f && shadow_view_proj_pos.x <= 1.0f &&
+                   shadow_view_proj_pos.y >= -1.0f && shadow_view_proj_pos.y <= 1.0f &&
+                   shadow_view_proj_pos.z >= 0.0f && shadow_view_proj_pos.z <= 1.0f;
+    if (in_clip)
+    {
+        float2 uv = shadow_view_proj_pos.xy * float2(0.5f, -0.5f) + 0.5f;
+        uint2 shadow_page_id = (uint2)(uv * virtual_shadow_resolution) / virtual_shadow_page_size;
+
+        virtual_shadow_page_buffer[pixel_id.x + pixel_id.y * client_width] = shadow_page_id;
+    }
+
 
     PixelOutput output;
     output.world_position_view_depth = float4(input.world_space_position, input.view_space_position.z);
@@ -96,13 +128,4 @@ PixelOutput main(VertexOutput input)
     output.pbr = float3(geometry.metallic, geometry.roughness, geometry.occlusion);
     output.emmisive = geometry.emissive;
     return output;
-}
-
-uint32_t estimate_mip_level(float2 texture_coordinate)
-{
-    float2 dx_vtc = ddx(texture_coordinate);
-    float2 dy_vtc = ddy(texture_coordinate);
-    float delta_max_sqr = max(dot(dx_vtc, dx_vtc), dot(dy_vtc, dy_vtc));
-    float mml = 0.5 * log2(delta_max_sqr);
-    return uint32_t(max(0.0f, round(mml)));
 }

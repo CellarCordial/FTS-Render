@@ -3,6 +3,14 @@
 #include "../shader/shader_compiler.h"
 #include "../core/tools/check_cast.h"
 #include "../gui/gui_panel.h"
+
+#include "../render_pass/culling/mesh_cluster_culling.h"
+#include "../render_pass/culling/hierarchical_zbuffer.h"
+#include "../render_pass/culling/shadow_tile_culling.h"
+#include "../render_pass/deferred/virtual_gbuffer.h"
+#include "../render_pass/deferred/virtual_texture_update.h"
+#include "../render_pass/deferred/mipmap_generation.h"
+#include "../render_pass/shadow/virtual_shadow_map.h"
 #include <memory>
 
 namespace fantasy
@@ -97,7 +105,7 @@ namespace fantasy
         gui::add(
             [this]()
             {
-                if (ImGui::CollapsingHeader("Restir Test"))
+                if (ImGui::CollapsingHeader("Final Test"))
 				{
                     const char* types[] = { "FinalGather", "World Position", "View Depth", "World Normal", "BaseColor", "Metallic", "Roughness", "Occlusion", "Emissive" };
                     ImGui::Combo("Show Type", &_pass_constant.show_type, types, IM_ARRAYSIZE(types));
@@ -118,9 +126,25 @@ namespace fantasy
 
     RenderPassInterface* FinalTest::init_render_pass(RenderGraph* render_graph)
     {
-		// RenderPassInterface* test_pass = render_graph->add_pass(std::make_shared<FinalTestPass>());
+		RenderPassInterface* mipmap_generation_pass = render_graph->add_pass(std::make_shared<MipmapGenerationPass>());
 
-		return nullptr; 
+		RenderPassInterface* test_pass = render_graph->add_pass(std::make_shared<FinalTestPass>());
+		RenderPassInterface* mesh_cluster_culling_pass = render_graph->add_pass(std::make_shared<MeshClusterCullingPass>());
+		RenderPassInterface* hierarchical_zbuffer_pass = render_graph->add_pass(std::make_shared<HierarchicalZBufferPass>());
+		RenderPassInterface* virtual_gbuffer_pass = render_graph->add_pass(std::make_shared<VirtualGBufferPass>());
+		RenderPassInterface* virtual_texture_update_pass = render_graph->add_pass(std::make_shared<VirtualTextureUpdatePass>());
+		RenderPassInterface* shadow_tile_culling_pass = render_graph->add_pass(std::make_shared<ShadowTileCullingPass>());
+		RenderPassInterface* virtual_shadow_map_pass = render_graph->add_pass(std::make_shared<VirtualShadowMapPass>());
+		
+		mesh_cluster_culling_pass->precede(virtual_gbuffer_pass);
+		virtual_gbuffer_pass->precede(hierarchical_zbuffer_pass);
+		virtual_gbuffer_pass->precede(virtual_texture_update_pass);
+		virtual_texture_update_pass->precede(shadow_tile_culling_pass);
+		shadow_tile_culling_pass->precede(virtual_shadow_map_pass);
+		hierarchical_zbuffer_pass->precede(test_pass);
+		virtual_shadow_map_pass->precede(test_pass);
+		
+		return test_pass; 
     }
 }
 

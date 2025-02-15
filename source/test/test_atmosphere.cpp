@@ -190,7 +190,7 @@ namespace fantasy
 					_pass_constant1.sun_direction = pLight->direction;
 					_pass_constant1.sun_theta = std::asin(-pLight->direction.y);
 					_pass_constant1.sun_radiance = float3(pLight->intensity * pLight->color);
-					_pass_constant1.shadow_view_proj = pLight->view_proj;
+					_pass_constant1.shadow_view_proj = pLight->get_view_proj();
 					return true;
 				}
 			));
@@ -287,18 +287,7 @@ namespace fantasy
 
 
 		DirectionalLight light;
-		float X = radians(light.angle.x);
-		float Y = radians(-light.angle.y);
-		light.direction = normalize(float3(
-			std::cos(X) * std::cos(Y),
-			std::sin(Y),
-			std::sin(X) * std::cos(Y)
-		));
-
-		light.view_proj = mul(
-			look_at_left_hand(-light.direction * 20.0f, float3{}, float3(0.0f, 1.0f, 0.0f)),
-			orthographic_left_hand(20.0f, 20.0f, 0.1f, 80.0f)
-		);
+		light.update_direction_view_proj();
 
 		Entity* light_entity = world->create_entity();
 		DirectionalLight* light_ptr = light_entity->assign<DirectionalLight>(light);
@@ -389,18 +378,7 @@ namespace fantasy
 
 						if (angle_changed)
 						{
-							float X = radians(light_ptr->angle.x);
-							float Y = radians(-light_ptr->angle.y);
-							light_ptr->direction = normalize(float3(
-								std::cos(X) * std::cos(Y),
-								std::sin(Y),
-								std::sin(X) * std::cos(Y)
-							));
-
-							light_ptr->view_proj = mul(
-								look_at_left_hand(-light_ptr->direction * 20.0f, float3{}, float3(0.0f, 1.0f, 0.0f)),
-								orthographic_left_hand(20.0f, 20.0f, 0.1f, 80.0f)
-							);
+							light_ptr->update_direction_view_proj();
 						}
 
 						if (ImGui::Button("reset"))
@@ -408,19 +386,7 @@ namespace fantasy
 							dirty = true;
 
 							*light_ptr = DirectionalLight{};
-
-							float X = radians(light_ptr->angle.x);
-							float Y = radians(-light_ptr->angle.y);
-							light_ptr->direction = normalize(float3(
-								std::cos(X) * std::cos(Y),
-								std::sin(Y),
-								std::sin(X) * std::cos(Y)
-							));
-
-							light_ptr->view_proj = mul(
-								look_at_left_hand(-light_ptr->direction * 20.0f, float3{}, float3(0.0f, 1.0f, 0.0f)),
-								orthographic_left_hand(20.0f, 20.0f, 0.1f, 80.0f)
-							);
+							light_ptr->update_direction_view_proj();
 						}
 
 						ImGui::TreePop();

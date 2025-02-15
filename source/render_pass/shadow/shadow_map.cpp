@@ -169,7 +169,7 @@ namespace fantasy
 			ReturnIfFalse(cache->get_world()->each<DirectionalLight>(
 				[this](Entity* entity, DirectionalLight* pLight) -> bool
 				{
-					_pass_constant.directional_light_view_proj = pLight->view_proj;
+					_pass_constant.directional_light_view_proj = pLight->get_view_proj();
 					return true;
 				}
 			));

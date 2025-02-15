@@ -16,8 +16,8 @@ cbuffer pass_constants : register(b0)
 [vk_binding(4, 0)] Texture2D<float3> vt_normal_physical_texture : register(t3);
 [vk_binding(5, 0)] Texture2D<float3> vt_pbr_physical_texture : register(t4);
 [vk_binding(6, 0)] Texture2D<float4> vt_emissive_physical_texture : register(t5);
-
 [vk_binding(7, 0)] Texture2D<float3> world_space_tangent_texture : register(t6);
+
 [vk_binding(8, 0)] RWTexture2D<float3> world_space_normal_texture : register(u0);
 [vk_binding(9, 0)] RWTexture2D<float4> base_color_texture : register(u1);
 [vk_binding(10, 0)] RWTexture2D<float4> pbr_texture : register(u2);

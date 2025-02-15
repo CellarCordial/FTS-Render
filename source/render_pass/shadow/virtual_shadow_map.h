@@ -2,6 +2,7 @@
 #define RENDER_PASS_VIRTUAL_SHADOW_MAP_H
 
 #include "../../render_graph/render_pass.h"
+#include "../../scene/virtual_texture.h"
 #include "../../core/math/matrix.h"
 #include <memory>
 
@@ -11,41 +12,38 @@ namespace fantasy
 	{
 		struct VirtualShadowMapPassConstant
 		{
-			float4x4 shadow_view_proj;
-
-			float3 camera_position;
-			uint32_t virtual_shadow_resolution = 0;
-
-			uint32_t virtual_shadow_page_size;
-			uint32_t client_width = CLIENT_WIDTH;
+			float4x4 view_proj;
+			float4x4 view_matrix;
+			uint2 tile_size_in_pixel = VIRTUAL_SHADOW_RESOLUTION / VIRTUAL_SHADOW_PAGE_SIZE;
 		};
 	}
 
 	class VirtualShadowMapPass : public RenderPassInterface
 	{
 	public:
-		VirtualShadowMapPass() { type = RenderPassType::Compute; }
+		VirtualShadowMapPass() { type = RenderPassType::Graphics; }
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
 	private:
 		bool _resource_writed = false;
-		static const uint32_t _virtual_shadow_page_size = 1024;
-		static const uint32_t _virtual_shadow_resolution = 16000;
-		static const uint32_t _physical_shadow_resolution = 8192;
-
 		constant::VirtualShadowMapPassConstant _pass_constant;
 
-		std::shared_ptr<BufferInterface> _virtual_shadow_page_buffer;
-
+		std::shared_ptr<TextureInterface> _physical_shadow_map_texture;
+		
+		BindingSetItemArray _binding_set_items;
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 
-		std::shared_ptr<Shader> _cs;
-		std::unique_ptr<ComputePipelineInterface> _pipeline;
+		std::shared_ptr<Shader> _vs;
+		std::shared_ptr<Shader> _ps;
+
+		std::unique_ptr<FrameBufferInterface> _frame_buffer;
+		std::unique_ptr<GraphicsPipelineInterface> _pipeline;
 
 		std::unique_ptr<BindingSetInterface> _binding_set;
-		ComputeState _compute_state;
+		GraphicsState _graphics_state;
+        DrawArguments _draw_arguments;
 	};
 }
 

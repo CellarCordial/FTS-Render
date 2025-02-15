@@ -5,7 +5,7 @@
 #include "../core/parallel/parallel.h"
 #include "../core/tools/file.h"
 #include "../gui/gui_panel.h"
-// #include "virtual_texture.h"
+#include "virtual_texture.h"
 #include "../core/tools/file.h"
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
@@ -145,13 +145,13 @@ namespace fantasy
 		
 		_loaded_model_names.insert(event.model_path);
 		
-		// uint32_t* finished_task_num = event.entity->assign<uint32_t>(0);
+		uint32_t* available_task_num = event.entity->assign<uint32_t>(1);
 		// ReturnIfFalse(_global_entity->get_component<event::GenerateSdf>()->broadcast(event.entity));
-		// ReturnIfFalse(_global_entity->get_component<event::GenerateMipmap>()->broadcast(event.entity));
+		ReturnIfFalse(_global_entity->get_component<event::GenerateMipmap>()->broadcast(event.entity));
 		// ReturnIfFalse(_global_entity->get_component<event::GenerateSurfaceCache>()->broadcast(event.entity));
 
-		// if (*finished_task_num < 3) std::this_thread::yield();
-		// gui::notify_message(gui::ENotifyType::Info, "Loaded " + event.model_path);
+		if (*available_task_num > 0) std::this_thread::yield();
+		gui::notify_message(gui::ENotifyType::Info, "Loaded " + event.model_path);
 
 		// Entity* tmp_model_entity = event.entity;
 		// gui::add(

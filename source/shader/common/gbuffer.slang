@@ -48,9 +48,12 @@ struct MeshClusterGroup
 {
     float4 bounding_sphere;
 
+    uint32_t mip_level;
     uint32_t cluster_count;
     uint32_t cluster_index_offset;
     float max_parent_lod_error;
+
+    uint32_t max_mip_level;
 };
 
 // namespace ray_tracing

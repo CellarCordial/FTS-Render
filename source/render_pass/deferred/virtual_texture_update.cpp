@@ -2,15 +2,36 @@
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
 #include "../../core/parallel/parallel.h"
+#include "../../scene/light.h"
+#include <cstdint>
 #include <memory>
+#include <mutex>
 
 namespace fantasy
 {
 #define THREAD_GROUP_SIZE_X 16
 #define THREAD_GROUP_SIZE_Y 16
  
+	struct ShadowTileInfo
+	{
+		uint2 id;
+		float4x4 view_matrix;
+		float3 frustum_top_normal;
+		float3 frustum_right_normal;
+	};
+
+	struct TextureCopyInfo
+	{
+		uint32_t submesh_id = 0;
+		VTPage* page = nullptr;
+		uint2 page_physical_pos_in_page;
+		std::string* model_name = nullptr;
+	};
+
 	bool VirtualTextureUpdatePass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
+		ReturnIfFalse(cache->collect_constants("shadow_tile_num", &_shadow_tile_num));
+
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(13);
@@ -56,6 +77,19 @@ namespace fantasy
 			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
 		}
 
+		{
+			uint32_t virtual_shadow_resolution_in_page = VIRTUAL_SHADOW_RESOLUTION / VIRTUAL_SHADOW_PAGE_SIZE;
+			ReturnIfFalse(_shadow_tile_info_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+				BufferDesc::create_structured_buffer(
+					sizeof(ShadowTileInfo) * virtual_shadow_resolution_in_page * virtual_shadow_resolution_in_page, 
+					sizeof(ShadowTileInfo), 
+					"shadow_tile_info_buffer"
+				)
+			)));
+			cache->collect(_shadow_tile_info_buffer, ResourceType::Buffer);
+		}
+
+		// Texture.
 		{	
 			ReturnIfFalse(_vt_indirect_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target_texture(
@@ -129,59 +163,103 @@ namespace fantasy
 
 		std::shared_ptr<BufferInterface> vt_page_info_buffer = 
 			check_cast<BufferInterface>(cache->require("vt_page_info_buffer"));
+		std::shared_ptr<BufferInterface> virtual_shadow_page_buffer = 
+				check_cast<BufferInterface>(cache->require("virtual_shadow_page_buffer"));
 
-		VTPageInfo* data = static_cast<VTPageInfo*>(vt_page_info_buffer->map(CpuAccessMode::Read));
+		uint2* shadow_tile_data = static_cast<uint2*>(virtual_shadow_page_buffer->map(CpuAccessMode::Read));
+		VTPageInfo* vt_page_data = static_cast<VTPageInfo*>(vt_page_info_buffer->map(CpuAccessMode::Read));
 		
-		struct TextureCopyInfo
-		{
-			uint32_t submesh_id = 0;
-			VTPage* page = nullptr;
-			uint2 page_physical_pos_in_page;
-			std::string* model_name = nullptr;
-		};
-
-		std::mutex info_mutex;
-		std::vector<TextureCopyInfo> copy_infos;
+		std::mutex copy_info_mutex;
+		std::mutex tile_info_mutex;
+		std::vector<TextureCopyInfo> texture_copy_infos;
+		std::vector<ShadowTileInfo> shadow_tile_infos;
 
 		parallel::parallel_for(
-			[&](uint64_t x, uint64_t y)
+			[&](uint64_t x, uint64_t y) -> void
 			{
 				uint32_t offset = static_cast<uint32_t>(x + y * CLIENT_WIDTH);
-				const VTPageInfo& info = *(data + offset);
 
+				const uint2& tile_id = *(shadow_tile_data + offset);
+				DirectionalLight* light = world->get_global_entity()->get_component<DirectionalLight>();
+
+				auto L = normalize(light->direction);
+				auto R = normalize(cross(float3(0.0f, 1.0f, 0.0f), L));
+				auto U = cross(L, R);
+				float3 pos = light->get_position();
+				float4x4 light_view_matrix = inverse(float4x4(
+					R.x,     R.y,     R.z,     0.0f,
+					U.x,     U.y,     U.z,     0.0f,
+					L.x,     L.y,     L.z,     0.0f,
+					pos.x, pos.y, pos.z, 1.0f
+				));
+
+				bool found = false;
+				bool res = world->each<MipmapLUT>(
+					[&](Entity* entity, MipmapLUT* mipmap_lut) -> bool
+					{
+						if (!found && mipmap_lut->get_mip0_resolution() == VIRTUAL_SHADOW_RESOLUTION)
+						{
+							found = true;
+
+							VTPage* page = mipmap_lut->query_page(tile_id, 0);
+							uint2 page_physical_pos_in_page;
+
+							{
+								std::lock_guard lock(tile_info_mutex);
+
+								VTPage::LoadFlag flag = page->flag;
+								page_physical_pos_in_page = _vt_physical_table.add_page(page);
+
+								if (flag == VTPage::LoadFlag::Unload)
+								{
+									shadow_tile_infos.emplace_back(ShadowTileInfo{
+										.id = tile_id,
+										.view_matrix = light_view_matrix,
+										.frustum_top_normal = U,
+										.frustum_right_normal = R
+									});
+								}
+							}
+						}
+						return found;
+					}
+				);
+				assert(res);
+
+				
+				const VTPageInfo& info = *(vt_page_data + offset);
 				uint2 page_id;
 				uint32_t mip_level;
 				uint32_t submesh_id = info.geometry_id;
 				info.get_data(page_id, mip_level);
 
-				bool res = world->each<std::string, Mesh, Material>(
+				res = world->each<std::string, Mesh, Material>(
 					[&](Entity* mesh_entity, std::string* model_name, Mesh* mesh, Material* material) -> bool
 					{
 						if (mesh->submesh_base_id <= submesh_id && submesh_id < mesh->submesh_base_id + mesh->submeshes.size())
 						{
 							const auto& submesh = mesh->submeshes[submesh_id - mesh->submesh_base_id];
-							
+
+							bool found = false;
 							ReturnIfFalse(world->each<MipmapLUT>(
 								[&](Entity* entity, MipmapLUT* mipmap_lut) -> bool
 								{
-									bool found = false;
-									if (mipmap_lut->get_mip0_resolution() == material->image_resolution)
+									if (!found && mipmap_lut->get_mip0_resolution() == material->image_resolution)
 									{
 										found = true;
 
 										VTPage* page = mipmap_lut->query_page(page_id, mip_level);
-										
 										uint2 page_physical_pos_in_page;
 
 										{
-											std::lock_guard lock(info_mutex);
+											std::lock_guard lock(copy_info_mutex);
 
 											VTPage::LoadFlag flag = page->flag;
 											page_physical_pos_in_page = _vt_physical_table.add_page(page);
 
 											if (flag == VTPage::LoadFlag::Unload)
 											{
-												copy_infos.emplace_back(TextureCopyInfo{
+												texture_copy_infos.emplace_back(TextureCopyInfo{
 													.submesh_id = submesh_id - mesh->submesh_base_id,
 													.page = page,
 													.page_physical_pos_in_page = page_physical_pos_in_page,
@@ -207,10 +285,16 @@ namespace fantasy
 			CLIENT_WIDTH,
 			CLIENT_HEIGHT
 		);
-
+		virtual_shadow_page_buffer->unmap();
 		vt_page_info_buffer->unmap();
 
-		for (const auto& info : copy_infos)
+		
+		_shadow_tile_num = static_cast<uint32_t>(shadow_tile_infos.size());
+
+		ReturnIfFalse(cmdlist->write_buffer(_shadow_tile_info_buffer.get(), shadow_tile_infos.data(), _shadow_tile_num * sizeof(ShadowTileInfo)));
+
+
+		for (const auto& info : texture_copy_infos)
 		{
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
 			{

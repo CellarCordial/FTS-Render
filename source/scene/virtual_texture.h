@@ -16,6 +16,10 @@ namespace fantasy
 	const static uint32_t HIGHEST_TEXTURE_RESOLUTION = 4096u;
     static const uint32_t VT_PHYSICAL_TEXTURE_RESOLUTION = 4096u;
 
+    static const uint32_t VIRTUAL_SHADOW_PAGE_SIZE = 1024;
+    static const uint32_t VIRTUAL_SHADOW_RESOLUTION = 16000;
+    static const uint32_t PHYSICAL_SHADOW_RESOLUTION = 8192;
+
     namespace event
 	{
 		DELCARE_DELEGATE_EVENT(GenerateMipmap, Entity*);
@@ -127,6 +131,7 @@ namespace fantasy
 
         uint2 add_page(VTPage* page);
         static std::string get_texture_name(uint32_t texture_type);
+        void reset() { _tiles.reset(); _current_avaible_pos = uint2(0u); }
 
     private:
         uint32_t _resolution;

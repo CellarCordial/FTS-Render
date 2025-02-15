@@ -50,6 +50,7 @@ namespace fantasy
         RenderPassInterface* init_render_pass(RenderGraph* render_graph) override;
 
     private:
+        
     };
 
 }

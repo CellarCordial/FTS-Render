@@ -27,10 +27,13 @@ namespace fantasy
 
 	private:
 		constant::VirtualGeometryTexturePassConstant _pass_constant;
+		uint32_t _shadow_tile_num = 0;
 
 		VTIndirectTable _vt_indirect_table;
 		VTPhysicalTable _vt_physical_table;
+		VTPhysicalTable _physical_shadow_table;
 
+		std::shared_ptr<BufferInterface> _shadow_tile_info_buffer;
 		std::shared_ptr<TextureInterface> _vt_indirect_texture;
 		std::array<std::shared_ptr<TextureInterface>, Material::TextureType_Num> _vt_physical_textures;
 

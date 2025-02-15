@@ -21,15 +21,20 @@ namespace fantasy
 
 		struct VirtualGBufferPassConstant
 		{
-            float4x4 view_proj;
+			float4x4 view_proj;
 
-            float4x4 view_matrix;
-            float4x4 prev_view_matrix;
-
-            VirtualGBufferViewMode view_mode = VirtualGBufferViewMode::Triangle;
-            uint32_t mip_level = 0;
-            uint32_t vt_page_size = VT_PAGE_SIZE;
-            uint32_t client_width = CLIENT_WIDTH;
+			float4x4 view_matrix;
+			float4x4 prev_view_matrix;
+			
+			float4x4 shadow_view_proj;
+		
+			uint32_t view_mode = 0;
+			uint32_t vt_page_size = VT_PAGE_SIZE;
+			uint32_t virtual_shadow_resolution = VIRTUAL_SHADOW_RESOLUTION;
+			uint32_t virtual_shadow_page_size = VIRTUAL_SHADOW_PAGE_SIZE;
+			
+			float3 camera_position;
+			uint32_t client_width = CLIENT_WIDTH;
 		};
 	}
 
@@ -56,6 +61,7 @@ namespace fantasy
 		std::shared_ptr<BufferInterface> _cluster_triangle_buffer;
 		std::shared_ptr<BufferInterface> _vt_page_info_buffer;
 		std::shared_ptr<BufferInterface> _draw_indexed_indirect_arguments_buffer;
+		std::shared_ptr<BufferInterface> _virtual_shadow_page_buffer;
 
 		std::shared_ptr<TextureInterface> _world_position_view_depth_texture;
 		std::shared_ptr<TextureInterface> _view_space_velocity_texture;

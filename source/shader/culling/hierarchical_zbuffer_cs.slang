@@ -1,6 +1,6 @@
-#define THREAD_GROUP_SIZE_X 1
-#define THREAD_GROUP_SIZE_Y 1
-#define COPY_DEPTH 1
+// #define THREAD_GROUP_SIZE_X 1
+// #define THREAD_GROUP_SIZE_Y 1
+// #define COPY_DEPTH 1
 
 #include "../common/math.slang"
 
@@ -16,11 +16,6 @@ cbuffer pass_constants : register(b0)
 [vk_binding(2, 0)] Texture2D<float4> world_position_view_depth_texture : register(t0);
 [vk_binding(3, 0)] RWTexture2D<float> hierarchical_zbuffer_texture[] : register(u0);
 
-struct VertexOutput
-{
-    float4 sv_position : SV_Position;
-    float2 uv : TEXCOORD;
-};
 
 #if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y)
 

@@ -2,6 +2,7 @@
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
 #include "../../scene/virtual_mesh.h"
+#include "../../scene/light.h"
 #include "../../scene/virtual_texture.h"
 #include "../../scene/camera.h"
 #include <cstdint>
@@ -21,7 +22,7 @@ namespace fantasy
 
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(7);
+			BindingLayoutItemArray binding_layout_items(8);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::VirtualGBufferPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_structured_buffer_srv(1);
@@ -29,6 +30,7 @@ namespace fantasy
 			binding_layout_items[4] = BindingLayoutItem::create_structured_buffer_srv(3);
 			binding_layout_items[5] = BindingLayoutItem::create_structured_buffer_srv(4);
 			binding_layout_items[6] = BindingLayoutItem::create_structured_buffer_uav(0);
+			binding_layout_items[7] = BindingLayoutItem::create_structured_buffer_uav(1);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -67,6 +69,15 @@ namespace fantasy
 				)
 			)));
 			cache->collect(_vt_page_info_buffer, ResourceType::Buffer);
+
+			ReturnIfFalse(_virtual_shadow_page_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+				BufferDesc::create_read_write_structured_buffer(
+					CLIENT_WIDTH * CLIENT_HEIGHT * sizeof(uint2),
+                    sizeof(uint2), 
+					"virtual_shadow_page_buffer"
+				)
+			)));
+			cache->collect(_virtual_shadow_page_buffer, ResourceType::Buffer);
 		}
 
 		// Texture.
@@ -183,6 +194,7 @@ namespace fantasy
 			_binding_set_items.resize(7);
 			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualGBufferPassConstant));
 			_binding_set_items[6] = BindingSetItem::create_structured_buffer_uav(0, _vt_page_info_buffer);
+			_binding_set_items[6] = BindingSetItem::create_structured_buffer_uav(1, _virtual_shadow_page_buffer);
 		}
 
 		// Graphics state.
@@ -193,6 +205,7 @@ namespace fantasy
 			_graphics_state.viewport_state = ViewportState::create_default_viewport(CLIENT_WIDTH, CLIENT_HEIGHT);
 			_graphics_state.indirect_buffer = check_cast<BufferInterface>(cache->require("draw_indexed_indirect_arguments_buffer")).get();
 		}
+
 
 		return true;
 	}
@@ -209,6 +222,8 @@ namespace fantasy
 			_pass_constant.view_matrix = camera->view_matrix;
 			_pass_constant.view_proj = camera->get_view_proj();
 			_pass_constant.prev_view_matrix = camera->prev_view_matrix;
+			_pass_constant.camera_position = camera->position;
+			_pass_constant.shadow_view_proj = world->get_global_entity()->get_component<DirectionalLight>()->get_view_proj();
 
 
 			bool res = world->each<VirtualMesh, Mesh, Material>(
