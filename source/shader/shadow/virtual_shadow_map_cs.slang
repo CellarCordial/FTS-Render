@@ -1,7 +1,7 @@
 #define THREAD_GROUP_SIZE_X 1
 #define THREAD_GROUP_SIZE_Y 1
 
-
+[vk_binding(0, 0)]
 cbuffer pass_constants : register(b0)
 {
     float4x4 shadow_view_proj;
@@ -13,9 +13,9 @@ cbuffer pass_constants : register(b0)
     uint32_t client_width;
 };
 
-Texture2D<float4> world_position_view_depth_texture : register(t0);
+[vk_binding(1, 0)] Texture2D<float4> world_position_view_depth_texture : register(t0);
 
-RWStructuredBuffer<uint2> virtual_shadow_page_buffer : register(u0);
+[vk_binding(2, 0)] RWStructuredBuffer<uint2> virtual_shadow_page_buffer : register(u0);
 
 #if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y)
 
@@ -28,6 +28,7 @@ void main(uint3 thread_id: SV_DispatchThreadID)
     float4 shadow_view_proj_pos = mul(float4(world_pos, 1.0f), shadow_view_proj);
     shadow_view_proj_pos.xyz = shadow_view_proj_pos.xyz / shadow_view_proj_pos.z;
 
+    // 是否在太阳投影的裁剪空间内.
     bool in_clip = shadow_view_proj_pos.w > 0.0f &&
                    shadow_view_proj_pos.x >= -1.0f && shadow_view_proj_pos.x <= 1.0f &&
                    shadow_view_proj_pos.y >= -1.0f && shadow_view_proj_pos.y <= 1.0f &&

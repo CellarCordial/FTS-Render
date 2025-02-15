@@ -145,7 +145,6 @@ namespace fantasy
     private:
 		std::vector<uint32_t> _indices;
         std::vector<Vertex> _vertices;
-        uint32_t _geometry_id = 0;
     };
     
     struct MeshClusterGpu

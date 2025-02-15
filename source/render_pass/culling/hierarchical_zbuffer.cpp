@@ -107,12 +107,13 @@ namespace fantasy
 			static_cast<uint32_t>((align(_pass_constants[0].hzb_resolution, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
 			static_cast<uint32_t>((align(_pass_constants[0].hzb_resolution, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
 		};
-		// TODO
+		
+		// _pass_constants 中变化的只有 last_mip_level, 而这 copy_depth pass 并不关心, 所以直接使用 _pass_constants[0] 即可.
 		_compute_state.pipeline = _copy_depth_pipeline.get();
 		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constants[0]));
 
 		_compute_state.pipeline = _calc_mip_pipeline.get();
-        for (uint32_t ix = 1; ix < _pass_constants.size(); ++ix)
+        for (uint32_t ix = 0; ix < _pass_constants.size(); ++ix)
         {
             ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constants[ix]));
         }

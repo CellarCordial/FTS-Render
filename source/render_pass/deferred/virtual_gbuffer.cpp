@@ -214,13 +214,13 @@ namespace fantasy
 			bool res = world->each<VirtualMesh, Mesh, Material>(
                 [&](Entity* entity, VirtualMesh* virtual_mesh, Mesh* mesh, Material* material) -> bool
                 {
-                    for (const auto& submesh : virtual_mesh->_submeshes)
+                    for (const auto& virtual_submesh : virtual_mesh->_submeshes)
                     {
-                        for (const auto& group : submesh.cluster_groups)
+                        for (const auto& group : virtual_submesh.cluster_groups)
                         {
                             for (auto ix : group.cluster_indices)
                             {
-                                const auto& cluster = submesh.clusters[ix];
+                                const auto& cluster = virtual_submesh.clusters[ix];
 								_cluster_vertices.insert(_cluster_vertices.end(), cluster.vertices.begin(), cluster.vertices.end());
 
 								for(uint32_t ix = 0; ix < cluster.indices.size() / 3; ++ix)

@@ -13,16 +13,10 @@ namespace fantasy
     {
     public:
         LruCache(uint32_t capacity = 0, OnEvict on_evict = [](T&) {}) : 
-            _capacity(capacity), _on_evict(on_evict) 
+            _capacity(capacity), _on_evict(on_evict)
         {
         }
 
-        void initialize(uint32_t capacity, OnEvict on_evict)
-        {
-            _capacity = capacity;
-            _on_evict = on_evict;
-        }
-        
         T* get(uint64_t key) 
         {
             auto iter = _map.find(key);
@@ -38,8 +32,9 @@ namespace fantasy
             }
         }
         
-        void insert(uint64_t key, const T& value) 
+        T insert(uint64_t key, const T& value) 
         {
+            // 未存满, 返回新模板元素的初始化值, 即 invalid 值; 已经存满, 则返回剔除的那个元素.
             auto iter = _map.find(key);
             if(iter == _map.end())
             {
@@ -49,8 +44,12 @@ namespace fantasy
                 {
                     auto data = &_list.back();
                     _map.erase(data->first);
-                    _on_evict(data->second);
+
+                    T ret = data->second;
                     _list.pop_back();
+                    
+                    _on_evict(ret);
+                    return ret;
                 }
             }
             else
@@ -58,6 +57,7 @@ namespace fantasy
                 iter->second->second = value;
                 _list.splice(_list.begin(), _list, iter->second);
             }
+            return T{};
         }
 
     private:

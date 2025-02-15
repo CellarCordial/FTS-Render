@@ -191,6 +191,7 @@ namespace fantasy
                 )
             )));
             cache->collect(_visible_cluster_id_buffer, ResourceType::Buffer);
+            
 
             ReturnIfFalse(cmdlist->write_buffer(
                 _mesh_cluster_group_buffer.get(), 
@@ -202,6 +203,7 @@ namespace fantasy
                 _mesh_clusters.data(), 
                 sizeof(MeshClusterGpu) * _mesh_clusters.size()
             ));
+
 
             _binding_set.reset();
 

@@ -6,15 +6,15 @@
 #include <string>
 #include "../core/tools/lru_cache.h"
 #include "../core/tools/delegate.h"
-#include "../core/math/bounds.h"
+#include "../core/math/vector.h"
 #include "../core/tools/ecs.h"
 
 namespace fantasy 
 {
     const static uint32_t VT_PAGE_SIZE = 128u;
-	const static uint32_t lowest_texture_resolution = 512u;
-	const static uint32_t highest_texture_resolution = 4096u;
-    static const uint32_t vt_physical_texture_resolution = 4096u;
+	const static uint32_t LOWEST_TEXTURE_RESOLUTION = 512u;
+	const static uint32_t HIGHEST_TEXTURE_RESOLUTION = 4096u;
+    static const uint32_t VT_PHYSICAL_TEXTURE_RESOLUTION = 4096u;
 
     namespace event
 	{
@@ -29,7 +29,7 @@ namespace fantasy
             Loaded
         };
 
-        Bounds2I bounds;
+        uint2 base_position;
         uint32_t mip_level = INVALID_SIZE_32;
         
         LoadFlag flag = LoadFlag::Unload;
@@ -42,13 +42,13 @@ namespace fantasy
         uint32_t geometry_id;
         uint32_t page_id_mip_level;
 
-        void get_data(uint32_t& submesh_id, uint2& page_id, uint32_t& mip_level) const
+        void get_data( uint2& page_id, uint32_t& mip_level) const
         {
             page_id = uint2(
                 ((page_id_mip_level >> 12) & 0xf << 8) | (page_id_mip_level >> 24) & 0xff,
                 ((page_id_mip_level >> 8) & 0xf << 8) | (page_id_mip_level >> 16) & 0xff
             );
-            submesh_id = geometry_id;
+            mip_level = page_id_mip_level & 0xff;
         }
     };
 
@@ -57,8 +57,7 @@ namespace fantasy
     public:
         bool initialize(
             uint32_t mip0_resolution, 
-            uint32_t max_mip_resolution = VT_PAGE_SIZE, 
-            uint32_t page_size = VT_PAGE_SIZE
+            uint32_t max_mip_resolution = VT_PAGE_SIZE
         );
 
         VTPage* query_page(uint2 page_id, uint32_t mip_level);
@@ -72,40 +71,7 @@ namespace fantasy
             std::vector<VTPage> pages;  // 以 morton code 排序.
         };
 
-        class QuadTree
-        {
-        public:
-            QuadTree() = default;
-            QuadTree(const QuadTree& other);
-            QuadTree& operator=(const QuadTree& other);
-
-            bool initialize(uint32_t mip0_resolution_in_page, uint32_t mip_levels);
-            uint32_t query_page_morton_code(uint2 page_id, uint32_t mip_level);
-
-        private:
-            // 每个 Node 代表一个 Page.
-            struct Node
-            {
-                std::array<std::unique_ptr<Node>, 4> children;
-                Node* parent_node = nullptr;
-                
-                Bounds2I virtual_bounds;    // 代表该 node 实际映射 virtual texture 的部分 (单位是 page).
-                uint32_t mip_level = INVALID_SIZE_32;
-                uint32_t morton_code = INVALID_SIZE_32;
-
-                Node() = default;
-                Node(const Node& other);
-                Node& operator=(const Node& other);
-                bool is_leaf() const { return children[0] == nullptr; }
-            };
-
-            std::unique_ptr<Node> _root;
-        };
-
         uint32_t _mip0_resolution = 0;
-        uint32_t _page_size = 0;
-
-        QuadTree _quad_tree;
         std::vector<Mip> _mips;
     };
 
@@ -113,22 +79,22 @@ namespace fantasy
     {
     public:
         VTIndirectTable() : 
-            page_pointers(CLIENT_WIDTH * CLIENT_HEIGHT, uint2(INVALID_SIZE_32)),
+            physical_page_pointers(CLIENT_WIDTH * CLIENT_HEIGHT, uint2(INVALID_SIZE_32)),
             resolution(CLIENT_WIDTH, CLIENT_HEIGHT) 
         {
         }
 
-        void set_page(uint2 page_id, uint2 page_pos)
+        void set_page(uint2 page_id, uint2 page_pos_in_page)
         {
-            page_pointers[page_id.y * resolution.x + page_id.x] = page_pos;
+            physical_page_pointers[page_id.y * resolution.x + page_id.x] = page_pos_in_page;
         }
 
         void set_page_null(uint2 page_id) { set_page(page_id, uint2(INVALID_SIZE_32)); }
-        uint2* get_data() { return page_pointers.data(); }
+        uint2* get_data() { return physical_page_pointers.data(); }
+        uint64_t get_data_size() const { return physical_page_pointers.size(); }
 
     private:
-        std::vector<uint2> page_pointers;
-        std::string texture_name;
+        std::vector<uint2> physical_page_pointers;
         uint2 resolution;
     };
 
@@ -141,6 +107,8 @@ namespace fantasy
         {
             VTPage* cache_page = nullptr;
             uint2 position = uint2(INVALID_SIZE_32);
+
+            bool is_valid() const { return cache_page != nullptr && position != uint2(INVALID_SIZE_32); }
         };
 
     private:
@@ -150,18 +118,11 @@ namespace fantasy
         }
 
     public:
-        VTPhysicalTable(uint32_t resolution = vt_physical_texture_resolution, uint32_t tile_size = VT_PAGE_SIZE) : 
+        VTPhysicalTable(uint32_t resolution = VT_PHYSICAL_TEXTURE_RESOLUTION, uint32_t tile_size = VT_PAGE_SIZE) : 
             _resolution(resolution),
             _resolution_in_tile(resolution / tile_size),
             _tiles((resolution / tile_size) * (resolution / tile_size), on_page_evict) 
         {
-        }
-
-        void initialize(uint32_t resolution, uint32_t tile_size)
-        {
-            _resolution = resolution;
-            _resolution_in_tile = resolution / tile_size;
-            _tiles.initialize(_resolution_in_tile * _resolution_in_tile, on_page_evict);
         }
 
         uint2 add_page(VTPage* page);

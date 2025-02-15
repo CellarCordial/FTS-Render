@@ -35,8 +35,8 @@ namespace fantasy
 		// _global_entity->assign<event::GenerateSurfaceCache>();
 
 		
-		// uint32_t current_resolution = lowest_texture_resolution;
-		// while (current_resolution < highest_texture_resolution)
+		// uint32_t current_resolution = LOWEST_TEXTURE_RESOLUTION;
+		// while (current_resolution < HIGHEST_TEXTURE_RESOLUTION)
 		// {
 		// 	_world->create_entity()->assign<MipmapLUT>()->initialize(current_resolution);
 		// 	current_resolution <<= 1;
