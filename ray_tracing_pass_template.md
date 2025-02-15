@@ -80,10 +80,10 @@ namespace fantasy
 			ShaderCompileDesc shader_compile_desc;
 			shader_compile_desc.shader_name = ".slang";
 			shader_compile_desc.entry_point = "ray_generation_shader";
-			ShaderData ray_gen_data = shader_compile::compile_shader(shader_compile_desc);
+			ShaderData ray_gen_data = compile_shader(shader_compile_desc);
 			shader_compile_desc.shader_name = ".slang";
 			shader_compile_desc.entry_point = "miss_shader";
-			ShaderData miss_data = shader_compile::compile_shader(shader_compile_desc);
+			ShaderData miss_data = compile_shader(shader_compile_desc);
 
 			ShaderDesc ray_gen_desc;
 			ray_gen_desc.entry = "ray_generation_shader";

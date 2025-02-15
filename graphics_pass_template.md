@@ -30,7 +30,7 @@ namespace fantasy
 		std::shared_ptr<TextureInterface> _texture;
 		
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
-		std::unique_ptr<InputLayoutInterface> _input_layout;
+		std::shared_ptr<InputLayoutInterface> _input_layout;
 
 		std::shared_ptr<Shader> _vs;
 		std::shared_ptr<Shader> _ps;
@@ -110,12 +110,12 @@ namespace fantasy
 			shader_compile_desc.entry_point = "vertex_shader";
 			shader_compile_desc.target = ShaderTarget::Vertex;
 			shader_compile_desc.defines.push_back("Define=" + std::to_string(Define));
-			ShaderData vs_data = shader_compile::compile_shader(shader_compile_desc);
+			ShaderData vs_data = compile_shader(shader_compile_desc);
 			shader_compile_desc.shader_name = ".slang";
 			shader_compile_desc.entry_point = "pixel_shader";
 			shader_compile_desc.target = ShaderTarget::Pixel;
 			shader_compile_desc.defines.push_back("Define=" + std::to_string(Define));
-			ShaderData ps_data = shader_compile::compile_shader(shader_compile_desc);
+			ShaderData ps_data = compile_shader(shader_compile_desc);
 
 			ShaderDesc vs_desc;
 			vs_desc.entry = "vertex_shader";
@@ -164,12 +164,12 @@ namespace fantasy
 		// Pipeline.
 		{
 			GraphicsPipelineDesc pipeline_desc;
-			pipeline_desc.vertex_shader = _vs.get();
-			pipeline_desc.pixel_shader = _ps.get();
-			pipeline_desc.input_layout = _input_layout.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.vertex_shader = _vs;
+			pipeline_desc.pixel_shader = _ps;
+			pipeline_desc.input_layout = _input_layout;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(
-				device->create_graphics_pipeline(pipeline_desc, _frame_buffer.get())
+				device->create_graphics_pipeline(pipeline_desc, _frame_buffer)
 			));
 		}
 
@@ -217,9 +217,7 @@ namespace fantasy
 			_resource_writed = true;
 		}
 
-		ReturnIfFalse(cmdlist->set_graphics_state(_graphics_state));
-		ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant)));
-		ReturnIfFalse(cmdlist->draw_indexed(DrawArgument));
+		ReturnIfFalse(cmdlist->draw_indexed(_graphics_state, DrawArgument{}, &_pass_constant));
 
 		ReturnIfFalse(cmdlist->close());
 		return true;

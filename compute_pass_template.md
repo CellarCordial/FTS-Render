@@ -76,14 +76,14 @@ namespace fantasy
 		{
 			ShaderCompileDesc cs_compile_desc;
 			cs_compile_desc.shader_name = ".slang";
-			cs_compile_desc.entry_point = "compute_shader";
+			cs_compile_desc.entry_point = "main";
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
-			ShaderData cs_data = shader_compile::compile_shader(cs_compile_desc);
+			ShaderData cs_data = compile_shader(cs_compile_desc);
 
 			ShaderDesc cs_desc;
-			cs_desc.entry = "compute_shader";
+			cs_desc.entry = "main";
 			cs_desc.shader_type = ShaderType::Compute;
 			ReturnIfFalse(_cs = std::unique_ptr<Shader>(create_shader(cs_desc, cs_data.data(), cs_data.size())));
 		}
@@ -91,8 +91,8 @@ namespace fantasy
 		// Pipeline.
 		{
 			ComputePipelineDesc pipeline_desc;
-			pipeline_desc.compute_shader = _cs.get();
-			pipeline_desc.binding_layouts.push_back(_binding_layout.get());
+			pipeline_desc.compute_shader = _cs;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
 		}
 
@@ -136,7 +136,7 @@ namespace fantasy
 			binding_set_items[Index] = BindingSetItem::create_sampler(slot, sampler);
             ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
                 BindingSetDesc{ .binding_items = binding_set_items },
-                _binding_layout.get()
+                _binding_layout
             )));
 		}
 
@@ -158,9 +158,7 @@ namespace fantasy
 			static_cast<uint32_t>((align(_texture_resolution.y, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
 		};
 
-		ReturnIfFalse(cmdlist->set_compute_state(_compute_state));
-		ReturnIfFalse(cmdlist->set_push_constants(&_pass_constant, sizeof(constant)));
-		ReturnIfFalse(cmdlist->dispatch(thread_group_num.x, thread_group_num.y));
+		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constant));
 
 		ReturnIfFalse(cmdlist->close());
         return true;
