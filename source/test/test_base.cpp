@@ -1,6 +1,4 @@
-#define GLFW_INCLUDE_VULKAN
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3.h>
+
 
 #include "test_base.h"
 #include "../core/tools/log.h"
@@ -8,6 +6,7 @@
 #include "../dynamic_rhi/resource.h"
 #include "../shader/shader_compiler.h"
 #include "../core/parallel/parallel.h"
+#include "../gui/gui_pass.h"
 #include "../scene/scene.h"
 #include "../scene/camera.h"
 #include <d3d12.h>
@@ -22,9 +21,8 @@
 
 #pragma comment(lib, "dxgi.lib")
 #pragma comment(lib, "d3d12.lib")
-#pragma comment(lib, "dxguid.lib")
-#pragma comment(lib, "d3dcompiler.lib")
-
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = 4;}
+extern "C" { __declspec(dllexport) extern const char* D3D12SDKPath = ".\\D3D12\\"; }
 
 namespace fantasy 
 {
@@ -38,22 +36,6 @@ namespace fantasy
         parallel::destroy();
 		glfwDestroyWindow(_window);
 		glfwTerminate();
-
-		switch (_api) 
-		{
-		case GraphicsAPI::D3D12:
-			{
-				Microsoft::WRL::ComPtr<IDXGIDebug1> dxgi_debug;
-				if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&dxgi_debug))))
-				{
-					dxgi_debug->ReportLiveObjects(
-						DXGI_DEBUG_ALL, 
-						DXGI_DEBUG_RLO_FLAGS(DXGI_DEBUG_RLO_DETAIL | DXGI_DEBUG_RLO_IGNORE_INTERNAL)
-					);
-				}
-			}
-		case GraphicsAPI::Vulkan: break;
-		}
     }
 
     bool TestBase::initialize()
@@ -66,13 +48,11 @@ namespace fantasy
         case GraphicsAPI::Vulkan: ReturnIfFalse(init_vulkan()); set_shader_platform(ShaderPlatform::SPIRV); break;
         }
 
-        return create_samplers() && init_gui();
+        return create_samplers() && init_passes();
     }
 
     bool TestBase::run()
     {
-        RenderPassInterface* pass = init_render_pass(_render_graph.get());
-		if (pass) pass->precede(_gui_pass.get());
         
         ReturnIfFalse(_render_graph->compile());
 		while (!glfwWindowShouldClose(_window))
@@ -85,11 +65,15 @@ namespace fantasy
         return true;
     }
 
-    bool TestBase::init_gui()
+    bool TestBase::init_passes()
     {
-        _gui_pass = std::make_shared<GuiPass>();
-		_gui_pass->init(_window, _device.get());
-		_render_graph->add_pass(_gui_pass);
+        std::shared_ptr<GuiPass> gui_pass = std::make_shared<GuiPass>();
+		gui_pass->init(_window, _device.get());
+		_render_graph->add_pass(gui_pass);
+		
+        RenderPassInterface* pass = init_render_pass(_render_graph.get());
+		if (pass) pass->precede(gui_pass.get());
+
         return true;
     }
 
@@ -121,12 +105,18 @@ namespace fantasy
 #ifdef DEBUG
 		{
 			Microsoft::WRL::ComPtr<ID3D12Debug> d3d12_debug_controller;
-			D3D12GetDebugInterface(IID_PPV_ARGS(d3d12_debug_controller.GetAddressOf()));
+			ReturnIfFalse(SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(d3d12_debug_controller.GetAddressOf()))));
 			d3d12_debug_controller->EnableDebugLayer();
 		}
 #endif
 		ID3D12Device* d3d12_device;
-		ReturnIfFalse(SUCCEEDED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&d3d12_device))));
+		ReturnIfFalse(SUCCEEDED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&d3d12_device))));
+
+		D3D12_FEATURE_DATA_SHADER_MODEL d3d12_shader_model = { D3D_SHADER_MODEL_6_6 };
+		ReturnIfFalse(
+			SUCCEEDED(d3d12_device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &d3d12_shader_model, sizeof(d3d12_shader_model))) &&
+			d3d12_shader_model.HighestShaderModel >= D3D_SHADER_MODEL_6_6
+		);
 
 		ID3D12CommandQueue* d3d12_graphics_cmd_queue;
 		ID3D12CommandQueue* d3d12_compute_cmd_queue;
@@ -180,7 +170,7 @@ namespace fantasy
 		);
 		ReturnIfFalse(_render_graph->initialize(&_world));
 
-		RenderResourceCache* cache = _render_graph->GetResourceCache();
+		RenderResourceCache* cache = _render_graph->get_resource_cache();
 		cache->collect_constants("back_buffer_index", &_current_back_buffer_index);
 
 		TextureDesc back_buffer_desc;
@@ -233,7 +223,7 @@ namespace fantasy
 		ReturnIfFalse(anisotropic_wrap_sampler = std::shared_ptr<SamplerInterface>(_device->create_sampler(sampler_desc)));
 
 
-		RenderResourceCache* cache = _render_graph->GetResourceCache();
+		RenderResourceCache* cache = _render_graph->get_resource_cache();
 		cache->collect(linear_clamp_sampler, ResourceType::Sampler);
 		cache->collect(point_clamp_sampler, ResourceType::Sampler);
 		cache->collect(linear_warp_sampler, ResourceType::Sampler);

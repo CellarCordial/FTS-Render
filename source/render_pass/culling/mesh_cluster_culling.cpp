@@ -3,6 +3,7 @@
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
 #include "../../scene/camera.h"
+#include "../../scene/scene.h"
 #include <cstdint>
 
 
@@ -83,6 +84,7 @@ namespace fantasy
             desc.height = _hzb_resolution;
             desc.format = Format::R32_FLOAT;
             desc.mip_levels = hzb_mip_levels;
+            desc.allow_unordered_access = true;
 			ReturnIfFalse(_hierarchical_zbuffer_texture = std::shared_ptr<TextureInterface>(device->create_texture(desc)));
 			cache->collect(_hierarchical_zbuffer_texture, ResourceType::Texture);
 		}
@@ -123,109 +125,112 @@ namespace fantasy
 	{
 		ReturnIfFalse(cmdlist->open());
 
-        World* world = cache->get_world();
-
-        Camera* camera = world->get_global_entity()->get_component<Camera>();
-        _pass_constant.camera_fov_y = camera->get_fov_y();
-        _pass_constant.view_matrix = camera->view_matrix;
-        _pass_constant.proj_matrix = camera->proj_matrix;
-        _pass_constant.near_plane = camera->get_near_z();
-        _pass_constant.far_plane = camera->get_far_z();
-
-        if (!_resource_writed)
+        if (SceneSystem::loaded_submesh_count != 0)
         {
-            DeviceInterface* device = cmdlist->get_deivce();
-            _pass_constant.group_count = 0;
-
-            uint32_t cluster_count = 0;
-            uint32_t vertex_offset = 0;
-            uint32_t triangle_offset = 0;
-
-            ReturnIfFalse(world->each<VirtualMesh>(
-                [&](Entity* entity, VirtualMesh* virtual_mesh) -> bool
-                {
-                    for (const auto& submesh : virtual_mesh->_submeshes)
+            World* world = cache->get_world();
+            
+            Camera* camera = world->get_global_entity()->get_component<Camera>();
+            _pass_constant.camera_fov_y = camera->get_fov_y();
+            _pass_constant.view_matrix = camera->view_matrix;
+            _pass_constant.proj_matrix = camera->proj_matrix;
+            _pass_constant.near_plane = camera->get_near_z();
+            _pass_constant.far_plane = camera->get_far_z();
+            
+            if (!_resource_writed)
+            {
+                DeviceInterface* device = cmdlist->get_deivce();
+                _pass_constant.group_count = 0;
+    
+                uint32_t cluster_count = 0;
+                uint32_t vertex_offset = 0;
+                uint32_t triangle_offset = 0;
+    
+                ReturnIfFalse(world->each<VirtualMesh>(
+                    [&](Entity* entity, VirtualMesh* virtual_mesh) -> bool
                     {
-                        _pass_constant.group_count += static_cast<uint32_t>(submesh.cluster_groups.size());
-
-                        for (const auto& group : submesh.cluster_groups)
+                        for (const auto& submesh : virtual_mesh->_submeshes)
                         {
-                            _mesh_cluster_groups.emplace_back(convert_mesh_cluster_group(group, cluster_count, submesh.mip_levels - 1));
-
-                            for (auto ix : group.cluster_indices)
+                            _pass_constant.group_count += static_cast<uint32_t>(submesh.cluster_groups.size());
+    
+                            for (const auto& group : submesh.cluster_groups)
                             {
-                                const auto& cluster = submesh.clusters[ix];
-                                _mesh_clusters.emplace_back(convert_mesh_cluster(cluster, vertex_offset, triangle_offset));
-
-                                vertex_offset += static_cast<uint32_t>(cluster.vertices.size());
-                                triangle_offset += static_cast<uint32_t>(cluster.indices.size() / 3);
+                                _mesh_cluster_groups.emplace_back(convert_mesh_cluster_group(group, cluster_count, submesh.mip_levels - 1));
+    
+                                for (auto ix : group.cluster_indices)
+                                {
+                                    const auto& cluster = submesh.clusters[ix];
+                                    _mesh_clusters.emplace_back(convert_mesh_cluster(cluster, vertex_offset, triangle_offset));
+    
+                                    vertex_offset += static_cast<uint32_t>(cluster.vertices.size());
+                                    triangle_offset += static_cast<uint32_t>(cluster.indices.size() / 3);
+                                }
+                                
+                                cluster_count += static_cast<uint32_t>(group.cluster_indices.size());
                             }
-                            
-                            cluster_count += static_cast<uint32_t>(group.cluster_indices.size());
-                        }
-
-                    }  
-                    return true;
-                }
-            ));
-            
-            ReturnIfFalse(_mesh_cluster_group_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-                BufferDesc::create_structured_buffer(
-                    sizeof(MeshClusterGroupGpu) * _mesh_cluster_groups.size(), 
-                    sizeof(MeshClusterGroupGpu),
-                    "mesh_cluster_group_buffer"
-                )
-            )));
-            
-            ReturnIfFalse(_mesh_cluster_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-                BufferDesc::create_structured_buffer(
-                    sizeof(MeshClusterGpu) * _mesh_clusters.size(), 
-                    sizeof(MeshClusterGpu),
-                    "mesh_cluster_buffer"
-                )
-            )));
-            cache->collect(_mesh_cluster_buffer, ResourceType::Buffer);
-
-            ReturnIfFalse(_visible_cluster_id_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-                BufferDesc::create_read_write_structured_buffer(
-                    sizeof(uint32_t) * cluster_count, 
-                    sizeof(uint32_t),
-                    "visible_cluster_id_buffer"
-                )
-            )));
-            cache->collect(_visible_cluster_id_buffer, ResourceType::Buffer);
-            
-
-            ReturnIfFalse(cmdlist->write_buffer(
-                _mesh_cluster_group_buffer.get(), 
-                _mesh_cluster_groups.data(), 
-                sizeof(MeshClusterGroupGpu) * _mesh_cluster_groups.size()
-            ));
-            ReturnIfFalse(cmdlist->write_buffer(
-                _mesh_cluster_buffer.get(), 
-                _mesh_clusters.data(), 
-                sizeof(MeshClusterGpu) * _mesh_clusters.size()
-            ));
-
-
-            _binding_set.reset();
-
-            _binding_set_items[2] = BindingSetItem::create_structured_buffer_uav(1, _visible_cluster_id_buffer);
-			_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(0, _mesh_cluster_group_buffer);
-			_binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(1, _mesh_cluster_buffer);
-            ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
-                BindingSetDesc{ .binding_items = _binding_set_items },
-                _binding_layout
-            )));
-            _compute_state.binding_sets[0] = _binding_set.get();
-
-            _resource_writed = true;
+    
+                        }  
+                        return true;
+                    }
+                ));
+                
+                ReturnIfFalse(_mesh_cluster_group_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+                    BufferDesc::create_structured_buffer(
+                        sizeof(MeshClusterGroupGpu) * _mesh_cluster_groups.size(), 
+                        sizeof(MeshClusterGroupGpu),
+                        "mesh_cluster_group_buffer"
+                    )
+                )));
+                
+                ReturnIfFalse(_mesh_cluster_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+                    BufferDesc::create_structured_buffer(
+                        sizeof(MeshClusterGpu) * _mesh_clusters.size(), 
+                        sizeof(MeshClusterGpu),
+                        "mesh_cluster_buffer"
+                    )
+                )));
+                cache->collect(_mesh_cluster_buffer, ResourceType::Buffer);
+    
+                ReturnIfFalse(_visible_cluster_id_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+                    BufferDesc::create_read_write_structured_buffer(
+                        sizeof(uint32_t) * cluster_count, 
+                        sizeof(uint32_t),
+                        "visible_cluster_id_buffer"
+                    )
+                )));
+                cache->collect(_visible_cluster_id_buffer, ResourceType::Buffer);
+                
+    
+                ReturnIfFalse(cmdlist->write_buffer(
+                    _mesh_cluster_group_buffer.get(), 
+                    _mesh_cluster_groups.data(), 
+                    sizeof(MeshClusterGroupGpu) * _mesh_cluster_groups.size()
+                ));
+                ReturnIfFalse(cmdlist->write_buffer(
+                    _mesh_cluster_buffer.get(), 
+                    _mesh_clusters.data(), 
+                    sizeof(MeshClusterGpu) * _mesh_clusters.size()
+                ));
+    
+    
+                _binding_set.reset();
+    
+                _binding_set_items[2] = BindingSetItem::create_structured_buffer_uav(1, _visible_cluster_id_buffer);
+                _binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(0, _mesh_cluster_group_buffer);
+                _binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(1, _mesh_cluster_buffer);
+                ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
+                    BindingSetDesc{ .binding_items = _binding_set_items },
+                    _binding_layout
+                )));
+                _compute_state.binding_sets[0] = _binding_set.get();
+    
+                _resource_writed = true;
+            }
+    
+            uint32_t thread_group_num = 
+                static_cast<uint32_t>((align(_pass_constant.group_count, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X));
+    
+            ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num, 1, 1, &_pass_constant));
         }
-
-		uint32_t thread_group_num = 
-            static_cast<uint32_t>((align(_pass_constant.group_count, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X));
-
-		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num, 1, 1, &_pass_constant));
 
 		ReturnIfFalse(cmdlist->close());
 

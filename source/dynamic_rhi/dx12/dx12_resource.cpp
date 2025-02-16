@@ -411,7 +411,7 @@ namespace fantasy
 
         d3d12_resource_desc = convert_buffer_desc(desc);
 
-        if (desc.is_volatile_constant_buffer || desc.is_virtual) return true;
+        if (desc.is_virtual) return true;
 
         D3D12_HEAP_TYPE heap_type = D3D12_HEAP_TYPE_DEFAULT;
         if (desc.cpu_access == CpuAccessMode::Read) heap_type = D3D12_HEAP_TYPE_READBACK;

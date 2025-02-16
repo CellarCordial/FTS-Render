@@ -444,7 +444,6 @@ namespace fantasy
     {
         commit_barriers();
         _current_cmdlist->d3d12_cmdlist->Close();
-        _volatile_constant_buffer_address_cache.clear();
         return true;
     }
 
@@ -856,23 +855,16 @@ namespace fantasy
 
         ID3D12Resource* d3d12_upload_resource = reinterpret_cast<ID3D12Resource*>(upload_buffer->get_native_object());
 
-        if (buffer->get_desc().is_volatile_constant_buffer)
-        {
-            _volatile_constant_buffer_address_cache[buffer] = d3d12_upload_resource->GetGPUVirtualAddress() + upload_offset;
-        }
-        else 
-        {
-			set_buffer_state(buffer, ResourceStates::CopyDst);
-            commit_barriers();
+        set_buffer_state(buffer, ResourceStates::CopyDst);
+        commit_barriers();
 
-            _current_cmdlist->d3d12_cmdlist->CopyBufferRegion(
-                reinterpret_cast<ID3D12Resource*>(buffer->get_native_object()), 
-                dst_byte_offset, 
-                d3d12_upload_resource, 
-                upload_offset, 
-                data_size
-            );
-        }
+        _current_cmdlist->d3d12_cmdlist->CopyBufferRegion(
+            reinterpret_cast<ID3D12Resource*>(buffer->get_native_object()), 
+            dst_byte_offset, 
+            d3d12_upload_resource, 
+            upload_offset, 
+            data_size
+        );
 
         return true;
     }
@@ -1076,14 +1068,15 @@ namespace fantasy
                 DX12BindingSet* binding_set = check_cast<DX12BindingSet*>(binding_sets[ix]);
                 DX12BindingLayout* binding_layout = check_cast<DX12BindingLayout*>(pipeline->get_desc().binding_layouts[ix].get());
 
-                for (uint32_t ix = 0; ix < binding_set->root_param_index_volatile_cb_map.size(); ++ix)
+                for (uint32_t ix = 0; ix < binding_set->root_param_index_constant_buffer_map.size(); ++ix)
                 {
-                    uint32_t root_param_index = binding_set->root_param_index_volatile_cb_map[ix].first;
-                    BufferInterface* volatile_constant_buffer = binding_set->root_param_index_volatile_cb_map[ix].second;
+                    uint32_t root_param_index = binding_set->root_param_index_constant_buffer_map[ix].first;
+                    BufferInterface* constant_buffer = binding_set->root_param_index_constant_buffer_map[ix].second;
 
-                    D3D12_GPU_VIRTUAL_ADDRESS gpu_address = _volatile_constant_buffer_address_cache[volatile_constant_buffer];
-
-                    _current_cmdlist->d3d12_cmdlist->SetComputeRootConstantBufferView(root_param_index, gpu_address);
+                    _current_cmdlist->d3d12_cmdlist->SetComputeRootConstantBufferView(
+                        root_param_index, 
+                        reinterpret_cast<ID3D12Resource*>(constant_buffer->get_native_object())->GetGPUVirtualAddress()
+                    );
                 }
 
                 if (binding_set->is_descriptor_table_sampler_valid)
@@ -1127,14 +1120,15 @@ namespace fantasy
                 DX12BindingSet* binding_set = check_cast<DX12BindingSet*>(binding_sets[ix]);
                 DX12BindingLayout* binding_layout = check_cast<DX12BindingLayout*>(pipeline->get_desc().binding_layouts[ix].get());
 
-                for (uint32_t ix = 0; ix < binding_set->root_param_index_volatile_cb_map.size(); ++ix)
+                for (uint32_t ix = 0; ix < binding_set->root_param_index_constant_buffer_map.size(); ++ix)
                 {
-                    uint32_t root_param_index = binding_set->root_param_index_volatile_cb_map[ix].first;
-                    BufferInterface* volatile_constant_buffer = binding_set->root_param_index_volatile_cb_map[ix].second;
+                    uint32_t root_param_index = binding_set->root_param_index_constant_buffer_map[ix].first;
+                    BufferInterface* constant_buffer = binding_set->root_param_index_constant_buffer_map[ix].second;
 
-                    D3D12_GPU_VIRTUAL_ADDRESS gpu_address = _volatile_constant_buffer_address_cache[volatile_constant_buffer];
-
-                    _current_cmdlist->d3d12_cmdlist->SetGraphicsRootConstantBufferView(root_param_index, gpu_address);
+                    _current_cmdlist->d3d12_cmdlist->SetGraphicsRootConstantBufferView(
+                        root_param_index, 
+                        reinterpret_cast<ID3D12Resource*>(constant_buffer->get_native_object())->GetGPUVirtualAddress()
+                    );
                 }
 
                 if (binding_set->is_descriptor_table_sampler_valid)

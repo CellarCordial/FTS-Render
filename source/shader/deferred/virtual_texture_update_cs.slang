@@ -1,5 +1,5 @@
-#define THREAD_GROUP_SIZE_X 1
-#define THREAD_GROUP_SIZE_Y 1
+// #define THREAD_GROUP_SIZE_X 1
+// #define THREAD_GROUP_SIZE_Y 1
 
 #include "../common/gbuffer.slang"
 
@@ -16,9 +16,9 @@ cbuffer pass_constants : register(b0)
 [vk_binding(4, 0)] Texture2D<float3> vt_normal_physical_texture : register(t3);
 [vk_binding(5, 0)] Texture2D<float3> vt_pbr_physical_texture : register(t4);
 [vk_binding(6, 0)] Texture2D<float4> vt_emissive_physical_texture : register(t5);
-[vk_binding(7, 0)] Texture2D<float3> world_space_tangent_texture : register(t6);
+[vk_binding(7, 0)] Texture2D<float4> world_space_tangent_texture : register(t6);
 
-[vk_binding(8, 0)] RWTexture2D<float3> world_space_normal_texture : register(u0);
+[vk_binding(8, 0)] RWTexture2D<float4> world_space_normal_texture : register(u0);
 [vk_binding(9, 0)] RWTexture2D<float4> base_color_texture : register(u1);
 [vk_binding(10, 0)] RWTexture2D<float4> pbr_texture : register(u2);
 [vk_binding(11, 0)] RWTexture2D<float4> emissive_texture : register(u3);
@@ -42,8 +42,8 @@ void main(uint3 thread_id : SV_DispatchThreadID)
 
     float3 normal = calculate_normal(
         vt_normal_physical_texture.Sample(linear_clamp_sampler, physical_uv).xyz,
-        normalize(world_space_normal_texture[pixel_id]),
-        normalize(world_space_tangent_texture[pixel_id])
+        normalize(world_space_normal_texture[pixel_id].xyz),
+        normalize(world_space_tangent_texture[pixel_id].xyz)
     );
     float4 base_color =
         vt_base_color_physical_texture.Sample(linear_clamp_sampler, physical_uv) *
@@ -55,7 +55,7 @@ void main(uint3 thread_id : SV_DispatchThreadID)
         vt_emissive_physical_texture.Sample(linear_clamp_sampler, physical_uv) * 
         emissive_texture[pixel_id];
 
-    world_space_normal_texture[pixel_id] = normal;
+    world_space_normal_texture[pixel_id] = float4(normal, 0.0f);
     base_color_texture[pixel_id] = base_color;
     pbr_texture[pixel_id] = float4(pbr, 1.0f);
     emissive_texture[pixel_id] = emissive;

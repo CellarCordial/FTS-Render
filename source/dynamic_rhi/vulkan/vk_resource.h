@@ -86,13 +86,6 @@ namespace fantasy
         std::mutex _mutex;
     };
 
-    struct VKBufferVersion : public std::atomic<uint64_t>
-    {
-        VKBufferVersion() : std::atomic<uint64_t>() {}
-        VKBufferVersion(const VKBufferVersion& other) { store(other); }
-        VKBufferVersion& operator=(const uint64_t a) { store(a); return *this; }
-    };
-
     class VKBuffer : public BufferInterface
     {
     public:
@@ -120,10 +113,6 @@ namespace fantasy
         std::shared_ptr<HeapInterface> heap;
         std::unordered_map<uint64_t, vk::BufferView> view_cache;
         
-        void* mapped_volatile_memory = nullptr;
-        std::vector<VKBufferVersion> version_tracking;
-        uint32_t version_search_start = 0;
-
     private:
         const VKContext* _context;
         const VKMemoryAllocator* _allocator;

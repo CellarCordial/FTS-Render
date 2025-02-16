@@ -5,6 +5,7 @@
 #include "../../core/math/matrix.h"
 #include "../../scene/geometry.h"
 #include "../../scene/virtual_texture.h"
+#include <memory>
 #include <vector>
  
 namespace fantasy
@@ -56,6 +57,7 @@ namespace fantasy
 		std::vector<uint32_t> _cluster_triangles;
 		std::vector<GeometryConstantGpu> _geometry_constants;
 
+		std::shared_ptr<BufferInterface> _pass_constant_buffer;
 		std::shared_ptr<BufferInterface> _geometry_constant_buffer;
 		std::shared_ptr<BufferInterface> _cluster_vertex_buffer;
 		std::shared_ptr<BufferInterface> _cluster_triangle_buffer;
@@ -70,7 +72,7 @@ namespace fantasy
 		std::shared_ptr<TextureInterface> _world_space_tangent_texture;
 		std::shared_ptr<TextureInterface> _base_color_texture;
 		std::shared_ptr<TextureInterface> _pbr_texture;
-		std::shared_ptr<TextureInterface> _emmisive_texture;
+		std::shared_ptr<TextureInterface> _emissive_texture;
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 		std::shared_ptr<InputLayoutInterface> _input_layout;

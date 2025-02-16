@@ -1,6 +1,7 @@
 #include "hierarchical_zbuffer.h"
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
+#include "../../scene/scene.h"
 #include <memory>
 
 namespace fantasy
@@ -33,7 +34,7 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc cs_compile_desc;
-			cs_compile_desc.shader_name = "culling/hierarchical_zbuffer_ps.slang";
+			cs_compile_desc.shader_name = "culling/hierarchical_zbuffer_cs.slang";
 			cs_compile_desc.entry_point = "main";
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.resize(3);
@@ -102,22 +103,23 @@ namespace fantasy
 	bool HierarchicalZBufferPass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
 		ReturnIfFalse(cmdlist->open());
-
-		uint2 thread_group_num = {
-			static_cast<uint32_t>((align(_pass_constants[0].hzb_resolution, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
-			static_cast<uint32_t>((align(_pass_constants[0].hzb_resolution, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
-		};
-		
-		// _pass_constants 中变化的只有 last_mip_level, 而这 copy_depth pass 并不关心, 所以直接使用 _pass_constants[0] 即可.
-		_compute_state.pipeline = _copy_depth_pipeline.get();
-		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constants[0]));
-
-		_compute_state.pipeline = _calc_mip_pipeline.get();
-        for (uint32_t ix = 0; ix < _pass_constants.size(); ++ix)
-        {
-            ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constants[ix]));
-        }
-
+        if (SceneSystem::loaded_submesh_count != 0)
+		{
+			uint2 thread_group_num = {
+				static_cast<uint32_t>((align(_pass_constants[0].hzb_resolution, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
+				static_cast<uint32_t>((align(_pass_constants[0].hzb_resolution, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
+			};
+			
+			// _pass_constants 中变化的只有 last_mip_level, 而这 copy_depth pass 并不关心, 所以直接使用 _pass_constants[0] 即可.
+			_compute_state.pipeline = _copy_depth_pipeline.get();
+			ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constants[0]));
+	
+			_compute_state.pipeline = _calc_mip_pipeline.get();
+			for (uint32_t ix = 0; ix < _pass_constants.size(); ++ix)
+			{
+				ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constants[ix]));
+			}
+		}
 		ReturnIfFalse(cmdlist->close());
 		return true;
 	}

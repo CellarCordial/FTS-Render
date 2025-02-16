@@ -48,7 +48,7 @@ VertexOutput main(uint32_t instance_id: SV_InstanceID, uint32_t vertex_index : S
     uint32_t triangle_index = vertex_index / 3;
     if (triangle_index >= cluster.triangle_count)
     {
-        output.sv_position.z = 0 / 0;
+        output.sv_position = float4(0.0, 0.0, 0.0, 0.0) / 0.0;
         return output;
     }
 

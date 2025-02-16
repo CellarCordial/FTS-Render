@@ -14,7 +14,6 @@ namespace fantasy
     inline const uint32_t MAX_VERTEX_ATTRIBUTES = 16U;
     inline const uint32_t MAX_BINDING_LAYOUTS = 5U;
     inline const uint32_t MAX_BINDINGS_PER_LAYOUT = 128U;
-    inline const uint32_t MAX_VOLATILE_CONSTANT_BUFFERS_PER_LAYOUT = 6U;
     inline const uint32_t MAX_VOLATILE_CONSTANT_BUFFERS = 32U;         
     inline const uint32_t MAX_PUSH_CONSTANT_SIZE = 128U;  // D3D12: 256 bytes max, Vulkan: 128 bytes max, 所以用 128.
     inline const uint32_t CONSTANT_BUFFER_OFFSET_SIZE_ALIGMENT = 256U;

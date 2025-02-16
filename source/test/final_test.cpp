@@ -40,7 +40,7 @@ namespace fantasy
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = compile_shader(shader_compile_desc);
-			shader_compile_desc.shader_name = "test/restir_test_ps.slang";
+			shader_compile_desc.shader_name = "test/final_test_ps.slang";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Pixel;
 			ShaderData ps_data = compile_shader(shader_compile_desc);
@@ -128,13 +128,13 @@ namespace fantasy
     {
 		RenderPassInterface* mipmap_generation_pass = render_graph->add_pass(std::make_shared<MipmapGenerationPass>());
 
-		RenderPassInterface* test_pass = render_graph->add_pass(std::make_shared<FinalTestPass>());
 		RenderPassInterface* mesh_cluster_culling_pass = render_graph->add_pass(std::make_shared<MeshClusterCullingPass>());
 		RenderPassInterface* hierarchical_zbuffer_pass = render_graph->add_pass(std::make_shared<HierarchicalZBufferPass>());
 		RenderPassInterface* virtual_gbuffer_pass = render_graph->add_pass(std::make_shared<VirtualGBufferPass>());
 		RenderPassInterface* virtual_texture_update_pass = render_graph->add_pass(std::make_shared<VirtualTextureUpdatePass>());
 		RenderPassInterface* shadow_tile_culling_pass = render_graph->add_pass(std::make_shared<ShadowTileCullingPass>());
 		RenderPassInterface* virtual_shadow_map_pass = render_graph->add_pass(std::make_shared<VirtualShadowMapPass>());
+		RenderPassInterface* test_pass = render_graph->add_pass(std::make_shared<FinalTestPass>());
 		
 		mesh_cluster_culling_pass->precede(virtual_gbuffer_pass);
 		virtual_gbuffer_pass->precede(hierarchical_zbuffer_pass);
@@ -143,7 +143,7 @@ namespace fantasy
 		shadow_tile_culling_pass->precede(virtual_shadow_map_pass);
 		hierarchical_zbuffer_pass->precede(test_pass);
 		virtual_shadow_map_pass->precede(test_pass);
-		
+
 		return test_pass; 
     }
 }

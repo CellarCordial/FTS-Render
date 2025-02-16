@@ -1,5 +1,6 @@
 #include "scene.h"
 
+#include <assimp/scene.h>
 // #include "light.h"
 #include "camera.h"
 #include "../core/parallel/parallel.h"
@@ -31,16 +32,17 @@ namespace fantasy
 		// _global_entity->assign<event::GenerateSdf>();
 		// _global_entity->assign<event::AddSpotLight>();
 		// _global_entity->assign<event::AddPointLight>();
+		_global_entity->assign<event::GenerateMipmap>();
 		// _global_entity->assign<event::UpdateGlobalSdf>();
 		// _global_entity->assign<event::GenerateSurfaceCache>();
 
 		
-		// uint32_t current_resolution = LOWEST_TEXTURE_RESOLUTION;
-		// while (current_resolution < HIGHEST_TEXTURE_RESOLUTION)
-		// {
-		// 	_world->create_entity()->assign<MipmapLUT>()->initialize(current_resolution);
-		// 	current_resolution <<= 1;
-		// }
+		uint32_t current_resolution = LOWEST_TEXTURE_RESOLUTION;
+		while (current_resolution < HIGHEST_TEXTURE_RESOLUTION)
+		{
+			_world->create_entity()->assign<MipmapLUT>()->initialize(current_resolution);
+			current_resolution <<= 1;
+		}
 
 		return true;
 	}
@@ -101,6 +103,7 @@ namespace fantasy
 			_world->add_delay_entity(model_entity);
 			ReturnIfFalse(_global_entity->get_component<event::AddModel>()->broadcast());
 
+			loaded_submesh_count = _current_submesh_count;
 			thread_id = INVALID_SIZE_64;
 			model_entity = nullptr;
 		}

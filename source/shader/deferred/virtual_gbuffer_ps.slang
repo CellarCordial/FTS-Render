@@ -21,16 +21,16 @@ cbuffer pass_constants : register(b0)
 
 struct VertexOutput
 {
-    float3 color : COLOR;
     float4 sv_position : SV_Position;
 
+    float3 color : COLOR;
     float3 world_space_position : WORLD_POSITION;
 
     float3 view_space_position : VIEW_POSITION;
     float3 prev_view_space_position : PREV_VIEW_POSITION;
-    
+
     float3 world_space_normal : NORMAL;
-    float3 world_space_tangent  : TANGENT;
+    float3 world_space_tangent : TANGENT;
     float2 uv : TEXCOORD;
 
     uint32_t geometry_id : GEOMETRY_ID;
@@ -39,14 +39,12 @@ struct VertexOutput
 struct PixelOutput
 {
     float4 world_position_view_depth : SV_Target0;
-    float3 view_space_velocity : SV_TARGET1;
-    float2 tile_uv : SV_Target2;
-
-    float3 world_space_normal : SV_TARGET3;
-    float3 world_space_tangent : SV_TARGET4;
-    float4 base_color : SV_TARGET5;
-    float3 pbr : SV_TARGET6;
-    float4 emmisive : SV_TARGET7;
+    float4 view_space_velocity : SV_TARGET1;
+    float4 world_space_normal : SV_Target2;
+    float4 world_space_tangent : SV_TARGET3;
+    float4 base_color : SV_TARGET4;
+    float4 pbr : SV_TARGET5;
+    float4 emmisive : SV_TARGET6;
 };
 
 [vk_binding(1, 0)] StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
@@ -57,8 +55,9 @@ struct VTPageInfo
     uint32_t page_id_mip_level;
 };
 
-[vk_binding(6, 0)] RWStructuredBuffer<VTPageInfo> vt_page_info_buffer : register(u0);
-[vk_binding(7, 0)] RWStructuredBuffer<uint2> virtual_shadow_page_buffer : register(u1);
+[vk_binding(6, 0)] RWTexture2D<float2> _tile_uv_texture : register(u0);
+[vk_binding(7, 0)] RWStructuredBuffer<VTPageInfo> vt_page_info_buffer : register(u1);
+[vk_binding(8, 0)] RWStructuredBuffer<uint2> virtual_shadow_page_buffer : register(u2);
 
 uint32_t estimate_mip_level(float2 texture_coordinate)
 {
@@ -72,7 +71,7 @@ uint32_t estimate_mip_level(float2 texture_coordinate)
 [shader("pixel")]
 PixelOutput main(VertexOutput input)
 {
-    // 更新 virtual texture page info buffer.
+    // 更新 virtual texture page_info_buffer 和 tile_uv_texture.
     GeometryConstant geometry = geometry_constant_buffer[input.geometry_id];
     uint2 page_id = (uint2)floor(input.uv * (geometry.texture_resolution / vt_page_size));
     uint2 page_id_high_bit = (page_id >> 8) & 0x0f;
@@ -95,6 +94,10 @@ PixelOutput main(VertexOutput input)
     uint32_t pixel_index = pixel_id.x + pixel_id.y * client_width;
     vt_page_info_buffer[pixel_index] = info;
 
+    uint32_t vt_mip_page_size = vt_page_size << mip_level;
+    uint2 mip_page_id = (uint2)floor(input.uv * (geometry.texture_resolution / vt_mip_page_size));
+    _tile_uv_texture[pixel_id] = (geometry_texture_pixel_id - mip_page_id * vt_mip_page_size) / vt_mip_page_size;
+
     
     // 更新 virtual shadow page buffer.
     float4 shadow_view_proj_pos = mul(float4(input.world_space_position, 1.0f), shadow_view_proj);
@@ -116,16 +119,11 @@ PixelOutput main(VertexOutput input)
 
     PixelOutput output;
     output.world_position_view_depth = float4(input.world_space_position, input.view_space_position.z);
-    output.view_space_velocity = input.prev_view_space_position - input.view_space_position;
-
-    uint32_t vt_mip_page_size = vt_page_size << mip_level;
-    uint2 mip_page_id = (uint2)floor(input.uv * (geometry.texture_resolution / vt_mip_page_size));
-    output.tile_uv = (geometry_texture_pixel_id - mip_page_id * vt_mip_page_size) / vt_mip_page_size;
-    
-    output.world_space_normal = input.world_space_normal;
-    output.world_space_tangent = input.world_space_tangent;
+    output.view_space_velocity = float4(input.prev_view_space_position - input.view_space_position, 0.0f);
+    output.world_space_normal = float4(input.world_space_normal, 0.0f);
+    output.world_space_tangent = float4(input.world_space_tangent, 0.0f);
     output.base_color = geometry.base_color;
-    output.pbr = float3(geometry.metallic, geometry.roughness, geometry.occlusion);
+    output.pbr = float4(geometry.metallic, geometry.roughness, geometry.occlusion, 0.0f);
     output.emmisive = geometry.emissive;
     return output;
 }

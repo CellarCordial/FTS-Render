@@ -35,7 +35,6 @@ namespace fantasy
         RawBuffer_UAV,
         
         ConstantBuffer,
-        VolatileConstantBuffer,
 
         AccelStruct,
 
@@ -101,14 +100,6 @@ namespace fantasy
             BindingLayoutItem ret;
             ret.slot = slot;
             ret.type = ResourceViewType::ConstantBuffer;
-            return ret;
-        }
-
-        static BindingLayoutItem create_volatile_constant_buffer(uint32_t slot)
-        {
-            BindingLayoutItem ret;
-            ret.slot = slot;
-            ret.type = ResourceViewType::VolatileConstantBuffer;
             return ret;
         }
 
@@ -289,22 +280,6 @@ namespace fantasy
             BindingSetItem ret;
             ret.resource = buffer;
             ret.type = ResourceViewType::ConstantBuffer;
-            ret.slot = slot;
-            ret.range = BufferRange{
-                .byte_offset = 0,
-                .byte_size = buffer->get_desc().byte_size
-            };
-            return ret;
-        }
-
-        static BindingSetItem create_volatile_constant_buffer(
-            uint32_t slot,
-            std::shared_ptr<BufferInterface> buffer
-        )
-        {
-            BindingSetItem ret;
-            ret.resource = buffer;
-            ret.type = ResourceViewType::VolatileConstantBuffer;
             ret.slot = slot;
             ret.range = BufferRange{
                 .byte_offset = 0,

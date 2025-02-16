@@ -73,14 +73,14 @@ namespace fantasy
                 
                 push_constant_size = binding.size;
             }
-            else if (binding.type == ResourceViewType::VolatileConstantBuffer)
+            else if (binding.type == ResourceViewType::ConstantBuffer)
             {
                 D3D12_ROOT_DESCRIPTOR1 d3d12_root_descriptor;
                 d3d12_root_descriptor.ShaderRegister = binding.slot;
                 d3d12_root_descriptor.RegisterSpace = _desc.register_space;
                 d3d12_root_descriptor.Flags = D3D12_ROOT_DESCRIPTOR_FLAG_DATA_STATIC;
                 
-                root_param_index_volatile_cb_descriptor_map.push_back(std::make_pair(-1, d3d12_root_descriptor));
+                root_param_index_constant_buffer_descriptor_map.push_back(std::make_pair(-1, d3d12_root_descriptor));
             }
             else if (!are_resource_types_compatible(binding.type, current_resource_type) || binding.slot != current_slot + 1)
             {
@@ -113,10 +113,6 @@ namespace fantasy
                     case ResourceViewType::StructuredBuffer_UAV:
                     case ResourceViewType::RawBuffer_UAV:
                         range_type = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
-                        break;
-
-                    case ResourceViewType::ConstantBuffer:
-                        range_type = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
                         break;
 
                     default:
@@ -170,14 +166,14 @@ namespace fantasy
             push_constant_root_param_index = static_cast<uint32_t>(d3d12_root_parameters.size()) - 1;
         }
 
-        for (auto& volatile_constant_buffer : root_param_index_volatile_cb_descriptor_map)
+        for (auto& constant_buffer : root_param_index_constant_buffer_descriptor_map)
         {
             auto& d3d12_root_parameter = d3d12_root_parameters.emplace_back();
             d3d12_root_parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-            d3d12_root_parameter.Descriptor = volatile_constant_buffer.second;
+            d3d12_root_parameter.Descriptor = constant_buffer.second;
             d3d12_root_parameter.ShaderVisibility = shader_visibility;
 
-            volatile_constant_buffer.first = static_cast<uint32_t>(d3d12_root_parameters.size()) - 1;
+            constant_buffer.first = static_cast<uint32_t>(d3d12_root_parameters.size()) - 1;
         }
 
         if (descriptor_table_srv_etc_size > 0)
@@ -226,10 +222,6 @@ namespace fantasy
                 range_type = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
                 break;
 
-            case ResourceViewType::ConstantBuffer:
-                range_type = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
-                break;
-
             case ResourceViewType::Texture_UAV:
             case ResourceViewType::TypedBuffer_UAV:
             case ResourceViewType::StructuredBuffer_UAV:
@@ -242,7 +234,7 @@ namespace fantasy
                 break;
 
             default:
-                assert(!"invalid Enumeration value");
+                assert(!"Invalid enum");
                 continue;
             }
 
@@ -289,19 +281,19 @@ namespace fantasy
     {
         auto binding_layout = check_cast<DX12BindingLayout>(_binding_layout);
 
-        for (const auto& [index, d3d12_root_descriptor] : binding_layout->root_param_index_volatile_cb_descriptor_map)
+        for (const auto& [index, d3d12_root_descriptor] : binding_layout->root_param_index_constant_buffer_descriptor_map)
         {
             BufferInterface* buffer = nullptr;
             for (const auto& binding : _desc.binding_items)
             {
-                if (binding.type == ResourceViewType::VolatileConstantBuffer && binding.slot == d3d12_root_descriptor.ShaderRegister)
+                if (binding.type == ResourceViewType::ConstantBuffer && binding.slot == d3d12_root_descriptor.ShaderRegister)
                 {
                     buffer = static_cast<BufferInterface*>(binding.resource.get());
                     break;
                 }
             }
             ReturnIfFalse(buffer != nullptr);
-            root_param_index_volatile_cb_map.push_back(std::make_pair(index, buffer));
+            root_param_index_constant_buffer_map.push_back(std::make_pair(index, buffer));
         }
 
         if (binding_layout->descriptor_table_srv_etc_size > 0)
@@ -355,14 +347,6 @@ namespace fantasy
                         {
                             DX12Texture* dx12_texture = check_cast<DX12Texture*>(binding.resource.get());
                             dx12_texture->create_uav(d3d12_descriptor_handle, binding.subresource, binding.format);
-
-                            found = true;
-                            break;
-                        }
-                        else if (type == ResourceViewType::ConstantBuffer && range.RangeType == D3D12_DESCRIPTOR_RANGE_TYPE_CBV)
-                        {
-                            DX12Buffer* dx12_buffer = check_cast<DX12Buffer*>(binding.resource.get());
-                            dx12_buffer->create_cbv(d3d12_descriptor_handle, binding.range);
 
                             found = true;
                             break;
@@ -467,12 +451,6 @@ namespace fantasy
 		{
 			DX12Buffer* dx12_buffer = check_cast<DX12Buffer*>(binding.resource.get());
 			dx12_buffer->create_uav(descriptor_handle, binding.range, binding.type, binding.format);
-			break;
-		}
-		case ResourceViewType::ConstantBuffer:
-		{
-			DX12Buffer* dx12_buffer = check_cast<DX12Buffer*>(binding.resource.get());
-			dx12_buffer->create_cbv(descriptor_handle, binding.range);
 			break;
 		}
 		default:

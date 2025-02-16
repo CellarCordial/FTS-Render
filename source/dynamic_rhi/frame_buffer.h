@@ -66,7 +66,7 @@ namespace fantasy
                 height = std::max(texture_desc.height >> base_mip_level, 1u);
             }
             else if (!desc.color_attachments.empty() && desc.color_attachments[0].is_valid())
-            {   
+            {
                 const TextureDesc& texture_desc = desc.color_attachments[0].texture->get_desc();
                 uint32_t base_mip_level = desc.color_attachments[0].subresource.base_mip_level;
 

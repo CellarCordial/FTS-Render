@@ -4,6 +4,7 @@
 #include "../../shader/shader_compiler.h"
 #include "../../scene/virtual_texture.h"
 #include "../../core/tools/check_cast.h"
+#include "../../scene/scene.h"
 
 
 namespace fantasy
@@ -66,6 +67,7 @@ namespace fantasy
 					"virtual_shadow_draw_indirect_buffer"
 				)
 			)));
+			cache->collect(_virtual_shadow_draw_indirect_buffer, ResourceType::Buffer);
 
             uint32_t virtual_shadow_resolution_in_page = VIRTUAL_SHADOW_RESOLUTION / VIRTUAL_SHADOW_PAGE_SIZE;
 			ReturnIfFalse(_virtual_shadow_visible_cluster_id_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
@@ -75,6 +77,7 @@ namespace fantasy
 					"virtual_shadow_visible_cluster_id_buffer"
 				)
 			)));
+			cache->collect(_virtual_shadow_visible_cluster_id_buffer, ResourceType::Buffer);
 		}
  
 		// Binding Set.
@@ -84,16 +87,12 @@ namespace fantasy
 			_binding_set_items[1] = BindingSetItem::create_structured_buffer_uav(0, _virtual_shadow_draw_indirect_buffer);
 			_binding_set_items[2] = BindingSetItem::create_structured_buffer_uav(1, _virtual_shadow_visible_cluster_id_buffer);
 			_binding_set_items[5] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("shadow_tile_info_buffer")));
-            ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
-                BindingSetDesc{ .binding_items = _binding_set_items },
-                _binding_layout
-            )));
 		}
 
 		// Compute state.
 		{
+			_compute_state.binding_sets.resize(1);
 			_compute_state.pipeline = _pipeline.get();
-            _compute_state.indirect_buffer = check_cast<BufferInterface>(cache->require("virtual_shadow_draw_indirect_buffer")).get();
 		}
  
 		return true;
@@ -101,25 +100,27 @@ namespace fantasy
 
 	bool ShadowTileCullingPass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
-        if (!_resource_writed)
-        {
-            DeviceInterface* device = cmdlist->get_deivce();
-			_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(0, check_cast<BufferInterface>(cache->require("mesh_cluster_group_buffer")));
-			_binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("mesh_cluster_buffer")));
-            ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
-                BindingSetDesc{ .binding_items = _binding_set_items },
-                _binding_layout
-            )));
-			_compute_state.binding_sets.push_back(_binding_set.get());
-            _resource_writed = true;
-        }
-
 		ReturnIfFalse(cmdlist->open());
 
-        uint32_t* cluster_group_count = nullptr;
-        ReturnIfFalse(cache->require_constants("cluster_group_count", (void**)&cluster_group_count));
-		ReturnIfFalse(cmdlist->dispatch(_compute_state, *cluster_group_count, 1, 1, &_pass_constant));
+		if (SceneSystem::loaded_submesh_count != 0)
+		{
+			if (!_resource_writed)
+			{
+				DeviceInterface* device = cmdlist->get_deivce();
+				_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(0, check_cast<BufferInterface>(cache->require("mesh_cluster_group_buffer")));
+				_binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("mesh_cluster_buffer")));
+				ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
+					BindingSetDesc{ .binding_items = _binding_set_items },
+					_binding_layout
+				)));
+				_compute_state.binding_sets[0] = _binding_set.get();
+				_resource_writed = true;
+			}
 
+			uint32_t* cluster_group_count = nullptr;
+			ReturnIfFalse(cache->require_constants("cluster_group_count", (void**)&cluster_group_count));
+			ReturnIfFalse(cmdlist->dispatch(_compute_state, *cluster_group_count, 1, 1, &_pass_constant));
+		}
 		ReturnIfFalse(cmdlist->close());
         return true;
 	}

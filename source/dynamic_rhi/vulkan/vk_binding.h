@@ -59,8 +59,6 @@ namespace fantasy
 
         std::vector<std::shared_ptr<ResourceInterface>> ref_resources;
 
-        StackArray<BufferInterface*, MAX_VOLATILE_CONSTANT_BUFFERS_PER_LAYOUT> volatile_constant_buffers;
-
     private:
         const VKContext* _context;
 

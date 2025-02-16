@@ -18,8 +18,6 @@ namespace fantasy
             {
             case ResourceViewType::PushConstants: descriptor_type = vk::DescriptorType::eUniformBuffer; break;
             
-            case ResourceViewType::VolatileConstantBuffer: descriptor_type = vk::DescriptorType::eUniformBufferDynamic; break;
-            
             case ResourceViewType::Texture_SRV: descriptor_type = vk::DescriptorType::eSampledImage; break;
             case ResourceViewType::Texture_UAV: descriptor_type = vk::DescriptorType::eStorageImage; break;
             
@@ -320,7 +318,6 @@ namespace fantasy
             case ResourceViewType::RawBuffer_SRV:
             case ResourceViewType::RawBuffer_UAV:
             case ResourceViewType::ConstantBuffer:
-            case ResourceViewType::VolatileConstantBuffer:
             {
                 const auto buffer = check_cast<VKBuffer>(binding.resource);
 
@@ -348,12 +345,6 @@ namespace fantasy
                 vk_write_descriptor_set.pTexelBufferView = nullptr;
 
                 descriptor_write_info.push_back(vk_write_descriptor_set);
-
-                if (binding.type == ResourceViewType::VolatileConstantBuffer) 
-                {
-                    ReturnIfFalse(buffer->desc.is_volatile_constant_buffer);
-                    volatile_constant_buffers.push_back(buffer.get());
-                }
             }
             break;
 

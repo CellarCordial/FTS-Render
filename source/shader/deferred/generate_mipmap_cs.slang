@@ -1,5 +1,5 @@
-#define THREAD_GROUP_SIZE_X 1
-#define THREAD_GROUP_SIZE_Y 1
+// #define THREAD_GROUP_SIZE_X 1
+// #define THREAD_GROUP_SIZE_Y 1
 
 Texture2D input_texture : register(t0);
 RWTexture2D output_texture : register(u0);

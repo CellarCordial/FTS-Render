@@ -8,7 +8,6 @@ namespace fantasy
 {
     class VKMemoryAllocator;
 
-    static const uint32_t volatile_constant_buffer_max_version = 3;
     static const uint32_t texture_tile_byte_size = 65536;
 
     struct VKContext

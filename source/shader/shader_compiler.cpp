@@ -100,7 +100,7 @@ namespace fantasy
         {
         case ShaderPlatform::DXIL:
             target_desc.format = SLANG_DXIL;
-            target_desc.profile = global_session->findProfile("sm_6_5");
+            target_desc.profile = global_session->findProfile("sm_6_6");
             break;
         case ShaderPlatform::SPIRV:
             target_desc.format = SLANG_SPIRV;

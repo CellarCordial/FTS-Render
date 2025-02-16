@@ -5,7 +5,8 @@
 #include "distance_field.h"
 #include "surface_cache.h"
 #include "virtual_mesh.h"
-#include <assimp/scene.h>
+
+class aiScene;
 
 namespace fantasy
 {
@@ -33,6 +34,9 @@ namespace fantasy
 		bool publish(World* world, const event::OnComponentAssigned<SurfaceCache>& event) override;
 		bool publish(World* world, const event::OnComponentAssigned<DistanceField>& event) override;
 
+	public:
+		inline static uint32_t loaded_submesh_count = 0;
+	
 	private:
 		World* _world = nullptr;
 		Entity* _global_entity = nullptr;

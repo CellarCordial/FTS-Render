@@ -31,6 +31,7 @@ namespace fantasy
 		constant::VirtualShadowMapPassConstant _pass_constant;
 
 		std::shared_ptr<TextureInterface> _physical_shadow_map_texture;
+		std::shared_ptr<TextureInterface> _fake_render_target_texture;
 		
 		BindingSetItemArray _binding_set_items;
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;

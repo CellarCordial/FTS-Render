@@ -8,8 +8,10 @@
 #include <vulkan/vulkan.hpp>
 #include "../core/tools/timer.h"
 #include "../core/tools/ecs.h"
-#include "../gui/gui_pass.h"
 #include "../render_graph/render_graph.h"
+#define GLFW_INCLUDE_VULKAN
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3.h>
 
 namespace fantasy 
 {
@@ -25,7 +27,7 @@ namespace fantasy
         virtual RenderPassInterface* init_render_pass(RenderGraph* render_graph) = 0;
 
     private:
-        bool init_gui();
+        bool init_passes();
         bool init_window();
         bool init_scene();
         bool init_d3d12();
@@ -71,7 +73,6 @@ namespace fantasy
         std::shared_ptr<TextureInterface> _final_texture;
         std::shared_ptr<TextureInterface> _back_buffers[FLIGHT_FRAME_NUM];
         std::unique_ptr<RenderGraph> _render_graph;
-        std::shared_ptr<GuiPass> _gui_pass;
     };
 }
 

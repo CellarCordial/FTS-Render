@@ -10,7 +10,6 @@
 #include <d3d12.h>
 #include <list>
 #include <memory>
-#include <unordered_map>
 #include <vector>
 #include <wrl/client.h>
 
@@ -304,8 +303,6 @@ namespace fantasy
         CommandListDesc _desc;
         std::shared_ptr<DX12InternalCommandList> _current_cmdlist;
         
-        std::unordered_map<BufferInterface*, D3D12_GPU_VIRTUAL_ADDRESS> _volatile_constant_buffer_address_cache;
-
         DX12UploadManager _upload_manager;
         DX12UploadManager _scratch_manager;
 

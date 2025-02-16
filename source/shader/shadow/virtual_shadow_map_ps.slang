@@ -15,12 +15,14 @@ struct VertexOutput
     uint2 tile_id : TILE_ID;
 };
 
-[vk_binding(1, 0)] RWTexture2D<float> physical_shadow_map_texture : register(u0);
+[vk_binding(6, 0)] RWTexture2D<uint32_t> physical_shadow_map_texture : register(u0);
 
 [shader("pixel")]
-void main(VertexOutput input)
+float4 main(VertexOutput input) : SV_Target
 {
     uint2 pixel_id = (uint2)round(input.sv_position.xy);
     uint2 uv = pixel_id - input.tile_id * tile_size_in_pixel;
-    InterlockedMin(physical_shadow_map_texture[uv], input.view_space_position.z);
+
+    InterlockedMin(physical_shadow_map_texture[uv], asuint(input.view_space_position.z));
+    return float4(0.0f, 0.0f, 0.0f, 0.0f);
 }

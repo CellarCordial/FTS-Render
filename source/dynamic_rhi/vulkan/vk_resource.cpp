@@ -157,7 +157,6 @@ namespace fantasy
     {
         for (auto&& iter : view_cache) _context->device.destroyBufferView(iter.second, _context->allocation_callbacks);
 
-        if (mapped_volatile_memory) _context->device.unmapMemory(vk_device_memory);
         
         if (vk_buffer) _context->device.destroyBuffer(vk_buffer, _context->allocation_callbacks);
         if (vk_device_memory) _allocator->free_buffer_memory(this);
@@ -165,24 +164,7 @@ namespace fantasy
 
     bool VKBuffer::initialize()
     {
-        if (desc.is_volatile_constant_buffer)
-        {
-            uint64_t alignment = _context->vk_physical_device_properties.limits.minUniformBufferOffsetAlignment;
-
-            uint64_t atom_size = _context->vk_physical_device_properties.limits.nonCoherentAtomSize;
-            alignment = std::max(alignment, atom_size);
-
-            ReturnIfFalse(is_power_of_2(alignment));
-            
-            desc.byte_size = align(desc.byte_size, alignment);
-            desc.byte_size *= volatile_constant_buffer_max_version;
-
-            version_tracking.resize(volatile_constant_buffer_max_version);
-            std::fill(version_tracking.begin(), version_tracking.end(), 0);
-
-            desc.cpu_access = CpuAccessMode::Write;
-        }
-        else if (desc.byte_size < 65536)
+        if (desc.byte_size < 65536)
         {
             // vulkan 允许使用 vkCmdUpdateBuffer 进行内联更新, 但数据大小必须是 4 的倍数，因此将大小向上对齐.
             desc.byte_size = align(desc.byte_size, 4ull);
@@ -197,12 +179,6 @@ namespace fantasy
         {
             ReturnIfFalse(_allocator->allocate_buffer_memory(this));
             _context->name_object(vk_device_memory, vk::ObjectType::eDeviceMemory, desc.name.c_str());
-
-            if (desc.is_volatile_constant_buffer)
-            {
-                mapped_volatile_memory = _context->device.mapMemory(vk_device_memory, 0, desc.byte_size);
-                ReturnIfFalse(mapped_volatile_memory != nullptr);
-            }
         }
         return true;
     }

@@ -28,7 +28,7 @@ namespace fantasy
         
         std::vector<D3D12_ROOT_PARAMETER1> d3d12_root_parameters;
 
-        std::vector<std::pair<uint32_t, D3D12_ROOT_DESCRIPTOR1>> root_param_index_volatile_cb_descriptor_map;
+        std::vector<std::pair<uint32_t, D3D12_ROOT_DESCRIPTOR1>> root_param_index_constant_buffer_descriptor_map;
         std::vector<D3D12_DESCRIPTOR_RANGE1> d3d12_descriptor_srv_etc_ranges;
         std::vector<D3D12_DESCRIPTOR_RANGE1> d3d12_descriptor_sampler_ranges;
 
@@ -90,7 +90,7 @@ namespace fantasy
         bool is_descriptor_table_srv_etc_valid = false;
         bool is_descriptor_table_sampler_valid = false;
 
-        std::vector<std::pair<uint32_t, BufferInterface*>> root_param_index_volatile_cb_map;
+        std::vector<std::pair<uint32_t, BufferInterface*>> root_param_index_constant_buffer_map;
         
     private:
         const DX12Context* _context;

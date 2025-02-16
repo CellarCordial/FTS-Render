@@ -5,6 +5,7 @@
 #include "../../scene/light.h"
 #include "../../scene/virtual_texture.h"
 #include "../../scene/camera.h"
+#include "../../scene/scene.h"
 #include <cstdint>
 #include <memory>
 
@@ -22,15 +23,16 @@ namespace fantasy
 
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(8);
-			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::VirtualGBufferPassConstant));
+			BindingLayoutItemArray binding_layout_items(9);
+			binding_layout_items[0] = BindingLayoutItem::create_constant_buffer(0);
 			binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_structured_buffer_srv(1);
 			binding_layout_items[3] = BindingLayoutItem::create_structured_buffer_srv(2);
 			binding_layout_items[4] = BindingLayoutItem::create_structured_buffer_srv(3);
 			binding_layout_items[5] = BindingLayoutItem::create_structured_buffer_srv(4);
-			binding_layout_items[6] = BindingLayoutItem::create_structured_buffer_uav(0);
+			binding_layout_items[6] = BindingLayoutItem::create_texture_uav(0);
 			binding_layout_items[7] = BindingLayoutItem::create_structured_buffer_uav(1);
+			binding_layout_items[8] = BindingLayoutItem::create_structured_buffer_uav(2);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -61,6 +63,13 @@ namespace fantasy
 
 		// Buffer
 		{
+			ReturnIfFalse(_pass_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+				BufferDesc::create_constant_buffer(
+					sizeof(constant::VirtualGBufferPassConstant),
+					"vt_page_info_buffer"
+				)
+			)));
+
 			ReturnIfFalse(_vt_page_info_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_read_write_structured_buffer(
 					sizeof(VTPageInfo) * CLIENT_WIDTH * CLIENT_HEIGHT, 
@@ -96,28 +105,19 @@ namespace fantasy
 				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RGB32_FLOAT,
+					Format::RGBA32_FLOAT,
 					"view_space_velocity_texture"
 				)
 			)));
 			cache->collect(_view_space_velocity_texture, ResourceType::Texture);
 
-			ReturnIfFalse(_tile_uv_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target_texture(
-					CLIENT_WIDTH,
-					CLIENT_HEIGHT,
-					Format::RG32_FLOAT,
-					"tile_uv_texture"
-				)
-			)));
-			cache->collect(_tile_uv_texture, ResourceType::Texture);
-
 			ReturnIfFalse(_world_space_normal_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RGB32_FLOAT,
-					"world_space_normal_texture"
+					Format::RGBA32_FLOAT,
+					"world_space_normal_texture",
+					true
 				)
 			)));
 			cache->collect(_world_space_normal_texture, ResourceType::Texture);
@@ -126,7 +126,7 @@ namespace fantasy
 				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RGB32_FLOAT,
+					Format::RGBA32_FLOAT,
 					"world_space_tangent_texture"
 				)
 			)));
@@ -137,7 +137,8 @@ namespace fantasy
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA16_FLOAT,
-					"base_color_texture"
+					"base_color_texture",
+					true
 				)
 			)));
 			cache->collect(_base_color_texture, ResourceType::Texture);
@@ -147,20 +148,33 @@ namespace fantasy
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA8_UNORM,
-					"pbr_texture"
+					"pbr_texture",
+					true
 				)
 			)));
 			cache->collect(_pbr_texture, ResourceType::Texture);
 
-			ReturnIfFalse(_emmisive_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+			ReturnIfFalse(_emissive_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RGBA16_FLOAT,
-					"emmisive_texture"
+					Format::R11G11B10_FLOAT,
+					"emissive_texture",
+					true
 				)
 			)));
-			cache->collect(_emmisive_texture, ResourceType::Texture);
+			cache->collect(_emissive_texture, ResourceType::Texture);
+
+			
+			ReturnIfFalse(_tile_uv_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_read_write_texture(
+					CLIENT_WIDTH,
+					CLIENT_HEIGHT,
+					Format::RG32_FLOAT,
+					"tile_uv_texture"
+				)
+			)));
+			cache->collect(_tile_uv_texture, ResourceType::Texture);
 		}
 
 		// Frame Buffer.
@@ -168,12 +182,11 @@ namespace fantasy
 			FrameBufferDesc frame_buffer_desc;
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_position_view_depth_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_view_space_velocity_texture));
-			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_tile_uv_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_space_normal_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_space_tangent_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_base_color_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_pbr_texture));
-			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_emmisive_texture));
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_emissive_texture));
 			ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
 		}
  
@@ -191,10 +204,11 @@ namespace fantasy
 
 		// Binding Set.
 		{
-			_binding_set_items.resize(7);
+			_binding_set_items.resize(9);
 			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualGBufferPassConstant));
-			_binding_set_items[6] = BindingSetItem::create_structured_buffer_uav(0, _vt_page_info_buffer);
-			_binding_set_items[6] = BindingSetItem::create_structured_buffer_uav(1, _virtual_shadow_page_buffer);
+			_binding_set_items[6] = BindingSetItem::create_texture_uav(0, _tile_uv_texture);
+			_binding_set_items[7] = BindingSetItem::create_structured_buffer_uav(1, _vt_page_info_buffer);
+			_binding_set_items[8] = BindingSetItem::create_structured_buffer_uav(2, _virtual_shadow_page_buffer);
 		}
 
 		// Graphics state.
@@ -203,7 +217,7 @@ namespace fantasy
 			_graphics_state.frame_buffer = _frame_buffer.get();
 			_graphics_state.binding_sets.resize(1);
 			_graphics_state.viewport_state = ViewportState::create_default_viewport(CLIENT_WIDTH, CLIENT_HEIGHT);
-			_graphics_state.indirect_buffer = check_cast<BufferInterface>(cache->require("draw_indexed_indirect_arguments_buffer")).get();
+			_graphics_state.indirect_buffer = check_cast<BufferInterface>(cache->require("virtual_gbuffer_draw_indirect_buffer")).get();
 		}
 
 
@@ -214,114 +228,120 @@ namespace fantasy
 	{
 		ReturnIfFalse(cmdlist->open());
 
-		if (!_resource_writed)
-		{
+		if (SceneSystem::loaded_submesh_count != 0)
+		{		
 			World* world = cache->get_world();
-
+	
 			Camera* camera = world->get_global_entity()->get_component<Camera>();
 			_pass_constant.view_matrix = camera->view_matrix;
 			_pass_constant.view_proj = camera->get_view_proj();
 			_pass_constant.prev_view_matrix = camera->prev_view_matrix;
 			_pass_constant.camera_position = camera->position;
 			_pass_constant.shadow_view_proj = world->get_global_entity()->get_component<DirectionalLight>()->get_view_proj();
-
-
-			bool res = world->each<VirtualMesh, Mesh, Material>(
-                [&](Entity* entity, VirtualMesh* virtual_mesh, Mesh* mesh, Material* material) -> bool
-                {
-                    for (const auto& virtual_submesh : virtual_mesh->_submeshes)
-                    {
-                        for (const auto& group : virtual_submesh.cluster_groups)
-                        {
-                            for (auto ix : group.cluster_indices)
-                            {
-                                const auto& cluster = virtual_submesh.clusters[ix];
-								_cluster_vertices.insert(_cluster_vertices.end(), cluster.vertices.begin(), cluster.vertices.end());
-
-								for(uint32_t ix = 0; ix < cluster.indices.size() / 3; ++ix)
-								{
-									uint32_t i0 = cluster.indices[ix * 3];
-									uint32_t i1 = cluster.indices[ix * 3 + 1];
-									uint32_t i2 = cluster.indices[ix * 3 + 2];
-
-									uint32_t max_index = sizeof(uint8_t);
-									ReturnIfFalse(i0 < max_index && i1 < max_index && i2 < max_index);
-
-									_cluster_triangles.push_back(uint32_t(i0 | (i1 << 8) | (i2 << 16)));
-								}
-                            }
-                        }
-                    }  
-					for (const auto& submesh : mesh->submeshes)
+	
+			void* mapped_address = _pass_constant_buffer->map(CpuAccessMode::Write);
+			memcpy(mapped_address, &_pass_constant, sizeof(constant::VirtualGBufferPassConstant));
+			_pass_constant_buffer->unmap();
+	
+			if (!_resource_writed)
+			{
+				bool res = world->each<VirtualMesh, Mesh, Material>(
+					[&](Entity* entity, VirtualMesh* virtual_mesh, Mesh* mesh, Material* material) -> bool
 					{
-						const auto& submaterial = material->submaterials[submesh.material_index];
-						_geometry_constants.emplace_back(
-							GeometryConstantGpu{
-								.world_matrix = submesh.world_matrix,
-								.inv_trans_world = inverse(transpose(submesh.world_matrix)),
-								.base_color = submaterial.base_color_factor,
-								.emissive = submaterial.emissive_factor,
-								.roughness = submaterial.roughness_factor,
-								.metallic = submaterial.metallic_factor,
-								.occlusion = submaterial.occlusion_factor,
-								.texture_resolution = uint2(submaterial.images[0].width, submaterial.images[0].height)
+						for (const auto& virtual_submesh : virtual_mesh->_submeshes)
+						{
+							for (const auto& group : virtual_submesh.cluster_groups)
+							{
+								for (auto ix : group.cluster_indices)
+								{
+									const auto& cluster = virtual_submesh.clusters[ix];
+									_cluster_vertices.insert(_cluster_vertices.end(), cluster.vertices.begin(), cluster.vertices.end());
+	
+									for(uint32_t ix = 0; ix < cluster.indices.size() / 3; ++ix)
+									{
+										uint32_t i0 = cluster.indices[ix * 3];
+										uint32_t i1 = cluster.indices[ix * 3 + 1];
+										uint32_t i2 = cluster.indices[ix * 3 + 2];
+	
+										uint32_t max_index = sizeof(uint8_t);
+										ReturnIfFalse(i0 < max_index && i1 < max_index && i2 < max_index);
+	
+										_cluster_triangles.push_back(uint32_t(i0 | (i1 << 8) | (i2 << 16)));
+									}
+								}
 							}
-						);
+						}  
+						for (const auto& submesh : mesh->submeshes)
+						{
+							const auto& submaterial = material->submaterials[submesh.material_index];
+							_geometry_constants.emplace_back(
+								GeometryConstantGpu{
+									.world_matrix = submesh.world_matrix,
+									.inv_trans_world = inverse(transpose(submesh.world_matrix)),
+									.base_color = submaterial.base_color_factor,
+									.emissive = submaterial.emissive_factor,
+									.roughness = submaterial.roughness_factor,
+									.metallic = submaterial.metallic_factor,
+									.occlusion = submaterial.occlusion_factor,
+									.texture_resolution = uint2(submaterial.images[0].width, submaterial.images[0].height)
+								}
+							);
+						}
+						return true;
 					}
-                    return true;
-                }
-            );
-			ReturnIfFalse(res);
-
-
-			DeviceInterface* device = cmdlist->get_deivce();
-
-			ReturnIfFalse(_cluster_vertex_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-					BufferDesc::create_structured_buffer(
-						sizeof(Vertex) * _cluster_vertices.size(), 
-						sizeof(Vertex),
-						"cluster_vertex_buffer"
+				);
+				ReturnIfFalse(res);
+	
+	
+				DeviceInterface* device = cmdlist->get_deivce();
+	
+				ReturnIfFalse(_cluster_vertex_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+						BufferDesc::create_structured_buffer(
+							sizeof(Vertex) * _cluster_vertices.size(), 
+							sizeof(Vertex),
+							"cluster_vertex_buffer"
+						)
 					)
-				)
-			));
-			ReturnIfFalse(_cluster_triangle_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-					BufferDesc::create_structured_buffer(
-						sizeof(uint32_t) * _cluster_triangles.size(), 
-						sizeof(uint32_t),
-						"cluster_triangle_buffer"
+				));
+				ReturnIfFalse(_cluster_triangle_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+						BufferDesc::create_structured_buffer(
+							sizeof(uint32_t) * _cluster_triangles.size(), 
+							sizeof(uint32_t),
+							"cluster_triangle_buffer"
+						)
 					)
-				)
-			));
-			ReturnIfFalse(_geometry_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-					BufferDesc::create_structured_buffer(
-						sizeof(GeometryConstantGpu) * _geometry_constants.size(), 
-						sizeof(GeometryConstantGpu),
-						"geometry_constant_buffer"
+				));
+				ReturnIfFalse(_geometry_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+						BufferDesc::create_structured_buffer(
+							sizeof(GeometryConstantGpu) * _geometry_constants.size(), 
+							sizeof(GeometryConstantGpu),
+							"geometry_constant_buffer"
+						)
 					)
-				)
-			));
-
-			ReturnIfFalse(cmdlist->write_buffer(_cluster_vertex_buffer.get(), _cluster_vertices.data(), sizeof(Vertex) * _cluster_vertices.size()));
-			ReturnIfFalse(cmdlist->write_buffer(_cluster_triangle_buffer.get(), _cluster_triangles.data(), sizeof(uint32_t) * _cluster_triangles.size()));
-			ReturnIfFalse(cmdlist->write_buffer(_geometry_constant_buffer.get(), _geometry_constants.data(), sizeof(GeometryConstantGpu) * _geometry_constants.size()));
-
-			_binding_set.reset();
-			_binding_set_items[1] = BindingSetItem::create_structured_buffer_srv(0, _geometry_constant_buffer);
-			_binding_set_items[2] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("visible_cluster_id_buffer")));
-			_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("cluster_buffer")));
-			_binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(3, _cluster_vertex_buffer);
-			_binding_set_items[5] = BindingSetItem::create_structured_buffer_srv(4, _cluster_triangle_buffer);
-			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
-				BindingSetDesc{ .binding_items = _binding_set_items },
-				_binding_layout
-			)));
-
-			_graphics_state.binding_sets[0] = _binding_set.get();
-
-			_resource_writed = true;
+				));
+	
+				ReturnIfFalse(cmdlist->write_buffer(_cluster_vertex_buffer.get(), _cluster_vertices.data(), sizeof(Vertex) * _cluster_vertices.size()));
+				ReturnIfFalse(cmdlist->write_buffer(_cluster_triangle_buffer.get(), _cluster_triangles.data(), sizeof(uint32_t) * _cluster_triangles.size()));
+				ReturnIfFalse(cmdlist->write_buffer(_geometry_constant_buffer.get(), _geometry_constants.data(), sizeof(GeometryConstantGpu) * _geometry_constants.size()));
+	
+				_binding_set.reset();
+				_binding_set_items[1] = BindingSetItem::create_structured_buffer_srv(0, _geometry_constant_buffer);
+				_binding_set_items[2] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("visible_cluster_id_buffer")));
+				_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("cluster_buffer")));
+				_binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(3, _cluster_vertex_buffer);
+				_binding_set_items[5] = BindingSetItem::create_structured_buffer_srv(4, _cluster_triangle_buffer);
+				ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
+					BindingSetDesc{ .binding_items = _binding_set_items },
+					_binding_layout
+				)));
+	
+				_graphics_state.binding_sets[0] = _binding_set.get();
+	
+				_resource_writed = true;
+			}
+	
+			ReturnIfFalse(cmdlist->draw_indirect(_graphics_state, 0, 1, &_pass_constant));
 		}
-
-		ReturnIfFalse(cmdlist->draw_indirect(_graphics_state, 0, 1, &_pass_constant));
 
 		ReturnIfFalse(cmdlist->close());
 		return true;

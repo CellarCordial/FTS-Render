@@ -267,7 +267,7 @@ namespace fantasy
 		_sun_disk_pass->precede(_atmosphere_debug_pass.get());
 
 
-		RenderResourceCache* cache = render_graph->GetResourceCache();
+		RenderResourceCache* cache = render_graph->get_resource_cache();
 		cache->collect_constants("WorldScale", &_world_scale);
 		cache->collect_constants("ground_albedo", &_ground_albedo);
 

@@ -3,6 +3,7 @@
 #include "../../core/tools/check_cast.h"
 #include "../../core/parallel/parallel.h"
 #include "../../scene/light.h"
+#include "../../scene/scene.h"
 #include <cstdint>
 #include <memory>
 #include <mutex>
@@ -115,7 +116,7 @@ namespace fantasy
 						VTPhysicalTable::get_texture_name(ix)
 					)
 				)));
-				cache->collect(_vt_physical_textures[index], ResourceType::Texture);
+				cache->collect(_vt_physical_textures[ix], ResourceType::Texture);
 			}
 		}
 
@@ -155,9 +156,16 @@ namespace fantasy
 
 	bool VirtualTextureUpdatePass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
+        if (SceneSystem::loaded_submesh_count == 0)
+		{
+			// 每个 render pass 都必须有一个有效的 cmdlist.
+			ReturnIfFalse(cmdlist->open());
+			ReturnIfFalse(cmdlist->close());
+			return true;
+		}
+
 		ReturnIfFalse(cmdlist->open());
 
-		
 		DeviceInterface* device = cmdlist->get_deivce();
 		World* world = cache->get_world();
 

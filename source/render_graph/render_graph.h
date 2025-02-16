@@ -33,7 +33,7 @@ namespace fantasy
         void reset();
 
         DeviceInterface* get_deivce() const { return _device.get(); }
-        RenderResourceCache* GetResourceCache() const { return _resource_cache.get(); }
+        RenderResourceCache* get_resource_cache() const { return _resource_cache.get(); }
 
         RenderPassInterface* add_pass(const std::shared_ptr<RenderPassInterface>& pass);
 

@@ -14,7 +14,7 @@ namespace fantasy
         Count
     };
 
-    // uint64_t version: for upload buffer chunk, scratch buffer chunk and volatile buffer.
+    // uint64_t version: for upload buffer chunk, scratch buffer chunk.
     // 63:	    version_submitted_flag: 表示对象是否已提交 (submitted).
     // 60-62	version_queue_type_shift, version_queue_type_mask: 表示命令队列的类型.
     // 0-59	    version_id_mask: 表示版本号的实例 ID.

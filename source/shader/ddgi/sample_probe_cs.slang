@@ -15,7 +15,7 @@ cbuffer pass_constants : register(b0)
 Texture2D<float3> ddgi_volume_irradiance_texture : register(t0);
 Texture2D<float2> ddgi_volume_depth_texture : register(t1);
 
-Texture2D<float3> world_space_normal_texture : register(t2);
+Texture2D<float4> world_space_normal_texture : register(t2);
 Texture2D<float4> world_position_view_depth_texture : register(t3);
 
 RWTexture2D<float4> ddgi_final_irradiance_texture : register(u0);
@@ -40,7 +40,7 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     }
 
     float3 pixel_world_position = world_position_view_depth.xyz;
-    float3 pixel_world_normal = world_space_normal_texture[pixel_id];
+    float3 pixel_world_normal = world_space_normal_texture[pixel_id].xyz;
     float3 pixel_to_camera = normalize(camera_position - pixel_world_position);
 
     float3 irradiance = sample_probe_irradiance(

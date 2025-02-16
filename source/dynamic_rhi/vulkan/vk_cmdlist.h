@@ -282,10 +282,6 @@ namespace fantasy
             vk::PipelineBindPoint vk_bind_point, 
             vk::PipelineLayout vk_layout
         );
-        
-        bool write_volatile_buffer(BufferInterface* buffer, const void* data, size_t data_size);
-        void flush_volatile_buffer_mapped_memory();
-        void submit_volatile_buffers(uint64_t recording_id, uint64_t submitted_id);
 
     private:
         const VKContext* _context;
@@ -295,8 +291,6 @@ namespace fantasy
         
         CommandListDesc _desc;
         std::shared_ptr<VKCommandBuffer> _current_cmdbuffer;
-
-        std::unordered_map<BufferInterface*, VKVolatileBufferVersion> _volatile_buffer_versions;
 
         VKUploadManager _upload_manager;
         VKUploadManager _scratch_manager;

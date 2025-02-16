@@ -397,7 +397,6 @@ namespace fantasy
     {
         commit_barriers();
         _current_cmdbuffer->vk_cmdbuffer.end();
-        flush_volatile_buffer_mapped_memory();
         return true;
     }
 
@@ -858,12 +857,6 @@ namespace fantasy
 
         ReturnIfFalse(data_size <= buffer->desc.byte_size);
 
-        if (buffer->desc.is_volatile_constant_buffer)
-        {
-            ReturnIfFalse(dst_byte_offset == 0);
-            return write_volatile_buffer(buffer, data, data_size);
-        }
-
         // 根据 Vulkan 规范, vkCmdUpdateBuffer 要求数据小于或等于 64 kB, 并且 offset 和 Data Size 是 4 的倍数.
         if (data_size <= 65536 && (dst_byte_offset & 3) == 0)
         {
@@ -899,75 +892,6 @@ namespace fantasy
 
             copy_buffer(buffer, dst_byte_offset, upload_buffer, upload_offset, data_size);
         }
-        return true;
-    }
-
-    bool VKCommandList::write_volatile_buffer(BufferInterface* buffer_, const void* data, size_t data_size)
-    {
-        std::array<uint64_t, uint32_t(CommandQueueType::Count)> queue_complete_ids = {
-            check_cast<VKDevice*>(_device)->get_queue(CommandQueueType::Graphics)->get_last_finished_id(),
-            check_cast<VKDevice*>(_device)->get_queue(CommandQueueType::Compute)->get_last_finished_id()
-        };
-
-        VKBuffer* buffer = check_cast<VKBuffer*>(buffer_);
-
-        uint32_t version_search_start = buffer->version_search_start;
-        uint32_t max_versions = volatile_constant_buffer_max_version;
-        uint32_t version = 0;
-
-        uint64_t origin_version = 0;
-
-        while (true)
-        {
-            bool found = false;
-
-            for (uint32_t ix = 0; ix < max_versions; ix++)
-            {
-                version = (version_search_start + ix) % max_versions;
-
-                origin_version = buffer->version_tracking[version];
-
-                if (origin_version == 0) { found = true; break; }
-
-                CommandQueueType queue_type = get_version_queue_type(origin_version);
-
-                if (
-                    is_version_submitted(origin_version) && 
-                    get_version_id(origin_version) <= queue_complete_ids[static_cast<uint32_t>(queue_type)]
-                )
-                {
-                    found = true;
-                    break;
-                }
-            }
-
-            // volatile_constant_buffer_max_version 不够大.
-            ReturnIfFalse(!found);
-
-            uint64_t new_version = make_version(_current_cmdbuffer->recording_id, _desc.queue_type, false);
-
-            if (buffer->version_tracking[version].compare_exchange_weak(origin_version, new_version)) break;
-        }
-
-        buffer->version_search_start = (version + 1) % max_versions;
-
-        
-        VKVolatileBufferVersion& volatile_version = _volatile_buffer_versions[buffer_];
-
-        if (!volatile_version.initialized)
-        {
-            volatile_version.min_version = volatile_constant_buffer_max_version;
-            volatile_version.max_version = -1;
-            volatile_version.initialized = true;
-        }
-
-        volatile_version.latest_version = static_cast<int32_t>(version);
-        volatile_version.min_version = std::min(static_cast<int32_t>(version), volatile_version.min_version);
-        volatile_version.max_version = std::max(static_cast<int32_t>(version), volatile_version.max_version);
-
-        void* dst_address = (char*)buffer->mapped_volatile_memory + version * buffer->desc.byte_size;
-        memcpy(dst_address, data, data_size);
-
         return true;
     }
 
@@ -1250,15 +1174,6 @@ namespace fantasy
             {
                 VKBindingSet* bindingSet = check_cast<VKBindingSet*>(binding_set);
                 vk_descriptor_sets.push_back(bindingSet->vk_descriptor_set);
-
-                for (BufferInterface* buffer : bindingSet->volatile_constant_buffers)
-                {
-                    auto iter = _volatile_buffer_versions.find(buffer);
-                    assert(iter != _volatile_buffer_versions.end());
-
-                    uint64_t offset = iter->second.latest_version * buffer->get_desc().byte_size;
-                    dynamic_offsets.push_back(static_cast<uint32_t>(offset));
-                }
             }
         }
 
@@ -1669,58 +1584,7 @@ namespace fantasy
             make_version(recording_id, queue_type, false),
             make_version(submit_id, queue_type, true)
         );
-        
-        submit_volatile_buffers(recording_id, submit_id);
-        _volatile_buffer_versions.clear();
     }
 
-    void VKCommandList::flush_volatile_buffer_mapped_memory()
-    {
-        // 确保在 GPU 使用数据之前，CPU 对 volatile 缓冲区的写入操作已经同步到 GPU.
-
-        std::vector<vk::MappedMemoryRange> vk_mapped_ranges;
-
-        for (auto& iter : _volatile_buffer_versions)
-        {
-            VKBuffer* buffer = check_cast<VKBuffer*>(iter.first);
-            VKVolatileBufferVersion& state = iter.second;
-
-            if (state.max_version < state.min_version || !state.initialized) continue;
-
-            int32_t version_count = state.max_version - state.min_version + 1;
-
-            vk::MappedMemoryRange vk_mapped_range{}; 
-            vk_mapped_range.memory = buffer->vk_device_memory;
-            vk_mapped_range.offset = state.min_version * buffer->desc.byte_size;
-            vk_mapped_range.size = version_count * buffer->desc.byte_size;
-
-            vk_mapped_ranges.push_back(vk_mapped_range);
-        }
-
-        if (!vk_mapped_ranges.empty())
-        {
-            _context->device.flushMappedMemoryRanges(vk_mapped_ranges);
-        }
-    }
-
-    void VKCommandList::submit_volatile_buffers(uint64_t recording_id, uint64_t submitted_id)
-    {
-        uint64_t old_version = make_version(recording_id, _desc.queue_type, false);
-        uint64_t new_version = make_version(submitted_id, _desc.queue_type, true);
-
-        for (auto& iter : _volatile_buffer_versions)
-        {
-            VKVolatileBufferVersion& volatile_version = iter.second;
-            
-            if (!volatile_version.initialized) continue;
-        
-            VKBuffer* buffer = check_cast<VKBuffer*>(iter.first);
-            for (int32_t version = volatile_version.min_version; version <= volatile_version.max_version; version++)
-            {
-                uint64_t expected = old_version;
-                buffer->version_tracking[version].compare_exchange_strong(expected, new_version);
-            }
-        }
-    }
      
 }
