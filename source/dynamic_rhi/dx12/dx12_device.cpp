@@ -70,7 +70,7 @@ namespace fantasy
         d3d12_command_signature_desc.NumArgumentDescs = 1;
         d3d12_command_signature_desc.pArgumentDescs = &d3d12_indirect_argument_desc;
 
-        d3d12_command_signature_desc.ByteStride = 16;
+        d3d12_command_signature_desc.ByteStride = sizeof(DrawIndirectArguments);
         d3d12_indirect_argument_desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW;
         context.device->CreateCommandSignature(
             &d3d12_command_signature_desc, 
@@ -78,7 +78,7 @@ namespace fantasy
             IID_PPV_ARGS(&context.draw_indirect_signature)
         );
 
-        d3d12_command_signature_desc.ByteStride = 20;
+        d3d12_command_signature_desc.ByteStride = sizeof(DrawIndexedIndirectArguments);
         d3d12_indirect_argument_desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DRAW_INDEXED;
         context.device->CreateCommandSignature(
             &d3d12_command_signature_desc, 
@@ -86,7 +86,7 @@ namespace fantasy
             IID_PPV_ARGS(&context.draw_indexed_indirect_signature)
         );
 
-        d3d12_command_signature_desc.ByteStride = 12;
+        d3d12_command_signature_desc.ByteStride = 3 * sizeof(uint32_t);
         d3d12_indirect_argument_desc.Type = D3D12_INDIRECT_ARGUMENT_TYPE_DISPATCH;
         context.device->CreateCommandSignature(
             &d3d12_command_signature_desc, 

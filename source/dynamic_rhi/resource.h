@@ -56,16 +56,17 @@ namespace fantasy
         ConstantBuffer          = 1 << 1,
         VertexBuffer            = 1 << 2,
         IndexBuffer             = 1 << 3,
-        ShaderResource          = 1 << 4,
-        UnorderedAccess         = 1 << 5,
-        RenderTarget            = 1 << 6,
-        DepthWrite              = 1 << 7,
-        DepthRead               = 1 << 8,
-        StreamOut               = 1 << 9,
-        CopyDst                 = 1 << 10,
-        CopySrc                 = 1 << 11,
-        Present                 = 1 << 12,
-        IndirectArgument        = 1 << 13
+        GraphicsShaderResource  = 1 << 4,
+        ComputeShaderResource   = 1 << 5,
+        UnorderedAccess         = 1 << 6,
+        RenderTarget            = 1 << 7,
+        DepthWrite              = 1 << 8,
+        DepthRead               = 1 << 9,
+        StreamOut               = 1 << 10,
+        CopyDst                 = 1 << 11,
+        CopySrc                 = 1 << 12,
+        Present                 = 1 << 13,
+        IndirectArgument        = 1 << 14
         // ,
         // AccelStructRead         = 1 << 14,
         // AccelStructWrite        = 1 << 15,
@@ -342,6 +343,15 @@ namespace fantasy
             return ret;
         }
 
+        static BufferDesc create_read_back_buffer(uint64_t size, std::string name = "")
+        {
+            BufferDesc ret;
+			ret.name = name;
+			ret.byte_size = size;
+            ret.cpu_access = CpuAccessMode::Read;
+            return ret;
+        }
+
         static BufferDesc create_vertex_buffer(uint64_t size, std::string name = "")
         {
             BufferDesc ret;
@@ -380,8 +390,6 @@ namespace fantasy
         }
     };
     
-    inline const BufferRange entire_buffer_range = BufferRange{ 0, ~0ull };
-
 
     struct BufferInterface : public ResourceInterface
     {

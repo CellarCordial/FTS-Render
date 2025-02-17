@@ -63,9 +63,11 @@
         TextureState* get_texture_state_track(TextureInterface* texture);
         BufferState* get_buffer_state_track(BufferInterface* buffer);
 
+    public:
+        std::unordered_map<TextureInterface*, std::unique_ptr<TextureState>> texture_states;
+        std::unordered_map<BufferInterface*, std::unique_ptr<BufferState>> buffer_states;
+    
     private:
-        std::unordered_map<TextureInterface*, std::unique_ptr<TextureState>> _texture_states;
-        std::unordered_map<BufferInterface*, std::unique_ptr<BufferState>> _buffer_states;
 
         std::vector<TextureBarrier> _texture_barriers;
         std::vector<BufferBarrier> _buffer_barriers;

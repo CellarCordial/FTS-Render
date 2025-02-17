@@ -126,7 +126,8 @@ namespace fantasy
 
         Format format = format_ == Format::UNKNOWN ? desc.format : format_;
         
-        auto iter = view_cache.find(std::make_tuple(subresource, format, view_type));
+        auto view_key = std::make_tuple(subresource, format, view_type);
+        auto iter = view_cache.find(view_key);
         if (iter == view_cache.end())
         {
             switch (view_type)
@@ -139,7 +140,6 @@ namespace fantasy
                         _descriptor_manager->shader_resource_heap.get_cpu_handle(descriptor_index);
 
                     create_srv(d3d12_cpu_descriptor, subresource, format);
-                    _descriptor_manager->shader_resource_heap.copy_to_shader_visible_heap(descriptor_index);
                 }
                 break;
             case ResourceViewType::Texture_UAV:
@@ -150,7 +150,6 @@ namespace fantasy
                         _descriptor_manager->shader_resource_heap.get_cpu_handle(descriptor_index);
 
                     create_uav(d3d12_cpu_descriptor, subresource, format);
-                    _descriptor_manager->shader_resource_heap.copy_to_shader_visible_heap(descriptor_index);
                 }
                 break;
             case ResourceViewType::Texture_RTV:
@@ -161,7 +160,6 @@ namespace fantasy
                         _descriptor_manager->render_target_heap.get_cpu_handle(descriptor_index);
 
                     create_rtv(d3d12_cpu_descriptor, subresource, format);
-                    
                 }
                 break;
             case ResourceViewType::Texture_DSV:
@@ -179,7 +177,7 @@ namespace fantasy
                 return INVALID_SIZE_32;
             }
 
-            iter->second = descriptor_index;
+            view_cache.emplace(view_key, descriptor_index);
         }
         else
         {
@@ -277,9 +275,9 @@ namespace fantasy
         case TextureDimension::TextureCube:
         case TextureDimension::TextureCubeArray:
             view_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
-            view_desc.Texture1DArray.ArraySize = subresource.array_slice_count;
-            view_desc.Texture1DArray.FirstArraySlice = subresource.base_array_slice;
-            view_desc.Texture1DArray.MipSlice = subresource.base_mip_level;
+            view_desc.Texture2DArray.ArraySize = subresource.array_slice_count;
+            view_desc.Texture2DArray.FirstArraySlice = subresource.base_array_slice;
+            view_desc.Texture2DArray.MipSlice = subresource.base_mip_level;
             break;
         case TextureDimension::Texture3D:
             view_desc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
@@ -319,15 +317,15 @@ namespace fantasy
             break;
         case TextureDimension::Texture2D:
             view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-            view_desc.Texture1D.MipSlice = subresource.base_mip_level;
+            view_desc.Texture2D.MipSlice = subresource.base_mip_level;
             break;
         case TextureDimension::Texture2DArray:
         case TextureDimension::TextureCube:
         case TextureDimension::TextureCubeArray:
             view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY;
-            view_desc.Texture1DArray.ArraySize = subresource.array_slice_count;
-            view_desc.Texture1DArray.FirstArraySlice = subresource.base_array_slice;
-            view_desc.Texture1DArray.MipSlice = subresource.base_mip_level;
+            view_desc.Texture2DArray.ArraySize = subresource.array_slice_count;
+            view_desc.Texture2DArray.FirstArraySlice = subresource.base_array_slice;
+            view_desc.Texture2DArray.MipSlice = subresource.base_mip_level;
             break;
         case TextureDimension::Texture3D:
             view_desc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE3D;
@@ -369,15 +367,15 @@ namespace fantasy
             break;
         case TextureDimension::Texture2D:
             view_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
-            view_desc.Texture1D.MipSlice = subresource.base_mip_level;
+            view_desc.Texture2D.MipSlice = subresource.base_mip_level;
             break;
         case TextureDimension::Texture2DArray:
         case TextureDimension::TextureCube:
         case TextureDimension::TextureCubeArray:
             view_desc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
-            view_desc.Texture1DArray.ArraySize = subresource.array_slice_count;
-            view_desc.Texture1DArray.FirstArraySlice = subresource.base_array_slice;
-            view_desc.Texture1DArray.MipSlice = subresource.base_mip_level;
+            view_desc.Texture2DArray.ArraySize = subresource.array_slice_count;
+            view_desc.Texture2DArray.FirstArraySlice = subresource.base_array_slice;
+            view_desc.Texture2DArray.MipSlice = subresource.base_mip_level;
             break;
         default:
             assert(!"invalid Enumeration value");
@@ -399,7 +397,10 @@ namespace fantasy
 
     DX12Buffer::~DX12Buffer() noexcept
     {
-        if (_uav_index_for_clear != INVALID_SIZE_32) _descriptor_manager->shader_resource_heap.release_descriptor(_uav_index_for_clear);
+        for (const auto& iter : view_cache)
+        {
+            _descriptor_manager->shader_resource_heap.release_descriptor(iter.second);
+        }
     }
 
     bool DX12Buffer::initialize()
@@ -414,8 +415,8 @@ namespace fantasy
         if (desc.is_virtual) return true;
 
         D3D12_HEAP_TYPE heap_type = D3D12_HEAP_TYPE_DEFAULT;
-        if (desc.cpu_access == CpuAccessMode::Read) heap_type = D3D12_HEAP_TYPE_READBACK;
-        if (desc.cpu_access == CpuAccessMode::Write) heap_type = D3D12_HEAP_TYPE_UPLOAD;
+        if (desc.cpu_access == CpuAccessMode::Read)                             heap_type = D3D12_HEAP_TYPE_READBACK;
+        if (desc.cpu_access == CpuAccessMode::Write || desc.is_constant_buffer) heap_type = D3D12_HEAP_TYPE_UPLOAD;
 
         D3D12_HEAP_PROPERTIES d3d12_heap_properties{};
         d3d12_heap_properties.Type = heap_type;
@@ -501,7 +502,10 @@ namespace fantasy
     
 	uint32_t DX12Buffer::get_view_index(ResourceViewType view_type, const BufferRange& range, Format format_)
 	{
-        auto iter = view_cache.find(std::make_tuple(range, format_, view_type));
+        // Buffer 自行管理 descriptor.
+
+        auto view_key = std::make_tuple(range, format_, view_type);
+        auto iter = view_cache.find(view_key);
 
         Format format = format_ == Format::UNKNOWN ? desc.format : format_;
 
@@ -515,8 +519,6 @@ namespace fantasy
 
             const D3D12_CPU_DESCRIPTOR_HANDLE cpu_descriptor_handle =
                         _descriptor_manager->shader_resource_heap.get_cpu_handle(descriptor_index);
-
-            _descriptor_manager->shader_resource_heap.copy_to_shader_visible_heap(descriptor_index);
 
             switch (view_type)
             {
@@ -534,7 +536,7 @@ namespace fantasy
                 assert(!"invalid enum.");
             }
 
-            iter->second = descriptor_index;
+            view_cache.emplace(view_key, descriptor_index);
             return descriptor_index;
         }
 	}
@@ -631,32 +633,6 @@ namespace fantasy
 
         _context->device->CreateUnorderedAccessView(d3d12_resource.Get(), nullptr, &view_desc, d3d12_cpu_descriptor);
     }
-    
-    uint32_t DX12Buffer::get_clear_uav_index()
-    {
-        if (_uav_index_for_clear != INVALID_SIZE_32) return _uav_index_for_clear;
-
-        // clear 时需要将其描述为 raw buffer.
-
-        D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor = 
-            _descriptor_manager->shader_resource_heap.get_cpu_handle(_uav_index_for_clear);
-
-        D3D12_UNORDERED_ACCESS_VIEW_DESC view_desc{};
-        view_desc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-        view_desc.Format = DXGI_FORMAT_R32_UINT;
-        view_desc.Buffer.FirstElement = entire_buffer_range.byte_offset / 4;
-        view_desc.Buffer.NumElements = static_cast<uint32_t>(entire_buffer_range.byte_size / 4);
-        view_desc.Buffer.StructureByteStride = 0;
-        view_desc.Buffer.CounterOffsetInBytes = 0;
-        view_desc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
-
-        _context->device->CreateUnorderedAccessView(d3d12_resource.Get(), nullptr, &view_desc, d3d12_cpu_descriptor);
-
-        _descriptor_manager->shader_resource_heap.copy_to_shader_visible_heap(_uav_index_for_clear);
-
-        return _uav_index_for_clear;
-    }
-
 
     DX12StagingTexture::DX12StagingTexture(const DX12Context* context, const TextureDesc& desc_, CpuAccessMode cpu_access_mode) :
         _context(context), 

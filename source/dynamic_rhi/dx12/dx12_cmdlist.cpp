@@ -9,6 +9,7 @@
 #include <memory>
 #include <minwindef.h>
 #include <pix_win.h>
+#include <tuple>
 #include <utility>
 #include <winerror.h>
 
@@ -154,7 +155,7 @@ namespace fantasy
 
         for (size_t ix = 0; ix < cmd_count; ix++)
         {
-            check_cast<DX12CommandList*>(cmdlists[ix])->executed(*this, last_submitted_id);
+            check_cast<DX12CommandList*>(cmdlists[ix])->executed(last_submitted_id);
         }
         
         _d3d12_wait_fences.clear();
@@ -442,7 +443,55 @@ namespace fantasy
     
     bool DX12CommandList::close()
     {
+        if (_desc.queue_type == CommandQueueType::Graphics)
+        {
+            // DX12 不允许在 compute cmdlist 中存在有资源处于 GraphicsShaderResource 或 RenderTarget state, 而我们不知道下一条
+            // 处理相同资源的 cmdlist 是否是 compute 的, 所以需要在此处将 GraphicsShaderResource 资源转换为 Common state.
+            for (const auto& pair : _resource_state_tracker.texture_states)
+            {
+                if ((pair.second->state & ResourceStates::GraphicsShaderResource) != 0 ||
+                    (pair.second->state & ResourceStates::RenderTarget) != 0)
+                {
+                    set_texture_state(
+                        pair.first, 
+                        TextureSubresourceSet{
+                            .base_mip_level = 0,
+                            .mip_level_count = pair.first->get_desc().mip_levels,
+                            .base_array_slice = 0,
+                            .array_slice_count = pair.first->get_desc().array_size
+                        }, 
+                        ResourceStates::Common
+                    );
+                }
+            }
+            for (const auto& pair : _resource_state_tracker.buffer_states)
+            {
+                if (pair.second->state == ResourceStates::GraphicsShaderResource)
+                {
+                    set_buffer_state(pair.first, ResourceStates::Common);
+                }
+            }
+        }
+
+        if (_desc.revert_resource_state)
+        {
+            for (const auto& [texture, slice_mip, state] : _recovery_textures)
+            {
+                TextureSubresourceSet subresource{ 
+                    .base_mip_level = (slice_mip & 0xffff), 
+                    .mip_level_count = 1,
+                    .base_array_slice = (slice_mip >> 16),
+                    .array_slice_count = 1 
+                };
+                _resource_state_tracker.set_texture_state(texture, subresource, state);
+            } 
+            for (const auto& [buffer, state] : _recovery_buffers)
+            {
+                _resource_state_tracker.set_buffer_state(buffer, state);
+            }
+        }
         commit_barriers();
+        
         _current_cmdlist->d3d12_cmdlist->Close();
         return true;
     }
@@ -467,10 +516,11 @@ namespace fantasy
             
 
             uint32_t view_index = texture->get_view_index(ResourceViewType::Texture_UAV, subresource_mip);
+            _descriptor_manager->shader_resource_heap.copy_to_shader_visible_heap(view_index);
 
             _current_cmdlist->d3d12_cmdlist->ClearUnorderedAccessViewFloat(
                 _descriptor_manager->shader_resource_heap.get_gpu_handle(view_index), 
-                _descriptor_manager->shader_resource_heap.get_cpu_handle(view_index), 
+                _descriptor_manager->shader_resource_heap.get_shader_visible_cpu_handle(view_index), 
                 reinterpret_cast<ID3D12Resource*>(texture->get_native_object()), 
                 &clear_color.r, 
                 0, 
@@ -495,6 +545,8 @@ namespace fantasy
         uint32_t clear_colors[4] = { clear_color, clear_color, clear_color, clear_color };
 
         set_texture_state(texture, subresource, ResourceStates::UnorderedAccess);
+        commit_barriers();
+        commit_descriptor_heaps();
 
         for (uint32_t mip = subresource.base_mip_level; mip < subresource.base_mip_level + subresource.mip_level_count; ++mip)
         {
@@ -505,9 +557,9 @@ namespace fantasy
                 .array_slice_count = subresource.array_slice_count
             };
             
-            commit_descriptor_heaps();
 
             uint32_t view_index = dx12_texture->get_view_index(ResourceViewType::Texture_UAV, subresource_mip);
+            _descriptor_manager->shader_resource_heap.copy_to_shader_visible_heap(view_index);
 
             _current_cmdlist->d3d12_cmdlist->ClearUnorderedAccessViewUint(
                 _descriptor_manager->shader_resource_heap.get_gpu_handle(view_index), 
@@ -801,7 +853,7 @@ namespace fantasy
             &upload_buffer, 
             &d3d12_foot_print.Offset, 
             &mapped_address, 
-            _recording_version, 
+            make_version(_current_cmdlist->recording_id, _desc.queue_type, false), 
             D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT
         ));
 
@@ -848,6 +900,7 @@ namespace fantasy
             &upload_buffer, 
             &upload_offset, 
             &mapped_address,
+            make_version(_current_cmdlist->recording_id, _desc.queue_type, false),
             D3D12_CONSTANT_BUFFER_DATA_PLACEMENT_ALIGNMENT
         ));
 
@@ -869,18 +922,19 @@ namespace fantasy
         return true;
     }
 
-    void DX12CommandList::clear_buffer_uint(BufferInterface* buffer, uint32_t clear_value)
+    void DX12CommandList::clear_buffer_uint(BufferInterface* buffer, BufferRange range, uint32_t clear_value)
     {
 		set_buffer_state(buffer, ResourceStates::UnorderedAccess);
         commit_barriers();
         commit_descriptor_heaps();
 
-        uint32_t clear_uav_index = check_cast<DX12Buffer*>(buffer)->get_clear_uav_index();
+        uint32_t view_index = check_cast<DX12Buffer*>(buffer)->get_view_index(ResourceViewType::RawBuffer_UAV, range);
+        _descriptor_manager->shader_resource_heap.copy_to_shader_visible_heap(view_index);
 
         const uint32_t clear_values[4] = { clear_value, clear_value, clear_value, clear_value };
         _current_cmdlist->d3d12_cmdlist->ClearUnorderedAccessViewUint(
-            _descriptor_manager->shader_resource_heap.get_gpu_handle(clear_uav_index), 
-            _descriptor_manager->shader_resource_heap.get_cpu_handle(clear_uav_index), 
+            _descriptor_manager->shader_resource_heap.get_gpu_handle(view_index), 
+            _descriptor_manager->shader_resource_heap.get_cpu_handle(view_index), 
             reinterpret_cast<ID3D12Resource*>(buffer->get_native_object()), 
             clear_values, 
             0, 
@@ -1180,7 +1234,16 @@ namespace fantasy
             switch(binding.type)
             {
                 case ResourceViewType::Texture_SRV:
-                    set_texture_state(check_cast<TextureInterface>(binding.resource).get(), binding.subresource, ResourceStates::ShaderResource);
+                    switch (_desc.queue_type)
+                    {
+                    case CommandQueueType::Graphics:
+                        set_texture_state(check_cast<TextureInterface>(binding.resource).get(), binding.subresource, ResourceStates::GraphicsShaderResource);
+                        break;
+                    case CommandQueueType::Compute:
+                        set_texture_state(check_cast<TextureInterface>(binding.resource).get(), binding.subresource, ResourceStates::ComputeShaderResource);
+                        break;
+                    default: assert(!"Invalid enum");
+                    }
                     break;
 
                 case ResourceViewType::Texture_UAV:
@@ -1190,17 +1253,22 @@ namespace fantasy
                 case ResourceViewType::TypedBuffer_SRV:
                 case ResourceViewType::StructuredBuffer_SRV:
                 case ResourceViewType::RawBuffer_SRV:
-                    set_buffer_state(check_cast<BufferInterface>(binding.resource).get(), ResourceStates::ShaderResource);
+                    switch (_desc.queue_type)
+                    {
+                    case CommandQueueType::Graphics:
+                        set_buffer_state(check_cast<BufferInterface>(binding.resource).get(), ResourceStates::GraphicsShaderResource);
+                        break;
+                    case CommandQueueType::Compute:
+                        set_buffer_state(check_cast<BufferInterface>(binding.resource).get(), ResourceStates::ComputeShaderResource);
+                        break;
+                    default: assert(!"Invalid enum");
+                    }
                     break;
 
                 case ResourceViewType::TypedBuffer_UAV:
                 case ResourceViewType::StructuredBuffer_UAV:
                 case ResourceViewType::RawBuffer_UAV:
                     set_buffer_state(check_cast<BufferInterface>(binding.resource).get(), ResourceStates::UnorderedAccess);
-                    break;
-
-                case ResourceViewType::ConstantBuffer:
-                    set_buffer_state(check_cast<BufferInterface>(binding.resource).get(), ResourceStates::ConstantBuffer);
                     break;
                 default:
                     continue;
@@ -1429,11 +1497,27 @@ namespace fantasy
     void DX12CommandList::set_texture_state(TextureInterface* texture, const TextureSubresourceSet& subresource, ResourceStates states)
     {
         _resource_state_tracker.set_texture_state(texture, subresource, states);
+        if (_desc.revert_resource_state)
+        {
+            for (uint32_t slice = subresource.base_array_slice; slice < subresource.base_array_slice + subresource.array_slice_count; ++slice)
+            {
+                for (uint32_t mip = subresource.base_mip_level; mip < subresource.base_mip_level + subresource.mip_level_count; ++mip)
+                {
+                    ResourceStates old_state = _resource_state_tracker.get_texture_state(texture, slice, mip);
+                    _recovery_textures.emplace_back(std::make_tuple(texture, (slice << 16 | mip & 0xffff), old_state));
+                }
+            }
+        }
     }
 
     void DX12CommandList::set_buffer_state(BufferInterface* buffer, ResourceStates states)
     {
         _resource_state_tracker.set_buffer_state(buffer, states);
+        if (_desc.revert_resource_state)
+        {
+            ResourceStates old_state = _resource_state_tracker.get_buffer_state(buffer);
+            _recovery_buffers.emplace_back(std::make_pair(buffer, old_state));
+        }
     }
 
     void DX12CommandList::commit_barriers()
@@ -1551,23 +1635,22 @@ namespace fantasy
         return _current_cmdlist->d3d12_cmdlist.Get();
     }
 
-    void DX12CommandList::executed(DX12CommandQueue& queue, uint64_t submit_id)
+    void DX12CommandList::executed(uint64_t submit_id)
     {
         _current_cmdlist->submit_id = submit_id;
 
-        const CommandQueueType queue_type = queue.queue_type;
         const uint64_t recording_id = _current_cmdlist->recording_id;
 
         _current_cmdlist = nullptr;
         
         _upload_manager.submit_chunks(
-            make_version(recording_id, queue_type, false),
-            make_version(submit_id, queue_type, true)
+            make_version(recording_id, _desc.queue_type, false),
+            make_version(submit_id, _desc.queue_type, true)
         );
         
         _scratch_manager.submit_chunks(
-            make_version(recording_id, queue_type, false),
-            make_version(submit_id, queue_type, true)
+            make_version(recording_id, _desc.queue_type, false),
+            make_version(submit_id, _desc.queue_type, true)
         );
     }
 

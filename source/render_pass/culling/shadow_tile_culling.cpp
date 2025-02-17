@@ -5,12 +5,12 @@
 #include "../../scene/virtual_texture.h"
 #include "../../core/tools/check_cast.h"
 #include "../../scene/scene.h"
+#include "../../scene/light.h"
 
 
 namespace fantasy
 {
-#define THREAD_GROUP_SIZE_X 16
-#define THREAD_GROUP_SIZE_Y 16
+#define THREAD_GROUP_SIZE_X 16u
  
     struct ShadowVisibleInfo
     {
@@ -104,6 +104,18 @@ namespace fantasy
 
 		if (SceneSystem::loaded_submesh_count != 0)
 		{
+			_pass_constant.shadow_tile_num = VIRTUAL_SHADOW_RESOLUTION / VIRTUAL_SHADOW_PAGE_SIZE;
+
+			uint32_t* cluster_group_count = nullptr;
+			ReturnIfFalse(cache->require_constants("cluster_group_count", (void**)&cluster_group_count));
+			_pass_constant.group_count = *cluster_group_count;
+
+			DirectionalLight* light = cache->get_world()->get_global_entity()->get_component<DirectionalLight>();
+			_pass_constant.near_plane = light->near_plane;
+			_pass_constant.far_plane = light->far_plane;
+			_pass_constant.frustum_right_normal = normalize(cross(float3(0.0f, 1.0f, 0.0f), light->direction));
+			_pass_constant.frustum_top_normal = cross(light->direction, _pass_constant.frustum_right_normal);
+
 			if (!_resource_writed)
 			{
 				DeviceInterface* device = cmdlist->get_deivce();
@@ -117,9 +129,13 @@ namespace fantasy
 				_resource_writed = true;
 			}
 
-			uint32_t* cluster_group_count = nullptr;
-			ReturnIfFalse(cache->require_constants("cluster_group_count", (void**)&cluster_group_count));
-			ReturnIfFalse(cmdlist->dispatch(_compute_state, *cluster_group_count, 1, 1, &_pass_constant));
+			ReturnIfFalse(cmdlist->dispatch(
+				_compute_state, 
+				align(*cluster_group_count, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X, 
+				1, 
+				1, 
+				&_pass_constant
+			));
 		}
 		ReturnIfFalse(cmdlist->close());
         return true;

@@ -13,14 +13,15 @@ cbuffer pass_constants : register(b0)
     float far_plane;
 
     uint32_t cluster_size;
+    float3 frustum_top_normal;
+
+    float3 frustum_right_normal;
 };
 
 struct ShadowTileInfo
 {
     uint2 id;
     float4x4 view_matrix;
-    float3 frustum_top_normal;
-    float3 frustum_right_normal;
 };
 
 struct ShadowVisibleInfo
@@ -66,10 +67,10 @@ void main(uint3 thread_id : SV_DispatchThreadID)
 
             if (visible)
             {
-                visible = dot(tile_info.frustum_top_normal, view_space_cluster_position) < cluster.bounding_sphere.w;
-                visible = visible && dot(-tile_info.frustum_top_normal, view_space_cluster_position) < cluster.bounding_sphere.w;
-                visible = visible && dot(tile_info.frustum_right_normal, view_space_cluster_position) < cluster.bounding_sphere.w;
-                visible = visible && dot(-tile_info.frustum_right_normal, view_space_cluster_position) < cluster.bounding_sphere.w;
+                visible = dot(frustum_top_normal, view_space_cluster_position) < cluster.bounding_sphere.w;
+                visible = visible && dot(-frustum_top_normal, view_space_cluster_position) < cluster.bounding_sphere.w;
+                visible = visible && dot(frustum_right_normal, view_space_cluster_position) < cluster.bounding_sphere.w;
+                visible = visible && dot(-frustum_right_normal, view_space_cluster_position) < cluster.bounding_sphere.w;
             }
 
             if (visible)

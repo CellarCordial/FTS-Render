@@ -26,6 +26,7 @@ namespace fantasy
 
 	private:
 		std::vector<constant::HierarchicalZBufferPassConstant> _pass_constants;
+		uint32_t _hzb_resolution = 1024;
     
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 

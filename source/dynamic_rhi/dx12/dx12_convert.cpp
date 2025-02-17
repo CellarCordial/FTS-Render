@@ -149,7 +149,8 @@ namespace fantasy
         if ((states & ResourceStates::ConstantBuffer) != 0) ret |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
         if ((states & ResourceStates::VertexBuffer) != 0) ret |= D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
         if ((states & ResourceStates::IndexBuffer) != 0) ret |= D3D12_RESOURCE_STATE_INDEX_BUFFER;
-        if ((states & ResourceStates::ShaderResource) != 0) ret |= D3D12_RESOURCE_STATE_ALL_SHADER_RESOURCE;
+        if ((states & ResourceStates::GraphicsShaderResource) != 0) ret |= D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+        if ((states & ResourceStates::ComputeShaderResource) != 0) ret |= D3D12_RESOURCE_STATE_NON_PIXEL_SHADER_RESOURCE;
         if ((states & ResourceStates::UnorderedAccess) != 0) ret |= D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
         if ((states & ResourceStates::RenderTarget) != 0) ret |= D3D12_RESOURCE_STATE_RENDER_TARGET;
         if ((states & ResourceStates::DepthWrite) != 0) ret |= D3D12_RESOURCE_STATE_DEPTH_WRITE;
@@ -430,7 +431,7 @@ namespace fantasy
     {
         D3D12_RESOURCE_STATES ret = D3D12_RESOURCE_STATE_COMMON;
         if (desc.cpu_access == CpuAccessMode::Read) ret |= D3D12_RESOURCE_STATE_COPY_DEST;
-        if (desc.cpu_access == CpuAccessMode::Write) ret |= D3D12_RESOURCE_STATE_GENERIC_READ;
+        if (desc.cpu_access == CpuAccessMode::Write || desc.is_constant_buffer) ret |= D3D12_RESOURCE_STATE_GENERIC_READ;
         return ret;
     }
 

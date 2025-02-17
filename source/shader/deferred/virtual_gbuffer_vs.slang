@@ -30,7 +30,7 @@ struct Vertex
 
 [vk_binding(1, 0)] StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
 [vk_binding(2, 0)] StructuredBuffer<uint32_t> visible_cluster_id_buffer : register(t1);
-[vk_binding(3, 0)] StructuredBuffer<MeshCluster> cluster_buffer : register(t2);
+[vk_binding(3, 0)] StructuredBuffer<MeshCluster> mesh_cluster_buffer : register(t2);
 [vk_binding(4, 0)] StructuredBuffer<Vertex> cluster_vertex_buffer : register(t3);
 [vk_binding(5, 0)] StructuredBuffer<uint32_t> cluster_triangle_buffer : register(t4);
 
@@ -69,7 +69,7 @@ VertexOutput main(uint32_t instance_id: SV_InstanceID, uint32_t vertex_index : S
     VertexOutput output;
 
     uint32_t cluster_index = visible_cluster_id_buffer[instance_id];
-    MeshCluster cluster = cluster_buffer[cluster_index];
+    MeshCluster cluster = mesh_cluster_buffer[cluster_index];
     uint32_t triangle_index = vertex_index / 3;
     if (triangle_index >= cluster.triangle_count)
     {

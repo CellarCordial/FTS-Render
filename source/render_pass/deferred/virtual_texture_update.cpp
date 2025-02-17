@@ -17,8 +17,6 @@ namespace fantasy
 	{
 		uint2 id;
 		float4x4 view_matrix;
-		float3 frustum_top_normal;
-		float3 frustum_right_normal;
 	};
 
 	struct TextureCopyInfo
@@ -169,18 +167,24 @@ namespace fantasy
 		DeviceInterface* device = cmdlist->get_deivce();
 		World* world = cache->get_world();
 
-		std::shared_ptr<BufferInterface> vt_page_info_buffer = 
-			check_cast<BufferInterface>(cache->require("vt_page_info_buffer"));
-		std::shared_ptr<BufferInterface> virtual_shadow_page_buffer = 
-				check_cast<BufferInterface>(cache->require("virtual_shadow_page_buffer"));
+		std::shared_ptr<BufferInterface> vt_page_info_read_back_buffer = 
+			check_cast<BufferInterface>(cache->require("vt_page_info_read_back_buffer"));
+		std::shared_ptr<BufferInterface> virtual_shadow_page_read_back_buffer = 
+				check_cast<BufferInterface>(cache->require("virtual_shadow_page_read_back_buffer"));
 
-		uint2* shadow_tile_data = static_cast<uint2*>(virtual_shadow_page_buffer->map(CpuAccessMode::Read));
-		VTPageInfo* vt_page_data = static_cast<VTPageInfo*>(vt_page_info_buffer->map(CpuAccessMode::Read));
+		uint2* shadow_tile_data = static_cast<uint2*>(virtual_shadow_page_read_back_buffer->map(CpuAccessMode::Read));
+		VTPageInfo* vt_page_data = static_cast<VTPageInfo*>(vt_page_info_read_back_buffer->map(CpuAccessMode::Read));
 		
 		std::mutex copy_info_mutex;
 		std::mutex tile_info_mutex;
 		std::vector<TextureCopyInfo> texture_copy_infos;
 		std::vector<ShadowTileInfo> shadow_tile_infos;
+
+		uint32_t virtual_shadow_tile_num = VIRTUAL_SHADOW_RESOLUTION / VIRTUAL_SHADOW_PAGE_SIZE;
+		DirectionalLight* light = world->get_global_entity()->get_component<DirectionalLight>();
+		float3 L = normalize(-light->get_position());
+		float3 frustum_right = normalize(cross(float3(0.0f, 1.0f, 0.0f), L));
+		float3 frustum_up = cross(L, frustum_right);
 
 		parallel::parallel_for(
 			[&](uint64_t x, uint64_t y) -> void
@@ -188,113 +192,111 @@ namespace fantasy
 				uint32_t offset = static_cast<uint32_t>(x + y * CLIENT_WIDTH);
 
 				const uint2& tile_id = *(shadow_tile_data + offset);
-				DirectionalLight* light = world->get_global_entity()->get_component<DirectionalLight>();
 
-				auto L = normalize(light->direction);
-				auto R = normalize(cross(float3(0.0f, 1.0f, 0.0f), L));
-				auto U = cross(L, R);
-				float3 pos = light->get_position();
-				float4x4 light_view_matrix = inverse(float4x4(
-					R.x,     R.y,     R.z,     0.0f,
-					U.x,     U.y,     U.z,     0.0f,
-					L.x,     L.y,     L.z,     0.0f,
-					pos.x, pos.y, pos.z, 1.0f
-				));
-
-				bool found = false;
-				bool res = world->each<MipmapLUT>(
-					[&](Entity* entity, MipmapLUT* mipmap_lut) -> bool
-					{
-						if (!found && mipmap_lut->get_mip0_resolution() == VIRTUAL_SHADOW_RESOLUTION)
+				if (tile_id != uint2(INVALID_SIZE_32, INVALID_SIZE_32))
+				{
+					bool found = false;
+					bool res = world->each<MipmapLUT>(
+						[&](Entity* entity, MipmapLUT* mipmap_lut) -> bool
 						{
-							found = true;
-
-							VTPage* page = mipmap_lut->query_page(tile_id, 0);
-							uint2 page_physical_pos_in_page;
-
+							if (!found && mipmap_lut->get_mip0_resolution() == VIRTUAL_SHADOW_RESOLUTION)
 							{
-								std::lock_guard lock(tile_info_mutex);
-
-								VTPage::LoadFlag flag = page->flag;
-								page_physical_pos_in_page = _vt_physical_table.add_page(page);
-
-								if (flag == VTPage::LoadFlag::Unload)
+								found = true;
+	
+								VTPage* page = mipmap_lut->query_page(tile_id, 0);
+								uint2 page_physical_pos_in_page;
+	
 								{
-									shadow_tile_infos.emplace_back(ShadowTileInfo{
-										.id = tile_id,
-										.view_matrix = light_view_matrix,
-										.frustum_top_normal = U,
-										.frustum_right_normal = R
-									});
+									std::lock_guard lock(tile_info_mutex);
+	
+									VTPage::LoadFlag flag = page->flag;
+									page_physical_pos_in_page = _vt_physical_table.add_page(page);
+	
+									if (flag == VTPage::LoadFlag::Unload)
+									{
+										float3 offset = frustum_right * (tile_id.x / virtual_shadow_tile_num) * light->orthographic_size +
+														frustum_up * (tile_id.y / virtual_shadow_tile_num) * light->orthographic_size;
+										shadow_tile_infos.emplace_back(ShadowTileInfo{
+											.id = tile_id,
+											.view_matrix = look_at_left_hand(
+												light->get_position() + offset,
+												offset,
+												float3(0.0f, 1.0f, 0.0f)
+											)
+										});
+									}
 								}
 							}
+							return found;
 						}
-						return found;
-					}
-				);
-				assert(res);
+					);
+					assert(res);
+				}
 
 				
 				const VTPageInfo& info = *(vt_page_data + offset);
-				uint2 page_id;
-				uint32_t mip_level;
-				uint32_t submesh_id = info.geometry_id;
-				info.get_data(page_id, mip_level);
-
-				res = world->each<std::string, Mesh, Material>(
-					[&](Entity* mesh_entity, std::string* model_name, Mesh* mesh, Material* material) -> bool
-					{
-						if (mesh->submesh_base_id <= submesh_id && submesh_id < mesh->submesh_base_id + mesh->submeshes.size())
+				if (info.geometry_id != INVALID_SIZE_32 && info.page_id_mip_level != INVALID_SIZE_32)
+				{
+					uint2 page_id;
+					uint32_t mip_level;
+					uint32_t submesh_id = info.geometry_id;
+					info.get_data(page_id, mip_level);
+	
+					bool res = world->each<std::string, Mesh, Material>(
+						[&](Entity* mesh_entity, std::string* model_name, Mesh* mesh, Material* material) -> bool
 						{
-							const auto& submesh = mesh->submeshes[submesh_id - mesh->submesh_base_id];
-
-							bool found = false;
-							ReturnIfFalse(world->each<MipmapLUT>(
-								[&](Entity* entity, MipmapLUT* mipmap_lut) -> bool
-								{
-									if (!found && mipmap_lut->get_mip0_resolution() == material->image_resolution)
+							if (mesh->submesh_base_id <= submesh_id && submesh_id < mesh->submesh_base_id + mesh->submeshes.size())
+							{
+								const auto& submesh = mesh->submeshes[submesh_id - mesh->submesh_base_id];
+	
+								bool found = false;
+								ReturnIfFalse(world->each<MipmapLUT>(
+									[&](Entity* entity, MipmapLUT* mipmap_lut) -> bool
 									{
-										found = true;
-
-										VTPage* page = mipmap_lut->query_page(page_id, mip_level);
-										uint2 page_physical_pos_in_page;
-
+										if (!found && mipmap_lut->get_mip0_resolution() == material->image_resolution)
 										{
-											std::lock_guard lock(copy_info_mutex);
-
-											VTPage::LoadFlag flag = page->flag;
-											page_physical_pos_in_page = _vt_physical_table.add_page(page);
-
-											if (flag == VTPage::LoadFlag::Unload)
+											found = true;
+	
+											VTPage* page = mipmap_lut->query_page(page_id, mip_level);
+											uint2 page_physical_pos_in_page;
+	
 											{
-												texture_copy_infos.emplace_back(TextureCopyInfo{
-													.submesh_id = submesh_id - mesh->submesh_base_id,
-													.page = page,
-													.page_physical_pos_in_page = page_physical_pos_in_page,
-													.model_name = model_name
-												});
+												std::lock_guard lock(copy_info_mutex);
+	
+												VTPage::LoadFlag flag = page->flag;
+												page_physical_pos_in_page = _vt_physical_table.add_page(page);
+	
+												if (flag == VTPage::LoadFlag::Unload)
+												{
+													texture_copy_infos.emplace_back(TextureCopyInfo{
+														.submesh_id = submesh_id - mesh->submesh_base_id,
+														.page = page,
+														.page_physical_pos_in_page = page_physical_pos_in_page,
+														.model_name = model_name
+													});
+												}
 											}
+											
+											_vt_indirect_table.set_page(
+												uint2(static_cast<uint32_t>(x), static_cast<uint32_t>(y)), 
+												page_physical_pos_in_page
+											);
 										}
-										
-										_vt_indirect_table.set_page(
-											uint2(static_cast<uint32_t>(x), static_cast<uint32_t>(y)), 
-											page_physical_pos_in_page
-										);
+										return found;
 									}
-									return found;
-								}
-							));
+								));
+							}
+							return true;
 						}
-						return true;
-					}
-				);
-				assert(res);
+					);
+					assert(res);
+				}
 			}, 
 			CLIENT_WIDTH,
 			CLIENT_HEIGHT
 		);
-		virtual_shadow_page_buffer->unmap();
-		vt_page_info_buffer->unmap();
+		virtual_shadow_page_read_back_buffer->unmap();
+		vt_page_info_read_back_buffer->unmap();
 
 		
 		_shadow_tile_num = static_cast<uint32_t>(shadow_tile_infos.size());

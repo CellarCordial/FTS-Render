@@ -51,9 +51,9 @@ namespace fantasy
     {
         std::string name;
         
-        uint64_t upload_chunk_size = 64 * 1024;
         CommandQueueType queue_type = CommandQueueType::Graphics;
-
+        bool revert_resource_state = false;
+        uint64_t upload_chunk_size = 64 * 1024;
         uint64_t scratch_chunk_size = 64 * 1024;
         uint64_t scratch_max_mamory = 1024 * 1024 * 1024;
     };
@@ -128,6 +128,7 @@ namespace fantasy
 
         virtual void clear_buffer_uint(
             BufferInterface* buffer, 
+            BufferRange range, 
             uint32_t clear_value
         ) = 0;
         

@@ -57,9 +57,9 @@ namespace fantasy
         ReturnIfFalse(_render_graph->compile());
 		while (!glfwWindowShouldClose(_window))
 		{
-			glfwPollEvents();
 			_world.tick(_timer.tick());
 			ReturnIfFalse(_render_graph->execute());
+			glfwPollEvents();
 		}
 
         return true;
@@ -125,6 +125,9 @@ namespace fantasy
 		ReturnIfFalse(SUCCEEDED(d3d12_device->CreateCommandQueue(&d3d12_queue_desc, IID_PPV_ARGS(&d3d12_graphics_cmd_queue))));
 		d3d12_queue_desc.Type = D3D12_COMMAND_LIST_TYPE_COMPUTE;
 		ReturnIfFalse(SUCCEEDED(d3d12_device->CreateCommandQueue(&d3d12_queue_desc, IID_PPV_ARGS(&d3d12_compute_cmd_queue))));
+
+		d3d12_graphics_cmd_queue->SetName(L"graphics_command_queue");
+		d3d12_compute_cmd_queue->SetName(L"compute_command_queue");
 
 		Microsoft::WRL::ComPtr<IDXGIFactory> dxgi_factory;
 		ReturnIfFalse(SUCCEEDED(CreateDXGIFactory(IID_PPV_ARGS(dxgi_factory.GetAddressOf()))));

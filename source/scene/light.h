@@ -43,6 +43,10 @@ namespace fantasy
         float4x4 view_matrix;
         float4x4 proj_matrix;
 
+        float near_plane = 0.1f;
+        float far_plane = 50.0f;
+        float orthographic_size = 20.0f;
+
         void update_direction_view_proj()
         {
             float x = radians(angle.x);
@@ -55,7 +59,7 @@ namespace fantasy
             ));
 
             view_matrix = look_at_left_hand(get_position(), float3{}, float3(0.0f, 1.0f, 0.0f));
-            proj_matrix = orthographic_left_hand(20.0f, 20.0f, 0.1f, 50.0f);
+            proj_matrix = orthographic_left_hand(orthographic_size, orthographic_size, near_plane, far_plane);
         }
 
         float3 get_position() const { return -direction * 20.0f; }

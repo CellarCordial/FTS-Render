@@ -2,7 +2,7 @@
 #include "virtual_shadow_map.h"
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
-#include "../../scene/camera.h"
+#include "../../scene/light.h"
 #include "../../scene/scene.h"
 #include <memory>
 
@@ -117,7 +117,7 @@ namespace fantasy
 			{
 				DeviceInterface* device = cmdlist->get_deivce();
 				_binding_set_items[1] = BindingSetItem::create_structured_buffer_srv(0, check_cast<BufferInterface>(cache->require("geometry_constant_buffer")));
-				_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("cluster_buffer")));
+				_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("mesh_cluster_buffer")));
 				_binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(3, check_cast<BufferInterface>(cache->require("cluster_vertex_buffer")));
 				_binding_set_items[5] = BindingSetItem::create_structured_buffer_srv(4, check_cast<BufferInterface>(cache->require("cluster_triangle_buffer")));
 				ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
@@ -128,9 +128,9 @@ namespace fantasy
 				_resource_writed = true;
 			}
 	
-			Camera* camera = cache->get_world()->get_global_entity()->get_component<Camera>();
-			_pass_constant.view_matrix = camera->view_matrix;
-			_pass_constant.view_proj = camera->get_view_proj();
+			DirectionalLight* light = cache->get_world()->get_global_entity()->get_component<DirectionalLight>();
+			_pass_constant.view_matrix = light->view_matrix;
+			_pass_constant.view_proj = light->get_view_proj();
 	
 			ReturnIfFalse(cmdlist->draw_indexed_indirect(_graphics_state, 0, 1, &_pass_constant));
 

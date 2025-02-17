@@ -1,7 +1,7 @@
 #include "scene.h"
 
 #include <assimp/scene.h>
-// #include "light.h"
+#include "light.h"
 #include "camera.h"
 #include "../core/parallel/parallel.h"
 #include "../core/tools/file.h"
@@ -35,6 +35,7 @@ namespace fantasy
 		_global_entity->assign<event::GenerateMipmap>();
 		// _global_entity->assign<event::UpdateGlobalSdf>();
 		// _global_entity->assign<event::GenerateSurfaceCache>();
+		_global_entity->assign<DirectionalLight>()->update_direction_view_proj();
 
 		
 		uint32_t current_resolution = LOWEST_TEXTURE_RESOLUTION;

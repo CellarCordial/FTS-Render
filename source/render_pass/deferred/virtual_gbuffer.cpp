@@ -65,8 +65,7 @@ namespace fantasy
 		{
 			ReturnIfFalse(_pass_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_constant_buffer(
-					sizeof(constant::VirtualGBufferPassConstant),
-					"vt_page_info_buffer"
+					sizeof(constant::VirtualGBufferPassConstant)
 				)
 			)));
 
@@ -86,7 +85,24 @@ namespace fantasy
 					"virtual_shadow_page_buffer"
 				)
 			)));
-			cache->collect(_virtual_shadow_page_buffer, ResourceType::Buffer);
+			cache->collect(_virtual_shadow_page_buffer, ResourceType::Buffer);			
+			
+
+			ReturnIfFalse(_vt_page_info_read_back_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+				BufferDesc::create_read_back_buffer(
+					sizeof(VTPageInfo) * CLIENT_WIDTH * CLIENT_HEIGHT, 
+					"vt_page_info_read_back_buffer"
+				)
+			)));
+			cache->collect(_vt_page_info_read_back_buffer, ResourceType::Buffer);
+
+			ReturnIfFalse(_virtual_shadow_page_read_back_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+				BufferDesc::create_read_back_buffer(
+					CLIENT_WIDTH * CLIENT_HEIGHT * sizeof(uint2),
+					"virtual_shadow_page_read_back_buffer"
+				)
+			)));
+			cache->collect(_virtual_shadow_page_read_back_buffer, ResourceType::Buffer);
 		}
 
 		// Texture.
@@ -205,7 +221,7 @@ namespace fantasy
 		// Binding Set.
 		{
 			_binding_set_items.resize(9);
-			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualGBufferPassConstant));
+			_binding_set_items[0] = BindingSetItem::create_constant_buffer(0, _pass_constant_buffer);
 			_binding_set_items[6] = BindingSetItem::create_texture_uav(0, _tile_uv_texture);
 			_binding_set_items[7] = BindingSetItem::create_structured_buffer_uav(1, _vt_page_info_buffer);
 			_binding_set_items[8] = BindingSetItem::create_structured_buffer_uav(2, _virtual_shadow_page_buffer);
@@ -263,8 +279,8 @@ namespace fantasy
 										uint32_t i1 = cluster.indices[ix * 3 + 1];
 										uint32_t i2 = cluster.indices[ix * 3 + 2];
 	
-										uint32_t max_index = sizeof(uint8_t);
-										ReturnIfFalse(i0 < max_index && i1 < max_index && i2 < max_index);
+										uint32_t max_index = 0xff;
+										ReturnIfFalse(i0 <= max_index && i1 <= max_index && i2 <= max_index);
 	
 										_cluster_triangles.push_back(uint32_t(i0 | (i1 << 8) | (i2 << 16)));
 									}
@@ -303,6 +319,8 @@ namespace fantasy
 						)
 					)
 				));
+				cache->collect(_cluster_vertex_buffer, ResourceType::Buffer);
+
 				ReturnIfFalse(_cluster_triangle_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 						BufferDesc::create_structured_buffer(
 							sizeof(uint32_t) * _cluster_triangles.size(), 
@@ -311,6 +329,8 @@ namespace fantasy
 						)
 					)
 				));
+				cache->collect(_cluster_triangle_buffer, ResourceType::Buffer);
+
 				ReturnIfFalse(_geometry_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 						BufferDesc::create_structured_buffer(
 							sizeof(GeometryConstantGpu) * _geometry_constants.size(), 
@@ -319,6 +339,7 @@ namespace fantasy
 						)
 					)
 				));
+				cache->collect(_geometry_constant_buffer, ResourceType::Buffer);
 	
 				ReturnIfFalse(cmdlist->write_buffer(_cluster_vertex_buffer.get(), _cluster_vertices.data(), sizeof(Vertex) * _cluster_vertices.size()));
 				ReturnIfFalse(cmdlist->write_buffer(_cluster_triangle_buffer.get(), _cluster_triangles.data(), sizeof(uint32_t) * _cluster_triangles.size()));
@@ -327,7 +348,7 @@ namespace fantasy
 				_binding_set.reset();
 				_binding_set_items[1] = BindingSetItem::create_structured_buffer_srv(0, _geometry_constant_buffer);
 				_binding_set_items[2] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("visible_cluster_id_buffer")));
-				_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("cluster_buffer")));
+				_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("mesh_cluster_buffer")));
 				_binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(3, _cluster_vertex_buffer);
 				_binding_set_items[5] = BindingSetItem::create_structured_buffer_srv(4, _cluster_triangle_buffer);
 				ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
@@ -339,8 +360,27 @@ namespace fantasy
 	
 				_resource_writed = true;
 			}
+
+			cmdlist->clear_buffer_uint(_vt_page_info_buffer.get(), BufferRange{ 0, _vt_page_info_buffer->get_desc().byte_size }, INVALID_SIZE_32);
+			cmdlist->clear_buffer_uint(_virtual_shadow_page_buffer.get(), BufferRange{ 0, _virtual_shadow_page_buffer->get_desc().byte_size }, INVALID_SIZE_32);
+			cmdlist->clear_texture_uint(_tile_uv_texture.get(), TextureSubresourceSet{}, INVALID_SIZE_32);
 	
-			ReturnIfFalse(cmdlist->draw_indirect(_graphics_state, 0, 1, &_pass_constant));
+			ReturnIfFalse(cmdlist->draw_indirect(_graphics_state, 0, 1));
+
+			cmdlist->copy_buffer(
+				_vt_page_info_read_back_buffer.get(), 
+				0, 
+				_vt_page_info_buffer.get(), 
+				0, 
+				sizeof(VTPageInfo) * CLIENT_WIDTH * CLIENT_HEIGHT
+			);
+			cmdlist->copy_buffer(
+				_virtual_shadow_page_read_back_buffer.get(), 
+				0, 
+				_virtual_shadow_page_buffer.get(), 
+				0, 
+				CLIENT_WIDTH * CLIENT_HEIGHT * sizeof(uint2)
+			);
 		}
 
 		ReturnIfFalse(cmdlist->close());

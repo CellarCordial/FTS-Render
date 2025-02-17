@@ -209,6 +209,7 @@ namespace fantasy
 
         void clear_buffer_uint(
             BufferInterface* buffer, 
+            BufferRange range,
             uint32_t clear_value
         ) override;
         
@@ -275,7 +276,7 @@ namespace fantasy
         void* get_native_object() override;
 
 
-        void executed(DX12CommandQueue& queue, uint64_t submit_id);
+        void executed(uint64_t submit_id);
         std::shared_ptr<DX12InternalCommandList> get_current_command_list();
 
     private:
@@ -306,11 +307,12 @@ namespace fantasy
         DX12UploadManager _upload_manager;
         DX12UploadManager _scratch_manager;
 
-        uint64_t _recording_version = 0;
-
         GraphicsState _current_graphics_state;
         ComputeState _current_compute_state;
         std::vector<D3D12_RESOURCE_BARRIER> _d3d12_barriers;
+
+        std::vector<std::tuple<TextureInterface*, uint32_t, ResourceStates>> _recovery_textures;
+        std::vector<std::pair<BufferInterface*, ResourceStates>> _recovery_buffers;
     };
 
 }

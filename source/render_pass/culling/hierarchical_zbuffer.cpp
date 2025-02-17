@@ -93,9 +93,9 @@ namespace fantasy
 			_compute_state.binding_sets.push_back(_binding_set.get());
 		}
 
-        uint32_t* ptr = &_pass_constants[0].hzb_resolution;
+        uint32_t* ptr = &_hzb_resolution;
         ReturnIfFalse(cache->require_constants("hzb_resolution", reinterpret_cast<void**>(&ptr)));
-        for (auto& constant : _pass_constants) constant.hzb_resolution = _pass_constants[0].hzb_resolution;
+        for (auto& constant : _pass_constants) constant.hzb_resolution = _hzb_resolution;
  
 		return true;
 	}

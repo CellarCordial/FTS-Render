@@ -43,7 +43,8 @@ namespace fantasy
         TextureState* track_state = get_texture_state_track(texture);
         if (subresource_set.is_entire_texture(desc) && track_state->subresource_states.size() == 1)
         {
-            bool is_transition_necessary = (track_state->state & state) != state;
+            bool is_transition_necessary = state == ResourceStates::Common ? 
+                                           track_state->state != ResourceStates::Common : (track_state->state & state) != state;
             bool is_uav_necessary = ((state & ResourceStates::UnorderedAccess) == ResourceStates::UnorderedAccess) &&
                                    (track_state->enable_uav_barriers && !track_state->uav_barrier_placed);
             if (is_transition_necessary || is_uav_necessary)
@@ -73,7 +74,8 @@ namespace fantasy
                     uint32_t subresource_index = calculate_texture_subresource(mip, slice, desc.mip_levels);
                     ResourceStates prior_state = track_state->subresource_states[subresource_index];
                     
-                    bool is_transition_necessary = (prior_state & state) != state;
+                    bool is_transition_necessary = state == ResourceStates::Common ? 
+                                                   prior_state != ResourceStates::Common : (prior_state & state) != state;
                     bool is_uav_necessary = ((state & ResourceStates::UnorderedAccess) != 0) && 
                                             (track_state->enable_uav_barriers && !track_state->uav_barrier_placed) &&
                                             !any_uav_barrier;
@@ -108,7 +110,8 @@ namespace fantasy
 
         BufferState* track = get_buffer_state_track(buffer);
 
-        bool is_transition_necessary = (track->state & state) != state;
+        bool is_transition_necessary = state == ResourceStates::Common ? 
+                                       track->state != ResourceStates::Common : (track->state & state) != state;
         if (is_transition_necessary)
         {
             for (auto& barrier : _buffer_barriers)
@@ -160,32 +163,36 @@ namespace fantasy
 
 	TextureState* ResourceStateTracker::get_texture_state_track(TextureInterface* texture)
     {
-        auto iter = _texture_states.find(texture);
-        if (iter != _texture_states.end()) return iter->second.get();
+        auto iter = texture_states.find(texture);
+        if (iter != texture_states.end()) return iter->second.get();
 
         std::unique_ptr<TextureState> track = std::make_unique<TextureState>();
         TextureState* texture_state_track = track.get();
-        _texture_states.insert(std::make_pair(texture, std::move(track)));
+        texture_states.insert(std::make_pair(texture, std::move(track)));
         
         const TextureDesc& desc = texture->get_desc();
         texture_state_track->state = ResourceStates::Common;
-        texture_state_track->subresource_states.resize(static_cast<size_t>(desc.mip_levels * desc.array_size), texture_state_track->state);
+        texture_state_track->subresource_states.resize(static_cast<size_t>(desc.mip_levels * desc.array_size), ResourceStates::Common);
 
         return texture_state_track;
     }
 
     BufferState* ResourceStateTracker::get_buffer_state_track(BufferInterface* buffer)
     {
-        auto iter = _buffer_states.find(buffer);
-        if (iter != _buffer_states.end()) return iter->second.get();
+        auto iter = buffer_states.find(buffer);
+        if (iter != buffer_states.end()) return iter->second.get();
 
         std::unique_ptr<BufferState> track = std::make_unique<BufferState>();
         BufferState* buffer_state_track = track.get();
-        _buffer_states.insert(std::make_pair(buffer, std::move(track)));
+        buffer_states.insert(std::make_pair(buffer, std::move(track)));
         
         const BufferDesc& desc = buffer->get_desc();
-        buffer_state_track->state = ResourceStates::Common;
-
+        switch (desc.cpu_access) 
+        {
+        case CpuAccessMode::None: buffer_state_track->state = ResourceStates::Common; break;
+        case CpuAccessMode::Read: buffer_state_track->state = ResourceStates::CopyDst; break;
+        case CpuAccessMode::Write: buffer_state_track->state = ResourceStates::CopySrc; break;
+        }
         return buffer_state_track;
     }
 

@@ -395,6 +395,23 @@ namespace fantasy
 
     bool VKCommandList::close()
     {
+        if (_desc.revert_resource_state)
+        {
+            for (const auto& [texture, slice_mip, state] : _recovery_textures)
+            {
+                TextureSubresourceSet subresource{ 
+                    .base_mip_level = (slice_mip & 0xffff), 
+                    .mip_level_count = 1,
+                    .base_array_slice = (slice_mip >> 16),
+                    .array_slice_count = 1 
+                };
+                _resource_state_tracker.set_texture_state(texture, subresource, state);
+            } 
+            for (const auto& [buffer, state] : _recovery_buffers)
+            {
+                _resource_state_tracker.set_buffer_state(buffer, state);
+            }
+        }
         commit_barriers();
         _current_cmdbuffer->vk_cmdbuffer.end();
         return true;
@@ -895,15 +912,15 @@ namespace fantasy
         return true;
     }
 
-    void VKCommandList::clear_buffer_uint(BufferInterface* buffer, uint32_t clear_value)
+    void VKCommandList::clear_buffer_uint(BufferInterface* buffer, BufferRange range, uint32_t clear_value)
     {        
         set_buffer_state(buffer, ResourceStates::CopyDst);
         commit_barriers();
 
         _current_cmdbuffer->vk_cmdbuffer.fillBuffer(
             *reinterpret_cast<vk::Buffer*>(buffer->get_native_object()), 
-            0, 
-            buffer->get_desc().byte_size, 
+            range.byte_offset, 
+            range.byte_size, 
             clear_value
         );
     }
@@ -1124,7 +1141,16 @@ namespace fantasy
             switch(binding.type)
             {
                 case ResourceViewType::Texture_SRV:
-                    set_texture_state(check_cast<TextureInterface>(binding.resource).get(), binding.subresource, ResourceStates::ShaderResource);
+                    switch (_desc.queue_type)
+                    {
+                    case CommandQueueType::Graphics:
+                        set_texture_state(check_cast<TextureInterface>(binding.resource).get(), binding.subresource, ResourceStates::GraphicsShaderResource);
+                        break;
+                    case CommandQueueType::Compute:
+                        set_texture_state(check_cast<TextureInterface>(binding.resource).get(), binding.subresource, ResourceStates::ComputeShaderResource);
+                        break;
+                    default: assert(!"Invalid enum");
+                    }
                     break;
 
                 case ResourceViewType::Texture_UAV:
@@ -1134,7 +1160,16 @@ namespace fantasy
                 case ResourceViewType::TypedBuffer_SRV:
                 case ResourceViewType::StructuredBuffer_SRV:
                 case ResourceViewType::RawBuffer_SRV:
-                    set_buffer_state(check_cast<BufferInterface>(binding.resource).get(), ResourceStates::ShaderResource);
+                    switch (_desc.queue_type)
+                    {
+                    case CommandQueueType::Graphics:
+                        set_buffer_state(check_cast<BufferInterface>(binding.resource).get(), ResourceStates::GraphicsShaderResource);
+                        break;
+                    case CommandQueueType::Compute:
+                        set_buffer_state(check_cast<BufferInterface>(binding.resource).get(), ResourceStates::ComputeShaderResource);
+                        break;
+                    default: assert(!"Invalid enum");
+                    }
                     break;
 
                 case ResourceViewType::TypedBuffer_UAV:
@@ -1381,14 +1416,30 @@ namespace fantasy
         _resource_state_tracker.set_buffer_enable_uav_barriers(buffer, enable_barriers);
     }
 
-    void VKCommandList::set_texture_state(TextureInterface* texture, const TextureSubresourceSet& subresource_set, ResourceStates states)
+    void VKCommandList::set_texture_state(TextureInterface* texture, const TextureSubresourceSet& subresource, ResourceStates states)
     {
-        _resource_state_tracker.set_texture_state(texture, subresource_set, states);
+        _resource_state_tracker.set_texture_state(texture, subresource, states);
+        if (_desc.revert_resource_state)
+        {
+            for (uint32_t slice = subresource.base_array_slice; slice < subresource.base_array_slice + subresource.array_slice_count; ++slice)
+            {
+                for (uint32_t mip = subresource.base_mip_level; mip < subresource.base_mip_level + subresource.mip_level_count; ++mip)
+                {
+                    ResourceStates old_state = _resource_state_tracker.get_texture_state(texture, slice, mip);
+                    _recovery_textures.emplace_back(std::make_tuple(texture, (slice << 16 | mip & 0xffff), old_state));
+                }
+            }
+        }
     }
 
     void VKCommandList::set_buffer_state(BufferInterface* buffer, ResourceStates states)
     {
         _resource_state_tracker.set_buffer_state(buffer, states);
+        if (_desc.revert_resource_state)
+        {
+            ResourceStates old_state = _resource_state_tracker.get_buffer_state(buffer);
+            _recovery_buffers.emplace_back(std::make_pair(buffer, old_state));
+        }
     }
 
     void VKCommandList::commit_barriers()

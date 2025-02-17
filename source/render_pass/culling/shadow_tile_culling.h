@@ -17,6 +17,9 @@ namespace fantasy
             float far_plane;
             
             uint32_t cluster_size = MeshCluster::cluster_size;
+			float3 frustum_top_normal;
+			
+			float3 frustum_right_normal;
 		};
 	}
 

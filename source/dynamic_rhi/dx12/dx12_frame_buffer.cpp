@@ -13,19 +13,6 @@ namespace fantasy
     {
     }
 
-    DX12FrameBuffer::~DX12FrameBuffer() noexcept
-    {
-        for (uint32_t rtv_index : rtv_indices)
-        {
-            _descriptor_manager->render_target_heap.release_descriptor(rtv_index);
-        }
-
-        if (dsv_index != INVALID_SIZE_32)
-        {
-            _descriptor_manager->depth_stencil_heap.release_descriptor(dsv_index);
-        }
-    }
-
     bool DX12FrameBuffer::initialize()
     {
         for (const auto& attachment : desc.color_attachments)

@@ -84,7 +84,13 @@ namespace fantasy
             vk::ImageLayout::eUndefined 
         },
         { 
-            ResourceStates::ShaderResource,
+            ResourceStates::GraphicsShaderResource,
+            vk::PipelineStageFlagBits::eAllCommands,
+            vk::AccessFlagBits::eShaderRead,
+            vk::ImageLayout::eShaderReadOnlyOptimal 
+        },
+        { 
+            ResourceStates::ComputeShaderResource,
             vk::PipelineStageFlagBits::eAllCommands,
             vk::AccessFlagBits::eShaderRead,
             vk::ImageLayout::eShaderReadOnlyOptimal 

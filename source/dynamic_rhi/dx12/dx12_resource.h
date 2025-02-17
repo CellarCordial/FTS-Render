@@ -125,8 +125,6 @@ namespace fantasy
         void create_srv(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const BufferRange& range, ResourceViewType type, Format format = Format::UNKNOWN);
         void create_uav(D3D12_CPU_DESCRIPTOR_HANDLE d3d12_cpu_descriptor, const BufferRange& range, ResourceViewType type, Format format = Format::UNKNOWN);
         
-        uint32_t get_clear_uav_index();
-
     public:
         BufferDesc desc;
 
@@ -140,7 +138,6 @@ namespace fantasy
         const DX12Context* _context;
         DX12DescriptorManager* _descriptor_manager;
         
-        uint32_t _uav_index_for_clear = INVALID_SIZE_32;
     };
 
 

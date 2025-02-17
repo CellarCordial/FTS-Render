@@ -32,7 +32,6 @@ void main(uint3 thread_id: SV_DispatchThreadID)
     float z2 = world_position_view_depth_texture[uv + uint2(1, 1)].w;
     float z3 = world_position_view_depth_texture[uv + uint2(0, 1)].w;
 #else
-    uv *= 2;
     float z0 = hierarchical_zbuffer_texture[last_mip_level][uv].r;
     float z1 = hierarchical_zbuffer_texture[last_mip_level][uv + uint2(1, 0)].r;
     float z2 = hierarchical_zbuffer_texture[last_mip_level][uv + uint2(1, 1)].r;

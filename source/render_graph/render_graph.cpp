@@ -12,6 +12,7 @@
 #include <string>
 #include <synchapi.h>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace fantasy
 {
@@ -122,6 +123,18 @@ namespace fantasy
 			}
 		);
 
+		for (uint32_t ix = 0; ix < passes.size(); ++ix)
+		{
+			passes[ix]->index = topology_map[passes[ix]->index];
+
+			std::unordered_set<uint32_t> dependents_index;
+			std::unordered_set<uint32_t> successors_index;
+			for (auto index : passes[ix]->dependents_index) dependents_index.insert(topology_map[index]);
+			for (auto index : passes[ix]->successors_index) successors_index.insert(topology_map[index]);
+			passes[ix]->dependents_index = dependents_index;
+			passes[ix]->successors_index = successors_index;
+		}
+
 		return true;
 	}
 
@@ -147,24 +160,26 @@ namespace fantasy
 		ReturnIfFalse(topology_passes(false));
 
 		_cmdlists.resize(_passes.size());
-        _pass_async_types.resize(_passes.size());
+        _pass_async_types.resize(_passes.size(), PassAsyncType::None);
         for (uint32_t ix = 0; ix < _passes.size(); ++ix)
         {
-            if ((_passes[ix]->type & RenderPassType::Graphics) == RenderPassType::Graphics)
+            if ((_passes[ix]->type & RenderPassType::Graphics) != 0)
             {
                 _cmdlists[ix] = std::unique_ptr<CommandListInterface>(_device->create_command_list(
                     CommandListDesc{ 
 						.name = std::string("commandlist") + std::to_string(ix), 
-						.queue_type = CommandQueueType::Graphics 
+						.queue_type = CommandQueueType::Graphics,
+						.revert_resource_state = (_passes[ix]->type & RenderPassType::Immediately) != 0 ? true : false
 					}
                 ));
             }
-            else if ((_passes[ix]->type & RenderPassType::Compute) == RenderPassType::Compute)
+            else if ((_passes[ix]->type & RenderPassType::Compute) != 0)
             {
                 _cmdlists[ix] = std::unique_ptr<CommandListInterface>(_device->create_command_list(
                     CommandListDesc{ 
 						.name = std::string("commandlist") + std::to_string(ix), 
-						.queue_type = CommandQueueType::Compute 
+						.queue_type = CommandQueueType::Compute ,
+						.revert_resource_state = (_passes[ix]->type & RenderPassType::Immediately) != 0 ? true : false
 					} 
                 ));
             }
@@ -261,9 +276,9 @@ namespace fantasy
 
         for (uint32_t ix = 0; ix < _cmdlists.size(); ++ix)
         {
-			bool wait = (_pass_async_types[ix] & PassAsyncType::Wait) == PassAsyncType::Wait;
-			bool signal = (_pass_async_types[ix] & PassAsyncType::Signal) == PassAsyncType::Signal;
-			bool immediately = (_passes[ix]->type & RenderPassType::Immediately) == RenderPassType::Immediately;
+			bool wait = (_pass_async_types[ix] & PassAsyncType::Wait) != 0;
+			bool signal = (_pass_async_types[ix] & PassAsyncType::Signal) != 0;
+			bool immediately = (_passes[ix]->type & RenderPassType::Immediately) != 0;
 
 			if ((_passes[ix]->type & RenderPassType::Graphics) == RenderPassType::Graphics)
 			{

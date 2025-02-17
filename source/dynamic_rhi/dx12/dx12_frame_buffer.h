@@ -13,7 +13,6 @@ namespace fantasy
     {
     public:
         DX12FrameBuffer(const DX12Context* context, DX12DescriptorManager* descriptor_heaps, const FrameBufferDesc& desc);
-        ~DX12FrameBuffer() noexcept;
 
         bool initialize();
 

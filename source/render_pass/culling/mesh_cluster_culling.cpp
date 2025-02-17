@@ -172,6 +172,8 @@ namespace fantasy
                         return true;
                     }
                 ));
+
+                _cluster_group_count = static_cast<uint32_t>(_mesh_cluster_groups.size());
                 
                 ReturnIfFalse(_mesh_cluster_group_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
                     BufferDesc::create_structured_buffer(
@@ -180,6 +182,7 @@ namespace fantasy
                         "mesh_cluster_group_buffer"
                     )
                 )));
+                cache->collect(_mesh_cluster_group_buffer, ResourceType::Buffer);
                 
                 ReturnIfFalse(_mesh_cluster_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
                     BufferDesc::create_structured_buffer(

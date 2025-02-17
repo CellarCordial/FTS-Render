@@ -61,9 +61,12 @@ namespace fantasy
 		std::shared_ptr<BufferInterface> _geometry_constant_buffer;
 		std::shared_ptr<BufferInterface> _cluster_vertex_buffer;
 		std::shared_ptr<BufferInterface> _cluster_triangle_buffer;
-		std::shared_ptr<BufferInterface> _vt_page_info_buffer;
 		std::shared_ptr<BufferInterface> _draw_indexed_indirect_arguments_buffer;
+		std::shared_ptr<BufferInterface> _vt_page_info_buffer;
 		std::shared_ptr<BufferInterface> _virtual_shadow_page_buffer;
+		std::shared_ptr<BufferInterface> _vt_page_info_read_back_buffer;
+		std::shared_ptr<BufferInterface> _virtual_shadow_page_read_back_buffer;
+
 
 		std::shared_ptr<TextureInterface> _world_position_view_depth_texture;
 		std::shared_ptr<TextureInterface> _view_space_velocity_texture;
