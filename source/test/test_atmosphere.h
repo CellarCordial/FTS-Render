@@ -89,6 +89,7 @@ namespace fantasy
 	class AtmosphereTest : public TestBase
 	{
 	public:
+		AtmosphereTest(GraphicsAPI api) : TestBase(api) {}
 		RenderPassInterface* init_render_pass(RenderGraph* render_graph) override;
 
 	private:

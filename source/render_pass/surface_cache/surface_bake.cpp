@@ -61,11 +61,11 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc shader_compile_desc;
-			shader_compile_desc.shader_name = "surface_cache/surface_bake_vs.slang";
+			shader_compile_desc.shader_name = "surface_cache/surface_bake_vs.hlsl";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = compile_shader(shader_compile_desc);
-			shader_compile_desc.shader_name = "surface_cache/surface_bake_ps.slang";
+			shader_compile_desc.shader_name = "surface_cache/surface_bake_ps.hlsl";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Pixel;
 			ShaderData ps_data = compile_shader(shader_compile_desc);

@@ -46,7 +46,7 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc vs_compile_desc;
-			vs_compile_desc.shader_name = "shadow/shadow_map_vs.slang";
+			vs_compile_desc.shader_name = "shadow/shadow_map_vs.hlsl";
 			vs_compile_desc.entry_point = "main";
 			vs_compile_desc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = compile_shader(vs_compile_desc);

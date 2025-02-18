@@ -56,11 +56,11 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc shader_compile_desc;
-			shader_compile_desc.shader_name = "test/atmosphere_test_vs.slang";
+			shader_compile_desc.shader_name = "test/atmosphere_test_vs.hlsl";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = compile_shader(shader_compile_desc);
-			shader_compile_desc.shader_name = "test/atmosphere_test_ps.slang";
+			shader_compile_desc.shader_name = "test/atmosphere_test_ps.hlsl";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Pixel;
 			ShaderData ps_data = compile_shader(shader_compile_desc);
@@ -426,6 +426,6 @@ namespace fantasy
 
 // int main()
 // {
-// 	fantasy::AtmosphereTest test;
-// 	return test.initialize(fantasy::GraphicsAPI::D3D12) && test.run() ? 1 : 0;
+// 	fantasy::AtmosphereTest test(fantasy::GraphicsAPI::D3D12);
+// 	return test.initialize() && test.run() ? 1 : 0;
 // }

@@ -14,6 +14,7 @@
 #include <slang-com-ptr.h>
 #include <slang-com-helper.h>
 
+
 namespace fantasy 
 {
     bool check_cache(const char* cache_path, const char* shader_path)
@@ -52,7 +53,6 @@ namespace fantasy
 
 
 
-    Slang::ComPtr<slang::IGlobalSession> global_session;
     ShaderPlatform platform = ShaderPlatform::DXIL;
 
     void set_shader_platform(ShaderPlatform in_platform)
@@ -60,6 +60,10 @@ namespace fantasy
         platform = in_platform;
     }
 
+
+#ifdef SLANG_SHADER
+
+    Slang::ComPtr<slang::IGlobalSession> global_session;
 
     ShaderData compile_shader(const ShaderCompileDesc& desc)
     { 
@@ -203,10 +207,212 @@ namespace fantasy
 
         return shader_data;
     }
+#endif
+    
+#ifdef HLSL_SHADER
+#include <dxcapi.h>
+
+
+    inline LPCWSTR GetTargetProfile(ShaderTarget target)
+    {
+        switch (target)
+        {
+        case ShaderTarget::Vertex  : return L"vs_6_6";
+        case ShaderTarget::Hull    : return L"hs_6_6";
+        case ShaderTarget::Domain  : return L"ds_6_6";
+        case ShaderTarget::Geometry: return L"gs_6_6";
+        case ShaderTarget::Pixel   : return L"ps_6_6";
+        case ShaderTarget::Compute : return L"cs_6_6";
+        default:
+            assert(false && "There is no such shader target.");
+            return L"";
+        }
+    }
+
+    class CustomDxcIncludeHandler : public IDxcIncludeHandler
+    {
+    public:
+        explicit CustomDxcIncludeHandler(IDxcUtils* InUtils) : IDxcIncludeHandler(), Utils(InUtils) {}
+        virtual ~CustomDxcIncludeHandler() = default;
+        HRESULT STDMETHODCALLTYPE LoadSource(_In_ LPCWSTR pFilename, _COM_Outptr_result_maybenull_ IDxcBlob** ppIncludeSource) override
+        {
+            Microsoft::WRL::ComPtr<IDxcBlobEncoding> ShaderSourceBlob;
+            std::wstring wstr_file_name = pFilename;
+            std::string FilePathToInclude(wstr_file_name.begin(), wstr_file_name.end());
+            std::transform(
+                FilePathToInclude.begin(),
+                FilePathToInclude.end(),
+                FilePathToInclude.begin(),
+                [](char& c)
+                {
+                    if (c == '\\') c = '/';
+                    return c;
+                }
+            );
+            
+            if (!is_file_exist(FilePathToInclude.c_str()))
+            {
+                ppIncludeSource = nullptr;
+                return E_FAIL;
+            }
+
+            const auto Iterator = std::find_if(
+                IncludedFileNames.begin(),
+                IncludedFileNames.end(),
+                [&FilePathToInclude](const auto& InName)
+                {
+                    return InName == FilePathToInclude;
+                }
+            );
+            if (Iterator != IncludedFileNames.end())
+            {
+                // Return a blank blob if this file has been included before
+                constexpr char nullStr[] = " ";
+                Utils->CreateBlobFromPinned(nullStr, ARRAYSIZE(nullStr), DXC_CP_ACP, ShaderSourceBlob.GetAddressOf());
+                *ppIncludeSource = ShaderSourceBlob.Detach();
+                return S_OK;
+            }
+
+            HRESULT hr = Utils->LoadFile(std::wstring(FilePathToInclude.begin(), FilePathToInclude.end()).c_str(), nullptr, ShaderSourceBlob.GetAddressOf());
+            if (SUCCEEDED(hr))
+            {
+                IncludedFileNames.push_back(FilePathToInclude);
+                *ppIncludeSource = ShaderSourceBlob.Detach();
+            }
+            else
+            {
+                ppIncludeSource = nullptr;
+            }
+            return hr;
+        }
+        
+        HRESULT STDMETHODCALLTYPE QueryInterface(const GUID& riid, _COM_Outptr_ void __RPC_FAR* __RPC_FAR* ppvObject) override { return E_NOINTERFACE; }
+        ULONG STDMETHODCALLTYPE AddRef(void) override {	return 0; }
+        ULONG STDMETHODCALLTYPE Release(void) override { return 0; }
+
+        std::vector<std::string> IncludedFileNames;
+        IDxcUtils* Utils;
+    };
+
+    namespace
+    {
+        Microsoft::WRL::ComPtr<IDxcCompiler3> dxc_compiler;
+        Microsoft::WRL::ComPtr<IDxcUtils> dxc_utils;
+        std::vector<std::string> SemanticNames;
+    }
+
+    ShaderData compile_shader(const ShaderCompileDesc& desc)
+    {
+        if (dxc_compiler == nullptr)
+        {
+            if (FAILED(DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(dxc_compiler.GetAddressOf()))))
+            {
+                LOG_ERROR("Call to DxcCreateInstance failed.");
+            }
+            if (FAILED(DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(dxc_utils.GetAddressOf()))))
+            {
+                LOG_ERROR("Call to DxcCreateInstance failed.");
+            }
+        }
+
+        const std::string proj_path = PROJ_DIR;
+        const std::string cache_path = proj_path + "asset/cache/shader/" + remove_file_extension(desc.shader_name.c_str()) + "_" + desc.entry_point + "_DEBUG.bin";
+        const std::string shader_path = proj_path + "source/shader/" + desc.shader_name;
+
+		size_t pos = shader_path.find_last_of('/');
+		if (pos == std::string::npos)
+		{
+			LOG_ERROR("Find hlsl file's Directory failed.");
+			return ShaderData{};
+		}
+
+        std::string str_file_directory = shader_path.substr(0, pos);
+		const std::wstring wstr_file_directroy = std::wstring(str_file_directory.begin(), str_file_directory.end());
+
+        if (check_cache(cache_path.c_str(), shader_path.c_str()))
+        {
+            return load_from_cache(cache_path.c_str());
+        }
+
+        const std::wstring EntryPoint = std::wstring(desc.entry_point.begin(), desc.entry_point.end());
+
+        std::vector<LPCWSTR> compile_arguments
+        {
+            L"-E",
+            EntryPoint.c_str(),
+            L"-T",
+            GetTargetProfile(desc.target),
+            L"-Qembed_debug",
+            L"-Od",
+            L"-I",
+            wstr_file_directroy.c_str(),
+            DXC_ARG_DEBUG,
+            DXC_ARG_WARNINGS_ARE_ERRORS,
+            DXC_ARG_PACK_MATRIX_ROW_MAJOR
+        };
+
+        std::vector<std::wstring> wstrDefines;
+        for (const auto& define : desc.defines)
+        {
+            wstrDefines.emplace_back(std::wstring(define.begin(), define.end()));
+        }
+		for (const auto& define : wstrDefines)
+		{
+			compile_arguments.push_back(L"-D");
+			compile_arguments.push_back(define.c_str());
+		}
+
+        
+
+        Microsoft::WRL::ComPtr<IDxcBlobEncoding> dxc_shader_blob;
+        if (FAILED(dxc_utils->LoadFile(std::wstring(shader_path.begin(), shader_path.end()).c_str(), nullptr, dxc_shader_blob.GetAddressOf())))
+        {
+            LOG_ERROR("Load shader file failed.");
+            return ShaderData{};
+        }
+        const DxcBuffer dxc_shader_buffer(dxc_shader_blob->GetBufferPointer(), dxc_shader_blob->GetBufferSize(), 0u);
+
+        CustomDxcIncludeHandler dxc_include_handler(dxc_utils.Get());
+        Microsoft::WRL::ComPtr<IDxcResult> CompileResult;
+        if (FAILED(dxc_compiler->Compile(
+            &dxc_shader_buffer,
+            compile_arguments.data(),
+            static_cast<uint32_t>(compile_arguments.size()),
+            &dxc_include_handler,
+            IID_PPV_ARGS(CompileResult.GetAddressOf())
+        )))
+        {
+            LOG_ERROR("Call to IDxcCompiler3::compile() failed");
+            return ShaderData{};
+        }
+
+        Microsoft::WRL::ComPtr<IDxcBlobUtf8> dxc_errors;
+		CompileResult->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(dxc_errors.GetAddressOf()), nullptr);
+		if (dxc_errors != nullptr && dxc_errors->GetStringLength() > 0)
+        {
+            LOG_ERROR(dxc_errors->GetStringPointer());
+            return ShaderData{};
+        }
+
+
+        Microsoft::WRL::ComPtr<IDxcBlob> result_shader_data;
+        if (FAILED(CompileResult->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(result_shader_data.GetAddressOf()), nullptr)))
+        {
+            LOG_ERROR("Call to IDxcCompiler3::GetOutput().Result failed");
+            return ShaderData{};
+        }
+
+        ShaderData shader_data;
+        shader_data.set_byte_code(result_shader_data->GetBufferPointer(), result_shader_data->GetBufferSize());
+        shader_data._include_shader_files = std::move(dxc_include_handler.IncludedFileNames);
+        shader_data._include_shader_files.push_back(desc.shader_name.c_str());
+
+        save_to_cache(cache_path.c_str(), shader_data);
+
+        return shader_data;
+    }
+#endif
 }
-
-
-
 
 
 

@@ -58,11 +58,11 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc shader_compile_desc;
-			shader_compile_desc.shader_name = "atmosphere/sun_disk_vs.slang";
+			shader_compile_desc.shader_name = "atmosphere/sun_disk_vs.hlsl";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Vertex;
 			ShaderData vs_data = compile_shader(shader_compile_desc);
-			shader_compile_desc.shader_name = "atmosphere/sun_disk_ps.slang";
+			shader_compile_desc.shader_name = "atmosphere/sun_disk_ps.hlsl";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Pixel;
 			ShaderData ps_data = compile_shader(shader_compile_desc);

@@ -42,7 +42,7 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc cs_compile_desc;
-			cs_compile_desc.shader_name = "culling/mesh_cluster_culling_cs.slang";
+			cs_compile_desc.shader_name = "culling/mesh_cluster_culling_cs.hlsl";
 			cs_compile_desc.entry_point = "main";
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
@@ -214,7 +214,6 @@ namespace fantasy
                     sizeof(MeshClusterGpu) * _mesh_clusters.size()
                 ));
     
-    
                 _binding_set.reset();
     
                 _binding_set_items[2] = BindingSetItem::create_structured_buffer_uav(1, _visible_cluster_id_buffer);
@@ -228,6 +227,12 @@ namespace fantasy
     
                 _resource_writed = true;
             }
+
+            cmdlist->clear_buffer_uint(
+                _virtual_gbuffer_draw_indirect_buffer.get(), 
+                BufferRange(0, sizeof(DrawIndexedIndirectArguments)), 
+                0
+            );
     
             uint32_t thread_group_num = 
                 static_cast<uint32_t>((align(_pass_constant.group_count, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X));

@@ -37,7 +37,7 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc cs_compile_desc;
-			cs_compile_desc.shader_name = "culling/shadow_tile_culling_cs.slang";
+			cs_compile_desc.shader_name = "culling/shadow_tile_culling_cs.hlsl";
 			cs_compile_desc.entry_point = "main";
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
@@ -128,6 +128,13 @@ namespace fantasy
 				_compute_state.binding_sets[0] = _binding_set.get();
 				_resource_writed = true;
 			}
+
+			
+            cmdlist->clear_buffer_uint(
+                _virtual_shadow_draw_indirect_buffer.get(), 
+                BufferRange(0, sizeof(DrawIndexedIndirectArguments)), 
+                0
+            );
 
 			ReturnIfFalse(cmdlist->dispatch(
 				_compute_state, 

@@ -27,7 +27,7 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc cs_compile_desc;
-			cs_compile_desc.shader_name = "deferred/reprojection_cs.slang";
+			cs_compile_desc.shader_name = "deferred/reprojection_cs.hlsl";
 			cs_compile_desc.entry_point = "main";
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
