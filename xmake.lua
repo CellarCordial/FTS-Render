@@ -11,6 +11,7 @@ local normalized_proj_dir = proj_dir:gsub("\\", "/")
 add_defines(
     "DEBUG", 
     "NOMINMAX", 
+    "HLSL_SHADER",
     "CLIENT_WIDTH=1024",
     "CLIENT_HEIGHT=768",
     "FLIGHT_FRAME_NUM=3", 
