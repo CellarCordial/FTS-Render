@@ -81,7 +81,7 @@ void main(uint3 thread_id : SV_DispatchThreadID)
             if (sdf_chunk_data.mesh_index_begin != -1)
             {
                 float weight_sum = 0.0f;
-                for (int32_t ix = sdf_chunk_data.mesh_index_begin; ix < sdf_chunk_data.mesh_index_end; ++ix)
+                for (int ix = sdf_chunk_data.mesh_index_begin; ix < sdf_chunk_data.mesh_index_end; ++ix)
                 {
                     MeshSurfaceData surface_data = mesh_surface_data_buffer[ix];
 

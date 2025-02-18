@@ -36,9 +36,9 @@ RWTexture3D<float> sdf_texture : register(u0);
 float calculate_sdf(float3 p, float upper_bound);
 float calculate_upper_bound(float3 p, uint precsion);
 float calculate_udf(float3 p, float upper_bound, out uint intersect_triangle_index);
-int32_t estimate_udf_sign(float3 p, float random);
+int estimate_udf_sign(float3 p, float random);
 bool contains_triangle(float3 p, float radius);
-int32_t trace_triangle_index(float3 p, float3 d, float max_length);
+int trace_triangle_index(float3 p, float3 d, float max_length);
 
 #if defined(UPPER_BOUND_ESTIMATE_PRECISON) && defined(BVH_STACK_SIZE) && defined(GROUP_THREAD_NUM_Y) && defined(GROUP_THREAD_NUM_Z)
 
@@ -81,7 +81,7 @@ float calculate_sdf(float3 p, float upper_bound)
     uint intersect_triangle_index;
     float udf = calculate_udf(p, upper_bound, intersect_triangle_index);
 
-    int32_t udf_sign = 0;
+    int udf_sign = 0;
     
     for (uint ix = 0; ix < sign_ray_count; ++ix)
     {
@@ -95,9 +95,9 @@ float calculate_sdf(float3 p, float upper_bound)
     Vertex v1 = vertex_buffer[intersect_triangle_index * 3 + 1];
     Vertex v2 = vertex_buffer[intersect_triangle_index * 3 + 2];
     
-    int32_t s0 = dot(p - v0.position, v0.normal) > 0 ? 1 : -1;
-    int32_t s1 = dot(p - v1.position, v1.normal) > 0 ? 1 : -1;
-    int32_t s2 = dot(p - v2.position, v2.normal) > 0 ? 1 : -1;
+    int s0 = dot(p - v0.position, v0.normal) > 0 ? 1 : -1;
+    int s1 = dot(p - v1.position, v1.normal) > 0 ? 1 : -1;
+    int s2 = dot(p - v2.position, v2.normal) > 0 ? 1 : -1;
 
     return s0 + s1 + s2 > 0 ? udf : -udf;
 }
@@ -157,7 +157,7 @@ float calculate_udf(float3 p, float upper_bound, out uint intersect_triangle_ind
     return upper_bound;
 }
 
-int32_t estimate_udf_sign(float3 p, float random)
+int estimate_udf_sign(float3 p, float random)
 {
     uint random_triangle_index = uint(random) * (triangle_count - 1);
 
@@ -169,7 +169,7 @@ int32_t estimate_udf_sign(float3 p, float random)
     float3 d = fCentroid - p;
 
     // 用 1.0f / 0.0f 表示无穷远.
-    int32_t triangle_index = trace_triangle_index(p, d, 1.0f / 0.0f);
+    int triangle_index = trace_triangle_index(p, d, 1.0f / 0.0f);
     if (triangle_index < 0) return 0;
 
     v0 = vertex_buffer[triangle_index * 3 + 0];
@@ -217,9 +217,9 @@ bool contains_triangle(float3 p, float radius)
 }
 
 
-int32_t trace_triangle_index(float3 p, float3 d, float max_length)
+int trace_triangle_index(float3 p, float3 d, float max_length)
 {
-    int32_t triangle_index = -1;
+    int triangle_index = -1;
     float length = max_length;
 
     uint stack[BVH_STACK_SIZE];

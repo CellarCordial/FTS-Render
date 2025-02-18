@@ -9,7 +9,7 @@ cbuffer gAtomsphereProperties : register(b0)
 cbuffer gPassConstant : register(b1)
 {
     float3 CameraPosition;  
-    int32_t dwMarchStepCount;
+    int dwMarchStepCount;
 
     float3 SunDir;
     uint bEnableMultiScattering;

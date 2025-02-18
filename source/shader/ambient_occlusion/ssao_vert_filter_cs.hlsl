@@ -80,7 +80,7 @@ void main(uint3 ThreadID: SV_ThreadID, uint3 GroupThreadID: SV_GroupThreadID)
     float fDepthNormalWeightSum = 0.0f;
 #endif
 
-    for (int32_t i = -BLUR_RADIUS; i <= BLUR_RADIUS; ++i)
+    for (int i = -BLUR_RADIUS; i <= BLUR_RADIUS; ++i)
     {
         uint k = GroupThreadID.y + BLUR_RADIUS + i;
 

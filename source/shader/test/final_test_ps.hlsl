@@ -1,7 +1,7 @@
 
 cbuffer pass_constant
 {
-    int32_t show_type;
+    int show_type;
 };
 
 Texture2D<float4> world_position_view_depth_texture : register(t0);

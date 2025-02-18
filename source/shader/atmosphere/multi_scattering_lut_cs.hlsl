@@ -16,7 +16,7 @@ cbuffer gAtomsphereProperties : register(b0)
 cbuffer gPassConstant : register(b1)
 {
     float3 SunIntensity;
-    int32_t dwRayMarchStepCount;
+    int dwRayMarchStepCount;
 
     float3 GroundAlbedo;
     float pad;

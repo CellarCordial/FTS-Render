@@ -161,7 +161,8 @@ void main(uint3 thread_id: SV_DispatchThreadID)
                     return;
 
                 // 判定是否在视锥体内, 以及从 hzb 中采样深度值进行比较.
-                visible = frustum_cull(cluster_view_space_position, cluster.bounding_sphere.w, proj_matrix) &&
+                // TODO: frustum_cull
+                visible = /* frustum_cull(cluster_view_space_position, cluster.bounding_sphere.w, proj_matrix) && */
                           cluster_view_space_position.z - cluster.bounding_sphere.w > near_plane &&
                           cluster_view_space_position.z + cluster.bounding_sphere.w < far_plane &&
                           hierarchical_zbuffer_cull(

@@ -17,8 +17,8 @@ struct GlobalSDFInfo
 
 struct SDFChunkData
 {
-    int32_t mesh_index_begin;
-    int32_t mesh_index_end;
+    int mesh_index_begin;
+    int mesh_index_end;
 };
 
 struct SDFHitData
@@ -31,7 +31,7 @@ struct SDFHitData
     bool is_inside() { return step_size <= 0.0f; }
 };
 
-SDFHitData trace_global_sdf(float3 o, float3 d, GlobalSDFInfo sdf_data, Texture3D<float> global_sdf, SamplerState sampler)
+SDFHitData trace_global_sdf(float3 o, float3 d, GlobalSDFInfo sdf_data, Texture3D<float> global_sdf, SamplerState sampler_)
 {
     SDFHitData ret;
 

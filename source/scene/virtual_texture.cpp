@@ -15,7 +15,7 @@ namespace fantasy
         
         uint32_t mip0_resolution_in_page = mip0_resolution / VT_PAGE_SIZE;
         uint32_t max_mip_resolution_in_page = max_mip_resolution / VT_PAGE_SIZE;
-        uint32_t mip_levels = std::log2(mip0_resolution_in_page / max_mip_resolution_in_page);
+        uint32_t mip_levels = std::log2(mip0_resolution_in_page / max_mip_resolution_in_page) + 1;
 
         _mips.resize(mip_levels);
         for (uint32_t ix = 0; ix < mip_levels; ++ix)

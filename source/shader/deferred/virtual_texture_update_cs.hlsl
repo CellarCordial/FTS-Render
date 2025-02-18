@@ -34,6 +34,7 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     uint2 pixel_id = thread_id.xy;
     float2 tile_uv = tile_uv_texture[pixel_id];
     uint2 indirection_info = vt_indirect_texture[pixel_id];
+    if (tile_uv.x == INVALID_SIZE_32 || tile_uv.y == INVALID_SIZE_32) return;
     if (indirection_info.x == INVALID_SIZE_32 || indirection_info.y == INVALID_SIZE_32) return;
 
     float2 physical_uv =

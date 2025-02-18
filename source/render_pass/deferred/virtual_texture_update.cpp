@@ -30,6 +30,7 @@ namespace fantasy
 	bool VirtualTextureUpdatePass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
 		ReturnIfFalse(cache->collect_constants("shadow_tile_num", &_shadow_tile_num));
+		ReturnIfFalse(_virtual_shadow_page_lut.initialize(VIRTUAL_SHADOW_RESOLUTION, VIRTUAL_SHADOW_RESOLUTION)); 
 
 		// Binding Layout.
 		{
@@ -195,42 +196,30 @@ namespace fantasy
 
 				if (tile_id != uint2(INVALID_SIZE_32, INVALID_SIZE_32))
 				{
-					bool found = false;
-					bool res = world->each<MipmapLUT>(
-						[&](Entity* entity, MipmapLUT* mipmap_lut) -> bool
+					VTPage* page = _virtual_shadow_page_lut.query_page(tile_id, 0);
+					uint2 page_physical_pos_in_page;
+
+					{
+						std::lock_guard lock(tile_info_mutex);
+
+						VTPage::LoadFlag flag = page->flag;
+						page_physical_pos_in_page = _physical_shadow_table.add_page(page);
+
+						if (flag == VTPage::LoadFlag::Unload)
 						{
-							if (!found && mipmap_lut->get_mip0_resolution() == VIRTUAL_SHADOW_RESOLUTION)
-							{
-								found = true;
-	
-								VTPage* page = mipmap_lut->query_page(tile_id, 0);
-								uint2 page_physical_pos_in_page;
-	
-								{
-									std::lock_guard lock(tile_info_mutex);
-	
-									VTPage::LoadFlag flag = page->flag;
-									page_physical_pos_in_page = _vt_physical_table.add_page(page);
-	
-									if (flag == VTPage::LoadFlag::Unload)
-									{
-										float3 offset = frustum_right * (tile_id.x / virtual_shadow_tile_num) * light->orthographic_size +
-														frustum_up * (tile_id.y / virtual_shadow_tile_num) * light->orthographic_size;
-										shadow_tile_infos.emplace_back(ShadowTileInfo{
-											.id = tile_id,
-											.view_matrix = look_at_left_hand(
-												light->get_position() + offset,
-												offset,
-												float3(0.0f, 1.0f, 0.0f)
-											)
-										});
-									}
-								}
-							}
-							return found;
+							float3 offset = 
+								frustum_right * (static_cast<float>(tile_id.x) / virtual_shadow_tile_num) * light->orthographic_size +
+								frustum_up * (static_cast<float>(tile_id.y) / virtual_shadow_tile_num) * light->orthographic_size;
+							shadow_tile_infos.emplace_back(ShadowTileInfo{
+								.id = tile_id,
+								.view_matrix = look_at_left_hand(
+									light->get_position() + offset,
+									offset,
+									float3(0.0f, 1.0f, 0.0f)
+								)
+							});
 						}
-					);
-					assert(res);
+					}
 				}
 
 				
@@ -245,6 +234,9 @@ namespace fantasy
 					bool res = world->each<std::string, Mesh, Material>(
 						[&](Entity* mesh_entity, std::string* model_name, Mesh* mesh, Material* material) -> bool
 						{
+							// 若 mesh 没有 纹理.
+							if (material->image_resolution == 0) return true;
+
 							if (mesh->submesh_base_id <= submesh_id && submesh_id < mesh->submesh_base_id + mesh->submeshes.size())
 							{
 								const auto& submesh = mesh->submeshes[submesh_id - mesh->submesh_base_id];
@@ -301,7 +293,11 @@ namespace fantasy
 		
 		_shadow_tile_num = static_cast<uint32_t>(shadow_tile_infos.size());
 
-		ReturnIfFalse(cmdlist->write_buffer(_shadow_tile_info_buffer.get(), shadow_tile_infos.data(), _shadow_tile_num * sizeof(ShadowTileInfo)));
+		ReturnIfFalse(cmdlist->write_buffer(
+			_shadow_tile_info_buffer.get(), 
+			shadow_tile_infos.data(), 
+			_shadow_tile_num * sizeof(ShadowTileInfo)
+		));
 
 
 		for (const auto& info : texture_copy_infos)

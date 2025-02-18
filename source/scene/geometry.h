@@ -63,7 +63,7 @@ namespace fantasy
 
         struct SubMaterial
         {
-			float base_color_factor[4] = { 0.0f };
+			float base_color_factor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 			float roughness_factor = 0.0f;
 			float metallic_factor = 0.0f;
 			float occlusion_factor = 0.0f;

@@ -122,7 +122,7 @@ PixelOutput main(VertexOutput input)
     output.view_space_velocity = float4(input.prev_view_space_position - input.view_space_position, 0.0f);
     output.world_space_normal = float4(input.world_space_normal, 0.0f);
     output.world_space_tangent = float4(input.world_space_tangent, 0.0f);
-    output.base_color = geometry.base_color;
+    output.base_color = geometry.base_color * float4(input.color, 1.0f);
     output.pbr = float4(geometry.metallic, geometry.roughness, geometry.occlusion, 0.0f);
     output.emmisive = geometry.emissive;
     return output;

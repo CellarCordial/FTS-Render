@@ -28,6 +28,7 @@ namespace fantasy
 	private:
 		constant::VirtualGeometryTexturePassConstant _pass_constant;
 		uint32_t _shadow_tile_num = 0;
+		MipmapLUT _virtual_shadow_page_lut;
 
 		VTIndirectTable _vt_indirect_table;
 		VTPhysicalTable _vt_physical_table;

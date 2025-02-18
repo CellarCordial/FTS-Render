@@ -14,7 +14,7 @@ cbuffer gPassConstant : register(b1)
 {
     float3 sun_dir;          float sun_theta;
     float3 frustum_A;        float max_distance;
-    float3 frustum_B;        int32_t per_slice_march_step_count;
+    float3 frustum_B;        int per_slice_march_step_count;
     float3 frustum_C;        float atmos_eye_height;
     float3 frustum_D;        uint enable_multi_scattering;
     float3 camera_position;  uint enable_shadow;

@@ -41,7 +41,7 @@ namespace fantasy
 		uint32_t current_resolution = LOWEST_TEXTURE_RESOLUTION;
 		while (current_resolution < HIGHEST_TEXTURE_RESOLUTION)
 		{
-			_world->create_entity()->assign<MipmapLUT>()->initialize(current_resolution);
+			_world->create_entity()->assign<MipmapLUT>()->initialize(current_resolution, VT_PAGE_SIZE);
 			current_resolution <<= 1;
 		}
 
@@ -122,8 +122,7 @@ namespace fantasy
 			aiProcess_Triangulate | 
 			aiProcess_GenSmoothNormals | 
 			aiProcess_FlipUVs |
-			aiProcess_CalcTangentSpace |
-			aiProcess_ConvertToLeftHanded
+			aiProcess_CalcTangentSpace
 		);
 
         if(!assimp_scene || assimp_scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !assimp_scene->mRootNode)

@@ -360,11 +360,18 @@ namespace fantasy
 	
 				_resource_writed = true;
 			}
+			
 
+			uint64_t color_attachment_count = _frame_buffer->get_desc().color_attachments.size();
+			for (uint32_t ix = 0; ix < color_attachment_count; ++ix)
+			{
+				clear_color_attachment(cmdlist, _frame_buffer.get(), ix);
+			}
 			cmdlist->clear_buffer_uint(_vt_page_info_buffer.get(), BufferRange{ 0, _vt_page_info_buffer->get_desc().byte_size }, INVALID_SIZE_32);
 			cmdlist->clear_buffer_uint(_virtual_shadow_page_buffer.get(), BufferRange{ 0, _virtual_shadow_page_buffer->get_desc().byte_size }, INVALID_SIZE_32);
 			cmdlist->clear_texture_uint(_tile_uv_texture.get(), TextureSubresourceSet{}, INVALID_SIZE_32);
-	
+			
+			
 			ReturnIfFalse(cmdlist->draw_indirect(_graphics_state, 0, 1));
 
 			cmdlist->copy_buffer(

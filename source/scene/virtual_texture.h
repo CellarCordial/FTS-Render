@@ -17,7 +17,7 @@ namespace fantasy
     static const uint32_t VT_PHYSICAL_TEXTURE_RESOLUTION = 4096u;
 
     static const uint32_t VIRTUAL_SHADOW_PAGE_SIZE = 1024;
-    static const uint32_t VIRTUAL_SHADOW_RESOLUTION = 16000;
+    static const uint32_t VIRTUAL_SHADOW_RESOLUTION = 16384;
     static const uint32_t PHYSICAL_SHADOW_RESOLUTION = 8192;
 
     namespace event
@@ -61,7 +61,7 @@ namespace fantasy
     public:
         bool initialize(
             uint32_t mip0_resolution, 
-            uint32_t max_mip_resolution = VT_PAGE_SIZE
+            uint32_t max_mip_resolution
         );
 
         VTPage* query_page(uint2 page_id, uint32_t mip_level);
