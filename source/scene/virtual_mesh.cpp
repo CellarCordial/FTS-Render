@@ -649,10 +649,6 @@ namespace fantasy
 				for(uint32_t ix = old_group_num; ix < virtual_submesh.cluster_groups.size(); ix++)
 				{
 					ReturnIfFalse(build_parent_clusters(virtual_submesh, ix));
-					if (virtual_submesh.clusters.size() >= 24919)
-					{
-						LOG_INFO("Break Point.");
-					}
 				}
 
 				level_offset = old_cluster_num;
