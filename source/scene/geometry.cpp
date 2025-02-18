@@ -71,11 +71,9 @@ namespace fantasy
 				for(uint32_t jx = 0; jx < assimp_meshes[ix]->mNumFaces; jx++)
 				{
 					aiFace face = assimp_meshes[ix]->mFaces[jx];
-					for(uint32_t kx = 0; kx < face.mNumIndices; kx += 3)
+					for(uint32_t kx = 0; kx < face.mNumIndices; kx++)
 					{
-						submesh.indices.push_back(face.mIndices[kx + 2]);
-						submesh.indices.push_back(face.mIndices[kx + 1]);
-						submesh.indices.push_back(face.mIndices[kx + 0]);
+						submesh.indices.push_back(face.mIndices[kx]);
 					}
 				}
 

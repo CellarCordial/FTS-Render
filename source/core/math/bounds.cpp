@@ -62,13 +62,15 @@ namespace fantasy
 	
 	Sphere merge(const Sphere& sphere0, const Sphere& sphere1)
 	{
-        float3 center0_to_1 = sphere0.center - sphere1.center;
-        float center_distance = center0_to_1.length();
-        if (sphere0.radius - sphere1.radius >= center_distance) return sphere0;
-        if (sphere1.radius - sphere0.radius >= center_distance) return sphere1;
+        float3 center1_to_0 = sphere1.center - sphere0.center;
+        if ((sphere0.radius - sphere1.radius) * (sphere0.radius - sphere1.radius) >= center1_to_0.length_squared())
+        {
+            return sphere0.radius < sphere1.radius ? sphere1 : sphere0;
+        }
 
+        float center_distance = center1_to_0.length();
         float radius = (center_distance + sphere0.radius + sphere1.radius) * 0.5f;
-        float3 center = sphere0.center + (-center0_to_1 / center_distance) * (radius - sphere0.radius);
+        float3 center = sphere0.center + (center1_to_0 / center_distance) * (radius - sphere0.radius);
 		return Sphere(center, radius);
 	}
 
@@ -107,12 +109,6 @@ namespace fantasy
         for (uint32_t i = 0; i < spheres.size(); i++) 
         {
             sphere = merge(sphere, spheres[i]);
-        }
-        for (uint32_t i = 0; i < spheres.size(); i++) 
-        {
-            float radius_diff = sphere.radius - spheres[i].radius;
-            float t1 = radius_diff * radius_diff;
-            float t2 = float3(sphere.center - spheres[i].center).length_squared();
         }
         return sphere;
     }
