@@ -649,6 +649,10 @@ namespace fantasy
 				for(uint32_t ix = old_group_num; ix < virtual_submesh.cluster_groups.size(); ix++)
 				{
 					ReturnIfFalse(build_parent_clusters(virtual_submesh, ix));
+					if (virtual_submesh.clusters.size() >= 24919)
+					{
+						LOG_INFO("Break Point.");
+					}
 				}
 
 				level_offset = old_cluster_num;
@@ -927,7 +931,6 @@ namespace fantasy
 		}
 		
 		cluster_group.bounding_sphere = merge(parent_lod_bounding_spheres);
-		cluster_group.parent_lod_error = parent_lod_error;
 
 		// 将边界顶点加入 edge_table 中, 并在 optimizer 中锁住, 以进行 optimize().
 		MeshOptimizer optimizer(cluster_vertices, cluster_indices);
@@ -950,6 +953,7 @@ namespace fantasy
 			(MeshCluster::cluster_size - 2) * (static_cast<uint32_t>(cluster_group.cluster_indices.size()) / 2)
 		));
 		parent_lod_error = std::max(parent_lod_error, std::sqrt(optimizer._max_error));
+		cluster_group.parent_lod_error = parent_lod_error;
 
 		SimpleGraph edge_link_graph;
 		SimpleGraph triangle_adjacency_graph;

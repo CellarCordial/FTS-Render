@@ -123,7 +123,7 @@ bool check_lod(float3 view_space_position, float radius, float error)
     // 根据物体远近确定 LOD.
     float distance = max(length(view_space_position) - radius, 0.0f);   // 摄像机到物体包围球的最近距离.
     float theta = radians(camera_fov_y) / client_height;    // 每个像素点所占有的弧度值, 即像素的角分辨率.
-    return distance * theta >= error;   // distance * theta 为半径乘以圆心角, 结果是弧长, 若弧长大于阈值, 则表明足够精细.
+    return distance * theta >= error;   // distance * theta 为半径乘以圆心角, 结果是弧长, 若弧长小于阈值, 则表明足够精细.
 }
 
 #if defined(THREAD_GROUP_SIZE_X)

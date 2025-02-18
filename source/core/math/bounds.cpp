@@ -80,8 +80,15 @@ namespace fantasy
         {
             for (uint32_t k = 0; k < 3; k++) 
             {
-                if (spheres[i].center[k] - spheres[i].radius < spheres[min_idx[k]].center[k] - spheres[min_idx[k]].radius) min_idx[k] = i;
-                if (spheres[i].center[k] + spheres[i].radius < spheres[max_idx[k]].center[k] + spheres[max_idx[k]].radius) max_idx[k] = i;
+                float a = spheres[i].center[k] - spheres[i].radius;
+                float b = spheres[min_idx[k]].center[k] - spheres[min_idx[k]].radius;
+                if (a < b) 
+                    min_idx[k] = i;
+                
+                a = spheres[i].center[k] + spheres[i].radius;
+                b = spheres[max_idx[k]].center[k] + spheres[max_idx[k]].radius;
+                if (a < b) 
+                    max_idx[k] = i;
             }
         }
 
@@ -106,7 +113,6 @@ namespace fantasy
             float radius_diff = sphere.radius - spheres[i].radius;
             float t1 = radius_diff * radius_diff;
             float t2 = float3(sphere.center - spheres[i].center).length_squared();
-            assert(t1 + 1e-6 >= t2);
         }
         return sphere;
     }

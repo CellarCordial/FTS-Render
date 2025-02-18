@@ -61,6 +61,7 @@ namespace fantasy
 		const TextureDesc& back_buffer_desc = back_buffer->get_desc();
 		const TextureDesc& final_texture_desc = _final_texture->get_desc();
 		cmdlist->copy_texture(back_buffer.get(), TextureSlice{}, _final_texture.get(), TextureSlice{});
+		cmdlist->clear_render_target_texture(_final_texture.get(), TextureSubresourceSet{}, Color{ 0.0f, 0.0f, 0.0f, 0.0f });
 		cmdlist->set_texture_state(back_buffer.get(), TextureSubresourceSet{}, ResourceStates::Present);
 
 		cmdlist->clear_render_target_texture(
