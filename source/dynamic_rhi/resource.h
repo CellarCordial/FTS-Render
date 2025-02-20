@@ -183,7 +183,7 @@ namespace fantasy
             ret.format = format;
             ret.allow_render_target = true;
             ret.use_clear_value = true;
-            ret.clear_value = Color{ 0.0f, 0.0f, 0.0f, 0.0f };
+            ret.clear_value = Color{ 0.0f };
             ret.allow_unordered_access = allow_unordered_access;
             return ret;
         }

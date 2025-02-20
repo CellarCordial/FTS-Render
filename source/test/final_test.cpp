@@ -144,6 +144,9 @@ namespace fantasy
 		hierarchical_zbuffer_pass->precede(test_pass);
 		// virtual_shadow_map_pass->precede(test_pass);
 
+
+
+
 		return test_pass;  
     }
 }

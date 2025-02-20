@@ -135,7 +135,7 @@ namespace fantasy
             _pass_constant.proj_matrix = camera->proj_matrix;
             _pass_constant.near_plane = camera->get_near_z();
             _pass_constant.far_plane = camera->get_far_z();
-            
+
             if (_mesh_update)
             {
                 DeviceInterface* device = cmdlist->get_deivce();
@@ -239,7 +239,7 @@ namespace fantasy
     
             ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num, 1, 1, &_pass_constant));
         }
-
+        
 		ReturnIfFalse(cmdlist->close());
 
         return true;

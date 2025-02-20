@@ -37,6 +37,9 @@ namespace fantasy
         {
             return !((*this) == other);
         }
+
+        Color() = default;
+        explicit Color(float f) : r(f), g(f), b(f), a(f) {}
     };
 
     struct Rect

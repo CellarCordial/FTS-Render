@@ -3,6 +3,7 @@
  
 #include "../../render_graph/render_pass.h"
 #include "../../core/math/vector.h"
+#include <memory>
  
 namespace fantasy
 {
@@ -29,6 +30,8 @@ namespace fantasy
 		uint32_t _hzb_resolution = 1024;
 		bool resource_writed = false;
 		
+		std::shared_ptr<TextureInterface> _hierarchical_zbuffer_texture;
+
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 
 		std::shared_ptr<Shader> _cs;

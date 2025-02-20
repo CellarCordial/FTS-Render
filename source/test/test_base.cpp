@@ -181,7 +181,7 @@ namespace fantasy
 		back_buffer_desc.height = CLIENT_HEIGHT;
 		back_buffer_desc.format = Format::RGBA8_UNORM;
 		back_buffer_desc.use_clear_value = true;
-		back_buffer_desc.clear_value = Color(0.0f, 0.0f, 0.0f, 1.0f);
+		back_buffer_desc.clear_value = Color(0.0f);
 
 		for (uint32_t ix = 0; ix < FLIGHT_FRAME_NUM; ++ix)
 		{

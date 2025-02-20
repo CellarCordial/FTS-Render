@@ -11,10 +11,9 @@ namespace fantasy
 
 	bool HierarchicalZBufferPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
-        std::shared_ptr<TextureInterface> hierarchical_zbuffer_texture =
-             check_cast<TextureInterface>(cache->require("hierarchical_zbuffer_texture"));
+        _hierarchical_zbuffer_texture = check_cast<TextureInterface>(cache->require("hierarchical_zbuffer_texture"));
 
-        uint32_t texture_mip_levels = hierarchical_zbuffer_texture->get_desc().mip_levels;
+        uint32_t texture_mip_levels = _hierarchical_zbuffer_texture->get_desc().mip_levels;
         _pass_constants.resize(texture_mip_levels + 1);
 
 		// Binding Layout.
@@ -72,7 +71,7 @@ namespace fantasy
             {
 			    binding_set_items[3 + ix] = BindingSetItem::create_texture_uav(
                     ix, 
-                    hierarchical_zbuffer_texture,
+                    _hierarchical_zbuffer_texture,
                     TextureSubresourceSet{
                         .base_mip_level = ix,
                         .mip_level_count = 1,
@@ -110,6 +109,17 @@ namespace fantasy
 
         if (SceneSystem::loaded_submesh_count != 0)
 		{
+            cmdlist->clear_texture_float(
+                _hierarchical_zbuffer_texture.get(), 
+                TextureSubresourceSet{
+                    .base_mip_level = 0,
+                    .mip_level_count = _hierarchical_zbuffer_texture->get_desc().mip_levels,
+                    .base_array_slice = 0,
+                    .array_slice_count = 1
+                }, 
+                Color{ 0.0f }
+            );
+
 			uint2 thread_group_num = {
 				static_cast<uint32_t>((align(_hzb_resolution, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
 				static_cast<uint32_t>((align(_hzb_resolution, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
