@@ -113,7 +113,7 @@ namespace fantasy
 
 	void Camera::walk(float size)
     {
-        size *= speed;
+        size *= speed * 0.2f;
 
         position = size * direction + position;
 
@@ -122,7 +122,7 @@ namespace fantasy
 
     void Camera::strafe(float size)
     {
-        size *= speed;
+        size *= speed * 0.2f;
 
         float3 right = cross(up, direction);
         position = size * right + position;
@@ -132,7 +132,7 @@ namespace fantasy
 
     void Camera::vertical(float size)
     {
-        size *= speed;
+        size *= speed * 0.2f;
 
         position = size * up + position;
 

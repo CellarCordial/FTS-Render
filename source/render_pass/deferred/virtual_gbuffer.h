@@ -76,6 +76,7 @@ namespace fantasy
 		std::shared_ptr<TextureInterface> _base_color_texture;
 		std::shared_ptr<TextureInterface> _pbr_texture;
 		std::shared_ptr<TextureInterface> _emissive_texture;
+        std::shared_ptr<TextureInterface> _depth_texture;
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 		std::shared_ptr<InputLayoutInterface> _input_layout;

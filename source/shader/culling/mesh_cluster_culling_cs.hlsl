@@ -4,7 +4,6 @@
 #include "../common/math.hlsl"
 #include "../common/indirect_argument.hlsl"
 
-
 cbuffer pass_constants : register(b0)
 {
     float4x4 view_matrix;
@@ -26,14 +25,14 @@ RWStructuredBuffer<uint> visible_cluster_id_buffer : register(u1);
 
 StructuredBuffer<MeshClusterGroup> mesh_cluster_group_buffer : register(t0);
 StructuredBuffer<MeshCluster> mesh_cluster_buffer : register(t1);
-Texture2D hierarchical_zbuffer : register(t2);
+Texture2D hierarchical_zbuffer_texture : register(t2);
 
 SamplerState linear_clamp_sampler : register(s0);
 
 float2 project_sphere(float a, float z, float radius) 
 {
     // 获取某点在 x 或 y 轴上投影的范围, a 是 x 或 y.
-    float tangent = sqrt(a * a + z * z - radius * radius);
+    float tangent = sqrt(a * a + z * z - radius * radius);  // 摄像机原点到包围球表面的切线长.
     float max = (z * radius - a * tangent) / (a * radius + z * tangent);
     float min = (z * radius + a * tangent) / (a * radius - z * tangent);
     return float2(min, max);
@@ -90,17 +89,15 @@ bool hierarchical_zbuffer_cull(float3 view_space_position, float radius, float4x
 
     // 采样覆盖区域的四个角点深度值, 取最小值.
     float2 uv = (hzb_rect.xy + 0.5f) / hzb_resolution;
-    float z0 = hierarchical_zbuffer.SampleLevel(linear_clamp_sampler, uv, lod).r;
-    float z1 = hierarchical_zbuffer.SampleLevel(linear_clamp_sampler, uv, lod, int2(1, 0)).r;
-    float z2 = hierarchical_zbuffer.SampleLevel(linear_clamp_sampler, uv, lod, int2(1, 1)).r;
-    float z3 = hierarchical_zbuffer.SampleLevel(linear_clamp_sampler, uv, lod, int2(0, 1)).r;
+    float z0 = hierarchical_zbuffer_texture.SampleLevel(linear_clamp_sampler, uv, lod).r;
+    float z1 = hierarchical_zbuffer_texture.SampleLevel(linear_clamp_sampler, uv, lod, int2(1, 0)).r;
+    float z2 = hierarchical_zbuffer_texture.SampleLevel(linear_clamp_sampler, uv, lod, int2(1, 1)).r;
+    float z3 = hierarchical_zbuffer_texture.SampleLevel(linear_clamp_sampler, uv, lod, int2(0, 1)).r;
     float min_z = min4(z0, z1, z2, z3);
 
-    // hzb 使用反转深度值.
     float near_z = view_space_position.z - radius;
-    near_z = 1.0f / near_z;
 
-    return near_z > min_z;
+    return near_z < min_z;
 }
 
 bool frustum_cull(float3 view_space_position, float radius, float4x4 proj_matrix)
@@ -127,7 +124,6 @@ bool check_lod(float3 view_space_position, float radius, float error)
 }
 
 #if defined(THREAD_GROUP_SIZE_X)
-
 
 [numthreads(THREAD_GROUP_SIZE_X, 1, 1)]
 void main(uint3 thread_id: SV_DispatchThreadID)
@@ -164,12 +160,12 @@ void main(uint3 thread_id: SV_DispatchThreadID)
                 // TODO: frustum_cull
                 visible = /* frustum_cull(cluster_view_space_position, cluster.bounding_sphere.w, proj_matrix) && */
                           cluster_view_space_position.z - cluster.bounding_sphere.w > near_plane &&
-                          cluster_view_space_position.z + cluster.bounding_sphere.w < far_plane &&
+                          cluster_view_space_position.z + cluster.bounding_sphere.w < far_plane /*&&
                           hierarchical_zbuffer_cull(
                             cluster_view_space_position,
                             cluster.bounding_sphere.w,
                             proj_matrix
-                          );
+                          )*/;
                 
                 if (visible)
                 {

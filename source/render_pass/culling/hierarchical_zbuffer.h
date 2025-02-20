@@ -27,13 +27,12 @@ namespace fantasy
 	private:
 		std::vector<constant::HierarchicalZBufferPassConstant> _pass_constants;
 		uint32_t _hzb_resolution = 1024;
-    
+		bool resource_writed = false;
+		
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 
-		std::shared_ptr<Shader> _calc_mip_cs;
-		std::shared_ptr<Shader> _copy_depth_cs;
-		std::unique_ptr<ComputePipelineInterface> _calc_mip_pipeline;
-		std::unique_ptr<ComputePipelineInterface> _copy_depth_pipeline;
+		std::shared_ptr<Shader> _cs;
+		std::unique_ptr<ComputePipelineInterface> _pipeline;
 
 		std::unique_ptr<BindingSetInterface> _binding_set;
 		ComputeState _compute_state;

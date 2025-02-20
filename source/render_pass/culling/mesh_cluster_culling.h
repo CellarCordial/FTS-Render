@@ -36,6 +36,7 @@ namespace fantasy
         bool finish_pass() override;
 
 	private:
+		bool _mesh_update = false;
 		bool _resource_writed = false;
         uint32_t _hzb_resolution = 1024u;
 		uint32_t _cluster_group_count = 0;

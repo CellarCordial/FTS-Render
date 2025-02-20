@@ -17,7 +17,7 @@ namespace fantasy
         cache->get_world()->get_global_entity()->get_component<event::AddModel>()->add_event(
             [this]() -> bool
             {
-                _resource_writed = false;
+                _mesh_update = true;
 				return true;
             }
         );
@@ -136,7 +136,7 @@ namespace fantasy
             _pass_constant.near_plane = camera->get_near_z();
             _pass_constant.far_plane = camera->get_far_z();
             
-            if (!_resource_writed)
+            if (_mesh_update)
             {
                 DeviceInterface* device = cmdlist->get_deivce();
                 _pass_constant.group_count = 0;
@@ -225,7 +225,7 @@ namespace fantasy
                 )));
                 _compute_state.binding_sets[0] = _binding_set.get();
     
-                _resource_writed = true;
+                _mesh_update = false;
             }
 
             cmdlist->clear_buffer_uint(

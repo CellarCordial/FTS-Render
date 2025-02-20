@@ -218,19 +218,24 @@ namespace fantasy
     };
 
     
-    inline bool clear_color_attachment(CommandListInterface* cmdlist, FrameBufferInterface* frame_buffer, uint32_t attachment_index)
+    inline bool clear_color_attachment(CommandListInterface* cmdlist, FrameBufferInterface* frame_buffer)
     {
-        const auto& attachment = frame_buffer->get_desc().color_attachments[attachment_index];
-        if (attachment.is_valid())
+        for (const auto& attachment : frame_buffer->get_desc().color_attachments)
         {
-            cmdlist->clear_render_target_texture(
-                attachment.texture.get(), 
-                attachment.subresource, 
-                attachment.texture->get_desc().clear_value
-            );
-            return true;
+            if (attachment.is_valid())
+            {
+                cmdlist->clear_render_target_texture(
+                    attachment.texture.get(), 
+                    attachment.subresource, 
+                    attachment.texture->get_desc().clear_value
+                );
+            }
+            else
+            {
+                return false;
+            }
         }
-        return false;
+        return true;
     }
 
     inline bool clear_depth_stencil_attachment(CommandListInterface* cmdlist, FrameBufferInterface* frame_buffer)

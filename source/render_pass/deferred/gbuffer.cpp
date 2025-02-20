@@ -210,11 +210,8 @@ namespace fantasy
 
         ReturnIfFalse(update(cmdlist, cache));
 
-		uint64_t color_attachment_count = _frame_buffer->get_desc().color_attachments.size();
-		for (uint32_t ix = 0; ix < color_attachment_count; ++ix)
-		{
-			clear_color_attachment(cmdlist, _frame_buffer.get(), ix);
-		}
+
+		clear_color_attachment(cmdlist, _frame_buffer.get());
 		clear_depth_stencil_attachment(cmdlist, _frame_buffer.get());
 
         for (uint32_t ix = 0; ix < _draw_arguments.size(); ++ix)

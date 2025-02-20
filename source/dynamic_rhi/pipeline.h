@@ -179,7 +179,7 @@ namespace fantasy
 
     struct DepthStencilState
     {
-        bool            enable_depth_test = true;
+        bool            enable_depth_test = false;
         bool            enable_depth_write = false;
         ComparisonFunc depth_func = ComparisonFunc::Less;
         

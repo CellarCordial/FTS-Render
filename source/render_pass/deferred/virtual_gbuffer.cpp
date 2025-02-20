@@ -191,6 +191,17 @@ namespace fantasy
 				)
 			)));
 			cache->collect(_tile_uv_texture, ResourceType::Texture);
+
+			
+            ReturnIfFalse(_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+                TextureDesc::create_depth_stencil_texture(
+                    CLIENT_WIDTH, 
+                    CLIENT_HEIGHT, 
+                    Format::D32,
+                    "depth_texture"
+                )
+            )));
+			cache->collect(_depth_texture, ResourceType::Texture);
 		}
 
 		// Frame Buffer.
@@ -203,6 +214,7 @@ namespace fantasy
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_base_color_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_pbr_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_emissive_texture));
+			frame_buffer_desc.depth_stencil_attachment = FrameBufferAttachment::create_attachment(_depth_texture);
 			ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
 		}
  
@@ -213,6 +225,9 @@ namespace fantasy
 			pipeline_desc.pixel_shader = _ps;
 			pipeline_desc.input_layout = _input_layout;
 			pipeline_desc.binding_layouts.push_back(_binding_layout);
+			pipeline_desc.render_state.depth_stencil_state.enable_depth_test = true;
+			pipeline_desc.render_state.depth_stencil_state.enable_depth_write = true;
+			pipeline_desc.render_state.depth_stencil_state.depth_func = ComparisonFunc::LessOrEqual;
 			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(
 				device->create_graphics_pipeline(pipeline_desc, _frame_buffer.get())
 			));
@@ -362,11 +377,8 @@ namespace fantasy
 			}
 			
 
-			uint64_t color_attachment_count = _frame_buffer->get_desc().color_attachments.size();
-			for (uint32_t ix = 0; ix < color_attachment_count; ++ix)
-			{
-				clear_color_attachment(cmdlist, _frame_buffer.get(), ix);
-			}
+			ReturnIfFalse(clear_color_attachment(cmdlist, _frame_buffer.get()));
+			ReturnIfFalse(clear_depth_stencil_attachment(cmdlist, _frame_buffer.get()));
 			cmdlist->clear_buffer_uint(_vt_page_info_buffer.get(), BufferRange{ 0, _vt_page_info_buffer->get_desc().byte_size }, INVALID_SIZE_32);
 			cmdlist->clear_buffer_uint(_virtual_shadow_page_buffer.get(), BufferRange{ 0, _virtual_shadow_page_buffer->get_desc().byte_size }, INVALID_SIZE_32);
 			cmdlist->clear_texture_uint(_tile_uv_texture.get(), TextureSubresourceSet{}, INVALID_SIZE_32);
