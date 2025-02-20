@@ -137,42 +137,41 @@ void main(uint3 thread_id: SV_DispatchThreadID)
 
     MeshClusterGroup group = mesh_cluster_group_buffer[group_index];
     float3 group_view_space_position = mul(float4(group.bounding_sphere.xyz, 1.0f), view_matrix).xyz;
-    // if (!check_lod(group_view_space_position, group.bounding_sphere.w, group.max_parent_lod_error))
-    if (group.mip_level == 0)
+    if (!check_lod(group_view_space_position, group.bounding_sphere.w, group.max_parent_lod_error))
     {
         for (uint ix = 0; ix < group.cluster_count; ++ix)
         {
             uint cluster_id = group.cluster_index_offset + ix;
             MeshCluster cluster = mesh_cluster_buffer[cluster_id];
-            // bool visible = check_lod(
-            //     mul(float4(cluster.lod_bounding_sphere.xyz, 1.0f), view_matrix).xyz,
-            //     cluster.lod_bounding_sphere.w,
-            //     cluster.lod_error
-            // );
+            bool visible = check_lod(
+                mul(float4(cluster.lod_bounding_sphere.xyz, 1.0f), view_matrix).xyz,
+                cluster.lod_bounding_sphere.w,
+                cluster.lod_error
+            );
 
-            // if (visible)
-            // {
-            //     float3 cluster_view_space_position = mul(float4(cluster.bounding_sphere.xyz, 1.0f), view_matrix).yxz;
+            if (visible)
+            {
+                float3 cluster_view_space_position = mul(float4(cluster.bounding_sphere.xyz, 1.0f), view_matrix).yxz;
 
-            //     // 包围球在 z 轴上的最远端不超过近平面或最近端超过远平面, 则将该 cluster 剔除.
-            //     if (
-            //         cluster_view_space_position.z + cluster.bounding_sphere.w < near_plane ||
-            //         cluster_view_space_position.z - cluster.bounding_sphere.w > far_plane
-            //     )
-            //         return;
+                // 包围球在 z 轴上的最远端不超过近平面或最近端超过远平面, 则将该 cluster 剔除.
+                if (
+                    cluster_view_space_position.z + cluster.bounding_sphere.w < near_plane ||
+                    cluster_view_space_position.z - cluster.bounding_sphere.w > far_plane
+                )
+                    return;
 
-            //     // 判定是否在视锥体内, 以及从 hzb 中采样深度值进行比较.
-            //     // TODO: frustum_cull
-            //     visible = /* frustum_cull(cluster_view_space_position, cluster.bounding_sphere.w, proj_matrix) && */
-            //               cluster_view_space_position.z - cluster.bounding_sphere.w > near_plane &&
-            //               cluster_view_space_position.z + cluster.bounding_sphere.w < far_plane &&
-            //               hierarchical_zbuffer_cull(
-            //                 cluster_view_space_position,
-            //                 cluster.bounding_sphere.w,
-            //                 proj_matrix
-            //               );
+                // 判定是否在视锥体内, 以及从 hzb 中采样深度值进行比较.
+                // TODO: frustum_cull
+                visible = /* frustum_cull(cluster_view_space_position, cluster.bounding_sphere.w, proj_matrix) && */
+                          cluster_view_space_position.z - cluster.bounding_sphere.w > near_plane &&
+                          cluster_view_space_position.z + cluster.bounding_sphere.w < far_plane &&
+                          hierarchical_zbuffer_cull(
+                            cluster_view_space_position,
+                            cluster.bounding_sphere.w,
+                            proj_matrix
+                          );
                 
-            //     if (visible)
+                if (visible)
                 {
                     uint current_pos;
                     InterlockedAdd(
@@ -184,7 +183,7 @@ void main(uint3 thread_id: SV_DispatchThreadID)
                     virtual_gbuffer_draw_indirect_buffer[0].vertex_count = cluster_size * 3;
                     visible_cluster_id_buffer[current_pos] = cluster_id;
                 }
-            // }
+            }
         }
     }
 }
