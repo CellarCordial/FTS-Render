@@ -251,5 +251,4 @@ namespace fantasy
         _mesh_clusters.clear(); _mesh_clusters.shrink_to_fit();
         return true;
     }
-
 }

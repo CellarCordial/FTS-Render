@@ -181,7 +181,7 @@ void main(uint3 thread_id: SV_DispatchThreadID)
                         current_pos
                     );
 
-                    virtual_gbuffer_draw_indirect_buffer[0].vertex_count = cluster_size;
+                    virtual_gbuffer_draw_indirect_buffer[0].vertex_count = cluster_size * 3;
                     visible_cluster_id_buffer[current_pos] = cluster_id;
                 }
             // }

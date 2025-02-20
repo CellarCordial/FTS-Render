@@ -68,7 +68,7 @@ VertexOutput main(uint instance_id: SV_InstanceID, uint vertex_index : SV_Vertex
     VertexOutput output;
 
     uint cluster_index = visible_cluster_id_buffer[instance_id];
-    MeshCluster cluster = mesh_cluster_buffer[cluster_index];
+    MeshCluster cluster = mesh_cluster_buffer[instance_id];
     uint triangle_index = vertex_index / 3;
     if (triangle_index >= cluster.triangle_count)
     {
