@@ -4,10 +4,10 @@
 
 namespace fantasy 
 {
-    QuadricSurface::QuadricSurface(const Vector3<double>& p0, const Vector3<double>& p1, const Vector3<double>& p2)
+    QuadricSurface::QuadricSurface(const double3& p0, const double3& p1, const double3& p2)
     {
-        Vector3<double> normal = cross(p1 - p0, p2 - p0);
-        Vector3<double> N = normal * (1 / sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z));
+        double3 normal = cross(p1 - p0, p2 - p0);
+        double3 N = normal * (1 / sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z));
 
         // ax + by + cz + d = 0 为平面方程, 则 d = -(ax + by + cz) = -dot(normal, p0).
         double distance = -dot(N, p0);
@@ -43,19 +43,18 @@ namespace fantasy
 
     bool QuadricSurface::get_vertex(float3& position)
     {
-        double4x4 m(
-            a2,   ab,   ac,   0.0f,
-            ab,   b2,   bc,   0.0f,
-            ac,   bc,   c2,   0.0f,
-            ad,   bd,   cd,   1.0f
-        );
-
         double4x4 inv;
-        if (!invertible(m, inv)) return false;
+        double4x4 m ={
+            a2,ab,ac,ad,
+            ab,b2,bc,bd,
+            ac,bc,c2,cd,
+            0,0,0,1
+        };
+        if(!inverse_row_major(reinterpret_cast<double*>(&m),reinterpret_cast<double*>(&inv))) return false;
         position = { 
-            static_cast<float>(inv[3][0]), 
-            static_cast<float>(inv[3][1]), 
-            static_cast<float>(inv[3][2]) 
+            static_cast<float>(inv[0][3]),
+            static_cast<float>(inv[1][3]),
+            static_cast<float>(inv[2][3])
         };
         return true;
     }
@@ -72,17 +71,13 @@ namespace fantasy
 
     QuadricSurface merge(const QuadricSurface& surface0, const QuadricSurface& surface1)
     {
-        static_assert(sizeof(QuadricSurface) == sizeof(double) * 10);
-        
-        const double* sur0 = reinterpret_cast<const double*>(&surface0);
-        const double* sur1 = reinterpret_cast<const double*>(&surface1);
-        
         QuadricSurface ret;
-        double* ret_ptr = reinterpret_cast<double*>(&ret);
-        for (uint32_t ix = 0; ix < 10; ++ix)
-        {
-            ret_ptr[ix] = sur0[ix] + sur1[ix];
-        }
+        double* t0 = reinterpret_cast<double*>(&ret);
+        const double* t1 = reinterpret_cast<const double*>(&surface0);
+        const double* t2 = reinterpret_cast<const double*>(&surface1);
+
+        for(uint32_t ix = 0; ix < 10; ix++) t0[ix] = t1[ix] + t2[ix];
+        
         return ret;
     }
 

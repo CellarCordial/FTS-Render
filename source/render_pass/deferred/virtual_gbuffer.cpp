@@ -273,11 +273,11 @@ namespace fantasy
 									const auto& cluster = virtual_submesh.clusters[ix];
 									_cluster_vertices.insert(_cluster_vertices.end(), cluster.vertices.begin(), cluster.vertices.end());
 	
-									for(uint32_t ix = 0; ix < cluster.indices.size() / 3; ++ix)
+									for(uint32_t ix = 0; ix < cluster.indices.size(); ix += 3)
 									{
-										uint32_t i0 = cluster.indices[ix * 3];
-										uint32_t i1 = cluster.indices[ix * 3 + 1];
-										uint32_t i2 = cluster.indices[ix * 3 + 2];
+										uint32_t i0 = cluster.indices[ix + 0];
+										uint32_t i1 = cluster.indices[ix + 1];
+										uint32_t i2 = cluster.indices[ix + 2];
 	
 										uint32_t max_index = 0xff;
 										ReturnIfFalse(i0 <= max_index && i1 <= max_index && i2 <= max_index);
@@ -286,7 +286,7 @@ namespace fantasy
 									}
 								}
 							}
-						}  
+						}
 						for (const auto& submesh : mesh->submeshes)
 						{
 							const auto& submaterial = material->submaterials[submesh.material_index];

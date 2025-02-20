@@ -632,7 +632,7 @@ namespace fantasy
 			
 			MeshOptimizer optimizer(_vertices, _indices);
 			ReturnIfFalse(optimizer.optimize(_indices.size()));
-
+			
 			ReturnIfFalse(cluster_triangles(virtual_submesh));
 			uint32_t level_offset = 0;
 			uint32_t mip_level = 0;
@@ -640,42 +640,42 @@ namespace fantasy
 			{
 				uint32_t level_cluster_count = virtual_submesh.clusters.size() - level_offset;
 				if(level_cluster_count<=1) break;
-
+			
 				uint32_t old_cluster_num = virtual_submesh.clusters.size();
 				uint32_t old_group_num = virtual_submesh.cluster_groups.size();
-
+			
 				ReturnIfFalse(build_cluster_groups(virtual_submesh, level_offset, level_cluster_count, mip_level));
-
+			
 				for(uint32_t ix = old_group_num; ix < virtual_submesh.cluster_groups.size(); ix++)
 				{
 					ReturnIfFalse(build_parent_clusters(virtual_submesh, ix));
 				}
-
+				
 				level_offset = old_cluster_num;
 				mip_level++;
 			}
 			virtual_submesh.mip_levels = mip_level + 1;
-
+			
 			for (uint32_t ix = cluster_offset; ix < virtual_submesh.clusters.size(); ++ix)
 			{
 				virtual_submesh.clusters[ix].geometry_id = current_geometry_id;
 			}
 			cluster_offset += static_cast<uint32_t>(virtual_submesh.clusters.size());
-
+			
 			current_geometry_id++;
 			_indices.clear();
 			_vertices.clear();
 		}
 		_indices.shrink_to_fit();
 		_vertices.shrink_to_fit();
-
+		
 		return true;
 	}
-
+	
 	uint32_t VirtualMesh::edge_hash(const float3& p0, const float3& p1)
 	{
 		uint32_t key0 = hash(p0);
-		uint32_t key1 = hash(p1);
+		uint32_t key1 = hash(p1); 
 		return murmur_mix(murmur_add(key0, key1));
 	}
 

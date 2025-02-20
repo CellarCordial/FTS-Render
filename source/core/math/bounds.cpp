@@ -70,7 +70,7 @@ namespace fantasy
 
         float center_distance = center1_to_0.length();
         float radius = (center_distance + sphere0.radius + sphere1.radius) * 0.5f;
-        float3 center = sphere0.center + (center1_to_0 / center_distance) * (radius - sphere0.radius);
+        float3 center = sphere0.center + center1_to_0 * ((radius - sphere0.radius) / center_distance);
 		return Sphere(center, radius);
 	}
 

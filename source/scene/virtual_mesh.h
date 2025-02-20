@@ -9,6 +9,7 @@
 #include "../core/tools/bit_allocator.h"
 #include "geometry.h"
 #include <utility>
+#include <vector>
 
 namespace fantasy 
 {

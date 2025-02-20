@@ -3,6 +3,7 @@
 
 #include "vector.h"
 
+
 namespace fantasy 
 {
     struct QuadricSurface
@@ -13,7 +14,7 @@ namespace fantasy
         double cd = 0.0;
 
         QuadricSurface() = default;
-        QuadricSurface(const Vector3<double>& p0, const Vector3<double>& p1, const Vector3<double>& p2);
+        QuadricSurface(const double3& p0, const double3& p1, const double3& p2);
 
         bool get_vertex(float3& position);
         float distance_to_surface(const float3& p);

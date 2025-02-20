@@ -1,5 +1,4 @@
 #include "../common/gbuffer.hlsl"
-#include "../common/octahedral.hlsl"
 
 
 cbuffer pass_constants : register(b0)
@@ -79,10 +78,10 @@ VertexOutput main(uint instance_id: SV_InstanceID, uint vertex_index : SV_Vertex
 
     switch (view_mode)
     {
-    case 0: output.color = color_hash(triangle_index);
-    case 1: output.color = color_hash(cluster_index);
-    case 2: output.color = color_hash(cluster.group_id);
-    case 3: output.color = color_hash(cluster.mip_level);
+    case 0: output.color = color_hash(triangle_index); break;
+    case 1: output.color = color_hash(cluster_index); break;
+    case 2: output.color = color_hash(cluster.group_id); break;
+    case 3: output.color = color_hash(cluster.mip_level); break;
     };
 
     // 因为一个 cluster 最多有 MeshCluster::cluster_size 个顶点 (默认 128个), 小于 255, 故 index 占用 8 个字节.

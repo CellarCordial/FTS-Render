@@ -124,7 +124,7 @@ namespace fantasy
 		requires std::is_arithmetic_v<U>
 		Vector2<T> operator/(U _u) const
 		{
-			float fInv = 1 / static_cast<float>(_u);
+			double fInv = 1 / static_cast<double>(_u);
 			return Vector2(x * fInv, y * fInv);
 		}
 
@@ -132,7 +132,7 @@ namespace fantasy
 		requires std::is_arithmetic_v<U>
 		Vector2<T>& operator/=(U _u)
 		{
-			float fInv = 1 / static_cast<float>(_u);
+			double fInv = 1 / static_cast<double>(_u);
 			x *= fInv;
 			y *= fInv;
 			return *this;
@@ -290,7 +290,7 @@ namespace fantasy
 		requires std::is_arithmetic_v<U>
 		Vector3<T> operator/(U _u) const
 		{
-			const float fInv = 1 / static_cast<float>(_u);
+			const double fInv = 1 / static_cast<double>(_u);
 			return Vector3(x * fInv, y * fInv, z * fInv);
 		}
 
@@ -298,7 +298,7 @@ namespace fantasy
 		requires std::is_arithmetic_v<U>
 		Vector3<T>& operator/=(U _u)
 		{
-			const float fInv = 1 / static_cast<float>(_u);
+			const double fInv = 1 / static_cast<double>(_u);
 			x *= fInv;
 			y *= fInv;
 			z *= fInv;
@@ -462,7 +462,7 @@ namespace fantasy
 		requires std::is_arithmetic_v<U>
 		Vector4<T> operator/(U _u) const
 		{
-			const float fInv = 1 / static_cast<float>(_u);
+			const double fInv = 1 / static_cast<double>(_u);
 			return Vector4(x * fInv, y * fInv, z * fInv, w * fInv);
 		}
 
@@ -470,7 +470,7 @@ namespace fantasy
 		requires std::is_arithmetic_v<U>
 		Vector4<T>& operator/=(U _u)
 		{
-			const float fInv = 1 / static_cast<float>(_u);
+			const double fInv = 1 / static_cast<double>(_u);
 			x *= fInv;
 			y *= fInv;
 			z *= fInv;
@@ -538,13 +538,13 @@ namespace fantasy
 	}
 
 	template <typename T>
-	inline T Absdot(const Vector3<T>& vec1, const Vector3<T>& vec2)
+	inline T abs_dot(const Vector3<T>& vec1, const Vector3<T>& vec2)
 	{
 		return std::abs(dot(vec1, vec2));
 	}
 
 	template <typename T>
-	inline T Absdot(const Vector2<T>& vec1, const Vector2<T>& vec2)
+	inline T abs_dot(const Vector2<T>& vec1, const Vector2<T>& vec2)
 	{
 		return std::abs(dot(vec1, vec2));
 	}
@@ -658,53 +658,53 @@ namespace fantasy
 
 	// 两点距离
 	template <typename T>
-	inline float distance(const Vector3<T>& vec1, const Vector3<T>& vec2)
+	inline double distance(const Vector3<T>& vec1, const Vector3<T>& vec2)
 	{
 		return (vec1 - vec2).length();
 	}
 
 	// 两点距离
 	template <typename T>
-	inline float distance(const Vector2<T>& vec1, const Vector2<T>& vec2)
+	inline double distance(const Vector2<T>& vec1, const Vector2<T>& vec2)
 	{
 		return (vec1 - vec2).length();
 	}
 
 	// 两点距离平方
 	template <typename T>
-	inline float DistanceSquared(const Vector3<T>& vec1, const Vector3<T>& vec2)
+	inline double DistanceSquared(const Vector3<T>& vec1, const Vector3<T>& vec2)
 	{
 		return (vec1 - vec2).length_squared();
 	}
 
 	// 两点距离平方
 	template <typename T>
-	inline float DistanceSquared(const Vector2<T>& vec1, const Vector2<T>& vec2)
+	inline double DistanceSquared(const Vector2<T>& vec1, const Vector2<T>& vec2)
 	{
 		return (vec1 - vec2).length_squared();
 	}
 
 	// 点的插值
 	template <typename T>
-	inline Vector3<T> lerp(const Vector3<T>& vec1, const Vector3<T>& vec2, float f)
+	inline Vector3<T> lerp(const Vector3<T>& vec1, const Vector3<T>& vec2, double f)
 	{
-		float fLerp = (std::min)(1.0f, (std::max)(0.0f, f));
+		double fLerp = (std::min)(1.0f, (std::max)(0.0f, f));
 		return (1 - fLerp) * vec1 + fLerp * vec2;
 	}
 
 	// 点的插值
 	template <typename T>
-	inline Vector2<T> lerp(const Vector2<T>& vec1, const Vector2<T>& vec2, float f)
+	inline Vector2<T> lerp(const Vector2<T>& vec1, const Vector2<T>& vec2, double f)
 	{
 		return (1 - f) * vec1 + f * vec2;
 	}
 
 	// 向量的插值
 	template <typename T>
-	inline Vector4<T> lerp(float f, const Vector4<T>& vec1, const Vector4<T>& vec2)
+	inline Vector4<T> lerp(double f, const Vector4<T>& vec1, const Vector4<T>& vec2)
 	{
-		float fLerp = (std::min)(1.0f, (std::max)(0.0f, f));
-		return Vector4<T>((1 - fLerp) * vec1 + fLerp * vec2);
+		double lerp = (std::min)(1.0f, (std::max)(0.0f, f));
+		return Vector4<T>((1 - lerp) * vec1 + lerp * vec2);
 	}
 
 	// 取两点各坐标最小值
@@ -728,50 +728,50 @@ namespace fantasy
 	}
 
 	template <typename T>
-	inline Vector3<T> Floor(const Vector3<T>& vec)
+	inline Vector3<T> floor(const Vector3<T>& vec)
 	{
 		return Vector3<T>{std::floor(vec.x), std::floor(vec.y), std::floor(vec.z)};
 	}
 
 	template <typename T>
-	inline Vector2<T> Floor(const Vector2<T>& vec)
+	inline Vector2<T> floor(const Vector2<T>& vec)
 	{
 		return Vector2<T>{std::floor(vec.x), std::floor(vec.y)};
 	}
 
 	template <typename T>
-	inline Vector3<T> Ceil(const Vector3<T>& vec)
+	inline Vector3<T> ceil(const Vector3<T>& vec)
 	{
 		return Vector3<T>{std::ceil(vec.x), std::ceil(vec.y), std::ceil(vec.z)};
 	}
 
 	template <typename T>
-	inline Vector2<T> Ceil(const Vector2<T>& vec)
+	inline Vector2<T> ceil(const Vector2<T>& vec)
 	{
 		return Vector2<T>{std::ceil(vec.x), std::ceil(vec.y)};
 	}
 	
 	template <typename T>
-	inline Vector3<T> Abs(const Vector3<T>& vec)
+	inline Vector3<T> abs(const Vector3<T>& vec)
 	{
 		return Vector3<T>{std::abs(vec.x), std::abs(vec.y), std::abs(vec.z)};
 	}
 
 	// 调整第一个向量参数的方向，使之与第二个向量参数的方向一致
 	template <typename T>
-	inline Vector3<T> Faceforward(const Vector3<T> &v1, const Vector3<T> &v2)
+	inline Vector3<T> face_forward(const Vector3<T> &v1, const Vector3<T> &v2)
 	{
 		return dot(v1, v2) < 0.0f ? -v1 : v1;
 	}
 
     	// 给定单位球面坐标系中点的仰角和方位角，使用默认基向量，返回对应的三位向量
-	inline float3 SphericalDirection(float sin_theta, float cos_theta, float phi)
+	inline float3 spherical_direction(float sin_theta, float cos_theta, float phi)
 	{
 		return float3(sin_theta * std::cos(phi), sin_theta * std::sin(phi), cos_theta);
 	}
 
 	// 给定单位球面坐标系中点的仰角和方位角，以及基向量，返回对应的三位向量
-	inline float3 SphericalDirection(
+	inline float3 spherical_direction(
 		float sin_theta, 
 		float cos_theta, 
 		float phi, 
@@ -788,13 +788,13 @@ namespace fantasy
 	}
 
 	// 计算向量 vec 与 z 轴的夹角（仰角），即球面坐标系中的 theta 角
-	inline float SphericalTheta(const float3& vec)
+	inline float spherical_theta(const float3& vec)
 	{
 		return std::acos(Clamp(vec.z, -1, 1));
 	}
 
 	// 计算向量 vec 在 xy 平面上的投影的方位角，即球面坐标系中的 phi 角
-	inline float SphericalPhi(const float3& vec)
+	inline float spherical_phi(const float3& vec)
 	{
 		// std::atan2 的值域为 [-π，π]
 		float p = std::atan2(vec.y, vec.x);
