@@ -192,7 +192,8 @@ namespace fantasy
             uint32_t width, 
             uint32_t height, 
             Format format, 
-            std::string name = ""
+            std::string name = "",
+            bool reverse_z = false
         )
         {
             TextureDesc ret;
@@ -202,7 +203,7 @@ namespace fantasy
             ret.format = format;
             ret.allow_depth_stencil = true;
             ret.use_clear_value = true;
-            ret.clear_value = Color{};
+            ret.clear_value = reverse_z ? Color{ 0.0f } : Color{ 1.0f };
             return ret;
         }
 

@@ -12,7 +12,7 @@ namespace fantasy
 		struct MeshClusterCullingPassConstant
 		{
             float4x4 view_matrix;
-            float4x4 proj_matrix;
+            float4x4 reverse_z_proj_matrix;
 
             uint32_t client_width = CLIENT_WIDTH;
             uint32_t client_height = CLIENT_HEIGHT;

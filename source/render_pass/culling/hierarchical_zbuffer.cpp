@@ -66,7 +66,7 @@ namespace fantasy
 			BindingSetItemArray binding_set_items(3 + texture_mip_levels);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::HierarchicalZBufferPassConstant));
 			binding_set_items[1] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
-			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("depth_texture")), TextureSubresourceSet{}, Format::R32_FLOAT);
+			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("reverse_depth_texture")), TextureSubresourceSet{}, Format::R32_FLOAT);
             for (uint32_t ix = 0; ix < texture_mip_levels; ++ix)
             {
 			    binding_set_items[3 + ix] = BindingSetItem::create_texture_uav(
@@ -117,7 +117,7 @@ namespace fantasy
                     .base_array_slice = 0,
                     .array_slice_count = 1
                 }, 
-                Color{ 1.0f }
+                Color{ 0.0f }
             );
 
 			uint2 thread_group_num = {

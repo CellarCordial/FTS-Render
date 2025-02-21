@@ -7,7 +7,7 @@
 cbuffer pass_constants : register(b0)
 {
     float4x4 view_matrix;
-    float4x4 proj_matrix;
+    float4x4 reverse_z_proj_matrix;
 
     uint client_width;
     uint client_height;
@@ -50,11 +50,11 @@ uint search_most_significant_bit(uint x)
     return res;
 }
 
-bool hierarchical_zbuffer_cull(float3 view_space_position, float radius, float4x4 proj_matrix)
+bool hierarchical_zbuffer_cull(float3 view_space_position, float radius, float4x4 reverse_z_proj_matrix)
 {
     // 获取球体在 x 或 y 轴上投影的范围.
-    float2 range_x = project_sphere(view_space_position.x, view_space_position.z, radius) * proj_matrix[0][0];
-    float2 range_y = project_sphere(view_space_position.y, view_space_position.z, radius) * proj_matrix[1][1];
+    float2 range_x = project_sphere(view_space_position.x, view_space_position.z, radius) * reverse_z_proj_matrix[0][0];
+    float2 range_y = project_sphere(view_space_position.y, view_space_position.z, radius) * reverse_z_proj_matrix[1][1];
     float4 rect = clamp(
         float4(
             float2(range_x.x, range_y.x) * float2(0.5f, -0.5f) + 0.5f,
@@ -93,20 +93,21 @@ bool hierarchical_zbuffer_cull(float3 view_space_position, float radius, float4x
     float z1 = hierarchical_zbuffer_texture.SampleLevel(linear_clamp_sampler, uv, lod, int2(1, 0)).r;
     float z2 = hierarchical_zbuffer_texture.SampleLevel(linear_clamp_sampler, uv, lod, int2(1, 1)).r;
     float z3 = hierarchical_zbuffer_texture.SampleLevel(linear_clamp_sampler, uv, lod, int2(0, 1)).r;
-    float max_z = max4(z0, z1, z2, z3);
+    float min_z = min4(z0, z1, z2, z3);
 
-    float cluster_near_z = proj_matrix[2][2] + proj_matrix[3][2] / (view_space_position.z - radius);
+    float cluster_near_z = view_space_position.z - radius;
+    cluster_near_z = reverse_z_proj_matrix[2][2] + reverse_z_proj_matrix[3][2] / cluster_near_z;
 
-    return cluster_near_z < max_z;
+    return cluster_near_z > min_z;
 }
 
-bool frustum_cull(float3 view_space_position, float radius, float4x4 proj_matrix)
+bool frustum_cull(float3 view_space_position, float radius, float4x4 reverse_z_proj_matrix)
 {
     // 视锥体左右上下四个面的单位法线.
-    float3 p0 = normalize(float3(proj_matrix[0][0], 0, 1));
-    float3 p1 = normalize(float3(-proj_matrix[0][0], 0, 1));
-    float3 p2 = normalize(float3(0, proj_matrix[1][1], 1));
-    float3 p3 = normalize(float3(0, -proj_matrix[1][1], 1));
+    float3 p0 = normalize(float3(-reverse_z_proj_matrix[0][0], 0, -1));
+    float3 p1 = normalize(float3(reverse_z_proj_matrix[0][0], 0, -1));
+    float3 p2 = normalize(float3(0, -reverse_z_proj_matrix[1][1], -1));
+    float3 p3 = normalize(float3(0, reverse_z_proj_matrix[1][1], -1));
 
     bool visible = dot(p0, view_space_position) < radius;
     visible = visible && dot(p1, view_space_position) < radius;
@@ -157,14 +158,13 @@ void main(uint3 thread_id: SV_DispatchThreadID)
                     return;
 
                 // 判定是否在视锥体内, 以及从 hzb 中采样深度值进行比较.
-                // TODO: frustum_cull
-                visible = /* frustum_cull(cluster_view_space_position, cluster.bounding_sphere.w, proj_matrix) && */
+                visible = frustum_cull(cluster_view_space_position, cluster.bounding_sphere.w, reverse_z_proj_matrix) && 
                           cluster_view_space_position.z - cluster.bounding_sphere.w > near_plane &&
                           cluster_view_space_position.z + cluster.bounding_sphere.w < far_plane &&
                           hierarchical_zbuffer_cull(
                             cluster_view_space_position,
                             cluster.bounding_sphere.w,
-                            proj_matrix
+                            reverse_z_proj_matrix
                           );
                 
                 if (visible)

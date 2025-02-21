@@ -193,15 +193,16 @@ namespace fantasy
 			cache->collect(_tile_uv_texture, ResourceType::Texture);
 
 			
-            ReturnIfFalse(_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+            ReturnIfFalse(_reverse_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
                 TextureDesc::create_depth_stencil_texture(
                     CLIENT_WIDTH, 
                     CLIENT_HEIGHT, 
                     Format::D32,
-                    "depth_texture"
+                    "reverse_depth_texture",
+					true
                 )
             )));
-			cache->collect(_depth_texture, ResourceType::Texture);
+			cache->collect(_reverse_depth_texture, ResourceType::Texture);
 		}
 
 		// Frame Buffer.
@@ -214,7 +215,7 @@ namespace fantasy
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_base_color_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_pbr_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_emissive_texture));
-			frame_buffer_desc.depth_stencil_attachment = FrameBufferAttachment::create_attachment(_depth_texture);
+			frame_buffer_desc.depth_stencil_attachment = FrameBufferAttachment::create_attachment(_reverse_depth_texture);
 			ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
 		}
  
@@ -227,7 +228,7 @@ namespace fantasy
 			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			pipeline_desc.render_state.depth_stencil_state.enable_depth_test = true;
 			pipeline_desc.render_state.depth_stencil_state.enable_depth_write = true;
-			pipeline_desc.render_state.depth_stencil_state.depth_func = ComparisonFunc::LessOrEqual;
+			pipeline_desc.render_state.depth_stencil_state.depth_func = ComparisonFunc::Greater;
 			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(
 				device->create_graphics_pipeline(pipeline_desc, _frame_buffer.get())
 			));
@@ -265,7 +266,7 @@ namespace fantasy
 	
 			Camera* camera = world->get_global_entity()->get_component<Camera>();
 			_pass_constant.view_matrix = camera->view_matrix;
-			_pass_constant.view_proj = camera->get_view_proj();
+			_pass_constant.reverse_z_view_proj = camera->get_reverse_z_view_proj();
 			_pass_constant.prev_view_matrix = camera->prev_view_matrix;
 			_pass_constant.camera_position = camera->position;
 			_pass_constant.shadow_view_proj = world->get_global_entity()->get_component<DirectionalLight>()->get_view_proj();
@@ -402,7 +403,7 @@ namespace fantasy
 			);
 
 			cmdlist->set_texture_state(
-				_depth_texture.get(), 
+				_reverse_depth_texture.get(), 
 				TextureSubresourceSet{}, 
 				ResourceStates::ComputeShaderResource | ResourceStates::DepthRead
 			);

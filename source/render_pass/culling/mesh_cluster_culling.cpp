@@ -132,7 +132,7 @@ namespace fantasy
             Camera* camera = world->get_global_entity()->get_component<Camera>();
             _pass_constant.camera_fov_y = camera->get_fov_y();
             _pass_constant.view_matrix = camera->view_matrix;
-            _pass_constant.proj_matrix = camera->proj_matrix;
+            _pass_constant.reverse_z_proj_matrix = camera->reverse_z_proj_matrix;
             _pass_constant.near_plane = camera->get_near_z();
             _pass_constant.far_plane = camera->get_far_z();
 

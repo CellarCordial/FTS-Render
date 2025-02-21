@@ -42,6 +42,7 @@ namespace fantasy
         float get_frustum_far_width() const;
 
         float4x4 get_view_proj() const { return mul(view_matrix, proj_matrix); }
+        float4x4 get_reverse_z_view_proj() const { return mul(view_matrix, reverse_z_proj_matrix); }
         float2 get_project_constants_ab() const;
         float2 cursor_cycle(float x, float y);
 
@@ -56,8 +57,10 @@ namespace fantasy
 
 
         float4x4 view_matrix;
-        float4x4 proj_matrix;
         float4x4 prev_view_matrix;
+        float4x4 proj_matrix;
+        float4x4 reverse_z_proj_matrix;
+        
         float3 position = { 0.0f, 0.0f, -2.0f };
         float3 direction = { 0.0f, 0.0f, 1.0f };
         float3 up = { 0.0f, 1.0f, 0.0f };

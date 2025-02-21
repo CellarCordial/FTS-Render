@@ -91,6 +91,7 @@ namespace fantasy
         _far_window_height = _far_z * static_cast<float>(std::tan(_fov_y)) * 2.0f;
 
         proj_matrix = perspective_left_hand(_fov_y, _aspect, _near_z, _far_z);    // LH is left hand
+        reverse_z_proj_matrix = perspective_left_hand_reverse_z(_fov_y, _aspect, near_z, far_z);
     }
 
     void Camera::set_position(const float3& pos)

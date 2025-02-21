@@ -114,12 +114,12 @@ namespace fantasy
         // mul(scale(float3(fInvTanAng / fAspectRatio, fInvTanAng, 1.0f)), normalizeDepthMatrix);
     }
 
-    float4x4 PerspectiveLeftHandinverseDepth(float fov_angle_y, float aspect_ratio, float near_z, float far_z)
+    float4x4 perspective_left_hand_reverse_z(float fov_angle_y, float aspect_ratio, float near_z, float far_z)
     {
-        float fInvTanAng = 1.0f / std::tan(radians(fov_angle_y) / 2.0f);
+        float inv_tan_ang = 1.0f / std::tan(radians(fov_angle_y) / 2.0f);
         return float4x4(
-            fInvTanAng / aspect_ratio, 0,          0,                         0, 
-            0,                         fInvTanAng, 0,                         0, 
+            inv_tan_ang / aspect_ratio, 0,          0,                         0, 
+            0,                         inv_tan_ang, 0,                         0, 
             0,                         0,          -near_z / (far_z - near_z),  1.0f,
             0,                         0,          far_z * near_z / (far_z - near_z),                      0
         );

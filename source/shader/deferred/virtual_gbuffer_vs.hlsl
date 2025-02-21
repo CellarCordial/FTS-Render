@@ -3,7 +3,7 @@
 
 cbuffer pass_constants : register(b0)
 {
-    float4x4 view_proj;
+    float4x4 reverse_z_view_proj;
 
     float4x4 view_matrix;
     float4x4 prev_view_matrix;
@@ -92,7 +92,7 @@ VertexOutput main(uint instance_id: SV_InstanceID, uint vertex_index : SV_Vertex
     GeometryConstant geometry = geometry_constant_buffer[cluster.geometry_id];
     float4 world_pos = mul(float4(vertex.position, 1.0f), geometry.world_matrix);
 
-    output.sv_position = mul(world_pos, view_proj);
+    output.sv_position = mul(world_pos, reverse_z_view_proj);
 
     output.world_space_position = world_pos.xyz;
 

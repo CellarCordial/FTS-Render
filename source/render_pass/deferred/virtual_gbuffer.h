@@ -22,7 +22,7 @@ namespace fantasy
 
 		struct VirtualGBufferPassConstant
 		{
-			float4x4 view_proj;
+			float4x4 reverse_z_view_proj;
 
 			float4x4 view_matrix;
 			float4x4 prev_view_matrix;
@@ -76,7 +76,7 @@ namespace fantasy
 		std::shared_ptr<TextureInterface> _base_color_texture;
 		std::shared_ptr<TextureInterface> _pbr_texture;
 		std::shared_ptr<TextureInterface> _emissive_texture;
-        std::shared_ptr<TextureInterface> _depth_texture;
+        std::shared_ptr<TextureInterface> _reverse_depth_texture;
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 		std::shared_ptr<InputLayoutInterface> _input_layout;

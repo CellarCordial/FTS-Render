@@ -151,93 +151,9 @@ namespace fantasy
 	float4x4 look_at_left_hand(const float3& crPos, const float3& crLook, const float3& crUp);
     float4x4 perspective_left_hand(float fFovAngleY, float fAspectRatio, float fNearZ, float fFarZ);
 	float4x4 orthographic_left_hand(float fWidth, float fHeight, float fNearZ, float fFarZ);
-    float4x4 PerspectiveLeftHandinverseDepth(float fFovAngleY, float fAspectRatio, float fNearZ, float fFarZ);
+    float4x4 perspective_left_hand_reverse_z(float fFovAngleY, float fAspectRatio, float fNearZ, float fFarZ);
 	float3x3 create_orthogonal_basis_from_z(const float3& Z);
 	float4x4 look_at_left_hand(const float3& crPos, const float3& crLook, const float3& crUp);
-
-    template <typename T>
-    requires std::is_same_v<T, float> || std::is_same_v<T, double>
-    bool invertible(const Matrix4x4<T>& matrix, Matrix4x4<T>& out_inv_matrix)
-    {
-        uint32_t index_column[4], index_raw[4];
-		uint32_t ipiv[4] = { 0, 0, 0, 0 };
-		T inv_matrix[4][4];
-		memcpy(inv_matrix, matrix._data, 16 * sizeof(T));
-
-		for (uint32_t i = 0; i < 4; ++i)
-		{
-			uint32_t column_index = 0, raw_index = 0;
-			T big = 0.0f;
-			for (uint32_t j = 0; j < 4; ++j)
-			{
-				if (ipiv[j] != 1)
-				{
-					for (uint32_t k = 0; k < 4; ++k)
-					{
-						if (ipiv[k] == 0)
-						{
-							if (std::abs(inv_matrix[j][k]) >= big)
-							{
-								big = std::abs(inv_matrix[j][k]);
-								raw_index = j;
-								column_index = k;
-							}
-						}
-						else if (ipiv[k] > 1)
-						{
-							return false;
-						}
-					}
-				}
-			}
-			ipiv[column_index]++;
-
-			if (column_index != raw_index)
-			{
-				for (uint32_t k = 0; k < 4; ++k)
-				{
-					std::swap(inv_matrix[raw_index][k], inv_matrix[column_index][k]);
-				}
-			}
-			index_column[i] = column_index;
-			index_raw[i] = raw_index;
-
-			if (inv_matrix[column_index][column_index] == 0.0f) return false;
-            
-			const T inv_piv = 1.0f / inv_matrix[column_index][column_index];
-			inv_matrix[column_index][column_index] = 1.0f;
-
-			for (uint32_t j = 0; j < 4; j++)
-			{
-				inv_matrix[column_index][j] *= inv_piv;
-			}
-
-			for (uint32_t j = 0; j < 4; j++)
-			{
-				if (j != column_index)
-				{
-					const T save = inv_matrix[j][column_index];
-					inv_matrix[j][column_index] = 0;
-					for (int k = 0; k < 4; k++)
-					{
-						inv_matrix[j][k] -= inv_matrix[column_index][k] * save;
-					}
-				}
-			}
-		}
-
-		for (int j = 3; j >= 0; j--)
-		{
-			if (index_raw[j] != index_column[j])
-			{
-				for (int k = 0; k < 4; k++)
-					std::swap(inv_matrix[k][index_raw[j]], inv_matrix[k][index_column[j]]);
-			}
-		}
-
-        out_inv_matrix = Matrix4x4<T>(inv_matrix);
-        return true;
-    }
 
     template <typename T>
     requires std::is_same_v<T, float> || std::is_same_v<T, double>
