@@ -103,11 +103,11 @@ bool hierarchical_zbuffer_cull(float3 view_space_position, float radius, float4x
 
 bool frustum_cull(float3 view_space_position, float radius, float4x4 reverse_z_proj_matrix)
 {
-    // 视锥体左右上下四个面的单位法线.
-    float3 p0 = normalize(float3(-reverse_z_proj_matrix[0][0], 0, -1));
-    float3 p1 = normalize(float3(reverse_z_proj_matrix[0][0], 0, -1));
-    float3 p2 = normalize(float3(0, -reverse_z_proj_matrix[1][1], -1));
-    float3 p3 = normalize(float3(0, reverse_z_proj_matrix[1][1], -1));
+    // 视锥体上下左右四个面的单位法线.
+    float3 p0 = normalize(float3(-reverse_z_proj_matrix[1][1], 0.0f, -1.0f));
+    float3 p1 = normalize(float3(reverse_z_proj_matrix[1][1], 0.0f, -1.0f));
+    float3 p2 = normalize(float3(0.0f, -reverse_z_proj_matrix[0][0], -1.0f));
+    float3 p3 = normalize(float3(0.0f, reverse_z_proj_matrix[0][0], -1.0f));
 
     bool visible = dot(p0, view_space_position) < radius;
     visible = visible && dot(p1, view_space_position) < radius;
