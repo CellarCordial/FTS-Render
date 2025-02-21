@@ -520,7 +520,7 @@ namespace fantasy
 
             _current_cmdlist->d3d12_cmdlist->ClearUnorderedAccessViewFloat(
                 _descriptor_manager->shader_resource_heap.get_gpu_handle(view_index), 
-                _descriptor_manager->shader_resource_heap.get_shader_visible_cpu_handle(view_index), 
+                _descriptor_manager->shader_resource_heap.get_cpu_handle(view_index), 
                 reinterpret_cast<ID3D12Resource*>(texture->get_native_object()), 
                 &clear_color.r, 
                 0, 

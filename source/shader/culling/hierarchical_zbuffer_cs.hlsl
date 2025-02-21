@@ -12,7 +12,7 @@ cbuffer pass_constants : register(b0)
 };
 
 SamplerState linear_clamp_sampler : register(s0);
-Texture2D<float4> world_position_view_depth_texture : register(t0);
+Texture2D<float> depth_texture : register(t0);
 RWTexture2D<float> hierarchical_zbuffer_texture[] : register(u0);
 
 
@@ -29,12 +29,12 @@ void main(uint3 thread_id: SV_DispatchThreadID)
     if (calc_mip_level == 0)
     {
         uint2 client_uv = float2(uv) / hzb_resolution * client_resolution;
-        z0 = world_position_view_depth_texture.Sample(linear_clamp_sampler, (client_uv + 0.5f) / client_resolution).w;
-        z1 = world_position_view_depth_texture.Sample(linear_clamp_sampler, (client_uv + 0.5f + uint2(1, 0)) / client_resolution).w;
-        z2 = world_position_view_depth_texture.Sample(linear_clamp_sampler, (client_uv + 0.5f + uint2(1, 1)) / client_resolution).w;
-        z3 = world_position_view_depth_texture.Sample(linear_clamp_sampler, (client_uv + 0.5f + uint2(0, 1)) / client_resolution).w;
+        z0 = depth_texture.Sample(linear_clamp_sampler, (client_uv + 0.5f) / client_resolution);
+        z1 = depth_texture.Sample(linear_clamp_sampler, (client_uv + 0.5f + uint2(1, 0)) / client_resolution);
+        z2 = depth_texture.Sample(linear_clamp_sampler, (client_uv + 0.5f + uint2(1, 1)) / client_resolution);
+        z3 = depth_texture.Sample(linear_clamp_sampler, (client_uv + 0.5f + uint2(0, 1)) / client_resolution);
 
-        hierarchical_zbuffer_texture[calc_mip_level][uv] = min4(z0, z1, z2, z3);
+        hierarchical_zbuffer_texture[calc_mip_level][uv] = max4(z0, z1, z2, z3);
     }
     else
     {
@@ -44,7 +44,7 @@ void main(uint3 thread_id: SV_DispatchThreadID)
         z2 = hierarchical_zbuffer_texture[calc_mip_level - 1][uv + uint2(1, 1)].r;
         z3 = hierarchical_zbuffer_texture[calc_mip_level - 1][uv + uint2(0, 1)].r;
 
-        hierarchical_zbuffer_texture[calc_mip_level][uv >> 1] = min4(z0, z1, z2, z3);
+        hierarchical_zbuffer_texture[calc_mip_level][uv >> 1] = max4(z0, z1, z2, z3);
     }
 }
 

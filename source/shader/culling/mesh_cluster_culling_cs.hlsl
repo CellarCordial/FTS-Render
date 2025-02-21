@@ -93,11 +93,11 @@ bool hierarchical_zbuffer_cull(float3 view_space_position, float radius, float4x
     float z1 = hierarchical_zbuffer_texture.SampleLevel(linear_clamp_sampler, uv, lod, int2(1, 0)).r;
     float z2 = hierarchical_zbuffer_texture.SampleLevel(linear_clamp_sampler, uv, lod, int2(1, 1)).r;
     float z3 = hierarchical_zbuffer_texture.SampleLevel(linear_clamp_sampler, uv, lod, int2(0, 1)).r;
-    float min_z = min4(z0, z1, z2, z3);
+    float max_z = max4(z0, z1, z2, z3);
 
-    float near_z = view_space_position.z - radius;
+    float cluster_near_z = proj_matrix[2][2] + proj_matrix[3][2] / (view_space_position.z - radius);
 
-    return near_z < min_z;
+    return cluster_near_z < max_z;
 }
 
 bool frustum_cull(float3 view_space_position, float radius, float4x4 proj_matrix)
@@ -160,12 +160,12 @@ void main(uint3 thread_id: SV_DispatchThreadID)
                 // TODO: frustum_cull
                 visible = /* frustum_cull(cluster_view_space_position, cluster.bounding_sphere.w, proj_matrix) && */
                           cluster_view_space_position.z - cluster.bounding_sphere.w > near_plane &&
-                          cluster_view_space_position.z + cluster.bounding_sphere.w < far_plane /*&&
+                          cluster_view_space_position.z + cluster.bounding_sphere.w < far_plane &&
                           hierarchical_zbuffer_cull(
                             cluster_view_space_position,
                             cluster.bounding_sphere.w,
                             proj_matrix
-                          )*/;
+                          );
                 
                 if (visible)
                 {

@@ -145,9 +145,7 @@ namespace fantasy
 		// virtual_shadow_map_pass->precede(test_pass);
 
 
-
-
-		return test_pass;  
+		return test_pass;
     }
 }
 

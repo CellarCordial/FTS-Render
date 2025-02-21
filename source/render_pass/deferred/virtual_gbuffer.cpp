@@ -400,6 +400,12 @@ namespace fantasy
 				0, 
 				CLIENT_WIDTH * CLIENT_HEIGHT * sizeof(uint2)
 			);
+
+			cmdlist->set_texture_state(
+				_depth_texture.get(), 
+				TextureSubresourceSet{}, 
+				ResourceStates::ComputeShaderResource | ResourceStates::DepthRead
+			);
 		}
 
 		ReturnIfFalse(cmdlist->close());
