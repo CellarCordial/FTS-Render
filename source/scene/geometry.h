@@ -64,10 +64,10 @@ namespace fantasy
         struct SubMaterial
         {
 			float base_color_factor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
-			float roughness_factor = 0.0f;
-			float metallic_factor = 0.0f;
-			float occlusion_factor = 0.0f;
-			float emissive_factor[4] = { 0.0f };
+			float roughness_factor = 1.0f;
+			float metallic_factor = 1.0f;
+			float occlusion_factor = 1.0f;
+			float emissive_factor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
             Image images[TextureType_Num];
 
@@ -129,7 +129,7 @@ namespace fantasy
         float4x4 world_matrix;
         bool moved = false;
         
-        uint32_t submesh_base_id = 0;
+        uint32_t submesh_global_base_id = 0;
     };
 
     struct GeometryConstantGpu

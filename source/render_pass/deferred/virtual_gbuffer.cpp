@@ -181,6 +181,17 @@ namespace fantasy
 			)));
 			cache->collect(_emissive_texture, ResourceType::Texture);
 
+			ReturnIfFalse(_virtual_mesh_visual_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_render_target_texture(
+					CLIENT_WIDTH,
+					CLIENT_HEIGHT,
+					Format::RGBA8_UNORM,
+					"virtual_mesh_visual_texture",
+					true
+				)
+			)));
+			cache->collect(_virtual_mesh_visual_texture, ResourceType::Texture);
+
 			
 			ReturnIfFalse(_tile_uv_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_read_write_texture(
@@ -215,6 +226,7 @@ namespace fantasy
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_base_color_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_pbr_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_emissive_texture));
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_virtual_mesh_visual_texture));
 			frame_buffer_desc.depth_stencil_attachment = FrameBufferAttachment::create_attachment(_reverse_depth_texture);
 			ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
 		}

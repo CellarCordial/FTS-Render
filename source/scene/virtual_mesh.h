@@ -199,9 +199,9 @@ namespace fantasy
         ret.group_id = cluster.group_id;
         ret.lod_error = cluster.lod_error;
         ret.vertex_index_count = static_cast<uint32_t>(cluster.indices.size()) / 3;
-        ret.geometry_id = cluster.geometry_id;
         ret.vertex_offset = vertex_offset;
         ret.triangle_offset = triangle_offset;
+        ret.geometry_id = cluster.geometry_id;
         return ret;
     }
 

@@ -237,9 +237,9 @@ namespace fantasy
 							// 若 mesh 没有 纹理.
 							if (material->image_resolution == 0) return true;
 
-							if (mesh->submesh_base_id <= submesh_id && submesh_id < mesh->submesh_base_id + mesh->submeshes.size())
+							if (mesh->submesh_global_base_id <= submesh_id && submesh_id < mesh->submesh_global_base_id + mesh->submeshes.size())
 							{
-								const auto& submesh = mesh->submeshes[submesh_id - mesh->submesh_base_id];
+								const auto& submesh = mesh->submeshes[submesh_id - mesh->submesh_global_base_id];
 	
 								bool found = false;
 								ReturnIfFalse(world->each<MipmapLUT>(
@@ -261,7 +261,7 @@ namespace fantasy
 												if (flag == VTPage::LoadFlag::Unload)
 												{
 													texture_copy_infos.emplace_back(TextureCopyInfo{
-														.submesh_id = submesh_id - mesh->submesh_base_id,
+														.submesh_id = submesh_id - mesh->submesh_global_base_id,
 														.page = page,
 														.page_physical_pos_in_page = page_physical_pos_in_page,
 														.model_name = model_name

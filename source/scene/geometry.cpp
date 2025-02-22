@@ -16,12 +16,6 @@ namespace fantasy
 {
 	bool SceneSystem::publish(World* world, const event::OnComponentAssigned<Mesh>& event)
 	{
-		if (!assimp_scene)
-		{
-			LOG_ERROR("You should load a model first.");
-			return false;
-		}
-
 		std::vector<float4x4> world_matrixs;
 		std::vector<const aiMesh*> assimp_meshes;
 
@@ -58,7 +52,7 @@ namespace fantasy
 		auto& submeshes = mesh->submeshes;
 		submeshes.resize(assimp_meshes.size());
 
-		mesh->submesh_base_id = _current_submesh_count;
+		mesh->submesh_global_base_id = _current_submesh_count;
 		_current_submesh_count += static_cast<uint32_t>(submeshes.size());
 
 		parallel::parallel_for(
@@ -164,30 +158,31 @@ namespace fantasy
 			material->submaterials.size()
 		);
 
+
+		// 确保所有模型纹理都为同一个分辨率, 横纵相同且都为 2 的幂次方大小.
 		uint2 resolution = uint2(
 			material->submaterials[0].images[0].width,
 			material->submaterials[0].images[0].height
 		);
 		ReturnIfFalse(resolution.x == resolution.y);
-
+		if (!is_power_of_2(resolution.x))
+		{
+			LOG_ERROR("Geometry texture resolution must be power of 2.");
+			return false;
+		}
 		for (const auto& submaterial : material->submaterials)
 		{
 			for (const auto& image : submaterial.images)
 			{
-				if (resolution != uint2(image.width, image.height))
+				uint2 image_res = uint2(image.width, image.height);
+				if (image_res != uint2(0u) && resolution != image_res)
 				{
 					LOG_ERROR("All Geometry texture resolution must be the same.");
 					return false;
 				}
 			}
 		}
-
 		material->image_resolution = resolution.x;
-		if (!is_power_of_2(material->image_resolution))
-		{
-			LOG_ERROR("Geometry texture resolution must be power of 2.");
-			return false;
-		}
 		
 		return true;
 	}

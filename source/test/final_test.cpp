@@ -17,6 +17,8 @@ namespace fantasy
 {
 	bool FinalTestPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
+		_final_texture = check_cast<TextureInterface>(cache->require("final_texture"));
+
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(7);
@@ -60,9 +62,7 @@ namespace fantasy
 		// Frame Buffer.
 		{
 			FrameBufferDesc frame_buffer_desc;
-			frame_buffer_desc.color_attachments.push_back(
-                FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("final_texture")))
-            );
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_final_texture));
 			ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
 		}
  

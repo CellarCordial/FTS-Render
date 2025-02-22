@@ -45,6 +45,7 @@ struct PixelOutput
     float4 base_color : SV_TARGET4;
     float4 pbr : SV_TARGET5;
     float4 emmisive : SV_TARGET6;
+    float4 virtual_mesh_visual : SV_TARGET7;
 };
 
 StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
@@ -59,13 +60,13 @@ RWTexture2D<float2> _tile_uv_texture : register(u0);
 RWStructuredBuffer<VTPageInfo> vt_page_info_buffer : register(u1);
 RWStructuredBuffer<uint2> virtual_shadow_page_buffer : register(u2);
 
-uint estimate_mip_level(float2 texture_coordinate)
+uint estimate_mip_level(float2 uv, uint2 resolution)
 {
-    float2 dx_vtc = ddx(texture_coordinate);
-    float2 dy_vtc = ddy(texture_coordinate);
-    float delta_max_sqr = max(dot(dx_vtc, dx_vtc), dot(dy_vtc, dy_vtc));
-    float mml = 0.5 * log2(delta_max_sqr);
-    return (uint)(max(0.0f, round(mml)));
+    float dx=ddx(uv);
+	float dy=ddy(uv);
+    float px = resolution.x * dx;
+    float py = resolution.y * dy;
+    return 0.5f * log2(max(dot(px, px), dot(py, py)));
 }
 
 
@@ -77,8 +78,7 @@ PixelOutput main(VertexOutput input)
     uint2 page_id_high_bit = (page_id >> 8) & 0x0f;
     uint2 page_id_low_bit = page_id & 0xff;
 
-    uint2 geometry_texture_pixel_id = (uint2)(input.uv * geometry.texture_resolution);
-    uint mip_level = estimate_mip_level(geometry_texture_pixel_id);
+    uint mip_level = estimate_mip_level(input.uv, geometry.texture_resolution);
 
     VTPageInfo info;
     info.geometry_id = input.geometry_id;
@@ -95,6 +95,7 @@ PixelOutput main(VertexOutput input)
     vt_page_info_buffer[pixel_index] = info;
 
     uint vt_mip_page_size = vt_page_size << mip_level;
+    uint2 geometry_texture_pixel_id = (uint2)(input.uv * geometry.texture_resolution);
     uint2 mip_page_id = (uint2)floor(input.uv * (geometry.texture_resolution / vt_mip_page_size));
     _tile_uv_texture[pixel_id] = (geometry_texture_pixel_id - mip_page_id * vt_mip_page_size) / vt_mip_page_size;
 
@@ -122,8 +123,9 @@ PixelOutput main(VertexOutput input)
     output.view_space_velocity = float4(input.prev_view_space_position - input.view_space_position, 0.0f);
     output.world_space_normal = float4(input.world_space_normal, 0.0f);
     output.world_space_tangent = float4(input.world_space_tangent, 0.0f);
-    output.base_color = geometry.base_color * float4(input.color, 1.0f);
+    output.base_color = geometry.base_color;
     output.pbr = float4(geometry.metallic, geometry.roughness, geometry.occlusion, 0.0f);
     output.emmisive = geometry.emissive;
+    output.virtual_mesh_visual = float4(input.color, 1.0f);
     return output;
 }

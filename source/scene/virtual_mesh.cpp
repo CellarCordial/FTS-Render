@@ -620,9 +620,6 @@ namespace fantasy
 
 	bool VirtualMesh::build(const Mesh* mesh)
 	{
-        uint32_t current_geometry_id = mesh->submesh_base_id;
-		
-		uint32_t cluster_offset = 0;
 		for (const auto& submesh : mesh->submeshes)
 		{
 			_indices.insert(_indices.end(), submesh.indices.begin(), submesh.indices.end());
@@ -656,13 +653,6 @@ namespace fantasy
 			}
 			virtual_submesh.mip_levels = mip_level + 1;
 			
-			for (uint32_t ix = cluster_offset; ix < virtual_submesh.clusters.size(); ++ix)
-			{
-				virtual_submesh.clusters[ix].geometry_id = current_geometry_id;
-			}
-			cluster_offset += static_cast<uint32_t>(virtual_submesh.clusters.size());
-			
-			current_geometry_id++;
 			_indices.clear();
 			_vertices.clear();
 		}
@@ -1040,7 +1030,8 @@ namespace fantasy
 
     bool SceneSystem::publish(World* world, const event::OnComponentAssigned<VirtualMesh>& event)
 	{
-		VirtualMesh* virtual_geometry = event.component;
+		VirtualMesh* virtual_mesh = event.component;
+		Mesh* mesh = event.entity->get_component<Mesh>();
 		
 		std::string* name = event.entity->get_component<std::string>();
 		std::string cache_path = std::string(PROJ_DIR) + "asset/cache/virtual_mesh/" + *name + ".vm";
@@ -1058,9 +1049,9 @@ namespace fantasy
 			{
 				uint64_t submesh_size = 0;
 				input(submesh_size);
-				virtual_geometry->_submeshes.resize(submesh_size);
+				virtual_mesh->_submeshes.resize(submesh_size);
 
-				for (auto& virtual_submesh : virtual_geometry->_submeshes)
+				for (auto& virtual_submesh : virtual_mesh->_submeshes)
 				{
 					uint64_t cluster_size = 0, cluster_group_size = 0;
 					input(virtual_submesh.mip_levels, cluster_size, cluster_group_size);
@@ -1070,8 +1061,6 @@ namespace fantasy
 
 					for (auto& cluster : virtual_submesh.clusters)
 					{
-						input(cluster.geometry_id);
-
 						uint64_t vertex_count = 0;
 						input(vertex_count);
 						cluster.vertices.resize(vertex_count);
@@ -1135,18 +1124,17 @@ namespace fantasy
 
 		if (!loaded_from_cache)
 		{
-			Mesh* mesh = event.entity->get_component<Mesh>();
-			ReturnIfFalse(virtual_geometry->build(mesh));
+			ReturnIfFalse(virtual_mesh->build(mesh));
 
 			serialization::BinaryOutput output(cache_path);
 
 			output(
 				MeshCluster::cluster_size, 
 				MeshClusterGroup::group_size,
-				virtual_geometry->_submeshes.size()
+				virtual_mesh->_submeshes.size()
 			);
 
-			for (const auto& virtual_submesh : virtual_geometry->_submeshes)
+			for (const auto& virtual_submesh : virtual_mesh->_submeshes)
 			{
 				output(
 					virtual_submesh.mip_levels, 
@@ -1156,8 +1144,6 @@ namespace fantasy
 
 				for (const auto& cluster : virtual_submesh.clusters)
 				{
-					output(cluster.geometry_id, cluster.vertices.size());
-
 					for (const auto& vertex : cluster.vertices)
 					{
 						output(
@@ -1213,6 +1199,18 @@ namespace fantasy
 					);
 				}
 			}
+		}
+
+		ReturnIfFalse(virtual_mesh->_submeshes.size() == mesh->submeshes.size());
+		
+		uint32_t current_geometry_id = mesh->submesh_global_base_id;
+		for (auto& virtual_submesh : virtual_mesh->_submeshes)
+		{
+			for (auto& cluster : virtual_submesh.clusters)
+			{
+				cluster.geometry_id = current_geometry_id;
+			}
+			current_geometry_id++;
 		}
 		return true;
 	}

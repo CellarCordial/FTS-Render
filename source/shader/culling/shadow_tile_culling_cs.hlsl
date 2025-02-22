@@ -1,4 +1,4 @@
-// #define THREAD_GROUP_SIZE_X 1
+#define THREAD_GROUP_SIZE_X 1
 
 #include "../common/indirect_argument.hlsl"
 #include "../common/gbuffer.hlsl"
