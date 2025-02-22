@@ -193,15 +193,15 @@ namespace fantasy
 			cache->collect(_virtual_mesh_visual_texture, ResourceType::Texture);
 
 			
-			ReturnIfFalse(_tile_uv_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+			ReturnIfFalse(_vt_tile_uv_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_read_write_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RG32_FLOAT,
-					"tile_uv_texture"
+					"vt_tile_uv_texture"
 				)
 			)));
-			cache->collect(_tile_uv_texture, ResourceType::Texture);
+			cache->collect(_vt_tile_uv_texture, ResourceType::Texture);
 
 			
             ReturnIfFalse(_reverse_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
@@ -250,7 +250,7 @@ namespace fantasy
 		{
 			_binding_set_items.resize(9);
 			_binding_set_items[0] = BindingSetItem::create_constant_buffer(0, _pass_constant_buffer);
-			_binding_set_items[6] = BindingSetItem::create_texture_uav(0, _tile_uv_texture);
+			_binding_set_items[6] = BindingSetItem::create_texture_uav(0, _vt_tile_uv_texture);
 			_binding_set_items[7] = BindingSetItem::create_structured_buffer_uav(1, _vt_page_info_buffer);
 			_binding_set_items[8] = BindingSetItem::create_structured_buffer_uav(2, _virtual_shadow_page_buffer);
 		}
@@ -394,7 +394,7 @@ namespace fantasy
 			ReturnIfFalse(clear_depth_stencil_attachment(cmdlist, _frame_buffer.get()));
 			cmdlist->clear_buffer_uint(_vt_page_info_buffer.get(), BufferRange{ 0, _vt_page_info_buffer->get_desc().byte_size }, INVALID_SIZE_32);
 			cmdlist->clear_buffer_uint(_virtual_shadow_page_buffer.get(), BufferRange{ 0, _virtual_shadow_page_buffer->get_desc().byte_size }, INVALID_SIZE_32);
-			cmdlist->clear_texture_uint(_tile_uv_texture.get(), TextureSubresourceSet{}, INVALID_SIZE_32);
+			cmdlist->clear_texture_uint(_vt_tile_uv_texture.get(), TextureSubresourceSet{}, INVALID_SIZE_32);
 			
 			
 			ReturnIfFalse(cmdlist->draw_indirect(_graphics_state, 0, 1));

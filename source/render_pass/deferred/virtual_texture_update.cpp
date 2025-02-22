@@ -123,7 +123,7 @@ namespace fantasy
 		{
 			BindingSetItemArray binding_set_items(13);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualGeometryTexturePassConstant));
-			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("tile_uv_texture")));
+			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("vt_tile_uv_texture")));
 			binding_set_items[2] = BindingSetItem::create_texture_srv(1, _vt_indirect_texture);
 			binding_set_items[3] = BindingSetItem::create_texture_srv(2, _vt_physical_textures[0]);
 			binding_set_items[4] = BindingSetItem::create_texture_srv(3, _vt_physical_textures[1]);

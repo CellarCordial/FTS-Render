@@ -68,9 +68,9 @@ namespace fantasy
 		std::shared_ptr<BufferInterface> _virtual_shadow_page_read_back_buffer;
 
 
+		std::shared_ptr<TextureInterface> _vt_tile_uv_texture;
 		std::shared_ptr<TextureInterface> _world_position_view_depth_texture;
 		std::shared_ptr<TextureInterface> _view_space_velocity_texture;
-		std::shared_ptr<TextureInterface> _tile_uv_texture;
 		std::shared_ptr<TextureInterface> _world_space_normal_texture;
 		std::shared_ptr<TextureInterface> _world_space_tangent_texture;
 		std::shared_ptr<TextureInterface> _base_color_texture;

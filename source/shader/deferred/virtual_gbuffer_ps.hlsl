@@ -56,33 +56,36 @@ struct VTPageInfo
     uint page_id_mip_level;
 };
 
-RWTexture2D<float2> _tile_uv_texture : register(u0);
+RWTexture2D<uint2> vt_tile_uv_texture : register(u0);
 RWStructuredBuffer<VTPageInfo> vt_page_info_buffer : register(u1);
 RWStructuredBuffer<uint2> virtual_shadow_page_buffer : register(u2);
 
-uint estimate_mip_level(float2 uv, uint2 resolution)
+uint estimate_mip_level(float2 pixel_id)
 {
-    float dx=ddx(uv);
-	float dy=ddy(uv);
-    float px = resolution.x * dx;
-    float py = resolution.y * dy;
-    return 0.5f * log2(max(dot(px, px), dot(py, py)));
+    float2 dx = ddx(pixel_id);
+	float2 dy = ddy(pixel_id);
+    return max(0.0f, 0.5f * log2(max(dot(dx, dx), dot(dy, dy))));
 }
-
 
 PixelOutput main(VertexOutput input)
 {
+    uint2 pixel_id = uint2(round(input.sv_position.xy));
+    uint pixel_index = pixel_id.x + pixel_id.y * client_width;
+
     // 更新 virtual texture page_info_buffer 和 tile_uv_texture.
     GeometryConstant geometry = geometry_constant_buffer[input.geometry_id];
-    uint2 page_id = (uint2)floor(input.uv * (geometry.texture_resolution / vt_page_size));
+
+    uint mip_level = estimate_mip_level(input.uv * geometry.texture_resolution);
+    uint2 geometry_texture_resolution = max(geometry.texture_resolution >> mip_level, vt_page_size);
+    uint2 geometry_texture_pixel_id = uint2(input.uv * geometry_texture_resolution);
+
+    uint2 page_id = geometry_texture_pixel_id / vt_page_size;
     uint2 page_id_high_bit = (page_id >> 8) & 0x0f;
     uint2 page_id_low_bit = page_id & 0xff;
 
-    uint mip_level = estimate_mip_level(input.uv, geometry.texture_resolution);
-
     VTPageInfo info;
     info.geometry_id = input.geometry_id;
-    info.page_id_mip_level = (uint)(
+    info.page_id_mip_level = uint(
         (page_id_low_bit.x << 24) |
         (page_id_low_bit.y << 16) |
         (page_id_high_bit.x << 12) |
@@ -90,14 +93,8 @@ PixelOutput main(VertexOutput input)
         (mip_level & 0xff)
     );
 
-    uint2 pixel_id = (uint2)round(input.sv_position.xy);
-    uint pixel_index = pixel_id.x + pixel_id.y * client_width;
     vt_page_info_buffer[pixel_index] = info;
-
-    uint vt_mip_page_size = vt_page_size << mip_level;
-    uint2 geometry_texture_pixel_id = (uint2)(input.uv * geometry.texture_resolution);
-    uint2 mip_page_id = (uint2)floor(input.uv * (geometry.texture_resolution / vt_mip_page_size));
-    _tile_uv_texture[pixel_id] = (geometry_texture_pixel_id - mip_page_id * vt_mip_page_size) / vt_mip_page_size;
+    vt_tile_uv_texture[pixel_id] = geometry_texture_pixel_id % vt_page_size;
 
     
     // 更新 virtual shadow page buffer.
@@ -114,7 +111,7 @@ PixelOutput main(VertexOutput input)
         float2 uv = shadow_view_proj_pos.xy * float2(0.5f, -0.5f) + 0.5f;
         uint2 shadow_page_id = (uint2)(uv * virtual_shadow_resolution) / virtual_shadow_page_size;
 
-        virtual_shadow_page_buffer[pixel_id.x + pixel_id.y * client_width] = shadow_page_id;
+        virtual_shadow_page_buffer[pixel_index] = shadow_page_id;
     }
 
 
