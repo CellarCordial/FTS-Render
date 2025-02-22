@@ -29,15 +29,6 @@ Texture2D hierarchical_zbuffer_texture : register(t2);
 
 SamplerState linear_clamp_sampler : register(s0);
 
-float2 project_sphere(float a, float z, float radius) 
-{
-    // 获取某点在 x 或 y 轴上投影的范围, a 是 x 或 y.
-    float tangent = sqrt(a * a + z * z - radius * radius);  // 摄像机原点到包围球表面的切线长.
-    float max = (z * radius - a * tangent) / (a * radius + z * tangent);
-    float min = (z * radius + a * tangent) / (a * radius - z * tangent);
-    return float2(min, max);
-}
-
 uint search_most_significant_bit(uint x)
 {
     // 折半查找最高有效位.
@@ -46,19 +37,19 @@ uint search_most_significant_bit(uint x)
     y = -((x >> t) != 0 ? 1 : 0); res += y & t; x >>= y & t; t >>= 1;
     y = -((x >> t) != 0 ? 1 : 0); res += y & t; x >>= y & t; t >>= 1;
     y = -((x >> t) != 0 ? 1 : 0); res += y & t; x >>= y & t; t >>= 1;
-    y = (x >> t) != 0 ? 1 : 0; res += y;
+    y = (x >> t) != 0 ? 1 : 0, res += y;
     return res;
 }
 
 bool hierarchical_zbuffer_cull(float3 view_space_position, float radius, float4x4 reverse_z_proj_matrix)
 {
     // 获取球体在 x 或 y 轴上投影的范围.
-    float2 range_x = project_sphere(view_space_position.x, view_space_position.z, radius) * reverse_z_proj_matrix[0][0];
-    float2 range_y = project_sphere(view_space_position.y, view_space_position.z, radius) * reverse_z_proj_matrix[1][1];
+    float2 range_x = float2(view_space_position.x - radius, view_space_position.x + radius) * reverse_z_proj_matrix[0][0] / view_space_position.z;
+    float2 range_y = float2(view_space_position.y - radius, view_space_position.y + radius) * reverse_z_proj_matrix[1][1] / view_space_position.z;;
     float4 rect = clamp(
         float4(
-            float2(range_x.x, range_y.x) * float2(0.5f, -0.5f) + 0.5f,
-            float2(range_x.y, range_y.y) * float2(0.5f, -0.5f) + 0.5f
+            float2(range_x.x, range_y.y) * float2(0.5f, -0.5f) + 0.5f,
+            float2(range_x.y, range_y.x) * float2(0.5f, -0.5f) + 0.5f
         ),
         0.0f,
         1.0f
@@ -72,19 +63,14 @@ bool hierarchical_zbuffer_cull(float3 view_space_position, float radius, float4x
 
     // 获取包围球在 hzb 纹理上的 uv 范围.
     uint4 hzb_rect;
-    uint tx = (screen_rect.x + 1) * hzb_resolution;
-    uint ty = (screen_rect.y + 1) * hzb_resolution;
-    hzb_rect.x = tx / client_width;
-    hzb_rect.y = ty / client_height;
-    hzb_rect.z = (screen_rect.z - 1) * hzb_resolution / client_width;
-    hzb_rect.w = (screen_rect.w - 1) * hzb_resolution / client_height;
-    if (tx % client_width == 0) hzb_rect.x--;
-    if (ty % client_height == 0) hzb_rect.y--;
-    if (hzb_rect.z < hzb_rect.x) hzb_rect.z = hzb_rect.x;
-    if (hzb_rect.w < hzb_rect.y) hzb_rect.w = hzb_rect.y;
+    hzb_rect.x = float(screen_rect.x) / client_width * hzb_resolution;
+    hzb_rect.y = float(screen_rect.y) / client_height * hzb_resolution;
+    hzb_rect.z = float(screen_rect.z) / client_width * hzb_resolution;
+    hzb_rect.w = float(screen_rect.w) / client_height * hzb_resolution;
 
-    // 计算覆盖区域的最大边长对应的最高有效位,
-    // 判定包围球覆盖了多少像素, 需要指定哪一个层级来使得一个像素就能包含所有包围球覆盖的像素.
+    // 计算覆盖区域的最大边长对应的最高有效位, 该有效位可以直接对应 hzb 的 lod,
+    // 来判定包围球覆盖了多少像素, 需要指定哪一个层级来使得一个像素就能包含所有包围球覆盖的像素.
+    uint max_extent = max(hzb_rect.z - hzb_rect.x, hzb_rect.w - hzb_rect.y);
     uint lod = search_most_significant_bit(max(hzb_rect.z - hzb_rect.x, hzb_rect.w - hzb_rect.y));
 
     // 采样覆盖区域的四个角点深度值, 取最小值.
@@ -103,11 +89,11 @@ bool hierarchical_zbuffer_cull(float3 view_space_position, float radius, float4x
 
 bool frustum_cull(float3 view_space_position, float radius, float4x4 reverse_z_proj_matrix)
 {
-    // 视锥体上下左右四个面的单位法线.
-    float3 p0 = normalize(float3(-reverse_z_proj_matrix[1][1], 0.0f, -1.0f));
-    float3 p1 = normalize(float3(reverse_z_proj_matrix[1][1], 0.0f, -1.0f));
-    float3 p2 = normalize(float3(0.0f, -reverse_z_proj_matrix[0][0], -1.0f));
-    float3 p3 = normalize(float3(0.0f, reverse_z_proj_matrix[0][0], -1.0f));
+    // 视锥体左右上下四个面的单位法线.
+    float3 p0 = normalize(float3(-reverse_z_proj_matrix[0][0], 0.0f, -1.0f));
+    float3 p1 = normalize(float3(reverse_z_proj_matrix[0][0], 0.0f, -1.0f));
+    float3 p2 = normalize(float3(0.0f, -reverse_z_proj_matrix[1][1], -1.0f));
+    float3 p3 = normalize(float3(0.0f, reverse_z_proj_matrix[1][1], -1.0f));
 
     bool visible = dot(p0, view_space_position) < radius;
     visible = visible && dot(p1, view_space_position) < radius;
@@ -148,7 +134,7 @@ void main(uint3 thread_id: SV_DispatchThreadID)
 
             if (visible)
             {
-                float3 cluster_view_space_position = mul(float4(cluster.bounding_sphere.xyz, 1.0f), view_matrix).yxz;
+                float3 cluster_view_space_position = mul(float4(cluster.bounding_sphere.xyz, 1.0f), view_matrix).xyz;
 
                 // 包围球在 z 轴上的最远端不超过近平面或最近端超过远平面, 则将该 cluster 剔除.
                 if (

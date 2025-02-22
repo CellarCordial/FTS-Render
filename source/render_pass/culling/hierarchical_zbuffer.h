@@ -27,7 +27,6 @@ namespace fantasy
 
 	private:
 		std::vector<constant::HierarchicalZBufferPassConstant> _pass_constants;
-		uint32_t _hzb_resolution = 1024;
 		bool resource_writed = false;
 		
 		std::shared_ptr<TextureInterface> _hierarchical_zbuffer_texture;

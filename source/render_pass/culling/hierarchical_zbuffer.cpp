@@ -92,12 +92,12 @@ namespace fantasy
 			_compute_state.pipeline = _pipeline.get();
 		}
 
-        uint32_t* ptr = &_hzb_resolution;
-        ReturnIfFalse(cache->require_constants("hzb_resolution", reinterpret_cast<void**>(&ptr)));
+        uint32_t* hzb_resolution = nullptr;
+        ReturnIfFalse(cache->require_constants("hzb_resolution", reinterpret_cast<void**>(&hzb_resolution)));
         for (uint32_t ix = 0; ix < _pass_constants.size(); ++ix)
 		{
 			_pass_constants[ix].last_mip_level = ix;
-			_pass_constants[ix].hzb_resolution = _hzb_resolution;
+			_pass_constants[ix].hzb_resolution = *hzb_resolution;
 		}
  
 		return true;
@@ -121,8 +121,8 @@ namespace fantasy
             );
 
 			uint2 thread_group_num = {
-				static_cast<uint32_t>((align(_hzb_resolution, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
-				static_cast<uint32_t>((align(_hzb_resolution, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
+				static_cast<uint32_t>((align(_pass_constants[0].hzb_resolution, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
+				static_cast<uint32_t>((align(_pass_constants[0].hzb_resolution, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
 			};
 			
 			for (uint32_t ix = 0; ix < _pass_constants.size(); ++ix)
