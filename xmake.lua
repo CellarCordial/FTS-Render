@@ -12,8 +12,8 @@ add_defines(
     "DEBUG", 
     "NOMINMAX", 
     "HLSL_SHADER",
-    "CLIENT_WIDTH=1024",
-    "CLIENT_HEIGHT=768",
+    "CLIENT_WIDTH=1920",
+    "CLIENT_HEIGHT=1080",
     "FLIGHT_FRAME_NUM=3", 
     "PROJ_DIR=\"" .. normalized_proj_dir .. "/\""
 )
