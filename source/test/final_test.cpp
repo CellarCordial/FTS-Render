@@ -142,8 +142,7 @@ namespace fantasy
 		// virtual_texture_update_pass->precede(shadow_tile_culling_pass);
 		// shadow_tile_culling_pass->precede(virtual_shadow_map_pass);
 		hierarchical_zbuffer_pass->precede(test_pass);
-		// virtual_shadow_map_pass->precede(test_pass);
-
+		// virtual_texture_update_pass->precede(test_pass);
 
 		return test_pass;
     }

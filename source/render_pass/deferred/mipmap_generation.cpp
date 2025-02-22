@@ -148,7 +148,7 @@ namespace fantasy
 		return true;
 	}
 
-	bool MipmapGenerationPass::finish_pass()
+	bool MipmapGenerationPass::finish_pass(RenderResourceCache* cache)
 	{
 		_current_image_index++;
 		if (_current_image_index == Material::TextureType_Num)

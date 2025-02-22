@@ -225,7 +225,7 @@ namespace fantasy
 		return true;
 	}
 
-    bool GBufferPass::finish_pass()
+    bool GBufferPass::finish_pass(RenderResourceCache* cache)
     {
         _indices.clear(); _indices.shrink_to_fit();
         _vertices.clear(); _vertices.shrink_to_fit();

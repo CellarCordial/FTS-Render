@@ -1144,6 +1144,8 @@ namespace fantasy
 
 				for (const auto& cluster : virtual_submesh.clusters)
 				{
+					output(cluster.vertices.size());
+
 					for (const auto& vertex : cluster.vertices)
 					{
 						output(

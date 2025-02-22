@@ -1,5 +1,5 @@
-#ifndef SHADER_SKY_COMMON_SLANG
-#define SHADER_SKY_COMMON_SLANG
+#ifndef SHADER_SKY_COMMON_HLSL
+#define SHADER_SKY_COMMON_HLSL
 
 #include "math.hlsl"
 

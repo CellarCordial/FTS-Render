@@ -298,9 +298,6 @@ namespace fantasy
 
         GraphicsState _current_graphics_state;
         ComputeState _current_compute_state;
-
-        std::vector<std::tuple<TextureInterface*, uint32_t, ResourceStates>> _recovery_textures;
-        std::vector<std::pair<BufferInterface*, ResourceStates>> _recovery_buffers;
     };
 }
 

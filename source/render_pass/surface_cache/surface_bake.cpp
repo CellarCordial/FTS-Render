@@ -254,7 +254,7 @@ namespace fantasy
 		return false;
 	}
 
-    bool SurfaceBakePass::finish_pass()
+    bool SurfaceBakePass::finish_pass(RenderResourceCache* cache)
     {
         _model_entity = nullptr;
 

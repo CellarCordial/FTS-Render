@@ -37,14 +37,6 @@ namespace fantasy
 		// _global_entity->assign<event::GenerateSurfaceCache>();
 		_global_entity->assign<DirectionalLight>()->update_direction_view_proj();
 
-		
-		uint32_t current_resolution = LOWEST_TEXTURE_RESOLUTION;
-		while (current_resolution < HIGHEST_TEXTURE_RESOLUTION)
-		{
-			_world->create_entity()->assign<MipmapLUT>()->initialize(current_resolution, VT_PAGE_SIZE);
-			current_resolution <<= 1;
-		}
-
 		return true;
 	}
 

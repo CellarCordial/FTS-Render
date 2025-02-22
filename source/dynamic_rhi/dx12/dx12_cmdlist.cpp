@@ -9,7 +9,6 @@
 #include <memory>
 #include <minwindef.h>
 #include <pix_win.h>
-#include <tuple>
 #include <utility>
 #include <winerror.h>
 
@@ -473,23 +472,6 @@ namespace fantasy
             }
         }
 
-        if (_desc.revert_resource_state)
-        {
-            for (const auto& [texture, slice_mip, state] : _recovery_textures)
-            {
-                TextureSubresourceSet subresource{ 
-                    .base_mip_level = (slice_mip & 0xffff), 
-                    .mip_level_count = 1,
-                    .base_array_slice = (slice_mip >> 16),
-                    .array_slice_count = 1 
-                };
-                _resource_state_tracker.set_texture_state(texture, subresource, state);
-            } 
-            for (const auto& [buffer, state] : _recovery_buffers)
-            {
-                _resource_state_tracker.set_buffer_state(buffer, state);
-            }
-        }
         commit_barriers();
         
         _current_cmdlist->d3d12_cmdlist->Close();
@@ -1497,27 +1479,11 @@ namespace fantasy
     void DX12CommandList::set_texture_state(TextureInterface* texture, const TextureSubresourceSet& subresource, ResourceStates states)
     {
         _resource_state_tracker.set_texture_state(texture, subresource, states);
-        if (_desc.revert_resource_state)
-        {
-            for (uint32_t slice = subresource.base_array_slice; slice < subresource.base_array_slice + subresource.array_slice_count; ++slice)
-            {
-                for (uint32_t mip = subresource.base_mip_level; mip < subresource.base_mip_level + subresource.mip_level_count; ++mip)
-                {
-                    ResourceStates old_state = _resource_state_tracker.get_texture_state(texture, slice, mip);
-                    _recovery_textures.emplace_back(std::make_tuple(texture, (slice << 16 | mip & 0xffff), old_state));
-                }
-            }
-        }
     }
 
     void DX12CommandList::set_buffer_state(BufferInterface* buffer, ResourceStates states)
     {
         _resource_state_tracker.set_buffer_state(buffer, states);
-        if (_desc.revert_resource_state)
-        {
-            ResourceStates old_state = _resource_state_tracker.get_buffer_state(buffer);
-            _recovery_buffers.emplace_back(std::make_pair(buffer, old_state));
-        }
     }
 
     void DX12CommandList::commit_barriers()

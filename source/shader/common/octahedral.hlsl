@@ -1,5 +1,5 @@
-#ifndef SHADER_OCOTOHEDRAL_SLANG
-#define SHADER_OCOTOHEDRAL_SLANG
+#ifndef SHADER_OCOTOHEDRAL_HLSL
+#define SHADER_OCOTOHEDRAL_HLSL
 
 float2 unit_vector_to_octahedron(float3 v)
 {

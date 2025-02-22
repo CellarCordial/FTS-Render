@@ -168,8 +168,7 @@ namespace fantasy
                 _cmdlists[ix] = std::unique_ptr<CommandListInterface>(_device->create_command_list(
                     CommandListDesc{ 
 						.name = std::string("commandlist") + std::to_string(ix), 
-						.queue_type = CommandQueueType::Graphics,
-						.revert_resource_state = (_passes[ix]->type & RenderPassType::Immediately) != 0 ? true : false
+						.queue_type = CommandQueueType::Graphics
 					}
                 ));
             }
@@ -178,8 +177,7 @@ namespace fantasy
                 _cmdlists[ix] = std::unique_ptr<CommandListInterface>(_device->create_command_list(
                     CommandListDesc{ 
 						.name = std::string("commandlist") + std::to_string(ix), 
-						.queue_type = CommandQueueType::Compute ,
-						.revert_resource_state = (_passes[ix]->type & RenderPassType::Immediately) != 0 ? true : false
+						.queue_type = CommandQueueType::Compute
 					} 
                 ));
             }
@@ -231,7 +229,7 @@ namespace fantasy
 		{
 			if ((pass->type & RenderPassType::Exclude) == RenderPassType::Exclude) continue;
 			pass->type |= RenderPassType::Exclude;
-			ReturnIfFalse(pass->finish_pass());
+			ReturnIfFalse(pass->finish_pass(_resource_cache.get()));
 		}
 
 		return true;
@@ -244,41 +242,16 @@ namespace fantasy
 
         for (uint32_t ix = 0; ix < _passes.size(); ++ix)
         {
-			if ((_passes[ix]->type & RenderPassType::Immediately) == RenderPassType::Immediately) continue;
             ReturnIfFalse(_passes[ix]->execute(_cmdlists[ix].get(), _resource_cache.get()));
         }
 
         std::vector<CommandListInterface*> graphics_cmdlists;
         std::vector<CommandListInterface*> compute_cmdlists;
 
-		auto func_execute_graphics_cmdlists = [&]()
-		{
-			_compute_wait_value = _device->execute_command_lists(
-				graphics_cmdlists.data(),
-				graphics_cmdlists.size(),
-				CommandQueueType::Graphics
-			);
-			graphics_cmdlists.clear();
-			return _compute_wait_value != INVALID_SIZE_64;
-		};
-
-		auto func_execute_compute_cmdlists = [&]()
-		{
-			_graphics_wait_value = _device->execute_command_lists(
-				compute_cmdlists.data(),
-				compute_cmdlists.size(),
-				CommandQueueType::Compute
-			);
-			compute_cmdlists.clear();
-			return _graphics_wait_value != INVALID_SIZE_64;
-		};
-
-
         for (uint32_t ix = 0; ix < _cmdlists.size(); ++ix)
         {
 			bool wait = (_pass_async_types[ix] & PassAsyncType::Wait) != 0;
 			bool signal = (_pass_async_types[ix] & PassAsyncType::Signal) != 0;
-			bool immediately = (_passes[ix]->type & RenderPassType::Immediately) != 0;
 
 			if ((_passes[ix]->type & RenderPassType::Graphics) == RenderPassType::Graphics)
 			{
@@ -290,20 +263,18 @@ namespace fantasy
 						_graphics_wait_value
 					);
 				}
-
-				if (immediately)
-				{
-					ReturnIfFalse(func_execute_graphics_cmdlists());
-					_device->wait_for_idle();
-
-					ReturnIfFalse(_passes[ix]->execute(_cmdlists[ix].get(), _resource_cache.get()));
-				}
 				
 				graphics_cmdlists.emplace_back(_cmdlists[ix].get());
 
 				if (signal)
 				{
-					ReturnIfFalse(func_execute_graphics_cmdlists());
+					_compute_wait_value = _device->execute_command_lists(
+						graphics_cmdlists.data(),
+						graphics_cmdlists.size(),
+						CommandQueueType::Graphics
+					);
+					graphics_cmdlists.clear();
+					ReturnIfFalse(_compute_wait_value != INVALID_SIZE_64);
 				}
 			}
 			else if ((_passes[ix]->type & RenderPassType::Compute) == RenderPassType::Compute)
@@ -317,30 +288,28 @@ namespace fantasy
 					);
 				}
 
-				if (immediately)
-				{
-					ReturnIfFalse(func_execute_compute_cmdlists());
-					_device->wait_for_idle();
-
-					ReturnIfFalse(_passes[ix]->execute(_cmdlists[ix].get(), _resource_cache.get()));
-				}
-
 				compute_cmdlists.emplace_back(_cmdlists[ix].get());
 
 				if (signal)
 				{
-					ReturnIfFalse(func_execute_compute_cmdlists());
+					_graphics_wait_value = _device->execute_command_lists(
+						compute_cmdlists.data(),
+						compute_cmdlists.size(),
+						CommandQueueType::Compute
+					);
+					compute_cmdlists.clear();
+					ReturnIfFalse(_graphics_wait_value != INVALID_SIZE_64);
 				}
 			}
 		}
 
         _device->execute_command_lists(graphics_cmdlists.data(), graphics_cmdlists.size(), CommandQueueType::Graphics);
+		for (const auto& pass : _passes) ReturnIfFalse(pass->finish_pass(_resource_cache.get()));
+		
 		_device->wait_for_idle();
-
-		for (const auto& pass : _passes) ReturnIfFalse(pass->finish_pass());
-
 		_device->collect_garbage();
-        _present_func();
+
+		_present_func();
 
 		_resource_cache->frame_index++;
 

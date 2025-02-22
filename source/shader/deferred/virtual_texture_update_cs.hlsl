@@ -6,6 +6,7 @@
 
 cbuffer pass_constants : register(b0)
 {
+    uint2 client_resolution;
     uint vt_page_size;
     uint vt_physical_texture_size;
 };
@@ -31,6 +32,8 @@ SamplerState linear_clamp_sampler : register(s0);
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
 void main(uint3 thread_id : SV_DispatchThreadID)
 {
+    if (thread_id.x >= client_resolution.x || thread_id.y >= client_resolution.y) return;
+
     uint2 pixel_id = thread_id.xy;
     float2 tile_uv = vt_tile_uv_texture[pixel_id];
     uint2 indirection_info = vt_indirect_texture[pixel_id];

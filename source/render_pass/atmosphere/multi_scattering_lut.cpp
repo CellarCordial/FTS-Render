@@ -174,7 +174,7 @@ namespace fantasy
         return true;
     }
 
-	bool MultiScatteringLUTPass::finish_pass()
+	bool MultiScatteringLUTPass::finish_pass(RenderResourceCache* cache)
 	{
 		if (!_dir_samples.empty())
 		{

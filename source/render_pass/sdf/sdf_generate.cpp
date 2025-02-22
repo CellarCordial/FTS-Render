@@ -215,7 +215,7 @@ namespace fantasy
 		return true;
     }
 
-	bool SdfGeneratePass::finish_pass()
+	bool SdfGeneratePass::finish_pass(RenderResourceCache* cache)
 	{
 		auto& mesh_df = _distance_field->mesh_distance_fields[_current_mesh_sdf_index];
 

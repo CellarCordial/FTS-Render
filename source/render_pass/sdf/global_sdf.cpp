@@ -250,7 +250,7 @@ namespace fantasy
 		return true;
 	}
 
-	bool GlobalSdfPass::finish_pass()
+	bool GlobalSdfPass::finish_pass(RenderResourceCache* cache)
 	{
 		_mesh_sdfs.clear(); _mesh_sdfs.shrink_to_fit();
 		_model_sdf_datas.clear(); _model_sdf_datas.shrink_to_fit();

@@ -22,6 +22,8 @@ RWTexture2D<float> hierarchical_zbuffer_texture[] : register(u0);
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
 void main(uint3 thread_id: SV_DispatchThreadID)
 {
+    if (any(thread_id.xy >= hzb_resolution)) return;
+
     uint2 uv = thread_id.xy;
     float z0, z1, z2, z3;
 

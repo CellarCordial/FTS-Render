@@ -1,5 +1,5 @@
-#ifndef SHADER_INTERSECT_SLANG
-#define SHADER_INTERSECT_SLANG
+#ifndef SHADER_INTERSECT_HLSL
+#define SHADER_INTERSECT_HLSL
 #include "../common/math.hlsl"
 
 float dot2(float3 v)

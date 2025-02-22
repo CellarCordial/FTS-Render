@@ -14,8 +14,7 @@ namespace fantasy
         Compute         = 1 << 2,
         
         Precompute      = 1 << 3,
-		Exclude         = 1 << 4,
-        Immediately     = 1 << 5
+		Exclude         = 1 << 4
     };  
 	ENUM_CLASS_FLAG_OPERATORS(RenderPassType)
 
@@ -26,8 +25,8 @@ namespace fantasy
 
         virtual bool compile(DeviceInterface* device, RenderResourceCache* cache) = 0;
         virtual bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) = 0;
+        virtual bool finish_pass(RenderResourceCache* cache) { return true; }
         
-        virtual bool finish_pass() { return true; }
         virtual void window_resize() {}
 
         void precede(RenderPassInterface* pass) 

@@ -425,7 +425,7 @@ namespace fantasy
 		return true;
 	}
 
-	bool VirtualGBufferPass::finish_pass()
+	bool VirtualGBufferPass::finish_pass(RenderResourceCache* cache)
 	{
 		_cluster_vertices.clear(); _cluster_vertices.shrink_to_fit();
 		_cluster_triangles.clear(); _cluster_triangles.shrink_to_fit();

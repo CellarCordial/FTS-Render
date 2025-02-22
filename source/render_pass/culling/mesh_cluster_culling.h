@@ -33,7 +33,7 @@ namespace fantasy
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
-        bool finish_pass() override;
+        bool finish_pass(RenderResourceCache* cache) override;
 
 	private:
 		bool _mesh_update = false;

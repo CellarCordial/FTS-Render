@@ -1,5 +1,5 @@
-#ifndef SHADER_DDGI_COMMON_SLANG
-#define SHADER_DDGI_COMMON_SLANG
+#ifndef SHADER_DDGI_COMMON_HLSL
+#define SHADER_DDGI_COMMON_HLSL
 
 #include "math.hlsl"
 #include "octahedral.hlsl"

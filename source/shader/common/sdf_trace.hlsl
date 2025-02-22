@@ -1,5 +1,5 @@
-#ifndef SHADER_SDF_COMMON_SLANG
-#define SHADER_SDF_COMMON_SLANG
+#ifndef SHADER_SDF_COMMON_HLSL
+#define SHADER_SDF_COMMON_HLSL
 
 #include "intersect.hlsl"
 #include "math.hlsl"

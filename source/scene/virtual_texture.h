@@ -49,14 +49,14 @@ namespace fantasy
         void get_data( uint2& page_id, uint32_t& mip_level) const
         {
             page_id = uint2(
-                ((page_id_mip_level >> 12) & 0xf << 8) | (page_id_mip_level >> 24) & 0xff,
-                ((page_id_mip_level >> 8) & 0xf << 8) | (page_id_mip_level >> 16) & 0xff
+                (page_id_mip_level >> 20) & 0xfff,
+                (page_id_mip_level >> 8) & 0xfff
             );
             mip_level = page_id_mip_level & 0xff;
         }
     };
 
-    class MipmapLUT
+    class VTMipmapLUT
     {
     public:
         bool initialize(
@@ -68,15 +68,14 @@ namespace fantasy
         uint32_t get_mip0_resolution() const { return _mip0_resolution; }
         uint32_t get_mip_levels() const { return static_cast<uint32_t>(_mips.size()); }
 
-    private:
+    private:        
         struct Mip
         {
-            uint32_t resolution = 0;
             std::vector<VTPage> pages;  // 以 morton code 排序.
         };
+        std::vector<Mip> _mips;
 
         uint32_t _mip0_resolution = 0;
-        std::vector<Mip> _mips;
     };
 
     class VTIndirectTable

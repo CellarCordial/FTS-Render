@@ -196,7 +196,7 @@ namespace fantasy
 		return true;
 	}
 
-	bool ShadowMapPass::finish_pass()
+	bool ShadowMapPass::finish_pass(RenderResourceCache* cache)
 	{
 		_vertices.clear();
 		_indices.clear();

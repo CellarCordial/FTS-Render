@@ -16,7 +16,7 @@ namespace fantasy
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
 	private:
-        MipmapLUT _surface_lut;
+        VTMipmapLUT _surface_lut;
         VTPhysicalTable _surface_atlas_table;
 
 		std::shared_ptr<TextureInterface> _surface_base_color_atlas_texture;

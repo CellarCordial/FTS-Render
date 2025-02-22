@@ -245,7 +245,7 @@ namespace fantasy
         return true;
 	}
 
-    bool MeshClusterCullingPass::finish_pass()
+    bool MeshClusterCullingPass::finish_pass(RenderResourceCache* cache)
     {
         _mesh_cluster_groups.clear(); _mesh_cluster_groups.shrink_to_fit();
         _mesh_clusters.clear(); _mesh_clusters.shrink_to_fit();

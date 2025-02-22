@@ -31,8 +31,7 @@ namespace fantasy
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
-
-        bool finish_pass() override;
+        bool finish_pass(RenderResourceCache* cache) override;
 
 		static const uint32_t max_cluster_light_num = 100u;
 	

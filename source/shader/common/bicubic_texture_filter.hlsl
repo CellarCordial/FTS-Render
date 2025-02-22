@@ -1,5 +1,5 @@
-#ifndef SHADER_BICUBIC_TEXTURE_FILTERING_SLANG
-#define SHADER_BICUBIC_TEXTURE_FILTERING_SLANG
+#ifndef SHADER_BICUBIC_TEXTURE_FILTERING_HLSL
+#define SHADER_BICUBIC_TEXTURE_FILTERING_HLSL
 
 float c_textureSize = 64.0;
 
@@ -46,7 +46,7 @@ float4 bicubic_lagrange_texture_sample(float2 P, Texture2D Texture, uint2 Textur
 {
     float2 pixel = P * TextureRes + 0.5;
 
-    float2 frac = fract(pixel);
+    float2 frac = frac(pixel);
     uint2 PixelID = uint2(pixel);
 
     float4 C00 = Texture[PixelID + int2(-c_onePixel, -c_onePixel)];
@@ -92,7 +92,7 @@ float4 bicubic_hermite_texture_sample(float2 P, Texture2D Texture, uint2 Texture
 {
     float2 pixel = P * TextureRes + 0.5;
 
-    float2 frac = fract(pixel);
+    float2 frac = frac(pixel);
     uint2 PixelID = uint2(pixel);
 
     float4 C00 = Texture[PixelID + int2(-c_onePixel, -c_onePixel)];

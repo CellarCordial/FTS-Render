@@ -7,7 +7,7 @@
 
 namespace fantasy 
 {
-    bool MipmapLUT::initialize(uint32_t mip0_resolution, uint32_t max_mip_resolution)
+    bool VTMipmapLUT::initialize(uint32_t mip0_resolution, uint32_t max_mip_resolution)
     {
         ReturnIfFalse(is_power_of_2(mip0_resolution));
         
@@ -18,13 +18,12 @@ namespace fantasy
         uint32_t mip_levels = std::log2(mip0_resolution_in_page / max_mip_resolution_in_page) + 1;
 
         _mips.resize(mip_levels);
+        uint32_t current_resolutiont = mip0_resolution;
         for (uint32_t ix = 0; ix < mip_levels; ++ix)
         {
             auto& mip = _mips[ix];
             
-            mip.resolution = ix == 0 ? mip0_resolution : _mips[ix - 1].resolution >> 1;
-            
-            uint32_t resolution_in_page = mip.resolution / VT_PAGE_SIZE;
+            uint32_t resolution_in_page = current_resolutiont / VT_PAGE_SIZE;
             mip.pages.resize(resolution_in_page * resolution_in_page);
             
             parallel::parallel_for(
@@ -40,11 +39,13 @@ namespace fantasy
                 resolution_in_page, 
                 resolution_in_page
             );
+
+            current_resolutiont >>= 1;
         }
         return true;
     }
 
-    VTPage* MipmapLUT::query_page(uint2 page_id, uint32_t mip_level)
+    VTPage* VTMipmapLUT::query_page(uint2 page_id, uint32_t mip_level)
     {
         // mip 0 的 node_size_in_page 为 1, 逐级往上指数递增.
         uint32_t mip_node_size_in_page = std::pow(2, mip_level);

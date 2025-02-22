@@ -174,7 +174,7 @@ namespace fantasy
         return true;
 	}
 
-	bool ClusterLightCullingPass::finish_pass()
+	bool ClusterLightCullingPass::finish_pass(RenderResourceCache* cache)
 	{
 		_point_lights.clear(); _point_lights.shrink_to_fit();
 		_spot_lights.clear(); _spot_lights.shrink_to_fit();

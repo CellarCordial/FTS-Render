@@ -199,7 +199,7 @@ namespace fantasy
 		return true;
 	}
 
-	bool SunDiskPass::finish_pass()
+	bool SunDiskPass::finish_pass(RenderResourceCache* cache)
 	{
 		if (!_sun_disk_vertices.empty())
 		{

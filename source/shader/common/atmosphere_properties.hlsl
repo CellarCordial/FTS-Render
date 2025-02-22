@@ -1,5 +1,5 @@
-#ifndef SHADER_MEDIUM_SLANG
-#define SHADER_MEDIUM_SLANG
+#ifndef SHADER_MEDIUM_HLSL
+#define SHADER_MEDIUM_HLSL
 #include "math.hlsl"
 
 

@@ -86,10 +86,8 @@ PixelOutput main(VertexOutput input)
     VTPageInfo info;
     info.geometry_id = input.geometry_id;
     info.page_id_mip_level = uint(
-        (page_id_low_bit.x << 24) |
-        (page_id_low_bit.y << 16) |
-        (page_id_high_bit.x << 12) |
-        (page_id_high_bit.y << 8) |
+        (page_id.x << 20) |
+        (page_id.y << 8) |
         (mip_level & 0xff)
     );
 
