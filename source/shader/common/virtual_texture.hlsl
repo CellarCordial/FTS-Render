@@ -8,28 +8,37 @@
 
 #if defined(VT_PAGE_SIZE) && defined(VT_PHYSICAL_TEXTURE_RESOLUTION)
 
-static uint row_page_num = VT_PHYSICAL_TEXTURE_RESOLUTION / VT_PAGE_SIZE;
-static uint col_page_num = VT_PHYSICAL_TEXTURE_RESOLUTION / VT_PAGE_SIZE;
+static uint page_num = (VT_PHYSICAL_TEXTURE_RESOLUTION / VT_PAGE_SIZE) * (VT_PHYSICAL_TEXTURE_RESOLUTION / VT_PAGE_SIZE);
 
 struct PhysicalTile
 {
     uint geometry_id;
     uint vt_page_id_mip_level;
     uint2 physical_postion;
+
+    uint previous;
+    uint next;
 };
 
 struct PhysicalTileLruCache
 {
-    PhysicalTile tiles[row_page_num * col_page_num];
+    PhysicalTile tiles[page_num];
+    
+    uint update_tiles[page_num];
+    uint update_tile_count;
+
+    PhysicalTile new_tiles[page_num];
+    uint new_tile_count;
+
     uint current_lru;
-    uint next_lru;
+    uint current_evict;
 
     static PhysicalTileLruCache construct()
     {
         PhysicalTileLruCache ret;
         ret.current_lru = 0;
-        ret.next_lru = 0;
-        uint size = row_page_num * col_page_num;
+        ret.current_evict = 0;
+        uint size = page_num;
         for (uint ix = 0; ix < size; ++ix)
         {
             ret.tiles[ix].physical_postion = uint2(INVALID_SIZE_32, INVALID_SIZE_32);
@@ -37,17 +46,33 @@ struct PhysicalTileLruCache
         return ret;
     }
 
-    PhysicalTile insert(PhysicalTile tile)
+    void insert(PhysicalTile tile)
     {
-        uint index = tile.physical_postion.y * row_page_num + tile.physical_postion.x;
-
-        if (tiles[index].physical_postion == uint2(INVALID_SIZE_32, INVALID_SIZE_32))
+        bool found = false;
+        uint index = current_lru;
+        for (; index != current_evict; index = tiles[index].next)
         {
-            tiles[index] = tile;
-            return tile;
+            PhysicalTile tmp = tiles[index];
+            if (tmp.geometry_id == tile.geometry_id && 
+                tmp.vt_page_id_mip_level == tile.vt_page_id_mip_level)
+            {
+                found = true;
+                break;
+            }
         }
-        PhysicalTile ret = tiles[current_lru];
-        return tile;
+
+        if (!found)
+        {
+            uint current_pos;
+            InterlockedAdd(new_tile_count, 1, current_pos);
+            new_tiles[current_pos] = tile;
+        }
+        else
+        {
+            uint current_pos;
+            InterlockedAdd(update_tile_count, 1, current_pos);
+            update_tiles[current_pos] = index;
+        }
     }
 };
 
@@ -55,6 +80,5 @@ struct PhysicalTileLruCache
 
 
 #endif
-
 
 #endif
