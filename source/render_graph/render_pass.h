@@ -14,7 +14,8 @@ namespace fantasy
         Compute         = 1 << 2,
         
         Precompute      = 1 << 3,
-		Exclude         = 1 << 4
+		Exclude         = 1 << 4,
+        Immediately     = 1 << 5
     };  
 	ENUM_CLASS_FLAG_OPERATORS(RenderPassType)
 

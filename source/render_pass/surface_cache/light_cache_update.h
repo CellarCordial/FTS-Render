@@ -2,7 +2,6 @@
 #define RENDER_PASS_H
 
 #include "../../render_graph/render_pass.h"
-#include "../../scene/virtual_texture.h"
 #include <memory>
 
 namespace fantasy
@@ -16,9 +15,6 @@ namespace fantasy
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
 	private:
-        VTMipmapLUT _surface_lut;
-        VTPhysicalTable _surface_atlas_table;
-
 		std::shared_ptr<TextureInterface> _surface_base_color_atlas_texture;
 		std::shared_ptr<TextureInterface> _surface_normal_atlas_texture;
 		std::shared_ptr<TextureInterface> _surface_pbr_atlas_texture;

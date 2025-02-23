@@ -26,14 +26,6 @@ namespace fantasy
 		float4x4 view_matrix;
 	};
 
-	struct VirtualTexturePositionInfo
-	{
-		VTPage* page = nullptr;
-		uint2 page_physical_pos_in_page;
-		std::array<TextureInterface*, Material::TextureType_Num> texture;
-	};
-
-
 	class VirtualTextureUpdatePass : public RenderPassInterface
 	{
 	public:
@@ -44,32 +36,17 @@ namespace fantasy
 		bool finish_pass(RenderResourceCache* cache) override;
 
 	private:
-		struct MaterialCache
-		{
-			const Material::SubMaterial* submaterial = nullptr;
-			const std::string* model_name = nullptr;
-			uint32_t submesh_id = INVALID_SIZE_32;
-			uint32_t texture_resolution = 0;
-		};
-		std::vector<MaterialCache> _material_cache;
-		constant::VirtualGeometryTexturePassConstant _pass_constant;
+		std::vector<std::pair<const std::string*, uint32_t>> _submesh_name_cache;
+		bool _update_submesh_name_cache = false;
+
 		uint64_t _finish_pass_thread_id = INVALID_SIZE_64;
-		// VTMipmapLUT _virtual_shadow_page_lut;
-		// uint32_t _shadow_tile_num = 0;
-		bool _update_material_cache = false;
+		constant::VirtualGeometryTexturePassConstant _pass_constant;
 
-		VTIndirectTable _vt_indirect_table;
-		VTPhysicalTable _vt_physical_table;
-		// VTPhysicalTable _physical_shadow_table;
-
-		std::vector<VTMipmapLUT> _vt_mipmap_luts;
-		std::vector<VirtualTexturePositionInfo> _virtual_texture_position_infos;
-		// std::vector<ShadowTileInfo> _shadow_tile_infos;
+		PhysicalTileLruCache* _physical_tile_lru_cache = nullptr;
 
 
-		std::shared_ptr<BufferInterface> _shadow_tile_info_buffer;
+		std::shared_ptr<BufferInterface> _vt_physical_tile_lru_cache_read_back_buffer;
 		
-		std::shared_ptr<TextureInterface> _vt_indirect_texture;
 		std::array<std::shared_ptr<TextureInterface>, Material::TextureType_Num> _vt_physical_textures;
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;

@@ -240,18 +240,37 @@ namespace fantasy
     {
 		ReturnIfFalse(precompute());
 
-        for (uint32_t ix = 0; ix < _passes.size(); ++ix)
-        {
-            ReturnIfFalse(_passes[ix]->execute(_cmdlists[ix].get(), _resource_cache.get()));
-        }
-
         std::vector<CommandListInterface*> graphics_cmdlists;
         std::vector<CommandListInterface*> compute_cmdlists;
+
+		auto func_execute_graphics_cmdlists = [&]()
+		{
+			_compute_wait_value = _device->execute_command_lists(
+				graphics_cmdlists.data(),
+				graphics_cmdlists.size(),
+				CommandQueueType::Graphics
+			);
+			graphics_cmdlists.clear();
+			return _compute_wait_value != INVALID_SIZE_64;
+		};
+
+		auto func_execute_compute_cmdlists = [&]()
+		{
+			_graphics_wait_value = _device->execute_command_lists(
+				compute_cmdlists.data(),
+				compute_cmdlists.size(),
+				CommandQueueType::Compute
+			);
+			compute_cmdlists.clear();
+			return _graphics_wait_value != INVALID_SIZE_64;
+		};
+
 
         for (uint32_t ix = 0; ix < _cmdlists.size(); ++ix)
         {
 			bool wait = (_pass_async_types[ix] & PassAsyncType::Wait) != 0;
 			bool signal = (_pass_async_types[ix] & PassAsyncType::Signal) != 0;
+			bool immediately = (_passes[ix]->type & RenderPassType::Immediately) != 0;
 
 			if ((_passes[ix]->type & RenderPassType::Graphics) == RenderPassType::Graphics)
 			{
@@ -264,6 +283,13 @@ namespace fantasy
 					);
 				}
 				
+				if (immediately)
+				{
+					ReturnIfFalse(func_execute_graphics_cmdlists());
+					_device->wait_for_idle();
+				}
+
+				ReturnIfFalse(_passes[ix]->execute(_cmdlists[ix].get(), _resource_cache.get()));
 				graphics_cmdlists.emplace_back(_cmdlists[ix].get());
 
 				if (signal)
@@ -288,17 +314,18 @@ namespace fantasy
 					);
 				}
 
+				if (immediately)
+				{
+					ReturnIfFalse(func_execute_compute_cmdlists());
+					_device->wait_for_idle();
+				}
+
+				ReturnIfFalse(_passes[ix]->execute(_cmdlists[ix].get(), _resource_cache.get()));
 				compute_cmdlists.emplace_back(_cmdlists[ix].get());
 
 				if (signal)
 				{
-					_graphics_wait_value = _device->execute_command_lists(
-						compute_cmdlists.data(),
-						compute_cmdlists.size(),
-						CommandQueueType::Compute
-					);
-					compute_cmdlists.clear();
-					ReturnIfFalse(_graphics_wait_value != INVALID_SIZE_64);
+					ReturnIfFalse(func_execute_compute_cmdlists());
 				}
 			}
 		}
@@ -308,8 +335,7 @@ namespace fantasy
 		
 		_device->wait_for_idle();
 		_device->collect_garbage();
-
-		_present_func();
+        _present_func();
 
 		_resource_cache->frame_index++;
 
