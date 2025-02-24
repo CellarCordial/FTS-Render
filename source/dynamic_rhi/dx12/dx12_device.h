@@ -24,8 +24,9 @@ namespace fantasy
 
         TextureInterface* create_texture_from_native(void* native_texture, const TextureDesc& desc) override;
         BufferInterface* create_buffer_from_native(void* native_buffer, const BufferDesc& desc) override;
-
+        
         SamplerInterface* create_sampler(const SamplerDesc& desc) override;
+        
         InputLayoutInterface* create_input_layout(const VertexAttributeDesc* cpDesc, uint32_t attribute_count) override;
         
         GraphicsAPI get_graphics_api() const override;
@@ -42,6 +43,13 @@ namespace fantasy
         BindlessSetInterface* create_bindless_set(std::shared_ptr<BindingLayoutInterface> binding_layout) override;
         
         CommandListInterface* create_command_list(const CommandListDesc& desc) override;
+
+        void update_texture_tile_mappings(
+            TextureInterface* texture, 
+            const TextureTilesMapping* tile_mappings, 
+            uint32_t tile_mapping_num, 
+            CommandQueueType execution_queue_type
+        ) override;
 
         uint64_t execute_command_lists(CommandListInterface* const* cmdlists, uint64_t cmd_count = 1, CommandQueueType queue_type = CommandQueueType::Graphics) override;
         void queue_wait_for_cmdlist(CommandQueueType wait_queue_type, CommandQueueType execution_queue_type, uint64_t submit_id) override;

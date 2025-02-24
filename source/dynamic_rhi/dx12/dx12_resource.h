@@ -4,6 +4,7 @@
 #include "../binding.h"
 #include "dx12_descriptor.h"
 #include "../../core/tools/hash_table.h"
+#include "dx12_forward.h"
 #include <functional>
 #include <memory>
 #include <tuple>
@@ -59,6 +60,7 @@ namespace fantasy
         const TextureDesc& get_desc() const override;
         MemoryRequirements get_memory_requirements() override;
 		bool bind_memory(std::shared_ptr<HeapInterface> heap, uint64_t offset) override;
+        const TextureTileInfo& get_tile_info() override; 
         void* get_native_object() override;
 
 		uint32_t get_view_index(ResourceViewType view_type, const TextureSubresourceSet& subresource, Format format = Format::UNKNOWN);
@@ -69,6 +71,7 @@ namespace fantasy
 
     public:
         TextureDesc desc;
+        TextureTileInfo tile_info;
         
         D3D12_RESOURCE_DESC d3d12_resource_desc;
         Microsoft::WRL::ComPtr<ID3D12Resource> d3d12_resource;
@@ -76,6 +79,7 @@ namespace fantasy
         std::unordered_map<SubresourceViewKey, uint32_t, Hash> view_cache;
     
         std::shared_ptr<HeapInterface> heap;
+
 
     private:
         const DX12Context* _context;
@@ -175,7 +179,6 @@ namespace fantasy
         D3D12_RANGE _d3d12_mapped_range;
         std::unique_ptr<BufferInterface> _buffer;
     };
-
 
     class DX12Sampler : public SamplerInterface 
     {

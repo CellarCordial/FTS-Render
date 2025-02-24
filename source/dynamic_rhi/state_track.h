@@ -53,7 +53,7 @@
 
         void set_texture_state(TextureInterface* texture, const TextureSubresourceSet& subresource_set, ResourceStates state);
         void set_buffer_state(BufferInterface* buffer, ResourceStates state);
-
+        
         const std::vector<TextureBarrier>& get_texture_barriers() const;
         const std::vector<BufferBarrier>& get_buffer_barriers() const;
 

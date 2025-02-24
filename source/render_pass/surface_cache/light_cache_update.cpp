@@ -90,10 +90,10 @@
 
 // 		HANDLE fence_event = CreateEvent(nullptr, false, false, nullptr);
 
-//         std::shared_ptr<BufferInterface> vt_page_info_buffer = 
-// 			check_cast<BufferInterface>(cache->require("vt_page_info_buffer"));
+//         std::shared_ptr<BufferInterface> vt_page_buffer = 
+// 			check_cast<BufferInterface>(cache->require("vt_page_buffer"));
 
-// 		VTPageInfo* data = static_cast<VTPageInfo*>(vt_page_info_buffer->map(CpuAccessMode::Read, fence_event));
+// 		VTPageInfo* data = static_cast<VTPageInfo*>(vt_page_buffer->map(CpuAccessMode::Read, fence_event));
 
 //         World* world = cache->get_world();
 		
@@ -143,7 +143,7 @@
 //             CLIENT_HEIGHT
 //         );
 
-//         vt_page_info_buffer->unmap();
+//         vt_page_buffer->unmap();
 
 // 		ReturnIfFalse(cmdlist->close());
 //         return true;

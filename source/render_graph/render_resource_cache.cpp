@@ -16,6 +16,9 @@ namespace fantasy
     {
         switch (type)
         {
+            case ResourceType::Heap:
+                _resource_names[check_cast<HeapInterface>(resource)->get_desc().name] = ResourceData{ .resource = resource };
+                break;
             case ResourceType::Texture: 
                 _resource_names[check_cast<TextureInterface>(resource)->get_desc().name] = ResourceData{ .resource = resource };
                 break;

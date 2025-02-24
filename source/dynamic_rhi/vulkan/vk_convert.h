@@ -38,7 +38,7 @@ namespace fantasy
     vk::ImageViewType convert_texture_dimension_to_image_view_type(TextureDimension dimension);
     vk::ImageUsageFlags get_image_usage_flag(const TextureDesc& desc);
     vk::SampleCountFlagBits get_sample_count_flag(uint32_t sample_count);
-    vk::ImageCreateFlags get_image_create_flag(TextureDimension dimension);
+    vk::ImageCreateFlags get_image_create_flag(TextureDimension dimension, bool is_tiled);
     vk::ImageCreateInfo convert_image_info(const TextureDesc& desc);
     vk::BufferCreateInfo convert_buffer_info(const BufferDesc& desc);
     vk::BufferUsageFlags get_buffer_usage(const BufferDesc& desc);

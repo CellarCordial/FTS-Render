@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <d3d12.h>
 #include <d3dcommon.h>
+#include <intsafe.h>
 #include <memory>
 #include <minwindef.h>
 #include <string>
@@ -16,6 +17,7 @@
 #include "dx12_frame_buffer.h"
 #include "dx12_ray_tracing.h"
 #include "dx12_resource.h"
+#include "../../core/tools/check_cast.h"
 
 namespace fantasy
 {
@@ -47,14 +49,27 @@ namespace fantasy
     {
         context.device = desc.d3d12_device;
 
-        D3D12_FEATURE_DATA_D3D12_OPTIONS5 feature_support_data{};
-        context.device->CheckFeatureSupport(
+        D3D12_FEATURE_DATA_D3D12_OPTIONS5 feature_support_data5{};
+        ReturnIfFalse(SUCCEEDED(context.device->CheckFeatureSupport(
             D3D12_FEATURE_D3D12_OPTIONS5, 
-            &feature_support_data, 
+            &feature_support_data5, 
             sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS5)
-        );
-        if (feature_support_data.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED) 
-            desc.d3d12_device->QueryInterface(context.device5.GetAddressOf());
+        )));
+        if (feature_support_data5.RaytracingTier != D3D12_RAYTRACING_TIER_NOT_SUPPORTED) 
+        {
+            ReturnIfFalse(SUCCEEDED(context.device->QueryInterface(context.device5.GetAddressOf())));
+        }
+            
+        D3D12_FEATURE_DATA_D3D12_OPTIONS7 feature_support_data7 = {};
+        ReturnIfFalse(SUCCEEDED(context.device->CheckFeatureSupport(
+            D3D12_FEATURE_D3D12_OPTIONS7, 
+            &feature_support_data7, 
+            sizeof(D3D12_FEATURE_DATA_D3D12_OPTIONS7))
+        ));
+        if (feature_support_data7.SamplerFeedbackTier >= D3D12_SAMPLER_FEEDBACK_TIER_0_9)
+        {
+            ReturnIfFalse(SUCCEEDED(context.device->QueryInterface(context.device8.GetAddressOf()))); 
+        }
 
         ReturnIfFalse(desc.d3d12_graphics_cmd_queue && desc.d3d12_compute_cmd_queue);
         cmdqueues[static_cast<uint8_t>(CommandQueueType::Graphics)] = 
@@ -308,6 +323,85 @@ namespace fantasy
             return nullptr;
         }
         return cmdlist;
+    }
+
+
+    void DX12Device::update_texture_tile_mappings(
+        TextureInterface* texture, 
+        const TextureTilesMapping* tile_mappings, 
+        uint32_t tile_mapping_num, 
+        CommandQueueType execution_queue_type
+    )
+    {
+        ID3D12Resource* d3d12_texture = reinterpret_cast<ID3D12Resource*>(texture>get_native_object());
+
+        const auto& tile_info = texture->get_tile_info();
+
+        for (size_t ix = 0; ix < tile_mapping_num; ix++)
+        {
+            ID3D12Heap* heap = tile_mappings[ix].heap ? check_cast<DX12Heap*>(tile_mappings[ix].heap)->d3d12_heap.Get() : nullptr;
+
+            uint32_t regions_num = static_cast<uint32_t>(tile_mappings[ix].regions.size());
+            std::vector<D3D12_TILED_RESOURCE_COORDINATE> d3d12_resource_coordiantes(regions_num);
+            std::vector<D3D12_TILE_REGION_SIZE> d3d12_region_sizes(regions_num);
+            std::vector<UINT> heap_start_offsets(regions_num);
+            std::vector<UINT> range_tile_counts(regions_num);
+
+            for (uint32_t jx = 0; jx < regions_num; ++jx)
+            {
+                const TextureTilesMapping::Region& region = tile_mappings[ix].regions[jx];
+
+                d3d12_resource_coordiantes[jx].Subresource = region.mip_level * texture->get_desc().array_size + region.array_level;
+                d3d12_resource_coordiantes[jx].X = region.x;
+                d3d12_resource_coordiantes[jx].Y = region.y;
+                d3d12_resource_coordiantes[jx].Z = region.z;
+
+                if (region.tiles_num > 0)
+                {
+                    d3d12_region_sizes[jx].NumTiles = region.tiles_num;
+                    d3d12_region_sizes[jx].UseBox = false;
+                }
+                else
+                {
+                    uint32_t tiles_x = (region.width + (tile_info.width_in_texels - 1)) / tile_info.width_in_texels;
+                    uint32_t tiles_y = (region.height + (tile_info.height_in_texels - 1)) / tile_info.height_in_texels;
+                    uint32_t tiles_z = (region.depth + (tile_info.depth_in_texels - 1)) / tile_info.depth_in_texels;
+
+                    d3d12_region_sizes[jx].Width = tiles_x;
+                    d3d12_region_sizes[jx].Height = static_cast<uint16_t>(tiles_y);
+                    d3d12_region_sizes[jx].Depth = static_cast<uint16_t>(tiles_z);
+
+                    d3d12_region_sizes[jx].NumTiles = tiles_x * tiles_y * tiles_z;
+                    d3d12_region_sizes[jx].UseBox = true;
+                }
+
+                if (heap) 
+                {
+                    heap_start_offsets[jx] = static_cast<uint32_t>(
+                        tile_mappings[ix].regions[jx].byte_offset / D3D12_TILED_RESOURCE_TILE_SIZE_IN_BYTES
+                    );
+                }
+
+                range_tile_counts[jx] = d3d12_region_sizes[jx].NumTiles;
+            }
+
+            std::vector<D3D12_TILE_RANGE_FLAGS> d3d12_tile_range_flags(
+                regions_num, 
+                heap ? D3D12_TILE_RANGE_FLAG_NONE : D3D12_TILE_RANGE_FLAG_NULL
+            );
+            get_queue(execution_queue_type)->d3d12_cmdqueue->UpdateTileMappings(
+                d3d12_texture, 
+                static_cast<uint32_t>(tile_mappings[ix].regions.size()), 
+                d3d12_resource_coordiantes.data(), 
+                d3d12_region_sizes.data(), 
+                heap, 
+                regions_num, 
+                d3d12_tile_range_flags.data(), 
+                heap ? heap_start_offsets.data() : nullptr, 
+                range_tile_counts.data(), 
+                D3D12_TILE_MAPPING_FLAG_NONE
+            );
+        }
     }
 
     uint64_t DX12Device::execute_command_lists(CommandListInterface* const* cmdlists, uint64_t cmd_count, CommandQueueType queue_type)

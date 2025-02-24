@@ -6,6 +6,7 @@
 #include <cassert>
 #include <cstdint>
 #include <memory>
+#include <vector>
 #include <windows.h>
 #include <string>
 #include "../core/math/common.h"
@@ -14,6 +15,7 @@ namespace fantasy
 {
     enum class ResourceType : uint8_t
     {
+        Heap,
         Texture,
         Buffer,
         StagingTexture,
@@ -26,11 +28,6 @@ namespace fantasy
         RayTracing_ShaderTable
     };
 
-    struct ResourceInterface
-    {
-		virtual ~ResourceInterface() = default;
-    };
-    
     enum class TextureDimension : uint8_t
     {
         Unknown,
@@ -66,7 +63,7 @@ namespace fantasy
         CopyDst                 = 1 << 11,
         CopySrc                 = 1 << 12,
         Present                 = 1 << 13,
-        IndirectArgument        = 1 << 14
+        IndirectArgument        = 1 << 14,
         // ,
         // AccelStructRead         = 1 << 14,
         // AccelStructWrite        = 1 << 15,
@@ -75,6 +72,53 @@ namespace fantasy
     };
     ENUM_CLASS_FLAG_OPERATORS(ResourceStates)
 
+
+
+    struct TextureTilesMapping
+    {
+        struct Region
+        {
+            uint16_t mip_level = 0;
+            uint16_t array_level = 0;
+            uint32_t x = 0;
+            uint32_t y = 0;
+            uint32_t z = 0;
+
+            uint32_t tiles_num = 0;
+            uint32_t width = 0;
+            uint32_t height = 0;
+            uint32_t depth = 0;
+
+            uint64_t byte_offset;
+        };
+        
+        std::vector<Region> regions;
+
+        HeapInterface* heap = nullptr;
+    };
+
+    struct TextureTileInfo
+    {
+        uint32_t total_tile_num = 0;
+
+        uint32_t standard_mip_num = 0;
+        uint32_t packed_mip_num = 0;
+        uint32_t tile_num_for_packed_mips = 0;
+        uint32_t start_tile_index = 0;
+
+        uint32_t width_in_texels = 0;
+        uint32_t height_in_texels = 0;
+        uint32_t depth_in_texels = 0;
+
+        struct SubresourceTiling
+        {
+            uint32_t width_in_tiles = 0;
+            uint32_t height_in_tiles = 0;
+            uint32_t depth_in_tiles = 0;
+            uint32_t start_tile_index = 0;
+        };
+        std::vector<SubresourceTiling> subresource_tilings;
+    };
 
     struct TextureDesc
     {
@@ -97,8 +141,42 @@ namespace fantasy
         bool allow_shader_resource = true;
         bool allow_unordered_access = false;
         
-        bool is_virtual = false;
+        bool is_tiled = false;
 
+        bool is_virtual = false;
+        uint64_t offset_in_heap = INVALID_SIZE_64;
+
+        static TextureDesc create_tiled_shader_resource_texture(
+            uint32_t width, 
+            uint32_t height, 
+            Format format, 
+            std::string name = ""
+        )
+        {
+            TextureDesc ret;
+            ret.name = name;
+            ret.width = width;
+            ret.height = height;
+            ret.format = format;
+            ret.is_tiled = true;
+            return ret;
+        }
+
+        static TextureDesc create_virtual_shader_resource_texture(
+            uint32_t width, 
+            uint32_t height, 
+            Format format, 
+            std::string name = ""
+        )
+        {
+            TextureDesc ret;
+            ret.name = name;
+            ret.width = width;
+            ret.height = height;
+            ret.format = format;
+            ret.is_virtual = true;
+            return ret;
+        }
 
         static TextureDesc create_shader_resource_texture(
             uint32_t width, 
@@ -275,6 +353,7 @@ namespace fantasy
 
         virtual bool bind_memory(std::shared_ptr<HeapInterface> heap, uint64_t offset) = 0;
         virtual MemoryRequirements get_memory_requirements() = 0;
+        virtual const TextureTileInfo& get_tile_info() = 0; 
 
         virtual void* get_native_object() = 0;
         
@@ -292,7 +371,6 @@ namespace fantasy
 
 		virtual ~StagingTextureInterface() = default;
     };
-
 
 
     struct BufferDesc
@@ -315,6 +393,7 @@ namespace fantasy
         // bool is_accel_struct_storage = false;
 
         bool is_virtual = false;
+        uint64_t offset_in_heap = INVALID_SIZE_64;
         
         static BufferDesc create_constant_buffer(uint64_t size, std::string name = "")
         {

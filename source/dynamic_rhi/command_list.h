@@ -2,6 +2,7 @@
 #define RHI_COMMAND_LIST_H
 
 #include "draw.h"
+#include "resource.h"
 // #include "ray_tracing.h"
 
 namespace fantasy

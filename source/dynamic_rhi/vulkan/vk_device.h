@@ -39,6 +39,13 @@ namespace fantasy
         BindingSetInterface* create_binding_set(const BindingSetDesc& desc, std::shared_ptr<BindingLayoutInterface> binding_layout) override;
 
         CommandListInterface* create_command_list(const CommandListDesc& desc) override;
+
+        void update_texture_tile_mappings(
+            TextureInterface* texture, 
+            const TextureTilesMapping* tile_mappings, 
+            uint32_t tile_mapping_num, 
+            CommandQueueType execution_queue_type
+        ) override;
         
         uint64_t execute_command_lists(
             CommandListInterface* const* cmdlists,

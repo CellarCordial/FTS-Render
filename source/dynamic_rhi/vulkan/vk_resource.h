@@ -66,12 +66,14 @@ namespace fantasy
         const TextureDesc& get_desc() const override;
         bool bind_memory(std::shared_ptr<HeapInterface> heap, uint64_t offset) override;
         MemoryRequirements get_memory_requirements() override;
+        const TextureTileInfo& get_tile_info() override; 
         void* get_native_object() override;
 
 		vk::ImageView get_view(ResourceViewType view_type, const TextureSubresourceSet& subresource, Format format = Format::UNKNOWN);
 
     public:
         TextureDesc desc;
+        TextureTileInfo tile_info;
 
         vk::Image vk_image;
         vk::ImageCreateInfo vk_image_info;

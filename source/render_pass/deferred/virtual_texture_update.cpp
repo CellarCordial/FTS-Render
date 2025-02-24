@@ -2,33 +2,35 @@
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
 #include "../../core/parallel/parallel.h"
-// #include "../../scene/light.h"
 #include "../../scene/scene.h"
+#include <array>
 #include <cstdint>
 #include <memory>
-#include <string>
 #include <thread>
-#include <utility>
 
 namespace fantasy
 {
 #define THREAD_GROUP_SIZE_X 16
 #define THREAD_GROUP_SIZE_Y 16
+
+
+	uint64_t create_texture_region_cache_key(uint32_t geometry_id, uint32_t mip_level, uint32_t material_type)
+	{
+		return (uint64_t(geometry_id) << 32) | (mip_level << 16) | (material_type & 0xffff);
+	}
  
 	bool VirtualTextureUpdatePass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
 		cache->get_world()->get_global_entity()->get_component<event::AddModel>()->add_event(
 			[this]() -> bool
 			{
-				_update_submesh_name_cache = true;
+				_update_texture_region_cache = true;
 				return true;
 			}
 		);
-		
-		_vt_physical_tile_lru_cache_read_back_buffer = 
-			check_cast<BufferInterface>(cache->require("vt_physical_tile_lru_cache_read_back_buffer"));
 
-		ReturnIfFalse(cache->collect_constants("physical_tile_lru_cache", &_physical_tile_lru_cache));
+		_geometry_texture_heap = check_cast<HeapInterface>(cache->require("geometry_texture_heap"));
+		_vt_page_read_back_buffer = check_cast<BufferInterface>(cache->require("vt_page_read_back_buffer"));
 
 		// Binding Layout.
 		{
@@ -75,10 +77,6 @@ namespace fantasy
 			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
 		}
 
-		// Buffer.
-		{
-		}
-
 		// Texture.
 		{	
 
@@ -89,11 +87,11 @@ namespace fantasy
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
 			{
 				ReturnIfFalse(_vt_physical_textures[ix] = std::shared_ptr<TextureInterface>(device->create_texture(
-					TextureDesc::create_render_target_texture(
+					TextureDesc::create_tiled_shader_resource_texture(
 						CLIENT_WIDTH,
 						CLIENT_HEIGHT,
 						formats[ix],
-						get_vt_physical_texture_name(ix)
+						VTPhysicalTable::get_texture_name(ix)
 					)
 				)));
 				cache->collect(_vt_physical_textures[ix], ResourceType::Texture);
@@ -104,8 +102,8 @@ namespace fantasy
 		{
 			BindingSetItemArray binding_set_items(13);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualGeometryTexturePassConstant));
-			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("vt_tile_uv_texture")));
-			binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("vt_indirect_texture")));
+			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("vt_page_uv_texture")));
+			binding_set_items[2] = BindingSetItem::create_texture_srv(1, _vt_indirect_texture);
 			binding_set_items[3] = BindingSetItem::create_texture_srv(2, _vt_physical_textures[0]);
 			binding_set_items[4] = BindingSetItem::create_texture_srv(3, _vt_physical_textures[1]);
 			binding_set_items[5] = BindingSetItem::create_texture_srv(4, _vt_physical_textures[2]);
@@ -136,19 +134,39 @@ namespace fantasy
 
 	bool VirtualTextureUpdatePass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
-		if (_update_submesh_name_cache)
+		if (_update_texture_region_cache)
 		{
-			cache->get_world()->each<std::string, Mesh>(
-				[this](Entity* entity, std::string* name, Mesh* mesh) -> bool
+			bool res = cache->get_world()->each<std::string, Mesh, Material>(
+				[this, cache](Entity* entity, std::string* name, Mesh* mesh, Material* material) -> bool
 				{
-					for (uint32_t ix = 0; ix < mesh->submeshes.size(); ++ix)
+					for (uint32_t ix = 0; ix < material->submaterials.size(); ++ix)
 					{
-						_submesh_name_cache.emplace_back(std::make_pair(name, ix));
+						uint32_t mip_levels = std::log2(material->image_resolution / VT_PAGE_SIZE);
+						for (uint32_t mip = 0; mip < mip_levels; ++mip)
+						{
+							for (uint32_t type = 0; type < Material::TextureType_Num; ++type)
+							{
+								uint32_t submesh_id = mesh->submesh_global_base_id + ix;
+
+								std::string texture_name = get_geometry_texture_name(submesh_id, ix, mip, *name);
+								
+								TextureTilesMapping::Region region;
+								region.width = material->submaterials[ix].images[type].width;
+								region.height = material->submaterials[ix].images[type].height;
+								region.byte_offset = 
+									check_cast<TextureInterface>(cache->require(texture_name.c_str()))->get_desc().offset_in_heap;
+								
+								uint64_t key = create_texture_region_cache_key(submesh_id, mip, type);
+								_geometry_texture_region_cache[key] = region;
+							}
+						}
 					}
 					return true;
 				}
 			);
-			_update_submesh_name_cache = false;
+			ReturnIfFalse(res);
+
+			_update_texture_region_cache = false;
 		}
 
 
@@ -156,63 +174,68 @@ namespace fantasy
 		
         if (SceneSystem::loaded_submesh_count != 0)
 		{
-			PhysicalTileLruCache* lru_cache = 
-				static_cast<PhysicalTileLruCache*>(_vt_physical_tile_lru_cache_read_back_buffer->map(CpuAccessMode::Read));
-			for (uint32_t ix = 0; ix < lru_cache->new_tile_count; ++ix)
+			if (_finish_pass_thread_id != INVALID_SIZE_64)
 			{
-				const PhysicalTile& tile = lru_cache->tiles[lru_cache->new_tiles[ix]];
+				if (!parallel::thread_finished(_finish_pass_thread_id)) std::this_thread::yield();
+				ReturnIfFalse(parallel::thread_success(_finish_pass_thread_id));
+			}
 
-				const auto& [submesh_name, submesh_id] = _submesh_name_cache[tile.geometry_id];
-				uint2 page_id = uint2(
-					(tile.vt_page_id_mip_level >> 20) & 0xfff,
-					(tile.vt_page_id_mip_level >> 8) & 0xfff
-				);
-				uint32_t mip_level = tile.vt_page_id_mip_level & 0xff;
+			uint2* vt_pages = static_cast<uint2*>(_vt_page_read_back_buffer->map(CpuAccessMode::Read));
 
-        		uint2 texture_position = page_id / std::pow(2, mip_level);
-				TextureSlice dst_slice = TextureSlice{
-					.x = tile.physical_postion.x * VT_PAGE_SIZE,
-					.y = tile.physical_postion.y * VT_PAGE_SIZE,
-					.width = VT_PAGE_SIZE,
-					.height = VT_PAGE_SIZE
-				};
-				TextureSlice src_slice = TextureSlice{
-					.x = texture_position.x * VT_PAGE_SIZE,
-					.y = texture_position.y * VT_PAGE_SIZE,
-					.width = VT_PAGE_SIZE,
-					.height = VT_PAGE_SIZE
-				};
+			std::array<TextureTilesMapping, Material::TextureType_Num> tile_mappings;
 
-				for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
+			uint32_t vt_page_num = CLIENT_WIDTH * CLIENT_HEIGHT;
+			for (uint32_t ix = 0; ix < vt_page_num; ++ix)
+			{
+				const auto& info = *(vt_pages + ix);
+
+				auto& page = _new_vt_pages.emplace_back();
+				page.geometry_id = info.x;
+				page.coordinate_mip_level = info.y;
+
+				if (!_vt_physical_table.check_page_loaded(page))
 				{
-					auto texture = check_cast<TextureInterface>(
-						cache->require(get_geometry_texture_name(submesh_id, ix, mip_level, *submesh_name).c_str())
-					);
-
-					if (texture) 
+					page.position_in_physical_texture = _vt_physical_table.get_new_coordinate();
+				}
+				else
+				{
+					for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
 					{
-						// 若为 nullptr, 相应的 factor 会是 0, 不必担心会因为没有覆盖 physical texture 中的 page 而担心. 
-						cmdlist->copy_texture(_vt_physical_textures[ix].get(), dst_slice, texture.get(), src_slice);
+						tile_mappings[ix].regions.emplace_back(_geometry_texture_region_cache[create_texture_region_cache_key(
+							page.geometry_id, page.get_mip_level(), ix
+						)]);
 					}
 				}
+
+				_vt_indirect_table.set_page(uint2(ix % CLIENT_WIDTH, ix / CLIENT_WIDTH), page.position_in_physical_texture);
+			}
+
+			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
+			{
+				tile_mappings[ix].heap = _geometry_texture_heap.get();
+
+				cmdlist->get_deivce()->update_texture_tile_mappings(
+					_vt_physical_textures[ix].get(), 
+					&tile_mappings[ix], 
+					1,
+					CommandQueueType::Compute 
+				);
 			}
 			
+			ReturnIfFalse(cmdlist->write_texture(
+				_vt_indirect_texture.get(), 
+				0, 
+				0, 
+				reinterpret_cast<uint8_t*>(_vt_indirect_table.get_data()), 
+				_vt_indirect_table.get_data_size()
+			));
+
 			uint2 thread_group_num = {
 				static_cast<uint32_t>((align(CLIENT_WIDTH, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
 				static_cast<uint32_t>((align(CLIENT_HEIGHT, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
 			};
 
 			ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y));
-
-
-			_finish_pass_thread_id = parallel::begin_thread(
-				[this, lru_cache]() -> bool
-				{					
-					_physical_tile_lru_cache->update(lru_cache);
-					_vt_physical_tile_lru_cache_read_back_buffer->unmap();
-					return true;
-				}
-			);
 		}
 
 		ReturnIfFalse(cmdlist->close());
@@ -224,12 +247,39 @@ namespace fantasy
 	{
 		if (SceneSystem::loaded_submesh_count != 0)
 		{
-			if (_finish_pass_thread_id != INVALID_SIZE_64)
-			{
-				if (!parallel::thread_finished(_finish_pass_thread_id)) std::this_thread::yield();
-				ReturnIfFalse(parallel::thread_success(_finish_pass_thread_id));
-			}
+			_finish_pass_thread_id = parallel::begin_thread(
+				[this, cache]() -> bool
+				{
+					_vt_physical_table.add_pages(_new_vt_pages);
+					return true;
+				}
+			);
 		}
+
+		// for (const auto& info : _virtual_texture_position_infos)
+		// {
+		// 	for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
+		// 	{
+		// 		TextureSlice dst_slice = TextureSlice{
+		// 			.x = info.page_physical_pos_in_page.x * VT_PAGE_SIZE,
+		// 			.y = info.page_physical_pos_in_page.y * VT_PAGE_SIZE,
+		// 			.width = VT_PAGE_SIZE,
+		// 			.height = VT_PAGE_SIZE
+		// 		};
+		// 		// TextureSlice src_slice = TextureSlice{
+		// 		// 	.x = info.page->base_position.x,
+		// 		// 	.y = info.page->base_position.y,
+		// 		// 	.width = VT_PAGE_SIZE,
+		// 		// 	.height = VT_PAGE_SIZE
+		// 		// };
+
+		// 		if (info.texture[ix]) 
+		// 		{
+		// 			// 若为 nullptr, 相应的 factor 会是 0, 不必担心会因为没有覆盖 physical texture 中的 page 而担心. 
+		// 			// cmdlist->copy_texture(_vt_physical_textures[ix].get(), dst_slice, info.texture[ix], src_slice);
+		// 		}
+		// 	}
+		// }
 		return true;
 	}
 }

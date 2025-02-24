@@ -11,7 +11,7 @@ cbuffer pass_constants : register(b0)
     uint vt_physical_texture_size;
 };
 
-Texture2D<float2> vt_tile_uv_texture : register(t0);
+Texture2D<float2> vt_page_uv_texture : register(t0);
 Texture2D<uint2> vt_indirect_texture : register(t1);
 Texture2D<float4> vt_base_color_physical_texture : register(t2);
 Texture2D<float3> vt_normal_physical_texture : register(t3);
@@ -35,14 +35,12 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     if (thread_id.x >= client_resolution.x || thread_id.y >= client_resolution.y) return;
 
     uint2 pixel_id = thread_id.xy;
-    float2 tile_uv = vt_tile_uv_texture[pixel_id];
-    uint2 indirection_info = vt_indirect_texture[pixel_id];
-    if (tile_uv.x == INVALID_SIZE_32 || tile_uv.y == INVALID_SIZE_32) return;
-    if (indirection_info.x == INVALID_SIZE_32 || indirection_info.y == INVALID_SIZE_32) return;
+    float2 page_uv = vt_page_uv_texture[pixel_id];
+    uint2 page_coordinate = vt_indirect_texture[pixel_id];
+    if (page_uv.x == INVALID_SIZE_32 || page_uv.y == INVALID_SIZE_32) return;
+    if (page_coordinate.x == INVALID_SIZE_32 || page_coordinate.y == INVALID_SIZE_32) return;
 
-    float2 physical_uv =
-        (tile_uv + indirection_info.xy * vt_page_size) /
-        vt_physical_texture_size;
+    float2 physical_uv = (page_uv * vt_page_size + page_coordinate.xy * vt_page_size) / vt_physical_texture_size;
 
     float3 normal = calculate_normal(
         vt_normal_physical_texture.Sample(linear_clamp_sampler, physical_uv).xyz,

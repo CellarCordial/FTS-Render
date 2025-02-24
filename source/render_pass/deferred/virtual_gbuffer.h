@@ -49,10 +49,8 @@ namespace fantasy
         bool finish_pass(RenderResourceCache* cache) override;
 	
 	private:
-		bool _update_mesh = false;
 		bool _resource_writed = false;
 		constant::VirtualGBufferPassConstant _pass_constant;
-		PhysicalTileLruCache _physical_tile_lru_cache;
 
 		std::vector<Vertex> _cluster_vertices;
 		std::vector<uint32_t> _cluster_triangles;
@@ -63,14 +61,15 @@ namespace fantasy
 		std::shared_ptr<BufferInterface> _cluster_vertex_buffer;
 		std::shared_ptr<BufferInterface> _cluster_triangle_buffer;
 		std::shared_ptr<BufferInterface> _draw_indexed_indirect_arguments_buffer;
-		std::shared_ptr<BufferInterface> _vt_physical_tile_lru_cache_buffer;
+
+		std::shared_ptr<BufferInterface> _vt_page_buffer;
+		std::shared_ptr<BufferInterface> _vt_page_read_back_buffer;
 		std::shared_ptr<BufferInterface> _virtual_shadow_page_buffer;
-		std::shared_ptr<BufferInterface> _vt_physical_tile_lru_cache_read_back_buffer;
 		std::shared_ptr<BufferInterface> _virtual_shadow_page_read_back_buffer;
 
 
-		std::shared_ptr<TextureInterface> _vt_tile_uv_texture;
-		std::shared_ptr<TextureInterface> _vt_indirect_texture;
+		std::shared_ptr<TextureInterface> _vt_page_uv_texture;
+
 		std::shared_ptr<TextureInterface> _world_position_view_depth_texture;
 		std::shared_ptr<TextureInterface> _view_space_velocity_texture;
 		std::shared_ptr<TextureInterface> _world_space_normal_texture;
@@ -79,6 +78,7 @@ namespace fantasy
 		std::shared_ptr<TextureInterface> _pbr_texture;
 		std::shared_ptr<TextureInterface> _emissive_texture;
         std::shared_ptr<TextureInterface> _reverse_depth_texture;
+
 		std::shared_ptr<TextureInterface> _virtual_mesh_visual_texture;
 
 

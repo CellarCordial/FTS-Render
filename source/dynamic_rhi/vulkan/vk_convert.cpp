@@ -470,7 +470,7 @@ namespace fantasy
         }
     }
 
-    vk::ImageCreateFlags get_image_create_flag(TextureDimension dimension)
+    vk::ImageCreateFlags get_image_create_flag(TextureDimension dimension, bool is_tiled)
     {
         vk::ImageCreateFlags flags = vk::ImageCreateFlags();
 
@@ -480,6 +480,8 @@ namespace fantasy
         )
             flags |= vk::ImageCreateFlagBits::eCubeCompatible;
 
+        if (is_tiled) flags |= vk::ImageCreateFlagBits::eSparseBinding | vk::ImageCreateFlagBits::eSparseResidency;
+
         return flags;
     }
 
@@ -487,7 +489,7 @@ namespace fantasy
     {
         vk::ImageCreateInfo ret{};
         ret.pNext = nullptr;
-        ret.flags = get_image_create_flag(desc.dimension);
+        ret.flags = get_image_create_flag(desc.dimension, desc.is_tiled);
         ret.imageType = convert_texture_dimension_to_image_type(desc.dimension);
         ret.format = convert_format(desc.format);
         ret.extent = vk::Extent3D(desc.width, desc.height, desc.depth);

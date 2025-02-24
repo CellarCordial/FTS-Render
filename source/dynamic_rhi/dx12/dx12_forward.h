@@ -21,6 +21,7 @@ namespace fantasy
     {
         Microsoft::WRL::ComPtr<ID3D12Device> device;
         Microsoft::WRL::ComPtr<ID3D12Device5> device5;
+        Microsoft::WRL::ComPtr<ID3D12Device8> device8;
 
         Microsoft::WRL::ComPtr<ID3D12CommandSignature> draw_indirect_signature;
         Microsoft::WRL::ComPtr<ID3D12CommandSignature> draw_indexed_indirect_signature;

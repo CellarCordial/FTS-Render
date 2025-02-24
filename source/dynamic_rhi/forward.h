@@ -1,7 +1,7 @@
 ﻿#ifndef RHI_FORWARD_H
 #define RHI_FORWARD_H
 
-
+#include <string>
 #include <stdint.h>
 
 
@@ -112,6 +112,19 @@ namespace fantasy
         Vulkan
     };
 
+    
+    struct MemoryRequirements
+    {
+        uint64_t alignment;
+        uint64_t size;
+    };
+    
+    struct ResourceInterface
+    {
+		virtual ~ResourceInterface() = default;
+    };
+
+
     enum class HeapType : uint8_t
     {
         Default,
@@ -119,26 +132,19 @@ namespace fantasy
         Readback
     };
 
-    struct MemoryRequirements
-    {
-        uint64_t alignment;
-        uint64_t size;
-    };
-
     struct HeapDesc
     {
-        uint64_t capacity = 0;
+        std::string name;
         HeapType type;
+        uint64_t capacity = 0;
     };
 
-    struct HeapInterface
+    struct HeapInterface : public ResourceInterface
     {
         virtual const HeapDesc& get_desc() const = 0;
         
 		virtual ~HeapInterface() = default;
     };
-
-
 }
 
 

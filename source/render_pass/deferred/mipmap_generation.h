@@ -20,6 +20,10 @@ namespace fantasy
 		uint32_t _current_image_index = 0;
 		uint32_t _current_submaterial_index = 0;
 
+		uint64_t _geometry_texture_heap_capacity = 1024 * 1024 * 64;
+		std::shared_ptr<HeapInterface> _geometry_texture_heap;
+		uint64_t _current_heap_offset = 0;
+
 		std::vector<std::shared_ptr<TextureInterface>> _textures;
 
         std::shared_ptr<SamplerInterface> _linear_clamp_sampler;

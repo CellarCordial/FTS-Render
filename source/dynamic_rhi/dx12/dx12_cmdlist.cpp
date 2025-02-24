@@ -1465,7 +1465,6 @@ namespace fantasy
         return true;
     }
 
-
     void DX12CommandList::set_enable_uav_barrier_for_texture(TextureInterface* texture, bool enable_barriers)
     {
         _resource_state_tracker.set_texture_enable_uav_barriers(texture, enable_barriers);
@@ -1493,10 +1492,6 @@ namespace fantasy
 
         const uint64_t total_barrier_count = texture_barriers.size() + buffer_barriers.size();
         if (total_barrier_count == 0) return;
-
-
-        _d3d12_barriers.clear();
-        _d3d12_barriers.reserve(total_barrier_count);
 
         for (const auto& barrier : texture_barriers)
         {
@@ -1575,6 +1570,7 @@ namespace fantasy
         }
 
         _resource_state_tracker.clear_barriers();
+        _d3d12_barriers.clear();
     }
 
     ResourceStates DX12CommandList::get_buffer_state(BufferInterface* buffer)

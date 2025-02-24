@@ -1,8 +1,4 @@
-// #define VT_PAGE_SIZE 1
-// #define VT_PHYSICAL_TEXTURE_RESOLUTION 1
-
 #include "../common/gbuffer.hlsl"
-#include "../common/virtual_texture.hlsl"
 
 
 cbuffer pass_constants : register(b0)
@@ -52,15 +48,11 @@ struct PixelOutput
     float4 virtual_mesh_visual : SV_TARGET7;
 };
 
-#if defined(VT_PAGE_SIZE) && defined(VT_PHYSICAL_TEXTURE_RESOLUTION)
-
-
 StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
 
-RWTexture2D<uint2> vt_tile_uv_texture : register(u0);
-RWTexture2D<uint2> vt_indirect_texture : register(u1);
-RWStructuredBuffer<PhysicalTileLruCache> physical_tile_lru_cache_buffer : register(u2);
-RWStructuredBuffer<uint2> virtual_shadow_page_buffer : register(u3);
+RWTexture2D<uint2> vt_page_uv_texture : register(u0);
+RWStructuredBuffer<uint2> vt_page_buffer : register(u1);
+RWStructuredBuffer<uint2> virtual_shadow_page_buffer : register(u2);
 
 uint estimate_mip_level(float2 pixel_id)
 {
@@ -78,16 +70,18 @@ PixelOutput main(VertexOutput input)
     GeometryConstant geometry = geometry_constant_buffer[input.geometry_id];
 
     uint mip_level = estimate_mip_level(input.uv * geometry.texture_resolution);
-    uint2 geometry_texture_pixel_id = uint2(input.uv * max(geometry.texture_resolution >> mip_level, vt_page_size));
-    vt_tile_uv_texture[pixel_id] = geometry_texture_pixel_id % vt_page_size;
+    uint2 geometry_texture_resolution = max(geometry.texture_resolution >> mip_level, vt_page_size);
+    uint2 geometry_texture_pixel_id = uint2(input.uv * geometry_texture_resolution);
 
     uint2 page_id = geometry_texture_pixel_id / vt_page_size;
-    uint vt_page_id_mip_level = uint(
+    uint page_id_mip_level = uint(
         (page_id.x << 20) |
         (page_id.y << 8) |
         (mip_level & 0xff)
     );
-    vt_indirect_texture[pixel_id] = physical_tile_lru_cache_buffer[0].insert(input.geometry_id, vt_page_id_mip_level);
+
+    vt_page_buffer[pixel_index] = uint2(input.geometry_id, page_id_mip_level);
+    vt_page_uv_texture[pixel_id] = geometry_texture_pixel_id % vt_page_size;
 
     
     // 更新 virtual shadow page buffer.
@@ -119,6 +113,3 @@ PixelOutput main(VertexOutput input)
     output.virtual_mesh_visual = float4(input.color, 1.0f);
     return output;
 }
-
-
-#endif

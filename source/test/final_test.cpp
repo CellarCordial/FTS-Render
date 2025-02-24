@@ -146,7 +146,7 @@ namespace fantasy
 
 		return test_pass;
     }
-}
+} 
 
 
 int main()

@@ -47,6 +47,73 @@ namespace fantasy
             _context->name_object(vk_device_memory, vk::ObjectType::eDeviceMemory, desc.name.c_str());
         }
 
+        if (desc.is_tiled)
+        {
+            auto vk_sparse_memory_requirements = _context->device.getImageSparseMemoryRequirements(vk_image);
+            if (!vk_sparse_memory_requirements.empty())
+            {
+                tile_info.standard_mip_num = vk_sparse_memory_requirements[0].imageMipTailFirstLod;
+            }
+            else 
+            {
+                tile_info.standard_mip_num = 0;
+            }
+            tile_info.packed_mip_num = vk_image_info.mipLevels - vk_sparse_memory_requirements[0].imageMipTailFirstLod;
+            tile_info.tile_num_for_packed_mips = static_cast<uint32_t>(vk_sparse_memory_requirements[0].imageMipTailSize / texture_tile_byte_size);
+            tile_info.start_tile_index = static_cast<uint32_t>(vk_sparse_memory_requirements[0].imageMipTailOffset / texture_tile_byte_size);
+            
+            auto formatProperties = _context->vk_physical_device.getSparseImageFormatProperties(
+                vk_image_info.format, 
+                vk_image_info.imageType, 
+                vk_image_info.samples, 
+                vk_image_info.usage, 
+                vk_image_info.tiling
+            );
+            if (!formatProperties.empty())
+            {   
+                tile_info.width_in_texels = formatProperties[0].imageGranularity.width;
+                tile_info.height_in_texels = formatProperties[0].imageGranularity.height;
+                tile_info.depth_in_texels = formatProperties[0].imageGranularity.depth;
+            }
+
+            uint32_t subresouce_tiling_num = desc.mip_levels;
+            uint32_t start_tile_indx = 0;
+
+            uint32_t width = desc.width;
+            uint32_t height = desc.height;
+            uint32_t depth = desc.depth;
+
+            for (uint32_t ix = 0; ix < subresouce_tiling_num; ++ix)
+            {
+                if (ix < tile_info.standard_mip_num)
+                {
+                    tile_info.subresource_tilings[ix].width_in_tiles = (width + tile_info.width_in_texels - 1) / tile_info.width_in_texels;
+                    tile_info.subresource_tilings[ix].height_in_tiles = (height + tile_info.height_in_texels - 1) / tile_info.height_in_texels;
+                    tile_info.subresource_tilings[ix].depth_in_tiles = (depth + tile_info.depth_in_texels - 1) / tile_info.depth_in_texels;
+                    tile_info.subresource_tilings[ix].start_tile_index = start_tile_indx;
+                }
+                else
+                {
+                    tile_info.subresource_tilings[ix].width_in_tiles = 0;
+                    tile_info.subresource_tilings[ix].height_in_tiles = 0;
+                    tile_info.subresource_tilings[ix].depth_in_tiles = 0;
+                    tile_info.subresource_tilings[ix].start_tile_index = UINT32_MAX;
+                }
+
+                width = std::max(width / 2, tile_info.width_in_texels);
+                height = std::max(height / 2, tile_info.height_in_texels);
+                depth = std::max(depth / 2, tile_info.depth_in_texels);
+
+                start_tile_indx += tile_info.subresource_tilings[ix].width_in_tiles * 
+                                                   tile_info.subresource_tilings[ix].height_in_tiles * 
+                                                   tile_info.subresource_tilings[ix].depth_in_tiles;
+            }
+    
+            
+            auto vk_memory_requirements = _context->device.getImageMemoryRequirements(vk_image);
+            tile_info.total_tile_num = static_cast<uint32_t>(vk_sparse_memory_requirements.size() / texture_tile_byte_size);
+        }
+
         return true;
     }
 
@@ -68,6 +135,8 @@ namespace fantasy
         if (heap != nullptr || !desc.is_virtual) return false;
 
         heap = heap_;
+        desc.offset_in_heap = offset;
+
         _context->device.bindImageMemory(vk_image, vk_device_memory, offset);
 
         return true;
@@ -83,6 +152,12 @@ namespace fantasy
         ret.size = vk_memory_requirement.size;
         return ret;
     }
+
+    
+    const TextureTileInfo& VKTexture::get_tile_info()
+    {
+        return tile_info;
+    } 
     
     void* VKTexture::get_native_object() 
     {
@@ -209,6 +284,7 @@ namespace fantasy
         if (heap != nullptr || !desc.is_virtual) return false;
 
         heap = heap_;
+        desc.offset_in_heap = offset;
 
         _context->device.bindBufferMemory(vk_buffer, vk_device_memory, offset);
 

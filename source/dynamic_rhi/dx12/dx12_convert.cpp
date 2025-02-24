@@ -364,7 +364,7 @@ namespace fantasy
         ret.MipLevels = static_cast<uint16_t>(desc.mip_levels);
         ret.Format = format_mapping.rtv_dsv_format;
         ret.SampleDesc = { 1, 0 };
-        ret.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+        ret.Layout = desc.is_tiled ? D3D12_TEXTURE_LAYOUT_64KB_UNDEFINED_SWIZZLE : D3D12_TEXTURE_LAYOUT_UNKNOWN;
         ret.Flags = d3d12_resource_flags;
 
         return ret;

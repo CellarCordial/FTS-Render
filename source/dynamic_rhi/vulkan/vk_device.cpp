@@ -4,6 +4,8 @@
 #include "vk_resource.h"
 #include "vk_pipeline.h"
 #include "vk_frame_buffer.h"
+#include "../../core/tools/check_cast.h"
+#include <cstdint>
 
 
 namespace fantasy 
@@ -263,6 +265,91 @@ namespace fantasy
             return nullptr;
         }
         return cmdlist;
+    }
+
+    void VKDevice::update_texture_tile_mappings(
+        TextureInterface* texture_, 
+        const TextureTilesMapping* tile_mappings, 
+        uint32_t tile_mapping_num, 
+        CommandQueueType execution_queue_type
+    )
+    {
+        VKTexture* texture = check_cast<VKTexture*>(texture_);
+
+        std::vector<vk::SparseImageMemoryBind> vk_sparse_image_memory_binds;
+        std::vector<vk::SparseMemoryBind> vk_sparse_memory_binds;
+
+        for (size_t i = 0; i < tile_mapping_num; i++)
+        {
+            uint32_t region_num = static_cast<uint32_t>(tile_mappings[i].regions.size());
+            VKHeap* heap = tile_mappings[i].heap ? check_cast<VKHeap*>(tile_mappings[i].heap) : nullptr;
+            vk::DeviceMemory vk_device_memory = heap ? heap->vk_device_memory : VK_NULL_HANDLE;
+
+            for (uint32_t j = 0; j < region_num; ++j)
+            {
+                const TextureTilesMapping::Region& region = tile_mappings[i].regions[j];
+
+                if (region.tiles_num)
+                {
+                    vk::SparseMemoryBind vk_memory_bind{};
+                    vk_memory_bind.resourceOffset = 0;
+                    vk_memory_bind.size = region.tiles_num * texture_tile_byte_size;
+                    vk_memory_bind.memory = vk_device_memory;
+                    vk_memory_bind.memoryOffset = vk_device_memory ? tile_mappings[i].regions[j].byte_offset : 0;
+                    vk_sparse_memory_binds.push_back(vk_memory_bind);
+                }
+                else
+                {
+                    vk::ImageSubresource vk_subresource{};
+                    vk_subresource.arrayLayer = region.array_level;
+                    vk_subresource.mipLevel = region.mip_level;
+
+                    vk::Offset3D vk_offset;
+                    vk_offset.x = region.x;
+                    vk_offset.y = region.y;
+                    vk_offset.z = region.z;
+
+                    vk::Extent3D vk_extent;
+                    vk_extent.width = region.width;
+                    vk_extent.height = region.height;
+                    vk_extent.depth = region.depth;
+
+                    vk::SparseImageMemoryBind vk_memory_bind{};
+                    vk_memory_bind.subresource = vk_subresource;
+                    vk_memory_bind.offset = vk_offset;
+                    vk_memory_bind.extent = vk_extent;
+                    vk_memory_bind.memory = vk_device_memory;
+                    vk_memory_bind.memoryOffset = vk_device_memory ? tile_mappings[i].regions[j].byte_offset : 0;
+                    vk_sparse_image_memory_binds.push_back(vk_memory_bind);
+                }
+            }
+        }
+
+        vk::BindSparseInfo vk_bind_sparse_info = {};
+
+        vk::SparseImageMemoryBindInfo vk_sparse_image_memory_bind_info;
+        if (!vk_sparse_image_memory_binds.empty())
+        {
+            vk_sparse_image_memory_bind_info.image = texture->vk_image;
+            vk_sparse_image_memory_bind_info.bindCount = static_cast<uint32_t>(vk_sparse_image_memory_binds.size());
+            vk_sparse_image_memory_bind_info.pBinds = vk_sparse_image_memory_binds.data();
+
+            vk_bind_sparse_info.imageBindCount = 1;
+            vk_bind_sparse_info.pImageBinds = &vk_sparse_image_memory_bind_info;
+        }
+
+        vk::SparseImageOpaqueMemoryBindInfo vk_sparse_image_opaque_memory_bind_info;
+        if (!vk_sparse_memory_binds.empty())
+        {
+            vk_sparse_image_opaque_memory_bind_info.image = texture->vk_image;
+            vk_sparse_image_opaque_memory_bind_info.bindCount = static_cast<uint32_t>(vk_sparse_memory_binds.size());
+            vk_sparse_image_opaque_memory_bind_info.pBinds = vk_sparse_memory_binds.data();
+
+            vk_bind_sparse_info.imageOpaqueBindCount = 1;
+            vk_bind_sparse_info.pImageOpaqueBinds = &vk_sparse_image_opaque_memory_bind_info;
+        }
+
+        get_queue(execution_queue_type)->vk_queue.bindSparse(vk_bind_sparse_info, vk::Fence());
     }
 
     uint64_t VKDevice::execute_command_lists(CommandListInterface* const* cmdlists, uint64_t cmd_count, CommandQueueType queue_type)

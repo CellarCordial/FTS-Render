@@ -5,7 +5,9 @@
 #include "../../scene/virtual_texture.h"
 #include "../../scene/geometry.h"
 #include <array>
+#include <cstdint>
 #include <memory>
+#include <unordered_map>
 
 namespace fantasy
 {
@@ -20,11 +22,6 @@ namespace fantasy
 	}
 
 	
-	struct ShadowTileInfo
-	{
-		uint2 id;
-		float4x4 view_matrix;
-	};
 
 	class VirtualTextureUpdatePass : public RenderPassInterface
 	{
@@ -36,17 +33,22 @@ namespace fantasy
 		bool finish_pass(RenderResourceCache* cache) override;
 
 	private:
-		std::vector<std::pair<const std::string*, uint32_t>> _submesh_name_cache;
-		bool _update_submesh_name_cache = false;
-
-		uint64_t _finish_pass_thread_id = INVALID_SIZE_64;
 		constant::VirtualGeometryTexturePassConstant _pass_constant;
-
-		PhysicalTileLruCache* _physical_tile_lru_cache = nullptr;
-
-
-		std::shared_ptr<BufferInterface> _vt_physical_tile_lru_cache_read_back_buffer;
+		uint64_t _finish_pass_thread_id = INVALID_SIZE_64;
 		
+		std::vector<VTPage> _new_vt_pages;
+		VTPhysicalTable _vt_physical_table;
+		VTIndirectTable _vt_indirect_table;
+
+		bool _update_texture_region_cache = false;
+		std::unordered_map<uint64_t, TextureTilesMapping::Region> _geometry_texture_region_cache;
+
+
+		std::shared_ptr<HeapInterface> _geometry_texture_heap;
+		
+		std::shared_ptr<BufferInterface> _vt_page_read_back_buffer;
+		
+		std::shared_ptr<TextureInterface> _vt_indirect_texture;
 		std::array<std::shared_ptr<TextureInterface>, Material::TextureType_Num> _vt_physical_textures;
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;

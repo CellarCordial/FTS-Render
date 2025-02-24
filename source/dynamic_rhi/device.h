@@ -36,6 +36,14 @@ namespace fantasy
         virtual BindingSetInterface* create_binding_set(const BindingSetDesc& desc, std::shared_ptr<BindingLayoutInterface> binding_layout) = 0;
 
         virtual CommandListInterface* create_command_list(const CommandListDesc& desc) = 0;
+
+        virtual void update_texture_tile_mappings(
+            TextureInterface* texture, 
+            const TextureTilesMapping* tile_mappings, 
+            uint32_t tile_mapping_num, 
+            CommandQueueType execution_queue_type
+        ) = 0;
+
         virtual uint64_t execute_command_lists(
             CommandListInterface* const* cmdlists,
             uint64_t cmd_count = 1,

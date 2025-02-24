@@ -1388,7 +1388,7 @@ namespace fantasy
         _current_cmdbuffer->vk_cmdbuffer.endRenderPass();
         return true;
     }
-
+    
     void VKCommandList::set_enable_uav_barrier_for_texture(TextureInterface* texture, bool enable_barriers)
     {
         _resource_state_tracker.set_texture_enable_uav_barriers(texture, enable_barriers);

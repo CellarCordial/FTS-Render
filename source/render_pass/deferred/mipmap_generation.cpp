@@ -5,6 +5,7 @@
 #include "../../scene/geometry.h"
 #include <cmath>
 #include <cstdint>
+#include <memory>
 #include <string>
 
 
@@ -31,6 +32,17 @@ namespace fantasy
 			binding_layout_items[2] = BindingLayoutItem::create_sampler(0);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
+			)));
+		}
+
+		// Texture Heap.
+		{
+			ReturnIfFalse(_geometry_texture_heap = std::shared_ptr<HeapInterface>(device->create_heap(
+				HeapDesc{ 
+					.name = "geometry_texture_heap", 
+					.type = HeapType::Upload, 
+					.capacity = _geometry_texture_heap_capacity 
+				}
 			)));
 		}
 
@@ -86,7 +98,7 @@ namespace fantasy
 			_textures.resize(mip_levels);
 
 			ReturnIfFalse(_textures[0] = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_shader_resource_texture(
+				TextureDesc::create_virtual_shader_resource_texture(
 					image.width, 
 					image.height,
 					image.format,
@@ -99,16 +111,19 @@ namespace fantasy
 				)
 			)));
 			cache->collect(_textures[0], ResourceType::Texture);
+
+			_textures[0]->bind_memory(_geometry_texture_heap, _current_heap_offset);
+			_current_heap_offset += image.size;
 			ReturnIfFalse(cmdlist->write_texture(_textures[0].get(), 1, 1, image.data.get(), image.size / image.height));
 
 
 			uint2 texture_resolution = uint2(image.width, image.height);
-			for (uint32_t mip_level = 1; mip_level <= mip_levels - 1; ++mip_level)
+			for (uint32_t mip_level = 1; mip_level < mip_levels; ++mip_level)
 			{
 				texture_resolution.x >>= 1;
 				texture_resolution.y >>= 1;
 				ReturnIfFalse(_textures[mip_level] = std::shared_ptr<TextureInterface>(device->create_texture(
-					TextureDesc::create_shader_resource_texture(
+					TextureDesc::create_virtual_shader_resource_texture(
 						texture_resolution.x, 
 						texture_resolution.y,
 						image.format,
@@ -121,6 +136,9 @@ namespace fantasy
 					)
 				)));
 				cache->collect(_textures[mip_level], ResourceType::Texture);
+
+				_textures[mip_level]->bind_memory(_geometry_texture_heap, _current_heap_offset);
+				_current_heap_offset += image.size >> (mip_level * 2);
 
 				// Binding Set.
 				{
@@ -157,6 +175,8 @@ namespace fantasy
 			_current_submaterial_index++;
 			if (_current_submaterial_index == _current_model->get_component<Material>()->submaterials.size()) 
 			{
+				_current_submaterial_index = 0;
+
 				// available_task_num--.
 				(*_current_model->get_component<uint32_t>())--;
 				

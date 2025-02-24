@@ -7,6 +7,7 @@
 #include <dxgiformat.h>
 #include <intsafe.h>
 #include <memory>
+#include <string>
 #include <tuple>
 #include <utility>
 #include <winerror.h>
@@ -53,14 +54,28 @@ namespace fantasy
 
         D3D12_CLEAR_VALUE d3d12_clear_value = convert_clear_value(desc);
 
-        ReturnIfFalse(SUCCEEDED(_context->device->CreateCommittedResource(
-            &d3d12_heap_properties, 
-            D3D12_HEAP_FLAG_NONE, 
-            &d3d12_resource_desc, 
-            D3D12_RESOURCE_STATE_COMMON, 
-            desc.use_clear_value ? &d3d12_clear_value : nullptr, 
-            IID_PPV_ARGS(d3d12_resource.GetAddressOf())
-        )));
+        if (desc.is_tiled)
+        {
+            ReturnIfFalse(SUCCEEDED(_context->device->CreateReservedResource(
+                &d3d12_resource_desc, 
+                D3D12_RESOURCE_STATE_COMMON, 
+                desc.use_clear_value ? &d3d12_clear_value : nullptr, 
+                IID_PPV_ARGS(d3d12_resource.GetAddressOf())
+            )));
+
+        }
+        else
+        {
+            ReturnIfFalse(SUCCEEDED(_context->device->CreateCommittedResource(
+                &d3d12_heap_properties, 
+                D3D12_HEAP_FLAG_NONE, 
+                &d3d12_resource_desc, 
+                D3D12_RESOURCE_STATE_COMMON, 
+                desc.use_clear_value ? &d3d12_clear_value : nullptr, 
+                IID_PPV_ARGS(d3d12_resource.GetAddressOf())
+            )));
+        }
+
         
 		d3d12_resource->SetName(std::wstring(desc.name.begin(), desc.name.end()).c_str());
 
@@ -69,6 +84,44 @@ namespace fantasy
         {
             _mip_uav_cache_for_clear.resize(desc.mip_levels);
             std::fill(_mip_uav_cache_for_clear.begin(), _mip_uav_cache_for_clear.end(), INVALID_SIZE_32);
+        }
+
+        if (desc.is_tiled)
+        {
+            D3D12_PACKED_MIP_INFO d3d12_packed_mip_info = {};
+            D3D12_TILE_SHAPE d3d12_tile_shape = {};
+            std::vector<D3D12_SUBRESOURCE_TILING> d3d12_subresouce_tilings(desc.mip_levels);
+
+            uint32_t subresource_tiling_num;
+
+            _context->device->GetResourceTiling(
+                d3d12_resource.Get(), 
+                &tile_info.total_tile_num, 
+                &d3d12_packed_mip_info, 
+                &d3d12_tile_shape, 
+                &subresource_tiling_num, 
+                0, 
+                d3d12_subresouce_tilings.data()
+            );
+
+
+            tile_info.standard_mip_num = d3d12_packed_mip_info.NumStandardMips;
+            tile_info.packed_mip_num = d3d12_packed_mip_info.NumPackedMips;
+            tile_info.tile_num_for_packed_mips = d3d12_packed_mip_info.NumTilesForPackedMips;
+            tile_info.start_tile_index = d3d12_packed_mip_info.StartTileIndexInOverallResource;
+
+            tile_info.width_in_texels = d3d12_tile_shape.WidthInTexels;
+            tile_info.height_in_texels = d3d12_tile_shape.HeightInTexels;
+            tile_info.depth_in_texels = d3d12_tile_shape.DepthInTexels;
+
+            tile_info.subresource_tilings.resize(subresource_tiling_num);
+            for (uint32_t ix = 0; ix < subresource_tiling_num; ++ix)
+            {
+                tile_info.subresource_tilings[ix].width_in_tiles = d3d12_subresouce_tilings[ix].WidthInTiles;
+                tile_info.subresource_tilings[ix].height_in_tiles = d3d12_subresouce_tilings[ix].HeightInTiles;
+                tile_info.subresource_tilings[ix].depth_in_tiles = d3d12_subresouce_tilings[ix].DepthInTiles;
+                tile_info.subresource_tilings[ix].start_tile_index = d3d12_subresouce_tilings[ix].StartTileIndexInOverallResource;
+            }
         }
 
         return true;
@@ -97,6 +150,7 @@ namespace fantasy
         if (heap_ == nullptr || !desc.is_virtual || d3d12_resource == nullptr) return false;
 
         heap = heap_;
+        desc.offset_in_heap = offset;
 
         auto dx12_heap = check_cast<DX12Heap>(heap);
 
@@ -119,6 +173,11 @@ namespace fantasy
 
         return true;
     }
+
+    const TextureTileInfo& DX12Texture::get_tile_info()
+    {
+        return tile_info;
+    } 
 
     uint32_t DX12Texture::get_view_index(ResourceViewType view_type, const TextureSubresourceSet& subresource, Format format_)
     {
@@ -484,6 +543,7 @@ namespace fantasy
         if (heap_ == nullptr || d3d12_resource == nullptr || desc.is_virtual) return false;
         
         heap = heap_;
+        desc.offset_in_heap = offset;
         
         auto dx12_heap = check_cast<DX12Heap>(heap_);
 
@@ -634,13 +694,14 @@ namespace fantasy
         _context->device->CreateUnorderedAccessView(d3d12_resource.Get(), nullptr, &view_desc, d3d12_cpu_descriptor);
     }
 
+
     DX12StagingTexture::DX12StagingTexture(const DX12Context* context, const TextureDesc& desc_, CpuAccessMode cpu_access_mode) :
         _context(context), 
         desc(desc_), 
         access_mode(cpu_access_mode)
     {
     }
-
+    
     bool DX12StagingTexture::initialize(DX12DescriptorManager* descriptor_heaps)
     {
         ReturnIfFalse(access_mode != CpuAccessMode::None);

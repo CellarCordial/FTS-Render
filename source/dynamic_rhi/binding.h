@@ -10,14 +10,6 @@
 
 namespace fantasy
 {
-    enum class DescriptorHeapType : uint8_t
-    {
-        RenderTargetView,
-        DepthStencilView,
-        ShaderResourceView,
-        Sampler
-    };
-
     enum class ResourceViewType : uint16_t
     {
         None,
@@ -203,6 +195,7 @@ namespace fantasy
             TextureSubresourceSet subresource;
             BufferRange range = { 0, 0 };
         };
+
 
         static BindingSetItem create_texture_srv(
             uint32_t slot,
