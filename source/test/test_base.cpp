@@ -82,7 +82,7 @@ namespace fantasy
     {
 		ReturnIfFalse(glfwInit());
 		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-		_window = glfwCreateWindow(CLIENT_WIDTH, CLIENT_HEIGHT, "Fantasy-Render", nullptr, nullptr);
+		_window = glfwCreateWindow(CLIENT_WIDTH, CLIENT_HEIGHT, "GPU-Driven-Pipeline", nullptr, nullptr);
 		return _window != nullptr;
     }
 
@@ -191,7 +191,7 @@ namespace fantasy
 		}
 
 		ReturnIfFalse(_final_texture = std::shared_ptr<TextureInterface>(_device->create_texture(
-			TextureDesc::create_render_target_texture(CLIENT_WIDTH, CLIENT_HEIGHT, Format::RGBA8_UNORM, "final_texture")
+			TextureDesc::create_render_target_texture(CLIENT_WIDTH, CLIENT_HEIGHT, Format::RGBA8_UNORM, "final_texture", true)
 		)));
 		cache->collect(_final_texture, ResourceType::Texture);
 

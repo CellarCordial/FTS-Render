@@ -3,7 +3,6 @@
 #include "../shader/shader_compiler.h"
 #include "../core/tools/check_cast.h"
 #include "../gui/gui_panel.h"
-#include "../scene/light.h"
 
 #include "../render_pass/culling/mesh_cluster_culling.h"
 #include "../render_pass/culling/hierarchical_zbuffer.h"
@@ -21,22 +20,22 @@
 #include "../render_pass/atmosphere/sky.h"
 
 namespace fantasy
-{
-	bool FinalTestPass::compile(DeviceInterface* device, RenderResourceCache* cache)
-	{
-		_final_texture = check_cast<TextureInterface>(cache->require("final_texture"));
+{	
+#define THREAD_GROUP_SIZE_X 16
+#define THREAD_GROUP_SIZE_Y 16
 
+	bool FinalTestPass::compile(DeviceInterface* device, RenderResourceCache* cache)
+	{	
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(8);
+			BindingLayoutItemArray binding_layout_items(7);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::FinalTestPassConstant));
-			binding_layout_items[1] = BindingLayoutItem::create_texture_srv(0);
-			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(1);
-			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(2);
-			binding_layout_items[4] = BindingLayoutItem::create_texture_srv(3);
-			binding_layout_items[5] = BindingLayoutItem::create_texture_srv(4);
-			binding_layout_items[6] = BindingLayoutItem::create_texture_srv(5);
-			binding_layout_items[7] = BindingLayoutItem::create_sampler(0);
+			binding_layout_items[1] = BindingLayoutItem::create_texture_uav(0);
+			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
+			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(1);
+			binding_layout_items[4] = BindingLayoutItem::create_texture_srv(2);
+			binding_layout_items[5] = BindingLayoutItem::create_texture_srv(3);
+			binding_layout_items[6] = BindingLayoutItem::create_texture_srv(4);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -45,56 +44,39 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc shader_compile_desc;
-			shader_compile_desc.shader_name = "common/full_screen_quad_vs.hlsl";
+			shader_compile_desc.shader_name = "test/final_test_cs.hlsl";
 			shader_compile_desc.entry_point = "main";
-			shader_compile_desc.target = ShaderTarget::Vertex;
-			ShaderData vs_data = compile_shader(shader_compile_desc);
-			shader_compile_desc.shader_name = "test/final_test_ps.hlsl";
-			shader_compile_desc.entry_point = "main";
-			shader_compile_desc.target = ShaderTarget::Pixel;
-			ShaderData ps_data = compile_shader(shader_compile_desc);
+			shader_compile_desc.target = ShaderTarget::Compute;
+			shader_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
+			shader_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
+			ShaderData cs_data = compile_shader(shader_compile_desc);
 
-			ShaderDesc vs_desc;
-			vs_desc.entry = "main";
-			vs_desc.shader_type = ShaderType::Vertex;
-			ReturnIfFalse(_vs = std::unique_ptr<Shader>(create_shader(vs_desc, vs_data.data(), vs_data.size())));
-
-			ShaderDesc ps_desc;
-			ps_desc.shader_type = ShaderType::Pixel;
-			ps_desc.entry = "main";
-			ReturnIfFalse(_ps = std::unique_ptr<Shader>(create_shader(ps_desc, ps_data.data(), ps_data.size())));
-		}
-
- 
-		// Frame Buffer.
-		{
-			FrameBufferDesc frame_buffer_desc;
-			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_final_texture));
-			ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
+			ShaderDesc cs_desc;
+			cs_desc.entry = "main";
+			cs_desc.shader_type = ShaderType::Compute;
+			ReturnIfFalse(_cs = std::unique_ptr<Shader>(create_shader(cs_desc, cs_data.data(), cs_data.size())));
 		}
  
 		// Pipeline.
 		{
-			GraphicsPipelineDesc pipeline_desc;
-			pipeline_desc.vertex_shader = _vs;
-			pipeline_desc.pixel_shader = _ps;
+			ComputePipelineDesc pipeline_desc;
+			pipeline_desc.compute_shader = _cs;
 			pipeline_desc.binding_layouts.push_back(_binding_layout);
-			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(
-				device->create_graphics_pipeline(pipeline_desc, _frame_buffer.get())
+			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(
+				device->create_compute_pipeline(pipeline_desc)
 			));
 		}
 
 		// Binding Set.
 		{
-			BindingSetItemArray binding_set_items(8);
+			BindingSetItemArray binding_set_items(7);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::FinalTestPassConstant));
-			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("final_texture")));
-			binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
-			binding_set_items[3] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("world_space_normal_texture")));
-			binding_set_items[4] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("base_color_texture")));
-			binding_set_items[5] = BindingSetItem::create_texture_srv(4, check_cast<TextureInterface>(cache->require("pbr_texture")));
-			binding_set_items[6] = BindingSetItem::create_texture_srv(5, check_cast<TextureInterface>(cache->require("emissive_texture")));
-			binding_set_items[7] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_wrap_sampler")));
+			binding_set_items[1] = BindingSetItem::create_texture_uav(0, check_cast<TextureInterface>(cache->require("final_texture")));
+			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
+			binding_set_items[3] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("world_space_normal_texture")));
+			binding_set_items[4] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("base_color_texture")));
+			binding_set_items[5] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("pbr_texture")));
+			binding_set_items[6] = BindingSetItem::create_texture_srv(4, check_cast<TextureInterface>(cache->require("emissive_texture")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
 				_binding_layout
@@ -103,10 +85,8 @@ namespace fantasy
 
 		// Graphics state.
 		{
-			_graphics_state.pipeline = _pipeline.get();
-			_graphics_state.frame_buffer = _frame_buffer.get();
-			_graphics_state.binding_sets.push_back(_binding_set.get());
-			_graphics_state.viewport_state = ViewportState::create_default_viewport(CLIENT_WIDTH, CLIENT_HEIGHT);
+			_compute_state.pipeline = _pipeline.get();
+			_compute_state.binding_sets.push_back(_binding_set.get());
 		}
 
         gui::add(
@@ -126,7 +106,11 @@ namespace fantasy
 	bool FinalTestPass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
 		ReturnIfFalse(cmdlist->open());
-		ReturnIfFalse(cmdlist->draw(_graphics_state, DrawArguments::full_screen_quad(), &_pass_constant));
+		uint2 thread_group_num = {
+			static_cast<uint32_t>((align(CLIENT_WIDTH, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
+			static_cast<uint32_t>((align(CLIENT_HEIGHT, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
+		};
+		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constant));
 		ReturnIfFalse(cmdlist->close());
 		return true;
 	}
@@ -145,7 +129,7 @@ namespace fantasy
 		RenderPassInterface* mesh_cluster_culling_pass = render_graph->add_pass(std::make_shared<MeshClusterCullingPass>());
 		RenderPassInterface* hierarchical_zbuffer_pass = render_graph->add_pass(std::make_shared<HierarchicalZBufferPass>());
 		RenderPassInterface* virtual_gbuffer_pass = render_graph->add_pass(std::make_shared<VirtualGBufferPass>());
-		RenderPassInterface* virtual_texture_update_pass = render_graph->add_pass(std::make_shared<VirtualTextureUpdatePass>());
+		// RenderPassInterface* virtual_texture_update_pass = render_graph->add_pass(std::make_shared<VirtualTextureUpdatePass>());
 		// RenderPassInterface* shadow_tile_culling_pass = render_graph->add_pass(std::make_shared<ShadowTileCullingPass>());
 		// RenderPassInterface* virtual_shadow_map_pass = render_graph->add_pass(std::make_shared<VirtualShadowMapPass>());
 		RenderPassInterface* test_pass = render_graph->add_pass(std::make_shared<FinalTestPass>());
@@ -157,19 +141,12 @@ namespace fantasy
 		
 		mesh_cluster_culling_pass->precede(virtual_gbuffer_pass);
 		virtual_gbuffer_pass->precede(hierarchical_zbuffer_pass);
-		virtual_gbuffer_pass->precede(virtual_texture_update_pass);
+		// virtual_gbuffer_pass->precede(virtual_texture_update_pass);
 		// virtual_texture_update_pass->precede(shadow_tile_culling_pass);
 		// shadow_tile_culling_pass->precede(virtual_shadow_map_pass);
 		hierarchical_zbuffer_pass->precede(test_pass);
-		virtual_texture_update_pass->precede(test_pass);
+		// virtual_texture_update_pass->precede(test_pass);
 
-
-		RenderResourceCache* cache = render_graph->get_resource_cache();
-		cache->collect_constants("world_scale", &_world_scale);
-
-		World* world = cache->get_world();
-		world->create_entity()->assign<DirectionalLight>();
-		world->create_entity()->assign<constant::AtmosphereProperties>();
 
 
 		return test_pass;

@@ -185,14 +185,6 @@ namespace fantasy
 				{
                     file_brower->Open();
 				}
-				if (ImGui::MenuItem("Console"))
-				{
-
-				}
-				if (ImGui::MenuItem("Log"))
-				{
-
-				}
 				ImGui::EndMenuBar();
 			}
 		}

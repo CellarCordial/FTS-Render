@@ -2,7 +2,6 @@
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
 #include "../../scene/virtual_texture.h"
-#include "../../scene/geometry.h"
 #include <cmath>
 #include <cstdint>
 #include <memory>
@@ -87,61 +86,69 @@ namespace fantasy
 	{
 		if (_current_model)
 		{
+			DeviceInterface* device = cmdlist->get_deivce();
 			ReturnIfFalse(cmdlist->open());
 
-			const auto& model_name = *_current_model->get_component<std::string>();
-			const Material* material = _current_model->get_component<Material>();
-			const auto& image = material->submaterials[_current_submaterial_index].images[_current_image_type];
-
-			if (image.is_valid())
+			if (_current_mip_levels == 0)
 			{
-				uint32_t mip_levels = std::log2(material->image_resolution / VT_PAGE_SIZE) + 1;
-	
-				std::shared_ptr<TextureInterface> texture;
-				ReturnIfFalse(texture = std::shared_ptr<TextureInterface>(cmdlist->get_deivce()->create_texture(
-					TextureDesc::create_virtual_shader_resource_texture(
-						image.width, 
-						image.height,
-						image.format,
-						mip_levels,
-						get_geometry_texture_name(
-							_current_submaterial_index, 
-							_current_image_type, 
-							model_name
-						)
-					)
-				)));
-				cache->collect(texture, ResourceType::Texture);
-	
-				ReturnIfFalse(texture->bind_memory(_geometry_texture_heap, _current_heap_offset));
-				_current_heap_offset += texture->get_memory_requirements().size;
-	
-	
-				ReturnIfFalse(cmdlist->write_texture(texture.get(), 0, 0, image.data.get(), image.size));
-	
-	
-				// uint2 texture_resolution = uint2(image.width, image.height);
-				// for (uint32_t mip_level = 1; mip_level < mip_levels; ++mip_level)
-				// {
-				// 	// Binding Set.
-				// 	{
-				// 		BindingSetItemArray binding_set_items(3);
-				// 		binding_set_items[0] = BindingSetItem::create_texture_srv(0, texture);
-				// 		binding_set_items[1] = BindingSetItem::create_texture_uav(0, texture);
-				// 		binding_set_items[2] = BindingSetItem::create_sampler(0, _linear_clamp_sampler);
-				// 		ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
-				// 			BindingSetDesc{ .binding_items = binding_set_items },
-				// 			_binding_layout
-				// 		)));
-				// 	}
-	
-				// 	uint2 thread_group_num = {
-				// 		static_cast<uint32_t>((align(texture_resolution.x, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
-				// 		static_cast<uint32_t>((align(texture_resolution.y, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
-				// 	};
-	
-				// 	ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y));
-				// }
+				const auto& model_name = *_current_model->get_component<std::string>();
+				const Material* material = _current_model->get_component<Material>();
+
+				for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
+				{
+					const auto& image = material->submaterials[_current_submaterial_index].images[ix];
+
+					if (image.is_valid())
+					{
+						_current_mip_levels = std::log2(material->image_resolution / VT_PAGE_SIZE) + 1;
+		
+						ReturnIfFalse(_current_textures[ix] = std::shared_ptr<TextureInterface>(device->create_texture(
+							TextureDesc::create_virtual_read_write_texture(
+								image.width, 
+								image.height,
+								image.format,
+								_current_mip_levels,
+								get_geometry_texture_name(
+									_current_submaterial_index, 
+									ix, 
+									model_name
+								)
+							)
+						)));
+						cache->collect(_current_textures[ix], ResourceType::Texture);
+			
+						ReturnIfFalse(_current_textures[ix]->bind_memory(_geometry_texture_heap, _current_heap_offset));
+						_current_heap_offset += _current_textures[ix]->get_memory_requirements().size;
+			
+						ReturnIfFalse(cmdlist->write_texture(_current_textures[ix].get(), 0, 0, image.data.get(), image.size));
+
+						_current_texture_resolution = uint2(image.width, image.height);
+					}
+				}
+			}
+
+			
+			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
+			{
+				// Binding Set.
+				{
+					BindingSetItemArray binding_set_items(3);
+					binding_set_items[0] = BindingSetItem::create_texture_srv(0, _current_textures[ix], TextureSubresourceSet{ .base_mip_level = _current_calculate_mip - 1 });
+					binding_set_items[1] = BindingSetItem::create_texture_uav(0, _current_textures[ix], TextureSubresourceSet{ .base_mip_level = _current_calculate_mip });
+					binding_set_items[2] = BindingSetItem::create_sampler(0, _linear_clamp_sampler);
+					ReturnIfFalse(_binding_sets[ix] = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
+						BindingSetDesc{ .binding_items = binding_set_items },
+						_binding_layout
+					)));
+				}
+				_compute_state.binding_sets[0] = _binding_set.get();
+
+				uint2 thread_group_num = {
+					static_cast<uint32_t>((align(_current_texture_resolution.x >> _current_calculate_mip, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
+					static_cast<uint32_t>((align(_current_texture_resolution.y >> _current_calculate_mip, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
+				};
+
+				ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y));
 			}
 
 			ReturnIfFalse(cmdlist->close());
@@ -152,22 +159,23 @@ namespace fantasy
 
 	bool MipmapGenerationPass::finish_pass(RenderResourceCache* cache)
 	{
-		_current_image_type++;
-		if (_current_image_type == Material::TextureType_Num)
+		_current_calculate_mip++;
+		if (_current_calculate_mip == _current_mip_levels)
 		{
-			_current_image_type = 0;
+			_current_calculate_mip = 1;
 			_current_submaterial_index++;
 			if (_current_submaterial_index == _current_model->get_component<Material>()->submaterials.size()) 
 			{
 				_current_submaterial_index = 0;
+				_current_mip_levels = 0;
 
-				// available_task_num--.
-				(*_current_model->get_component<uint32_t>())--;
+				uint32_t* available_task_num = _current_model->get_component<uint32_t>();
+				(*available_task_num)--;
 				
 				std::string model_name = *_current_model->get_component<std::string>();
+				LOG_INFO(model_name + "geometry texture mip generated.");
 				
 				_current_model = nullptr;
-				LOG_INFO(model_name + "geometry texture mip generated.");
 			
 				return true;
 			}

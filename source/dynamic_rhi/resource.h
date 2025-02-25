@@ -166,7 +166,7 @@ namespace fantasy
             uint32_t width, 
             uint32_t height, 
             Format format, 
-            uint32_t mip_level,
+            uint32_t mip_levels,
             std::string name = ""
         )
         {
@@ -175,6 +175,7 @@ namespace fantasy
             ret.width = width;
             ret.height = height;
             ret.format = format;
+            ret.mip_levels = mip_levels;
             ret.is_virtual = true;
             return ret;
         }
@@ -209,6 +210,25 @@ namespace fantasy
             ret.depth = depth;
             ret.format = format;
             ret.dimension = TextureDimension::Texture3D;
+            return ret;
+        }
+        
+        static TextureDesc create_virtual_read_write_texture(
+            uint32_t width, 
+            uint32_t height, 
+            Format format, 
+            uint32_t mip_levels,
+            std::string name = ""
+        )
+        {
+            TextureDesc ret;
+            ret.name = name;
+            ret.width = width;
+            ret.height = height;
+            ret.format = format;
+            ret.mip_levels = mip_levels;
+            ret.is_virtual = true;
+            ret.allow_unordered_access = true;
             return ret;
         }
         

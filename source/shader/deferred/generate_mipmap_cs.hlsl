@@ -13,6 +13,7 @@ void main(uint3 thread_id: SV_DispatchThreadID)
 {
     uint width, height;
     input_texture.GetDimensions(width, height);
+    if (thread_id.x >= width || thread_id.y >= height) return;
 
     float2 uv = float2(
         (thread_id.x + 0.5f) * width,

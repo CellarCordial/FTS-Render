@@ -1,6 +1,7 @@
 #include "transmittance_lut.h"
 #include "../../shader/shader_compiler.h"
 #include "../../core/math/vector.h"
+#include "../../scene/light.h"
 #include <memory>
 #include <string>
 
@@ -13,6 +14,12 @@ namespace fantasy
 
     bool TransmittanceLUTPass::compile(DeviceInterface* device, RenderResourceCache* cache)
     {
+		cache->collect_constants("world_scale", &_world_scale);
+
+		World* world = cache->get_world();
+		world->create_entity()->assign<DirectionalLight>();
+		world->create_entity()->assign<constant::AtmosphereProperties>();
+
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(2);

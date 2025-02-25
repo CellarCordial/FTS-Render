@@ -2,6 +2,7 @@
 #define TEST_RESTIR_H
 
 #include "../render_graph/render_graph.h"
+#include "../core/math/vector.h"
 #include "test_base.h"
 #include <cstdint>
 #include <memory>
@@ -13,14 +14,15 @@ namespace fantasy
     {
         struct FinalTestPassConstant
         {
-            int32_t show_type;
+            int32_t show_type = 0;
+            uint2 client_resolution = { CLIENT_WIDTH, CLIENT_HEIGHT };
         };
     }
 
     class FinalTestPass : public RenderPassInterface
     {
     public:
-		FinalTestPass() { type = RenderPassType::Graphics; }
+		FinalTestPass() { type = RenderPassType::Compute; }
 
         bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
         bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
@@ -28,20 +30,15 @@ namespace fantasy
     private:
 		constant::FinalTestPassConstant _pass_constant;
 
-        std::shared_ptr<TextureInterface> _final_texture;
-
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 		std::shared_ptr<InputLayoutInterface> _input_layout;
 
-		std::shared_ptr<Shader> _vs;
-		std::shared_ptr<Shader> _ps;
+		std::shared_ptr<Shader> _cs;
 
-		std::unique_ptr<FrameBufferInterface> _frame_buffer;
-		std::unique_ptr<GraphicsPipelineInterface> _pipeline;
+		std::unique_ptr<ComputePipelineInterface> _pipeline;
 
 		std::unique_ptr<BindingSetInterface> _binding_set;
-		GraphicsState _graphics_state;
-        DrawArguments _draw_arguments;
+		ComputeState _compute_state;
     };
 
 
@@ -52,7 +49,6 @@ namespace fantasy
         RenderPassInterface* init_render_pass(RenderGraph* render_graph) override;
 
     private:
-		float _world_scale = 200.0f;
     };
 
 }

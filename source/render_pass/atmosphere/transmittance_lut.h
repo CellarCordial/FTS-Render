@@ -18,6 +18,7 @@ namespace fantasy
 		friend class AtmosphereTest;
 
     private:
+		float _world_scale = 200.0f;
         constant::AtmosphereProperties _standard_atomsphere_properties;
 
 		std::shared_ptr<BufferInterface> _atomsphere_properties_buffer;

@@ -36,7 +36,7 @@ namespace fantasy
     {
         float4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
         float intensity = 5.0f;
-        float2 angle = { 0.0f, 11.6f };
+        float2 angle = { 240.0f, 10.0f };
         float sun_angular_radius = 0.9999f;
 
         float3 direction;

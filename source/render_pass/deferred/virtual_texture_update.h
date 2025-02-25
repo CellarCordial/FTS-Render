@@ -40,6 +40,7 @@ namespace fantasy
 		VTPhysicalTable _vt_physical_table;
 		VTIndirectTable _vt_indirect_table;
 
+		std::vector<uint2> _vt_feed_back_data;
 		bool _update_texture_region_cache = false;
 		uint32_t* _vt_feed_back_scale_factor = nullptr;
 		std::unordered_map<uint64_t, TextureTilesMapping::Region> _geometry_texture_region_cache;

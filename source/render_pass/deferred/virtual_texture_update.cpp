@@ -5,8 +5,10 @@
 #include "../../scene/scene.h"
 #include <array>
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <thread>
+#include <vector>
 
 namespace fantasy
 {
@@ -197,19 +199,25 @@ namespace fantasy
 				ReturnIfFalse(parallel::thread_success(_finish_pass_thread_id));
 			}
 
-			uint2* vt_pages = static_cast<uint2*>(_vt_page_read_back_buffer->map(CpuAccessMode::Read));
-
-			std::array<TextureTilesMapping, Material::TextureType_Num> tile_mappings;
-
+			uint2* mapped_data = static_cast<uint2*>(_vt_page_read_back_buffer->map(CpuAccessMode::Read));
+			
 			uint32_t vt_page_num = (CLIENT_WIDTH / *_vt_feed_back_scale_factor) * (CLIENT_HEIGHT / *_vt_feed_back_scale_factor);
-			for (uint32_t ix = 0; ix < vt_page_num; ++ix)
+			_vt_feed_back_data.resize(vt_page_num);
+			memcpy(_vt_feed_back_data.data(), mapped_data, vt_page_num * sizeof(uint2)); 
+
+			_vt_page_read_back_buffer->unmap();
+
+			
+			std::array<TextureTilesMapping, Material::TextureType_Num> tile_mappings;
+			
+			for (uint32_t ix = 0; ix < _vt_feed_back_data.size(); ++ix)
 			{
-				const auto& info = *(vt_pages + ix);
-				if (info.x == INVALID_SIZE_32 || info.y == INVALID_SIZE_32) continue;
+				const auto& data = _vt_feed_back_data[ix];
+				if (data.x == INVALID_SIZE_32 && data.y == INVALID_SIZE_32) continue;
 
 				VTPage page;
-				page.geometry_id = info.x;
-				page.coordinate_mip_level = info.y;
+				page.geometry_id = data.x;
+				page.coordinate_mip_level = data.y;
 
 				if (!_vt_physical_table.check_page_loaded(page))
 				{
@@ -220,25 +228,22 @@ namespace fantasy
 				{
 					_update_vt_pages.push_back(page);
 
-					for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
+					for (uint32_t jx = 0; jx < Material::TextureType_Num; ++jx)
 					{
 						TextureTilesMapping::Region region = _geometry_texture_region_cache[create_texture_region_cache_key(
-							page.geometry_id, page.get_mip_level(), ix
+							page.geometry_id, page.get_mip_level(), jx
 						)];
 					
 						uint2 coordinate = page.get_coordinate();
 						region.x = coordinate.x; 
 						region.y = coordinate.y; 
 					
-						tile_mappings[ix].regions.emplace_back(region);
+						tile_mappings[jx].regions.emplace_back(region);
 					}
 				}
 
 				_vt_indirect_table.set_page(uint2(ix % CLIENT_WIDTH, ix / CLIENT_WIDTH), page.physical_position_in_page);
 			}
-			_vt_page_read_back_buffer->unmap();
-
-
 
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
 			{

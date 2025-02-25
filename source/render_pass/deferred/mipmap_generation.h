@@ -2,7 +2,10 @@
 #define RENDER_PASS_H
 
 #include "../../render_graph/render_pass.h"
+#include "../../scene/geometry.h"
+#include <array>
 #include <memory>
+#include <vector>
 
 namespace fantasy
 {
@@ -17,8 +20,11 @@ namespace fantasy
 
 	private:
 		Entity* _current_model = nullptr;
-		uint32_t _current_image_type = 0;
+		uint32_t _current_mip_levels = 0;
+		uint2 _current_texture_resolution;
+		uint32_t _current_calculate_mip = 1;
 		uint32_t _current_submaterial_index = 0;
+		std::array<std::shared_ptr<TextureInterface>, Material::TextureType_Num> _current_textures;
 
 		uint64_t _geometry_texture_heap_capacity = 1024 * 1024 * 64;
 		std::shared_ptr<HeapInterface> _geometry_texture_heap;
@@ -32,6 +38,7 @@ namespace fantasy
 		std::unique_ptr<ComputePipelineInterface> _pipeline;
 
 		std::unique_ptr<BindingSetInterface> _binding_set;
+		std::array<std::unique_ptr<BindingSetInterface>, Material::TextureType_Num> _binding_sets;
 		ComputeState _compute_state;
 	};
 }
