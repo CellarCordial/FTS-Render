@@ -10,7 +10,7 @@ cbuffer pass_constants : register(b0)
     
     float4x4 shadow_view_proj;
 
-    uint view_mode_mip_level;
+    uint vt_feed_back_scale_factor;
     uint vt_page_size;
     uint virtual_shadow_resolution;
     uint virtual_shadow_page_size;
@@ -68,38 +68,46 @@ PixelOutput main(VertexOutput input)
 
     // 更新 virtual texture page_info_buffer 和 tile_uv_texture.
     GeometryConstant geometry = geometry_constant_buffer[input.geometry_id];
-
-    uint mip_level = estimate_mip_level(input.uv * geometry.texture_resolution);
-    uint2 geometry_texture_resolution = max(geometry.texture_resolution >> mip_level, vt_page_size);
-    uint2 geometry_texture_pixel_id = uint2(input.uv * geometry_texture_resolution);
-
-    uint2 page_id = geometry_texture_pixel_id / vt_page_size;
-    uint page_id_mip_level = uint(
-        (page_id.x << 20) |
-        (page_id.y << 8) |
-        (mip_level & 0xff)
-    );
-
-    vt_page_buffer[pixel_index] = uint2(input.geometry_id, page_id_mip_level);
-    vt_page_uv_texture[pixel_id] = geometry_texture_pixel_id % vt_page_size;
-
-    
-    // 更新 virtual shadow page buffer.
-    float4 shadow_view_proj_pos = mul(float4(input.world_space_position, 1.0f), shadow_view_proj);
-    shadow_view_proj_pos.xyz = shadow_view_proj_pos.xyz / shadow_view_proj_pos.z;
-
-    // 是否在太阳投影的裁剪空间内.
-    bool in_clip = shadow_view_proj_pos.w > 0.0f &&
-                   shadow_view_proj_pos.x >= -1.0f && shadow_view_proj_pos.x <= 1.0f &&
-                   shadow_view_proj_pos.y >= -1.0f && shadow_view_proj_pos.y <= 1.0f &&
-                   shadow_view_proj_pos.z >= 0.0f && shadow_view_proj_pos.z <= 1.0f;
-    if (in_clip)
+    if (all(geometry.texture_resolution != 0))
     {
-        float2 uv = shadow_view_proj_pos.xy * float2(0.5f, -0.5f) + 0.5f;
-        uint2 shadow_page_id = (uint2)(uv * virtual_shadow_resolution) / virtual_shadow_page_size;
+        uint mip_level = estimate_mip_level(input.uv * geometry.texture_resolution);
+        uint2 geometry_texture_resolution = max(geometry.texture_resolution >> mip_level, vt_page_size);
+        uint2 geometry_texture_pixel_id = uint2(input.uv * geometry_texture_resolution);
 
-        virtual_shadow_page_buffer[pixel_index] = shadow_page_id;
+        vt_page_uv_texture[pixel_id] = geometry_texture_pixel_id % vt_page_size;
+
+        if (((pixel_id.x | pixel_id.y) & (vt_feed_back_scale_factor - 1)) == 0)
+        {
+            uint2 page_id = geometry_texture_pixel_id / vt_page_size;
+            uint page_id_mip_level = uint(
+                (page_id.x << 20) |
+                (page_id.y << 8) |
+                (mip_level & 0xff)
+            );
+
+            uint2 feed_back_id = pixel_id / vt_feed_back_scale_factor;
+            uint feed_back_index = feed_back_id.x + feed_back_id.y * (client_width / vt_feed_back_scale_factor);
+
+            vt_page_buffer[feed_back_index] = uint2(input.geometry_id, page_id_mip_level);
+        }
     }
+    
+    // // 更新 virtual shadow page buffer.
+    // float4 shadow_view_proj_pos = mul(float4(input.world_space_position, 1.0f), shadow_view_proj);
+    // shadow_view_proj_pos.xyz = shadow_view_proj_pos.xyz / shadow_view_proj_pos.z;
+
+    // // 是否在太阳投影的裁剪空间内.
+    // bool in_clip = shadow_view_proj_pos.w > 0.0f &&
+    //                shadow_view_proj_pos.x >= -1.0f && shadow_view_proj_pos.x <= 1.0f &&
+    //                shadow_view_proj_pos.y >= -1.0f && shadow_view_proj_pos.y <= 1.0f &&
+    //                shadow_view_proj_pos.z >= 0.0f && shadow_view_proj_pos.z <= 1.0f;
+    // if (in_clip)
+    // {
+    //     float2 uv = shadow_view_proj_pos.xy * float2(0.5f, -0.5f) + 0.5f;
+    //     uint2 shadow_page_id = (uint2)(uv * virtual_shadow_resolution) / virtual_shadow_page_size;
+
+    //     virtual_shadow_page_buffer[pixel_index] = shadow_page_id;
+    // }
 
 
     PixelOutput output;

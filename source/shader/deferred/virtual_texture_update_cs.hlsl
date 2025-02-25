@@ -40,7 +40,7 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     if (page_uv.x == INVALID_SIZE_32 || page_uv.y == INVALID_SIZE_32) return;
     if (page_coordinate.x == INVALID_SIZE_32 || page_coordinate.y == INVALID_SIZE_32) return;
 
-    float2 physical_uv = (page_uv * vt_page_size + page_coordinate.xy * vt_page_size) / vt_physical_texture_size;
+    float2 physical_uv = (page_uv + page_coordinate.xy * vt_page_size) / vt_physical_texture_size;
 
     float3 normal = calculate_normal(
         vt_normal_physical_texture.Sample(linear_clamp_sampler, physical_uv).xyz,

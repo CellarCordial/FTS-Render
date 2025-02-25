@@ -44,6 +44,7 @@ namespace fantasy
 					.capacity = _geometry_texture_heap_capacity 
 				}
 			)));
+			cache->collect(_geometry_texture_heap, ResourceType::Heap);
 		}
 
 		// Shader.

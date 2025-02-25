@@ -36,11 +36,12 @@ namespace fantasy
 		constant::VirtualGeometryTexturePassConstant _pass_constant;
 		uint64_t _finish_pass_thread_id = INVALID_SIZE_64;
 		
-		std::vector<VTPage> _new_vt_pages;
+		std::vector<VTPage> _update_vt_pages;
 		VTPhysicalTable _vt_physical_table;
 		VTIndirectTable _vt_indirect_table;
 
 		bool _update_texture_region_cache = false;
+		uint32_t* _vt_feed_back_scale_factor = nullptr;
 		std::unordered_map<uint64_t, TextureTilesMapping::Region> _geometry_texture_region_cache;
 
 

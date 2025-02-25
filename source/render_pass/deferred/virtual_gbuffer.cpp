@@ -20,6 +20,9 @@ namespace fantasy
 			}
 		);
 
+		ReturnIfFalse(cache->collect_constants("vt_feed_back_scale_factor", &_vt_feed_back_scale_factor));
+		_pass_constant.vt_feed_back_scale_factor = _vt_feed_back_scale_factor;
+
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(9);
@@ -69,9 +72,12 @@ namespace fantasy
 			)));
 
 
+			uint32_t vt_page_buffer_element_num = 
+				(CLIENT_WIDTH / _vt_feed_back_scale_factor) * (CLIENT_HEIGHT / _vt_feed_back_scale_factor);
+
 			ReturnIfFalse(_vt_page_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_read_write_structured_buffer(
-					sizeof(uint2) * CLIENT_WIDTH * CLIENT_HEIGHT, 
+					sizeof(uint2) * vt_page_buffer_element_num, 
 					sizeof(uint2),
 					"vt_page_buffer"
 				)
@@ -80,13 +86,13 @@ namespace fantasy
 
 			ReturnIfFalse(_vt_page_read_back_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_read_back_buffer(
-					sizeof(uint2) * CLIENT_WIDTH * CLIENT_HEIGHT, 
+					sizeof(uint2) * vt_page_buffer_element_num, 
 					"vt_page_read_back_buffer"
 				)
 			)));
 			cache->collect(_vt_page_read_back_buffer, ResourceType::Buffer);
 
-
+			
 			ReturnIfFalse(_virtual_shadow_page_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_read_write_structured_buffer(
 					CLIENT_WIDTH * CLIENT_HEIGHT * sizeof(uint2),
@@ -399,14 +405,18 @@ namespace fantasy
 			
 			ReturnIfFalse(cmdlist->draw_indirect(_graphics_state, 0, 1));
 			
+			
+			uint32_t vt_page_buffer_element_num = 
+				(CLIENT_WIDTH / _vt_feed_back_scale_factor) * (CLIENT_HEIGHT / _vt_feed_back_scale_factor);
 
 			cmdlist->copy_buffer(
 				_vt_page_read_back_buffer.get(), 
 				0, 
 				_vt_page_buffer.get(), 
 				0, 
-				sizeof(uint2) * CLIENT_WIDTH * CLIENT_HEIGHT
+				sizeof(uint2) * vt_page_buffer_element_num
 			);
+
 			cmdlist->copy_buffer(
 				_virtual_shadow_page_read_back_buffer.get(), 
 				0, 
@@ -414,6 +424,7 @@ namespace fantasy
 				0, 
 				CLIENT_WIDTH * CLIENT_HEIGHT * sizeof(uint2)
 			);
+
 
 			cmdlist->set_texture_state(
 				_reverse_depth_texture.get(), 

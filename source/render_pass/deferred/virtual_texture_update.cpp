@@ -96,10 +96,22 @@ namespace fantasy
 				)));
 				cache->collect(_vt_physical_textures[ix], ResourceType::Texture);
 			}
+
+			ReturnIfFalse(_vt_indirect_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_read_write_texture(
+					CLIENT_WIDTH,
+					CLIENT_HEIGHT,
+					Format::RG32_UINT,
+					"vt_indirect_texture"
+				)
+			)));
+			cache->collect(_vt_indirect_texture, ResourceType::Texture);
 		}
 
 		// Binding Set.
 		{
+			ReturnIfFalse(Material::TextureType_Num == 4);
+
 			BindingSetItemArray binding_set_items(13);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualGeometryTexturePassConstant));
 			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("vt_page_uv_texture")));
@@ -128,6 +140,7 @@ namespace fantasy
 
         _pass_constant.vt_page_size = VT_PAGE_SIZE;
         _pass_constant.vt_physical_texture_size = VT_PHYSICAL_TEXTURE_RESOLUTION;
+		ReturnIfFalse(cache->require_constants("vt_feed_back_scale_factor", (void**)&_vt_feed_back_scale_factor));
  
 		return true;
 	}
@@ -141,6 +154,8 @@ namespace fantasy
 				{
 					for (uint32_t ix = 0; ix < material->submaterials.size(); ++ix)
 					{
+						if (material->image_resolution == 0) continue;
+
 						uint32_t mip_levels = std::log2(material->image_resolution / VT_PAGE_SIZE);
 						for (uint32_t mip = 0; mip < mip_levels; ++mip)
 						{
@@ -150,9 +165,11 @@ namespace fantasy
 
 								std::string texture_name = get_geometry_texture_name(submesh_id, ix, mip, *name);
 								
+								// 之后再添加 page 的 xy 坐标.
 								TextureTilesMapping::Region region;
-								region.width = material->submaterials[ix].images[type].width;
-								region.height = material->submaterials[ix].images[type].height;
+								region.mip_level= mip;
+								region.width = VT_PAGE_SIZE;
+								region.height = VT_PAGE_SIZE;
 								region.byte_offset = 
 									check_cast<TextureInterface>(cache->require(texture_name.c_str()))->get_desc().offset_in_heap;
 								
@@ -184,34 +201,49 @@ namespace fantasy
 
 			std::array<TextureTilesMapping, Material::TextureType_Num> tile_mappings;
 
-			uint32_t vt_page_num = CLIENT_WIDTH * CLIENT_HEIGHT;
+			uint32_t vt_page_num = (CLIENT_WIDTH / *_vt_feed_back_scale_factor) * (CLIENT_HEIGHT / *_vt_feed_back_scale_factor);
 			for (uint32_t ix = 0; ix < vt_page_num; ++ix)
 			{
 				const auto& info = *(vt_pages + ix);
+				if (info.x == INVALID_SIZE_32 || info.y == INVALID_SIZE_32) continue;
 
-				auto& page = _new_vt_pages.emplace_back();
+				VTPage page;
 				page.geometry_id = info.x;
 				page.coordinate_mip_level = info.y;
 
 				if (!_vt_physical_table.check_page_loaded(page))
 				{
-					page.position_in_physical_texture = _vt_physical_table.get_new_coordinate();
+					page.physical_position_in_page = _vt_physical_table.get_new_position();
+					_vt_physical_table.add_page(page);
 				}
 				else
 				{
+					_update_vt_pages.push_back(page);
+
 					for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
 					{
-						tile_mappings[ix].regions.emplace_back(_geometry_texture_region_cache[create_texture_region_cache_key(
+						TextureTilesMapping::Region region = _geometry_texture_region_cache[create_texture_region_cache_key(
 							page.geometry_id, page.get_mip_level(), ix
-						)]);
+						)];
+					
+						uint2 coordinate = page.get_coordinate();
+						region.x = coordinate.x; 
+						region.y = coordinate.y; 
+					
+						tile_mappings[ix].regions.emplace_back(region);
 					}
 				}
 
-				_vt_indirect_table.set_page(uint2(ix % CLIENT_WIDTH, ix / CLIENT_WIDTH), page.position_in_physical_texture);
+				_vt_indirect_table.set_page(uint2(ix % CLIENT_WIDTH, ix / CLIENT_WIDTH), page.physical_position_in_page);
 			}
+			_vt_page_read_back_buffer->unmap();
+
+
 
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
 			{
+				if (tile_mappings[ix].regions.empty()) continue;
+				
 				tile_mappings[ix].heap = _geometry_texture_heap.get();
 
 				cmdlist->get_deivce()->update_texture_tile_mappings(
@@ -250,7 +282,7 @@ namespace fantasy
 			_finish_pass_thread_id = parallel::begin_thread(
 				[this, cache]() -> bool
 				{
-					_vt_physical_table.add_pages(_new_vt_pages);
+					_vt_physical_table.add_pages(_update_vt_pages);
 					return true;
 				}
 			);

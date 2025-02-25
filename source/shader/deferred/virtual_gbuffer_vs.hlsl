@@ -10,7 +10,7 @@ cbuffer pass_constants : register(b0)
 
     float4x4 shadow_view_proj;
 
-    uint view_mode;
+    uint vt_feed_back_scale_factor;
     uint vt_page_size;
     uint virtual_shadow_resolution;
     uint virtual_shadow_page_size;
@@ -76,7 +76,7 @@ VertexOutput main(uint instance_id: SV_InstanceID, uint vertex_index : SV_Vertex
         return output;
     }
 
-    switch (view_mode)
+    switch (0)
     {
     case 0: output.color = color_hash(triangle_index); break;
     case 1: output.color = color_hash(cluster_index); break;

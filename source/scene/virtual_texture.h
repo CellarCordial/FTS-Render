@@ -12,10 +12,10 @@
 
 namespace fantasy 
 {
-    const static uint32_t VT_PAGE_SIZE = 128u;
-	const static uint32_t LOWEST_TEXTURE_RESOLUTION = 512u;
-	const static uint32_t HIGHEST_TEXTURE_RESOLUTION = 4096u;
-    static const uint32_t VT_PHYSICAL_TEXTURE_RESOLUTION = 8192u;
+    const static uint32_t VT_PAGE_SIZE = 128;
+	const static uint32_t LOWEST_TEXTURE_RESOLUTION = 512;
+	const static uint32_t HIGHEST_TEXTURE_RESOLUTION = 4096;
+    static const uint32_t VT_PHYSICAL_TEXTURE_RESOLUTION = 4096;
 
     static const uint32_t VIRTUAL_SHADOW_PAGE_SIZE = 1024;
     static const uint32_t VIRTUAL_SHADOW_RESOLUTION = 16384;
@@ -30,7 +30,7 @@ namespace fantasy
     {
         uint32_t geometry_id = INVALID_SIZE_32;
         uint32_t coordinate_mip_level = INVALID_SIZE_32;
-        uint2 position_in_physical_texture;
+        uint2 physical_position_in_page;
 
         uint2 get_coordinate() const 
         {
@@ -65,9 +65,10 @@ namespace fantasy
         VTPhysicalTable(uint32_t resolution = VT_PHYSICAL_TEXTURE_RESOLUTION);
 
         bool check_page_loaded(VTPage& page) const;
-        uint2 get_new_coordinate();
+        uint2 get_new_position();
 
         void add_pages(std::span<VTPage> pages);
+        void add_page(const VTPage& page);
         void reset();
         
         static std::string get_texture_name(uint32_t texture_type);
