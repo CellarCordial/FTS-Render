@@ -45,7 +45,7 @@ namespace fantasy
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(6);
-			binding_layout_items[0] = BindingLayoutItem::create_constant_buffer(0);
+			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::MultiScatteringPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_constant_buffer(1);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[3] = BindingLayoutItem::create_structured_buffer_srv(1);
@@ -83,12 +83,6 @@ namespace fantasy
 
         // Buffer.
 		{
-			ReturnIfFalse(_pass_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-                BufferDesc::create_constant_buffer(
-					sizeof(constant::MultiScatteringPassConstant),
-					"multiscattering_pass_constant_buffer" 
-				)
-			)));
 			ReturnIfFalse(_dir_sample_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
                 BufferDesc::create_structured_buffer(
 					sizeof(uint2) * DIRECTION_SAMPLE_COUNT, 
@@ -115,8 +109,8 @@ namespace fantasy
 		// Binding Set.
 		{
 			BindingSetItemArray binding_set_items(6);
-			binding_set_items[0] = BindingSetItem::create_constant_buffer(0, check_cast<BufferInterface>(cache->require("atmosphere_properties_buffer")));
-			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, _pass_constant_buffer);
+			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::MultiScatteringPassConstant));
+			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, check_cast<BufferInterface>(cache->require("atmosphere_properties_buffer")));
 			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("transmittance_texture")));
 			binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(1, _dir_sample_buffer);
 			binding_set_items[4] = BindingSetItem::create_texture_uav(0, _multi_scattering_texture);
@@ -149,11 +143,7 @@ namespace fantasy
 					return true;
 				}
 			));
-			float3* groud_albedo;
-			ReturnIfFalse(cache->require_constants("ground_albedo", reinterpret_cast<void**>(&groud_albedo)));
-			_pass_constants.ground_albedo = *groud_albedo;
-
-			ReturnIfFalse(cmdlist->write_buffer(_pass_constant_buffer.get(), &_pass_constants, sizeof(constant::MultiScatteringPassConstant)));
+			_pass_constants.ground_albedo = { 0.3f, 0.3f, 0.3f };
 		}
 		
 		if (!_resource_writed)
@@ -167,7 +157,7 @@ namespace fantasy
 			static_cast<uint32_t>(align(MULTI_SCATTERING_LUT_RES, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y),
 		};
 
-		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y));
+		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constants));
 
 		ReturnIfFalse(cmdlist->close());
 

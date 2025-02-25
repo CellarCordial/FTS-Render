@@ -34,7 +34,7 @@ namespace fantasy
 		friend class AtmosphereTest;
 
 	private:
-		void GenerateSunDiskVertices();
+		void generate_sun_disk_vertices();
 
 	private:
 		struct Vertex

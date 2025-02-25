@@ -36,7 +36,6 @@ namespace fantasy
 	private:
 		constant::SkyLUTPassConstant _pass_constant;
 
-		std::shared_ptr<BufferInterface> _pass_constant_buffer;
 		std::shared_ptr<TextureInterface> _sky_lut_texture;
 
 		std::shared_ptr<TextureInterface> _transmittance_texture;

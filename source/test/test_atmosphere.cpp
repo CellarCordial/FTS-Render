@@ -169,7 +169,7 @@ namespace fantasy
 		{
 			float* pworld_scale;
 			float3* pGroundAlbedo;
-			ReturnIfFalse(cache->require_constants("WorldScale", reinterpret_cast<void**>(&pworld_scale)));
+			ReturnIfFalse(cache->require_constants("world_scale", reinterpret_cast<void**>(&pworld_scale)));
 			ReturnIfFalse(cache->require_constants("ground_albedo", reinterpret_cast<void**>(&pGroundAlbedo)));
 			_pass_constant1.world_scale = *pworld_scale;
 			_pass_constant1.ground_albedo = *pGroundAlbedo;
@@ -205,7 +205,9 @@ namespace fantasy
 				}
 			));
 
-			ReturnIfFalse(cmdlist->write_buffer(_pass_constant1_buffer.get(), &_pass_constant1, sizeof(constant::AtmosphereDebugPassConstant1)));
+			void* mapped_address = _pass_constant1_buffer->map(CpuAccessMode::Write);
+			memcpy(mapped_address, &_pass_constant1, sizeof(constant::AtmosphereDebugPassConstant1));
+			_pass_constant1_buffer->unmap();
 
 			uint64_t stSubmeshIndex = 0;
 			ReturnIfFalse(cache->get_world()->each<Mesh>(
@@ -268,7 +270,7 @@ namespace fantasy
 
 
 		RenderResourceCache* cache = render_graph->get_resource_cache();
-		cache->collect_constants("WorldScale", &_world_scale);
+		cache->collect_constants("world_scale", &_world_scale);
 		cache->collect_constants("ground_albedo", &_ground_albedo);
 
 

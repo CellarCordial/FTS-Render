@@ -156,14 +156,14 @@ namespace fantasy
 					{
 						if (material->image_resolution == 0) continue;
 
-						uint32_t mip_levels = std::log2(material->image_resolution / VT_PAGE_SIZE);
+						uint32_t mip_levels = std::log2(material->image_resolution / VT_PAGE_SIZE) + 1;
 						for (uint32_t mip = 0; mip < mip_levels; ++mip)
 						{
 							for (uint32_t type = 0; type < Material::TextureType_Num; ++type)
 							{
 								uint32_t submesh_id = mesh->submesh_global_base_id + ix;
 
-								std::string texture_name = get_geometry_texture_name(submesh_id, ix, mip, *name);
+								std::string texture_name = get_geometry_texture_name(submesh_id, ix, *name);
 								
 								// 之后再添加 page 的 xy 坐标.
 								TextureTilesMapping::Region region;
@@ -243,7 +243,7 @@ namespace fantasy
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
 			{
 				if (tile_mappings[ix].regions.empty()) continue;
-				
+
 				tile_mappings[ix].heap = _geometry_texture_heap.get();
 
 				cmdlist->get_deivce()->update_texture_tile_mappings(

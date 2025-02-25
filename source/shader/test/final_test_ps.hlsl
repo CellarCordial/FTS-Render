@@ -1,14 +1,15 @@
 
-cbuffer pass_constant
+cbuffer pass_constant : register(b0)
 {
     int show_type;
 };
 
-Texture2D<float4> world_position_view_depth_texture : register(t0);
-Texture2D<float4> world_space_normal_texture : register(t1);
-Texture2D<float4> base_color_texture : register(t2);
-Texture2D<float4> pbr_texture : register(t3);
-Texture2D<float4> emissive_texture : register(t4);
+Texture2D<float4> final_texture : register(t0);
+Texture2D<float4> world_position_view_depth_texture : register(t1);
+Texture2D<float4> world_space_normal_texture : register(t2);
+Texture2D<float4> base_color_texture : register(t3);
+Texture2D<float4> pbr_texture : register(t4);
+Texture2D<float4> emissive_texture : register(t5);
 
 // Texture2D<float> shadow_map_texture : register(t5);
 
@@ -26,7 +27,7 @@ float4 main(VertexOutput input) : SV_Target0
     float4 color;
     switch (show_type)
     {
-    case 0: color = base_color_texture.Sample(sampler0, input.uv); break;
+    case 0: color = final_texture.Sample(sampler0, input.uv); break;
     case 1: color = float4(world_position_view_depth_texture.Sample(sampler0, input.uv).xyz, 1.0f); break;
     case 2: color = float4(world_position_view_depth_texture.Sample(sampler0, input.uv).w, 0.0f, 0.0f, 1.0f); break;
     case 3: color = world_space_normal_texture.Sample(sampler0, input.uv); break;

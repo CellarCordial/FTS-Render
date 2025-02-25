@@ -1,7 +1,7 @@
 #include "../common/sky.hlsl"
 #include "../common/post_process.hlsl"
 
-cbuffer gPassConstant : register(b0)
+cbuffer pass_constants : register(b0)
 {
     float3 FrustumA; float pad0;
     float3 FrustumB; float pad1;

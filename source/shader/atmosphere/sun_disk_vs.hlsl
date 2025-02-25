@@ -1,12 +1,12 @@
 #include "../common/post_process.hlsl"
 #include "../common/atmosphere_properties.hlsl"
 
-cbuffer gAtomsphereProperties : register(b0)
+cbuffer atomsphere_properties : register(b0)
 {
     AtmosphereProperties AP;    
 };
 
-cbuffer gPassConstant : register(b1)
+cbuffer pass_constants : register(b1)
 {
 	float4x4 WorldViewProj;
 	float3 SunRadius;

@@ -15,7 +15,7 @@ namespace fantasy
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(5);
-			binding_layout_items[0] = BindingLayoutItem::create_constant_buffer(0);
+			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0,sizeof(constant::SkyLUTPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_constant_buffer(1);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(1);
@@ -48,16 +48,6 @@ namespace fantasy
 			ReturnIfFalse(_ps = std::unique_ptr<Shader>(create_shader(ps_desc, ps_data.data(), ps_data.size())));
 		}
 
-		// Buffer.
-		{
-			ReturnIfFalse(_pass_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_constant_buffer(
-					sizeof(constant::SkyLUTPassConstant),
-					"sky_lut_pass_constant_buffer"
-				)
-			)));
-		}
- 
 		// Texture.
 		{
 			ReturnIfFalse(_sky_lut_texture = std::shared_ptr<TextureInterface>(device->create_texture(
@@ -93,8 +83,8 @@ namespace fantasy
 			_transmittance_texture = check_cast<TextureInterface>(cache->require("transmittance_texture"));
 
 			BindingSetItemArray binding_set_items(5);
-			binding_set_items[0] = BindingSetItem::create_constant_buffer(0, check_cast<BufferInterface>(cache->require("atmosphere_properties_buffer")));
-			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, _pass_constant_buffer);
+			binding_set_items[0] = BindingSetItem::create_push_constants(0,sizeof(constant::SkyLUTPassConstant));
+			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, check_cast<BufferInterface>(cache->require("atmosphere_properties_buffer")));
 			binding_set_items[2] = BindingSetItem::create_texture_srv(0, _multi_scattering_texture);
 			binding_set_items[3] = BindingSetItem::create_texture_srv(1, _transmittance_texture);
 			binding_set_items[4] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
@@ -122,7 +112,7 @@ namespace fantasy
 		// Update constant.
 		{
 			float* world_scale;
-			ReturnIfFalse(cache->require_constants("WorldScale", reinterpret_cast<void**>(&world_scale)));
+			ReturnIfFalse(cache->require_constants("world_scale", reinterpret_cast<void**>(&world_scale)));
 
 			ReturnIfFalse(cache->get_world()->each<Camera>(
 				[this, world_scale](Entity* entity, Camera* _camera) -> bool
@@ -139,10 +129,9 @@ namespace fantasy
 					return true;
 				}
 			));
-			ReturnIfFalse(cmdlist->write_buffer(_pass_constant_buffer.get(), &_pass_constant, sizeof(constant::SkyLUTPassConstant)));
 		}
 
-		ReturnIfFalse(cmdlist->draw(_graphics_state, DrawArguments{ .index_count = 6 }));
+		ReturnIfFalse(cmdlist->draw(_graphics_state, DrawArguments{ .index_count = 6 }, &_pass_constant));
 		
 		ReturnIfFalse(cmdlist->close());
 

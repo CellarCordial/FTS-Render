@@ -147,7 +147,7 @@ namespace fantasy
 
     bool DX12Texture::bind_memory(std::shared_ptr<HeapInterface> heap_, uint64_t offset)
     {
-        if (heap_ == nullptr || !desc.is_virtual || d3d12_resource == nullptr) return false;
+        if (heap_ == nullptr || !desc.is_virtual || d3d12_resource != nullptr) return false;
 
         heap = heap_;
         desc.offset_in_heap = offset;

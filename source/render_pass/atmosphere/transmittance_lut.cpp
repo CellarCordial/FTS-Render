@@ -106,11 +106,10 @@ namespace fantasy
 					return true;
 				}
 			));
-			ReturnIfFalse(cmdlist->write_buffer(
-				_atomsphere_properties_buffer.get(), 
-				&_standard_atomsphere_properties, 
-				sizeof(constant::AtmosphereProperties)
-			));
+				
+			void* mapped_address = _atomsphere_properties_buffer->map(CpuAccessMode::Write);
+			memcpy(mapped_address, &_standard_atomsphere_properties, sizeof(constant::AtmosphereProperties));
+			_atomsphere_properties_buffer->unmap();
 		}
 
 

@@ -43,7 +43,6 @@ namespace fantasy
         std::vector<float2> _dir_samples;
         constant::MultiScatteringPassConstant _pass_constants;
 
-        std::shared_ptr<BufferInterface> _pass_constant_buffer;
         std::shared_ptr<BufferInterface> _dir_sample_buffer;
         std::shared_ptr<TextureInterface> _multi_scattering_texture;
 

@@ -1,5 +1,5 @@
 
-cbuffer gPassConstant : register(b0)
+cbuffer pass_constants : register(b0)
 {
     float4x4 world_matrix;
     float4x4 view_proj;

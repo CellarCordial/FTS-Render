@@ -10,7 +10,7 @@ namespace fantasy
 {
 #define SUN_DISK_SEGMENT_NUM 32
 
-	void SunDiskPass::GenerateSunDiskVertices()
+	void SunDiskPass::generate_sun_disk_vertices()
 	{
 		for (uint32_t ix = 0; ix < SUN_DISK_SEGMENT_NUM; ++ix)
 		{
@@ -80,7 +80,7 @@ namespace fantasy
 
 		// Buffer.
 		{
-			GenerateSunDiskVertices();
+			generate_sun_disk_vertices();
 			ReturnIfFalse(_vertex_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_vertex_buffer(
 					sizeof(Vertex) * SUN_DISK_SEGMENT_NUM * 3, 
@@ -154,7 +154,7 @@ namespace fantasy
 
 		{
 			float* world_scale;
-			ReturnIfFalse(cache->require_constants("WorldScale", reinterpret_cast<void**>(&world_scale)));
+			ReturnIfFalse(cache->require_constants("world_scale", reinterpret_cast<void**>(&world_scale)));
 
 			float3 LightDirection;
 			ReturnIfFalse(cache->get_world()->each<DirectionalLight>(

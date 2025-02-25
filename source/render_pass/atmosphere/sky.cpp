@@ -11,13 +11,9 @@ namespace fantasy
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(3);
-			binding_layout_items[0].type = ResourceViewType::PushConstants;
-			binding_layout_items[0].size = sizeof(constant::SkyPassConstant);
-			binding_layout_items[0].slot = 0;
-			binding_layout_items[1].type = ResourceViewType::Texture_SRV;
-			binding_layout_items[1].slot = 0;
-			binding_layout_items[2].type = ResourceViewType::Sampler;
-			binding_layout_items[2].slot = 0;
+			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::SkyPassConstant));
+			binding_layout_items[1] = BindingLayoutItem::create_texture_srv(0);
+			binding_layout_items[2] = BindingLayoutItem::create_sampler(0);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));

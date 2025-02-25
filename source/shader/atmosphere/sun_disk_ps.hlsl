@@ -1,7 +1,7 @@
 #include "../common/post_process.hlsl"
 #include "../common/atmosphere_properties.hlsl"
 
-cbuffer gPassConstant : register(b1)
+cbuffer pass_constants : register(b1)
 {
 	float4x4 WorldViewProj;
 	float3 SunRadius;

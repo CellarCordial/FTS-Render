@@ -19,6 +19,7 @@ namespace fantasy
         cache->get_world()->get_global_entity()->get_component<event::GenerateMipmap>()->add_event(
             [this](Entity* entity) -> bool
             {
+				recompute();
 				_current_model = entity; 
 				return true;
             }
@@ -40,7 +41,7 @@ namespace fantasy
 			ReturnIfFalse(_geometry_texture_heap = std::shared_ptr<HeapInterface>(device->create_heap(
 				HeapDesc{ 
 					.name = "geometry_texture_heap", 
-					.type = HeapType::Upload, 
+					.type = HeapType::Default, 
 					.capacity = _geometry_texture_heap_capacity 
 				}
 			)));
@@ -88,77 +89,59 @@ namespace fantasy
 		{
 			ReturnIfFalse(cmdlist->open());
 
-			DeviceInterface* device = cmdlist->get_deivce();
-
 			const auto& model_name = *_current_model->get_component<std::string>();
-
 			const Material* material = _current_model->get_component<Material>();
-			const auto& image = material->submaterials[_current_submaterial_index].images[_current_image_index];
+			const auto& image = material->submaterials[_current_submaterial_index].images[_current_image_type];
 
-			uint32_t mip_levels = std::log2( material->image_resolution / VT_PAGE_SIZE) + 1;
-			_textures.resize(mip_levels);
-
-			ReturnIfFalse(_textures[0] = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_virtual_shader_resource_texture(
-					image.width, 
-					image.height,
-					image.format,
-					get_geometry_texture_name(
-						_current_submaterial_index, 
-						_current_image_index, 
-						0, 
-						model_name
-					)
-				)
-			)));
-			cache->collect(_textures[0], ResourceType::Texture);
-
-			_textures[0]->bind_memory(_geometry_texture_heap, _current_heap_offset);
-			_current_heap_offset += image.size;
-			ReturnIfFalse(cmdlist->write_texture(_textures[0].get(), 1, 1, image.data.get(), image.size / image.height));
-
-
-			uint2 texture_resolution = uint2(image.width, image.height);
-			for (uint32_t mip_level = 1; mip_level < mip_levels; ++mip_level)
+			if (image.is_valid())
 			{
-				texture_resolution.x >>= 1;
-				texture_resolution.y >>= 1;
-				ReturnIfFalse(_textures[mip_level] = std::shared_ptr<TextureInterface>(device->create_texture(
+				uint32_t mip_levels = std::log2(material->image_resolution / VT_PAGE_SIZE) + 1;
+	
+				std::shared_ptr<TextureInterface> texture;
+				ReturnIfFalse(texture = std::shared_ptr<TextureInterface>(cmdlist->get_deivce()->create_texture(
 					TextureDesc::create_virtual_shader_resource_texture(
-						texture_resolution.x, 
-						texture_resolution.y,
+						image.width, 
+						image.height,
 						image.format,
+						mip_levels,
 						get_geometry_texture_name(
 							_current_submaterial_index, 
-							_current_image_index, 
-							mip_level, 
+							_current_image_type, 
 							model_name
 						)
 					)
 				)));
-				cache->collect(_textures[mip_level], ResourceType::Texture);
-
-				_textures[mip_level]->bind_memory(_geometry_texture_heap, _current_heap_offset);
-				_current_heap_offset += image.size >> (mip_level * 2);
-
-				// Binding Set.
-				{
-					BindingSetItemArray binding_set_items(3);
-					binding_set_items[0] = BindingSetItem::create_texture_srv(0, _textures[mip_level - 1]);
-					binding_set_items[1] = BindingSetItem::create_texture_uav(0, _textures[mip_level]);
-					binding_set_items[2] = BindingSetItem::create_sampler(0, _linear_clamp_sampler);
-					ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
-						BindingSetDesc{ .binding_items = binding_set_items },
-						_binding_layout
-					)));
-				}
-
-				uint2 thread_group_num = {
-					static_cast<uint32_t>((align(texture_resolution.x, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
-					static_cast<uint32_t>((align(texture_resolution.y, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
-				};
-
-				ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y));
+				cache->collect(texture, ResourceType::Texture);
+	
+				ReturnIfFalse(texture->bind_memory(_geometry_texture_heap, _current_heap_offset));
+				_current_heap_offset += texture->get_memory_requirements().size;
+	
+	
+				ReturnIfFalse(cmdlist->write_texture(texture.get(), 0, 0, image.data.get(), image.size));
+	
+	
+				// uint2 texture_resolution = uint2(image.width, image.height);
+				// for (uint32_t mip_level = 1; mip_level < mip_levels; ++mip_level)
+				// {
+				// 	// Binding Set.
+				// 	{
+				// 		BindingSetItemArray binding_set_items(3);
+				// 		binding_set_items[0] = BindingSetItem::create_texture_srv(0, texture);
+				// 		binding_set_items[1] = BindingSetItem::create_texture_uav(0, texture);
+				// 		binding_set_items[2] = BindingSetItem::create_sampler(0, _linear_clamp_sampler);
+				// 		ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
+				// 			BindingSetDesc{ .binding_items = binding_set_items },
+				// 			_binding_layout
+				// 		)));
+				// 	}
+	
+				// 	uint2 thread_group_num = {
+				// 		static_cast<uint32_t>((align(texture_resolution.x, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
+				// 		static_cast<uint32_t>((align(texture_resolution.y, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
+				// 	};
+	
+				// 	ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y));
+				// }
 			}
 
 			ReturnIfFalse(cmdlist->close());
@@ -169,10 +152,10 @@ namespace fantasy
 
 	bool MipmapGenerationPass::finish_pass(RenderResourceCache* cache)
 	{
-		_current_image_index++;
-		if (_current_image_index == Material::TextureType_Num)
+		_current_image_type++;
+		if (_current_image_type == Material::TextureType_Num)
 		{
-			_current_image_index = 0;
+			_current_image_type = 0;
 			_current_submaterial_index++;
 			if (_current_submaterial_index == _current_model->get_component<Material>()->submaterials.size()) 
 			{
@@ -185,15 +168,11 @@ namespace fantasy
 				
 				_current_model = nullptr;
 				LOG_INFO(model_name + "geometry texture mip generated.");
-			}
-			else 
-			{
-				recompute();
+			
+				return true;
 			}
 		}
-	
-		_binding_layout.reset();
-		_textures.clear();
+		recompute();
 		return true;
 	}
 }

@@ -3,6 +3,7 @@
 #include "../shader/shader_compiler.h"
 #include "../core/tools/check_cast.h"
 #include "../gui/gui_panel.h"
+#include "../scene/light.h"
 
 #include "../render_pass/culling/mesh_cluster_culling.h"
 #include "../render_pass/culling/hierarchical_zbuffer.h"
@@ -11,7 +12,13 @@
 #include "../render_pass/deferred/virtual_texture_update.h"
 #include "../render_pass/deferred/mipmap_generation.h"
 #include "../render_pass/shadow/virtual_shadow_map.h"
-#include <memory>
+
+#include "../render_pass/atmosphere/multi_scattering_lut.h"
+#include "../render_pass/atmosphere/transmittance_lut.h"
+#include "../render_pass/atmosphere/aerial_lut.h"
+#include "../render_pass/atmosphere/sun_disk.h"
+#include "../render_pass/atmosphere/sky_lut.h"
+#include "../render_pass/atmosphere/sky.h"
 
 namespace fantasy
 {
@@ -21,15 +28,15 @@ namespace fantasy
 
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(7);
+			BindingLayoutItemArray binding_layout_items(8);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::FinalTestPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(1);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(2);
 			binding_layout_items[4] = BindingLayoutItem::create_texture_srv(3);
 			binding_layout_items[5] = BindingLayoutItem::create_texture_srv(4);
-			// binding_layout_items[6] = BindingLayoutItem::create_texture_srv(5);
-			binding_layout_items[6] = BindingLayoutItem::create_sampler(0);
+			binding_layout_items[6] = BindingLayoutItem::create_texture_srv(5);
+			binding_layout_items[7] = BindingLayoutItem::create_sampler(0);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -79,15 +86,15 @@ namespace fantasy
 
 		// Binding Set.
 		{
-			BindingSetItemArray binding_set_items(7);
+			BindingSetItemArray binding_set_items(8);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::FinalTestPassConstant));
-			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
-			binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("world_space_normal_texture")));
-			binding_set_items[3] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("base_color_texture")));
-			binding_set_items[4] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("pbr_texture")));
-			binding_set_items[5] = BindingSetItem::create_texture_srv(4, check_cast<TextureInterface>(cache->require("emissive_texture")));
-			// binding_set_items[6] = BindingSetItem::create_texture_srv(5, check_cast<TextureInterface>(cache->require("shadow_map_texture")));
-			binding_set_items[6] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_wrap_sampler")));
+			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("final_texture")));
+			binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
+			binding_set_items[3] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("world_space_normal_texture")));
+			binding_set_items[4] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("base_color_texture")));
+			binding_set_items[5] = BindingSetItem::create_texture_srv(4, check_cast<TextureInterface>(cache->require("pbr_texture")));
+			binding_set_items[6] = BindingSetItem::create_texture_srv(5, check_cast<TextureInterface>(cache->require("emissive_texture")));
+			binding_set_items[7] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_wrap_sampler")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
 				_binding_layout
@@ -126,6 +133,13 @@ namespace fantasy
 
     RenderPassInterface* FinalTest::init_render_pass(RenderGraph* render_graph)
     {
+		RenderPassInterface* transmittance_lut_pass = render_graph->add_pass(std::make_shared<TransmittanceLUTPass>());
+		RenderPassInterface* multi_scattering_lut_pass = render_graph->add_pass(std::make_shared<MultiScatteringLUTPass>());
+		RenderPassInterface* sky_lut_pass = render_graph->add_pass(std::make_shared<SkyLUTPass>());
+		RenderPassInterface* sky_pass = render_graph->add_pass(std::make_shared<SkyPass>());
+		RenderPassInterface* sun_disk_pass = render_graph->add_pass(std::make_shared<SunDiskPass>());
+
+
 		RenderPassInterface* mipmap_generation_pass = render_graph->add_pass(std::make_shared<MipmapGenerationPass>());
 
 		RenderPassInterface* mesh_cluster_culling_pass = render_graph->add_pass(std::make_shared<MeshClusterCullingPass>());
@@ -135,6 +149,11 @@ namespace fantasy
 		// RenderPassInterface* shadow_tile_culling_pass = render_graph->add_pass(std::make_shared<ShadowTileCullingPass>());
 		// RenderPassInterface* virtual_shadow_map_pass = render_graph->add_pass(std::make_shared<VirtualShadowMapPass>());
 		RenderPassInterface* test_pass = render_graph->add_pass(std::make_shared<FinalTestPass>());
+
+
+		sky_lut_pass->precede(sky_pass);
+		sky_pass->precede(sun_disk_pass);
+		sun_disk_pass->precede(virtual_gbuffer_pass);
 		
 		mesh_cluster_culling_pass->precede(virtual_gbuffer_pass);
 		virtual_gbuffer_pass->precede(hierarchical_zbuffer_pass);
@@ -143,6 +162,15 @@ namespace fantasy
 		// shadow_tile_culling_pass->precede(virtual_shadow_map_pass);
 		hierarchical_zbuffer_pass->precede(test_pass);
 		virtual_texture_update_pass->precede(test_pass);
+
+
+		RenderResourceCache* cache = render_graph->get_resource_cache();
+		cache->collect_constants("world_scale", &_world_scale);
+
+		World* world = cache->get_world();
+		world->create_entity()->assign<DirectionalLight>();
+		world->create_entity()->assign<constant::AtmosphereProperties>();
+
 
 		return test_pass;
     }

@@ -3,6 +3,7 @@
 #include "../../core/tools/check_cast.h"
 #include "../../scene/light.h"
 #include "../../scene/camera.h"
+#include "atmosphere_properties.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -20,7 +21,7 @@ namespace fantasy
 		// BindingLayout.
 		{
 			BindingLayoutItemArray binding_layout_items(8);
-			binding_layout_items[0] = BindingLayoutItem::create_constant_buffer(0);
+			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::AtmosphereProperties));
 			binding_layout_items[1] = BindingLayoutItem::create_constant_buffer(1);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(1);
@@ -57,16 +58,6 @@ namespace fantasy
 			ReturnIfFalse(_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
 		}
 
-		// Buffer.
-		{
-			ReturnIfFalse(_pass_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_constant_buffer(
-					sizeof(constant::AerialLUTPassConstant),
-					"aerial_lut_pass_constant_buffer"
-				)
-			)));
-		}
-
 		// Texture.
 		{
 			ReturnIfFalse(_aerial_lut_texture = std::shared_ptr<TextureInterface>(device->create_texture(
@@ -84,8 +75,8 @@ namespace fantasy
 		// Binding Set.
 		{
 			BindingSetItemArray binding_set_items(8);
-			binding_set_items[0] = BindingSetItem::create_constant_buffer(0, check_cast<BufferInterface>(cache->require("atmosphere_properties_buffer")));
-			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, _pass_constant_buffer);
+			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::AtmosphereProperties));
+			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, check_cast<BufferInterface>(cache->require("atmosphere_properties_buffer")));
 			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("multi_scattering_texture")));
 			binding_set_items[3] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("transmittance_texture")));
 			binding_set_items[4] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("shadow_map_texture")), TextureSubresourceSet{}, Format::R32_FLOAT);
@@ -114,7 +105,7 @@ namespace fantasy
 		// Update constant.
 		{
 			float* world_scale;
-			ReturnIfFalse(cache->require_constants("WorldScale", reinterpret_cast<void**>(&world_scale)));
+			ReturnIfFalse(cache->require_constants("world_scale", reinterpret_cast<void**>(&world_scale)));
 			_pass_constant.world_scale = *world_scale;
 
 			ReturnIfFalse(cache->get_world()->each<Camera>(
@@ -141,7 +132,6 @@ namespace fantasy
 				}
 			));
 
-			ReturnIfFalse(cmdlist->write_buffer(_pass_constant_buffer.get(), &_pass_constant, sizeof(constant::AerialLUTPassConstant)));
 		}
 
 		uint2 thread_group_num = {
@@ -149,7 +139,7 @@ namespace fantasy
 			static_cast<uint32_t>(align(AERIAL_LUT_RES_Y, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y),
 		};
 
-		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y));
+		ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constant));
 
 		ReturnIfFalse(cmdlist->close());
 		return true;

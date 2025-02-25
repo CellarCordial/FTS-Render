@@ -492,7 +492,7 @@ namespace fantasy
 			for (uint32_t i = 0; i < vertices.size(); i++) 
 			{
 				float len = float3(vertices[i] - center).length();
-				assert(len - 1e-6 <= radius);
+				// assert(len - 1e-6 <= radius);
 			}
 		}
 

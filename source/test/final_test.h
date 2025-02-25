@@ -52,7 +52,7 @@ namespace fantasy
         RenderPassInterface* init_render_pass(RenderGraph* render_graph) override;
 
     private:
-        
+		float _world_scale = 200.0f;
     };
 
 }

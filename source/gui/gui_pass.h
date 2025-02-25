@@ -20,7 +20,7 @@ namespace fantasy
 
 	private:
 		DeviceInterface* _device = nullptr;
-		std::shared_ptr<TextureInterface> _final_texture = nullptr;
+		std::shared_ptr<TextureInterface> _final_texture;
 	};
 
 }

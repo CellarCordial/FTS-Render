@@ -4,13 +4,9 @@
 #include "../common/atmosphere_properties.hlsl"
 #include "../common/intersect.hlsl"
 
-cbuffer gAtomsphereProperties : register(b0)
-{
-    AtmosphereProperties AP;
-};
 
 
-cbuffer gPassConstant : register(b1)
+cbuffer pass_constants : register(b0)
 {
     float3 sun_dir;          float sun_theta;
     float3 frustum_A;        float max_distance;
@@ -20,6 +16,12 @@ cbuffer gPassConstant : register(b1)
     float3 camera_position;  uint enable_shadow;
     float world_scale;      float3 pad;
     float4x4 shadow_view_proj;
+};
+
+
+cbuffer atomsphere_properties : register(b1)
+{
+    AtmosphereProperties AP;
 };
 
 

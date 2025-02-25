@@ -190,7 +190,7 @@ namespace fantasy
 		));
 		ReturnIfFalse(submesh_index == _draw_arguments.size());
 		
-		cmdlist->set_texture_state(_shadow_map_texture.get(), TextureSubresourceSet{}, ResourceStates::DepthRead);
+		cmdlist->set_texture_state(_shadow_map_texture.get(), TextureSubresourceSet{}, ResourceStates::DepthRead | ResourceStates::ComputeShaderResource);
 		ReturnIfFalse(cmdlist->close());
 
 		return true;

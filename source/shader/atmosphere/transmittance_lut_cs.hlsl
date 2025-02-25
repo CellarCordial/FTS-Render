@@ -8,7 +8,7 @@
 
 #if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y) && defined(STEP_COUNT)
 
-cbuffer gAtomsphereProperties : register(b0)
+cbuffer atomsphere_properties : register(b0)
 {
     AtmosphereProperties AP;
 };
@@ -32,9 +32,9 @@ void main(uint3 ThreadIndex : SV_DispatchThreadID)
     float2 RayDir = float2(cos(theta), sin(theta));      // 范围为右侧半圆.
 
     float fDistance = 0.0f;
-    if (!IntersectRayCircle(RayOri, RayDir, AP.planet_radius, fDistance))
+    if (!intersect_ray_circle(RayOri, RayDir, AP.planet_radius, fDistance))
     {
-        IntersectRayCircle(RayOri, RayDir, AP.atmosphere_radius, fDistance);
+        intersect_ray_circle(RayOri, RayDir, AP.atmosphere_radius, fDistance);
     }
     float2 RayEnd = RayOri + RayDir * fDistance;
 

@@ -1,12 +1,7 @@
 #include "../common/atmosphere_properties.hlsl"
 #include "../common/intersect.hlsl"
 
-cbuffer gAtomsphereProperties : register(b0)
-{
-    AtmosphereProperties AP;
-};
-
-cbuffer gPassConstant : register(b1)
+cbuffer pass_constant : register(b0)
 {
     float3 CameraPosition;  
     int dwMarchStepCount;
@@ -18,9 +13,14 @@ cbuffer gPassConstant : register(b1)
     float pad;
 };
 
-Texture2D<float3> gmulti_scattering_texture : register(t0);
+cbuffer atomsphere_properties : register(b1)
+{
+    AtmosphereProperties AP;
+};
+
+Texture2D<float3> multi_scattering_texture : register(t0);
 Texture2D<float3> transmittance_texture : register(t1);
-SamplerState gMTSampler : register(s0);
+SamplerState sampler_ : register(s0);
 
 struct VertexOutput
 {
@@ -28,7 +28,7 @@ struct VertexOutput
     float2 uv        : TEXCOORD;
 };
 
-void RayMarching(float fPhaseU, float3 o, float3 d, float t, float dt, inout float3 TransmittanceSum, inout float3 InScatteringSum)
+void ray_marching(float fPhaseU, float3 o, float3 d, float t, float dt, inout float3 TransmittanceSum, inout float3 InScatteringSum)
 {
     float fMidT = t + 0.5f * dt;
 
@@ -49,13 +49,13 @@ void RayMarching(float fPhaseU, float3 o, float3 d, float t, float dt, inout flo
     if (!intersect_ray_sphere(Pos, -SunDir, AP.planet_radius))
     {
         float3 Phase = estimate_phase_func(AP, height, fPhaseU);
-        float3 SunTransmittance = transmittance_texture.SampleLevel(gMTSampler, uv, 0);
+        float3 SunTransmittance = transmittance_texture.SampleLevel(sampler_, uv, 0);
         InScatteringSum += dt * (EyeTransmittance * InScatter * Phase) * SunTransmittance;
     }
 
     if (bool(bEnableMultiScattering))
     {
-        float3 MultiScattering = gmulti_scattering_texture.SampleLevel(gMTSampler, uv, 0);
+        float3 MultiScattering = multi_scattering_texture.SampleLevel(sampler_, uv, 0);
         InScatteringSum += dt * EyeTransmittance * InScatter * MultiScattering;
     }
 
@@ -78,9 +78,9 @@ float4 main(VertexOutput In) : SV_Target0
     float2 WorldDir = float2(fCosTheta, fSinTheta);        // 仰角, 垂直于地面的平面上的仰角.
 
     float fDistance = 0.0f;
-    if (!IntersectRayCircle(WorldOri, WorldDir, AP.planet_radius, fDistance))
+    if (!intersect_ray_circle(WorldOri, WorldDir, AP.planet_radius, fDistance))
     {
-        IntersectRayCircle(WorldOri, WorldDir, AP.atmosphere_radius, fDistance);
+        intersect_ray_circle(WorldOri, WorldDir, AP.atmosphere_radius, fDistance);
     }
 
     float fPhaseU = dot(-SunDir, Dir);
@@ -92,7 +92,7 @@ float4 main(VertexOutput In) : SV_Target0
     float dt = fDistance / dwMarchStepCount;
     for (uint ix = 0; ix < dwMarchStepCount; ++ix)
     {
-        RayMarching(fPhaseU, Ori, Dir, t, dt, TransmittanceSum, InScatterSum);
+        ray_marching(fPhaseU, Ori, Dir, t, dt, TransmittanceSum, InScatterSum);
         t += dt;
     }
 

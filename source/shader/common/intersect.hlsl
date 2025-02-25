@@ -211,7 +211,7 @@ bool IntersectRayTriangle(float3 o, float3 d, float fMaxLength, float3 a, float3
 }
 
 // 默认圆心在坐标系原点.
-bool IntersectRayCircle(float2 o, float2 d, float r, out float fClosestIntersectDistance)
+bool intersect_ray_circle(float2 o, float2 d, float r, out float fClosestIntersectDistance)
 {
     // 圆: o^2 + d^2 = r^2 和 射线: o + td 相交得 At^2 + Bt + C - r_2 = 0.
     // A = d_x^2 + d_y^2, B = 2(o_x * d_x + o_y * d_y), C = o_x^2 + o_y^2.

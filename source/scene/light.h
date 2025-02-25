@@ -47,6 +47,9 @@ namespace fantasy
         float far_plane = 50.0f;
         float orthographic_size = 20.0f;
 
+        
+        DirectionalLight() { update_direction_view_proj(); }
+
         void update_direction_view_proj()
         {
             float x = radians(angle.x);

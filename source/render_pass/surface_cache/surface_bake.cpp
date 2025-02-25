@@ -209,10 +209,10 @@ namespace fantasy
                 	device->create_graphics_pipeline(_pipeline_desc, _frame_buffer.get())
                 ));
 
-                _binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require(get_geometry_texture_name(ix, Material::TextureType_BaseColor, 0, model_name).c_str())));
-                _binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require(get_geometry_texture_name(ix, Material::TextureType_Normal, 0, model_name).c_str())));
-                _binding_set_items[3] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require(get_geometry_texture_name(ix, Material::TextureType_PBR, 0, model_name).c_str())));
-                _binding_set_items[4] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require(get_geometry_texture_name(ix, Material::TextureType_Emissive, 0, model_name).c_str())));
+                _binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require(get_geometry_texture_name(ix, Material::TextureType_BaseColor, model_name).c_str())));
+                _binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require(get_geometry_texture_name(ix, Material::TextureType_Normal, model_name).c_str())));
+                _binding_set_items[3] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require(get_geometry_texture_name(ix, Material::TextureType_PBR, model_name).c_str())));
+                _binding_set_items[4] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require(get_geometry_texture_name(ix, Material::TextureType_Emissive, model_name).c_str())));
                 ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
                 	BindingSetDesc{ .binding_items = _binding_set_items },
                 	_binding_layout

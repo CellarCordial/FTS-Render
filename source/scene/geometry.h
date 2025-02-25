@@ -149,7 +149,6 @@ namespace fantasy
 	inline std::string get_geometry_texture_name(
         uint32_t submesh_index,
         uint32_t image_type, 
-        uint32_t mip_level, 
         const std::string& model_name
     )
 	{
@@ -157,13 +156,13 @@ namespace fantasy
 		switch (image_type) 
 		{
 		case Material::TextureType_BaseColor: 
-			texture_name = model_name + std::to_string(submesh_index) + "_base_color" + "_mip" + std::to_string(mip_level); break;
+			texture_name = model_name + "_base_color_" + std::to_string(submesh_index); break;
 		case Material::TextureType_Normal:  
-			texture_name = model_name + std::to_string(submesh_index) + "_normal" + "_mip" + std::to_string(mip_level);; break;
+			texture_name = model_name + "_normal_" + std::to_string(submesh_index); break;
 		case Material::TextureType_PBR:  
-			texture_name = model_name + std::to_string(submesh_index) + "_pbr" + "_mip" + std::to_string(mip_level);; break;
+			texture_name = model_name + "_pbr_" + std::to_string(submesh_index); break;
 		case Material::TextureType_Emissive:  
-			texture_name = model_name + std::to_string(submesh_index) + "_emissive" + "_mip" + std::to_string(mip_level);; break;
+			texture_name = model_name + "_emissive_" + std::to_string(submesh_index); break;
 		default: break;
 		}
 		return texture_name;

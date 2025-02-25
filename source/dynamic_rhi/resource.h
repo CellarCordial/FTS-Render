@@ -166,6 +166,7 @@ namespace fantasy
             uint32_t width, 
             uint32_t height, 
             Format format, 
+            uint32_t mip_level,
             std::string name = ""
         )
         {
