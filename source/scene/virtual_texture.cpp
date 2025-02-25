@@ -11,9 +11,9 @@ namespace fantasy
     //     return &_mips[mip_level].pages[MortonEncode(page_id / mip_node_size_in_page)];
     // }
 
-    VTIndirectTable::VTIndirectTable() : 
-        physical_page_pointers(CLIENT_WIDTH * CLIENT_HEIGHT, uint2(INVALID_SIZE_32))
+    void VTIndirectTable::initialize(uint32_t width, uint32_t height) 
     {
+        physical_page_pointers.resize(width * height, uint2(INVALID_SIZE_32));
     }
 
     void VTIndirectTable::set_page(uint2 pixel_id, uint2 physical_pos_in_page)

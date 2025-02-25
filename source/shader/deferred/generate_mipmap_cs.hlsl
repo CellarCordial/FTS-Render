@@ -1,6 +1,12 @@
 // #define THREAD_GROUP_SIZE_X 1
 // #define THREAD_GROUP_SIZE_Y 1
 
+cbuffer pass_constants : register(b0)
+{
+    uint2 output_resolution;
+    uint input_mip_level;
+};
+
 Texture2D input_texture : register(t0);
 RWTexture2D<float4> output_texture : register(u0);
 SamplerState linear_clamp_sampler : register(s0);
@@ -11,16 +17,11 @@ SamplerState linear_clamp_sampler : register(s0);
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
 void main(uint3 thread_id: SV_DispatchThreadID)
 {
-    uint width, height;
-    input_texture.GetDimensions(width, height);
-    if (thread_id.x >= width || thread_id.y >= height) return;
+    if (thread_id.x >= output_resolution.x || thread_id.y >= output_resolution.y) return;
 
-    float2 uv = float2(
-        (thread_id.x + 0.5f) * width,
-        (thread_id.y + 0.5f) * height
-    );
+    float2 uv = float2(thread_id.x + 0.5f, thread_id.y + 0.5f) / output_resolution;
 
-    output_texture[thread_id.xy] = input_texture.SampleLevel(linear_clamp_sampler, uv, 0.0f);
+    output_texture[thread_id.xy] = input_texture.SampleLevel(linear_clamp_sampler, uv, input_mip_level);
 }
 
 #endif

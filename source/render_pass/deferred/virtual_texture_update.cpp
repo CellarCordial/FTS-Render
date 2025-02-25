@@ -8,6 +8,7 @@
 #include <cstring>
 #include <memory>
 #include <thread>
+#include <utility>
 #include <vector>
 
 namespace fantasy
@@ -33,6 +34,13 @@ namespace fantasy
 
 		_geometry_texture_heap = check_cast<HeapInterface>(cache->require("geometry_texture_heap"));
 		_vt_page_read_back_buffer = check_cast<BufferInterface>(cache->require("vt_page_read_back_buffer"));
+
+		uint32_t vt_feed_back_scale_factor = 0;
+		uint32_t* vt_feed_back_scale_factor_ptr = &vt_feed_back_scale_factor;
+		ReturnIfFalse(cache->require_constants("vt_feed_back_scale_factor", (void**)&vt_feed_back_scale_factor_ptr));
+
+		_vt_feed_back_resolution = { CLIENT_WIDTH / vt_feed_back_scale_factor, CLIENT_HEIGHT / vt_feed_back_scale_factor };
+		_vt_indirect_table.initialize(_vt_feed_back_resolution.x, _vt_feed_back_resolution.y);
 
 		// Binding Layout.
 		{
@@ -101,8 +109,8 @@ namespace fantasy
 
 			ReturnIfFalse(_vt_indirect_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_read_write_texture(
-					CLIENT_WIDTH,
-					CLIENT_HEIGHT,
+					_vt_feed_back_resolution.x,
+					_vt_feed_back_resolution.y,
 					Format::RG32_UINT,
 					"vt_indirect_texture"
 				)
@@ -142,7 +150,6 @@ namespace fantasy
 
         _pass_constant.vt_page_size = VT_PAGE_SIZE;
         _pass_constant.vt_physical_texture_size = VT_PHYSICAL_TEXTURE_RESOLUTION;
-		ReturnIfFalse(cache->require_constants("vt_feed_back_scale_factor", (void**)&_vt_feed_back_scale_factor));
  
 		return true;
 	}
@@ -158,25 +165,32 @@ namespace fantasy
 					{
 						if (material->image_resolution == 0) continue;
 
-						uint32_t mip_levels = std::log2(material->image_resolution / VT_PAGE_SIZE) + 1;
-						for (uint32_t mip = 0; mip < mip_levels; ++mip)
+						uint32_t submesh_id = mesh->submesh_global_base_id + ix;
+						for (uint32_t type = 0; type < Material::TextureType_Num; ++type)
 						{
-							for (uint32_t type = 0; type < Material::TextureType_Num; ++type)
-							{
-								uint32_t submesh_id = mesh->submesh_global_base_id + ix;
+							const auto& texture_desc = check_cast<TextureInterface>(cache->require(
+								get_geometry_texture_name(submesh_id, type, *name).c_str()
+							))->get_desc();
 
-								std::string texture_name = get_geometry_texture_name(submesh_id, ix, *name);
-								
-								// 之后再添加 page 的 xy 坐标.
-								TextureTilesMapping::Region region;
-								region.mip_level= mip;
-								region.width = VT_PAGE_SIZE;
-								region.height = VT_PAGE_SIZE;
-								region.byte_offset = 
-									check_cast<TextureInterface>(cache->require(texture_name.c_str()))->get_desc().offset_in_heap;
-								
+							uint32_t row_size_in_page = texture_desc.width / VT_PAGE_SIZE;
+							uint32_t pixel_size = get_format_info(texture_desc.format).size;
+
+							uint32_t mip0_size = texture_desc.width * texture_desc.height * pixel_size;
+
+							TextureTilesMapping::Region region;
+							region.width = VT_PAGE_SIZE;
+							region.height = VT_PAGE_SIZE;
+							region.byte_offset = texture_desc.offset_in_heap;
+
+							uint64_t key = create_texture_region_cache_key(submesh_id, 0, type);
+							_geometry_texture_region_cache[key] = std::make_pair(region, (pixel_size << 16) | (row_size_in_page & 0xffff));
+
+							for (uint32_t mip = 1; mip < texture_desc.mip_levels; ++mip)
+							{
+								region.byte_offset = texture_desc.offset_in_heap + (mip0_size >> (mip - 1));
+
 								uint64_t key = create_texture_region_cache_key(submesh_id, mip, type);
-								_geometry_texture_region_cache[key] = region;
+								_geometry_texture_region_cache[key] = std::make_pair(region, (pixel_size << 16) | ((row_size_in_page >> mip) & 0xffff));
 							}
 						}
 					}
@@ -201,7 +215,7 @@ namespace fantasy
 
 			uint2* mapped_data = static_cast<uint2*>(_vt_page_read_back_buffer->map(CpuAccessMode::Read));
 			
-			uint32_t vt_page_num = (CLIENT_WIDTH / *_vt_feed_back_scale_factor) * (CLIENT_HEIGHT / *_vt_feed_back_scale_factor);
+			uint32_t vt_page_num = _vt_feed_back_resolution.x * _vt_feed_back_resolution.y;
 			_vt_feed_back_data.resize(vt_page_num);
 			memcpy(_vt_feed_back_data.data(), mapped_data, vt_page_num * sizeof(uint2)); 
 
@@ -222,27 +236,32 @@ namespace fantasy
 				if (!_vt_physical_table.check_page_loaded(page))
 				{
 					page.physical_position_in_page = _vt_physical_table.get_new_position();
-					_vt_physical_table.add_page(page);
 				}
 				else
 				{
-					_update_vt_pages.push_back(page);
-
 					for (uint32_t jx = 0; jx < Material::TextureType_Num; ++jx)
 					{
-						TextureTilesMapping::Region region = _geometry_texture_region_cache[create_texture_region_cache_key(
+						auto [region, pixel_size_row_page_num] = _geometry_texture_region_cache[create_texture_region_cache_key(
 							page.geometry_id, page.get_mip_level(), jx
 						)];
+
+						uint32_t pixel_size = pixel_size_row_page_num >> 16;
+						uint32_t row_page_num = pixel_size_row_page_num & 0xffff;
 					
-						uint2 coordinate = page.get_coordinate();
-						region.x = coordinate.x; 
-						region.y = coordinate.y; 
+						uint2 coordinate = page.get_coordinate_in_page();
+						region.x = page.physical_position_in_page.x * VT_PAGE_SIZE * pixel_size;
+						region.y = page.physical_position_in_page.y * VT_PAGE_SIZE * pixel_size;
+						region.byte_offset += (coordinate.x + coordinate.y * row_page_num) * VT_PAGE_SIZE * pixel_size;
 					
 						tile_mappings[jx].regions.emplace_back(region);
 					}
 				}
 
-				_vt_indirect_table.set_page(uint2(ix % CLIENT_WIDTH, ix / CLIENT_WIDTH), page.physical_position_in_page);
+				_vt_physical_table.add_page(page);
+				_vt_indirect_table.set_page(
+					uint2(ix % _vt_feed_back_resolution.x, ix / _vt_feed_back_resolution.x), 
+					page.physical_position_in_page
+				);
 			}
 
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
@@ -282,17 +301,6 @@ namespace fantasy
 
 	bool VirtualTextureUpdatePass::finish_pass(RenderResourceCache* cache)
 	{
-		if (SceneSystem::loaded_submesh_count != 0)
-		{
-			_finish_pass_thread_id = parallel::begin_thread(
-				[this, cache]() -> bool
-				{
-					_vt_physical_table.add_pages(_update_vt_pages);
-					return true;
-				}
-			);
-		}
-
 		// for (const auto& info : _virtual_texture_position_infos)
 		// {
 		// 	for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)

@@ -165,6 +165,8 @@ namespace fantasy
             IID_PPV_ARGS(d3d12_resource.GetAddressOf())
         )));
 
+		d3d12_resource->SetName(std::wstring(desc.name.begin(), desc.name.end()).c_str());
+
         if (desc.allow_unordered_access)
         {
             _mip_uav_cache_for_clear.resize(desc.mip_levels);
@@ -555,6 +557,8 @@ namespace fantasy
             nullptr, 
             IID_PPV_ARGS(d3d12_resource.GetAddressOf())
         )));
+        
+		d3d12_resource->SetName(std::wstring(desc.name.begin(), desc.name.end()).c_str());
 
         return true;
     }

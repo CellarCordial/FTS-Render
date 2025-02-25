@@ -26,10 +26,11 @@ namespace fantasy
 
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(3);
-			binding_layout_items[0] = BindingLayoutItem::create_texture_srv(0);
-			binding_layout_items[1] = BindingLayoutItem::create_texture_uav(0);
-			binding_layout_items[2] = BindingLayoutItem::create_sampler(0);
+			BindingLayoutItemArray binding_layout_items(4);
+			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::MipmapGenerationPassConstant));
+			binding_layout_items[1] = BindingLayoutItem::create_texture_srv(0);
+			binding_layout_items[2] = BindingLayoutItem::create_texture_uav(0);
+			binding_layout_items[3] = BindingLayoutItem::create_sampler(0);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -130,25 +131,31 @@ namespace fantasy
 			
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
 			{
+				if (!_current_textures[ix]) continue;
+				
 				// Binding Set.
 				{
-					BindingSetItemArray binding_set_items(3);
-					binding_set_items[0] = BindingSetItem::create_texture_srv(0, _current_textures[ix], TextureSubresourceSet{ .base_mip_level = _current_calculate_mip - 1 });
-					binding_set_items[1] = BindingSetItem::create_texture_uav(0, _current_textures[ix], TextureSubresourceSet{ .base_mip_level = _current_calculate_mip });
-					binding_set_items[2] = BindingSetItem::create_sampler(0, _linear_clamp_sampler);
+					BindingSetItemArray binding_set_items(4);
+					binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::MipmapGenerationPassConstant));
+					binding_set_items[1] = BindingSetItem::create_texture_srv(0, _current_textures[ix], TextureSubresourceSet{ .base_mip_level = _current_calculate_mip - 1 });
+					binding_set_items[2] = BindingSetItem::create_texture_uav(0, _current_textures[ix], TextureSubresourceSet{ .base_mip_level = _current_calculate_mip });
+					binding_set_items[3] = BindingSetItem::create_sampler(0, _linear_clamp_sampler);
 					ReturnIfFalse(_binding_sets[ix] = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 						BindingSetDesc{ .binding_items = binding_set_items },
 						_binding_layout
 					)));
 				}
-				_compute_state.binding_sets[0] = _binding_set.get();
+				_compute_state.binding_sets[0] = _binding_sets[ix].get();
+				_pass_constants[ix].input_mip_level = _current_calculate_mip - 1;
+				_pass_constants[ix].output_resolution = { _current_texture_resolution.x >> _current_calculate_mip,
+														  _current_texture_resolution.y >> _current_calculate_mip };
 
 				uint2 thread_group_num = {
-					static_cast<uint32_t>((align(_current_texture_resolution.x >> _current_calculate_mip, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
-					static_cast<uint32_t>((align(_current_texture_resolution.y >> _current_calculate_mip, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
+					static_cast<uint32_t>((align(_pass_constants[ix].output_resolution.x, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
+					static_cast<uint32_t>((align(_pass_constants[ix].output_resolution.y, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
 				};
 
-				ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y));
+				ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constants[ix]));
 			}
 
 			ReturnIfFalse(cmdlist->close());

@@ -8,11 +8,11 @@ cbuffer pass_constant : register(b0)
 };
 
 RWTexture2D<float4> final_texture : register(u0);
-Texture2D<float4> world_position_view_depth_texture : register(t0);
-Texture2D<float4> world_space_normal_texture : register(t1);
-Texture2D<float4> base_color_texture : register(t2);
-Texture2D<float4> pbr_texture : register(t3);
-Texture2D<float4> emissive_texture : register(t4);
+Texture2D world_position_view_depth_texture : register(t0);
+Texture2D world_space_normal_texture : register(t1);
+Texture2D base_color_texture : register(t2);
+Texture2D pbr_texture : register(t3);
+Texture2D emissive_texture : register(t4);
 
 
 #if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y)

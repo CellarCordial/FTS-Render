@@ -9,6 +9,8 @@ cbuffer pass_constants : register(b0)
     uint2 client_resolution;
     uint vt_page_size;
     uint vt_physical_texture_size;
+
+    uint vt_feed_back_scale_factor;
 };
 
 Texture2D<float2> vt_page_uv_texture : register(t0);
@@ -36,7 +38,7 @@ void main(uint3 thread_id : SV_DispatchThreadID)
 
     uint2 pixel_id = thread_id.xy;
     float2 page_uv = vt_page_uv_texture[pixel_id];
-    uint2 page_coordinate = vt_indirect_texture[pixel_id];
+    uint2 page_coordinate = vt_indirect_texture[pixel_id / vt_feed_back_scale_factor];
     if (page_uv.x == INVALID_SIZE_32 || page_uv.y == INVALID_SIZE_32) return;
     if (page_coordinate.x == INVALID_SIZE_32 || page_coordinate.y == INVALID_SIZE_32) return;
 

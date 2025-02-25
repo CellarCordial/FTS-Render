@@ -138,6 +138,7 @@ namespace fantasy
         desc.offset_in_heap = offset;
 
         _context->device.bindImageMemory(vk_image, vk_device_memory, offset);
+        _context->name_object(vk_device_memory, vk::ObjectType::eDeviceMemory, desc.name.c_str());
 
         return true;
     }
@@ -287,6 +288,7 @@ namespace fantasy
         desc.offset_in_heap = offset;
 
         _context->device.bindBufferMemory(vk_buffer, vk_device_memory, offset);
+        _context->name_object(vk_device_memory, vk::ObjectType::eDeviceMemory, desc.name.c_str());
 
         return true;
     }

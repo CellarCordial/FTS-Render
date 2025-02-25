@@ -79,7 +79,7 @@ namespace fantasy
         struct Region
         {
             uint16_t mip_level = 0;
-            uint16_t array_level = 0;
+            uint16_t array_slice = 0;
             uint32_t x = 0;
             uint32_t y = 0;
             uint32_t z = 0;

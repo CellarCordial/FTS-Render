@@ -32,7 +32,7 @@ namespace fantasy
         uint32_t coordinate_mip_level = INVALID_SIZE_32;
         uint2 physical_position_in_page;
 
-        uint2 get_coordinate() const 
+        uint2 get_coordinate_in_page() const 
         {
             uint32_t coordinate = coordinate_mip_level >> 8;
             return uint2(coordinate >> 12 , coordinate & 0xfff);
@@ -47,7 +47,7 @@ namespace fantasy
     class VTIndirectTable
     {
     public:
-        VTIndirectTable();
+        void initialize(uint32_t width, uint32_t height);
 
         void set_page(uint2 pixel_id, uint2 physical_pos_in_page);
         void set_page_null(uint2 pixel_i);

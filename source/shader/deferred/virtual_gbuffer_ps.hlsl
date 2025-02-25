@@ -66,11 +66,14 @@ PixelOutput main(VertexOutput input)
     uint2 pixel_id = uint2(round(input.sv_position.xy));
     uint pixel_index = pixel_id.x + pixel_id.y * client_width;
 
-    // 更新 virtual texture page_info_buffer 和 tile_uv_texture.
     GeometryConstant geometry = geometry_constant_buffer[input.geometry_id];
     if (all(geometry.texture_resolution != 0))
     {
         uint mip_level = estimate_mip_level(input.uv * geometry.texture_resolution);
+        if (geometry.texture_resolution >> mip_level < vt_page_size)
+        {
+            mip_level = log2(geometry.texture_resolution / vt_page_size);
+        }
         uint2 geometry_texture_resolution = max(geometry.texture_resolution >> mip_level, vt_page_size);
         uint2 geometry_texture_pixel_id = uint2(input.uv * geometry_texture_resolution);
 
@@ -92,7 +95,6 @@ PixelOutput main(VertexOutput input)
         }
     }
     
-    // // 更新 virtual shadow page buffer.
     // float4 shadow_view_proj_pos = mul(float4(input.world_space_position, 1.0f), shadow_view_proj);
     // shadow_view_proj_pos.xyz = shadow_view_proj_pos.xyz / shadow_view_proj_pos.z;
 

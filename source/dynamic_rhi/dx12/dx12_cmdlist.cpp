@@ -839,11 +839,10 @@ namespace fantasy
             D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT
         ));
 
-        uint32_t pixel_size = get_format_info(dst->get_desc().format).size;
         uint32_t row_pitch = d3d12_foot_print.Footprint.RowPitch;
-        uint32_t height = (d3d12_foot_print.Footprint.Height * pixel_size) / row_pitch;
+        uint32_t height = d3d12_foot_print.Footprint.Height;
         uint32_t depth = d3d12_foot_print.Footprint.Depth;
-        uint32_t depth_pitch = row_pitch * d3d12_foot_print.Footprint.Height;
+        uint32_t depth_pitch = row_pitch * height;
         
         uint8_t* dst_address = reinterpret_cast<uint8_t*>(mapped_address);
         for (uint32_t z = 0; z < depth; z++)
@@ -856,6 +855,7 @@ namespace fantasy
                 src_address += row_pitch;
             }
         }
+
 
         D3D12_TEXTURE_COPY_LOCATION dst_location;
         dst_location.pResource = reinterpret_cast<ID3D12Resource*>(dst->get_native_object());

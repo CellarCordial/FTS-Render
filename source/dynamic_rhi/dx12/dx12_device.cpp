@@ -351,10 +351,11 @@ namespace fantasy
             {
                 const TextureTilesMapping::Region& region = tile_mappings[ix].regions[jx];
 
-                d3d12_resource_coordiantes[jx].Subresource = region.mip_level * texture->get_desc().array_size + region.array_level;
                 d3d12_resource_coordiantes[jx].X = region.x;
                 d3d12_resource_coordiantes[jx].Y = region.y;
                 d3d12_resource_coordiantes[jx].Z = region.z;
+                d3d12_resource_coordiantes[jx].Subresource = 
+                    calculate_texture_subresource(region.mip_level, region.array_slice, texture->get_desc().mip_levels);
 
                 if (region.tiles_num > 0)
                 {
@@ -363,9 +364,9 @@ namespace fantasy
                 }
                 else
                 {
-                    uint32_t tiles_x = (region.width + (tile_info.width_in_texels - 1)) / tile_info.width_in_texels;
-                    uint32_t tiles_y = (region.height + (tile_info.height_in_texels - 1)) / tile_info.height_in_texels;
-                    uint32_t tiles_z = (region.depth + (tile_info.depth_in_texels - 1)) / tile_info.depth_in_texels;
+                    uint32_t tiles_x = align(region.width, tile_info.width_in_texels) / tile_info.width_in_texels;
+                    uint32_t tiles_y = align(region.height, tile_info.height_in_texels) / tile_info.height_in_texels;
+                    uint32_t tiles_z = align(region.depth, tile_info.depth_in_texels) / tile_info.depth_in_texels;
 
                     d3d12_region_sizes[jx].Width = tiles_x;
                     d3d12_region_sizes[jx].Height = static_cast<uint16_t>(tiles_y);

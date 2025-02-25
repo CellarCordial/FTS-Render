@@ -113,7 +113,8 @@ namespace fantasy
 				TextureDesc::create_shader_resource_texture(
 					_blue_noise_image.width,
 					_blue_noise_image.height,
-					_blue_noise_image.format
+					_blue_noise_image.format,
+					"blue_noise_texture"
 				)
 			)));
 		}

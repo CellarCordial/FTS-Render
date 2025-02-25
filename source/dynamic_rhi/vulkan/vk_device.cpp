@@ -301,7 +301,7 @@ namespace fantasy
                 else
                 {
                     vk::ImageSubresource vk_subresource{};
-                    vk_subresource.arrayLayer = region.array_level;
+                    vk_subresource.arrayLayer = region.array_slice;
                     vk_subresource.mipLevel = region.mip_level;
 
                     vk::Offset3D vk_offset;

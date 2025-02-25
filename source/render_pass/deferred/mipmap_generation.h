@@ -5,10 +5,18 @@
 #include "../../scene/geometry.h"
 #include <array>
 #include <memory>
-#include <vector>
 
 namespace fantasy
 {
+	namespace constant 
+	{
+		struct MipmapGenerationPassConstant
+		{
+			uint2 output_resolution;
+			uint32_t input_mip_level;
+		};
+	}
+
 	class MipmapGenerationPass : public RenderPassInterface
 	{
 	public:
@@ -25,6 +33,7 @@ namespace fantasy
 		uint32_t _current_calculate_mip = 1;
 		uint32_t _current_submaterial_index = 0;
 		std::array<std::shared_ptr<TextureInterface>, Material::TextureType_Num> _current_textures;
+		std::array<constant::MipmapGenerationPassConstant, Material::TextureType_Num> _pass_constants;
 
 		uint64_t _geometry_texture_heap_capacity = 1024 * 1024 * 64;
 		std::shared_ptr<HeapInterface> _geometry_texture_heap;
@@ -37,7 +46,6 @@ namespace fantasy
 		std::shared_ptr<Shader> _cs;
 		std::unique_ptr<ComputePipelineInterface> _pipeline;
 
-		std::unique_ptr<BindingSetInterface> _binding_set;
 		std::array<std::unique_ptr<BindingSetInterface>, Material::TextureType_Num> _binding_sets;
 		ComputeState _compute_state;
 	};
