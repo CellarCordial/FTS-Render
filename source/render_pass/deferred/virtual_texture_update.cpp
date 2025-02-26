@@ -90,7 +90,7 @@ namespace fantasy
 		{	
 
 			const Format formats[Material::TextureType_Num] = {
-				Format::RGBA16_FLOAT, Format::RGBA32_FLOAT, Format::RGBA8_UNORM, Format::R11G11B10_FLOAT
+				Format::RGBA8_UNORM, Format::RGBA32_FLOAT, Format::RGBA8_UNORM, Format::R11G11B10_FLOAT
 			};
 
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
