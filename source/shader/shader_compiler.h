@@ -54,7 +54,7 @@ namespace fantasy
             }
         }
 
-        bool invalid() const { return _data.empty(); }
+        bool is_valid() const { return !_data.empty(); }
     };
 
     void set_shader_platform(ShaderPlatform platform);

@@ -24,24 +24,32 @@ namespace fantasy
         return true;
     }
 
-    void save_to_cache(const char* cache_path, const ShaderData& data)
+    void save_to_cache(const ShaderCompileDesc& desc, const char* cache_path, const ShaderData& data)
     {
-        if (data.invalid())
+        if (!data.is_valid())
         {
             LOG_ERROR("Call to FShaderCompiler::save_to_cache() failed for invalid Shader data.");
             return;
         }
 
         serialization::BinaryOutput output(cache_path);
+        for (const auto& define : desc.defines) output(define);
         output(data._data.size());
         output.save_binary_data(data._data.data(), data._data.size());
     }
 
-    ShaderData load_from_cache(const char* cache_path)
+    ShaderData load_from_cache(const ShaderCompileDesc& desc, const char* cache_path)
     {
         ShaderData shader_data;
         
         serialization::BinaryInput input(cache_path);
+
+        for (const auto& define : desc.defines)
+        {
+            std::string cache_define;
+            input(cache_define);
+            if (cache_define != define) return ShaderData{};
+        }
 
         uint64_t ByteCodeSize = 0;
         input(ByteCodeSize);
@@ -331,7 +339,8 @@ namespace fantasy
 
         if (check_cache(cache_path.c_str(), shader_path.c_str()))
         {
-            return load_from_cache(cache_path.c_str());
+            ShaderData data =load_from_cache(desc, cache_path.c_str());
+            if (data.is_valid()) return data;
         }
 
         const std::wstring EntryPoint = std::wstring(desc.entry_point.begin(), desc.entry_point.end());
@@ -407,7 +416,7 @@ namespace fantasy
         shader_data._include_shader_files = std::move(dxc_include_handler.IncludedFileNames);
         shader_data._include_shader_files.push_back(desc.shader_name.c_str());
 
-        save_to_cache(cache_path.c_str(), shader_data);
+        save_to_cache(desc, cache_path.c_str(), shader_data);
 
         return shader_data;
     }

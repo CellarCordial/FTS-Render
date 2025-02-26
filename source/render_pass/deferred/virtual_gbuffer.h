@@ -50,7 +50,6 @@ namespace fantasy
 	
 	private:
 		bool _resource_writed = false;
-		uint32_t _vt_feed_back_scale_factor = 4;
 		constant::VirtualGBufferPassConstant _pass_constant;
 
 		std::vector<Vertex> _cluster_vertices;
@@ -63,10 +62,8 @@ namespace fantasy
 		std::shared_ptr<BufferInterface> _cluster_triangle_buffer;
 		std::shared_ptr<BufferInterface> _draw_indexed_indirect_arguments_buffer;
 
-		std::shared_ptr<BufferInterface> _vt_page_buffer;
-		std::shared_ptr<BufferInterface> _vt_page_read_back_buffer;
-		std::shared_ptr<BufferInterface> _virtual_shadow_page_buffer;
-		std::shared_ptr<BufferInterface> _virtual_shadow_page_read_back_buffer;
+		std::shared_ptr<BufferInterface> _vt_feed_back_buffer;
+		std::shared_ptr<BufferInterface> _vt_feed_back_read_back_buffer;
 
 
 		std::shared_ptr<TextureInterface> _vt_page_uv_texture;

@@ -31,7 +31,7 @@ namespace fantasy
 		);
 
 		_geometry_texture_heap = check_cast<HeapInterface>(cache->require("geometry_texture_heap"));
-		_vt_page_read_back_buffer = check_cast<BufferInterface>(cache->require("vt_page_read_back_buffer"));
+		_vt_feed_back_read_back_buffer = check_cast<BufferInterface>(cache->require("vt_feed_back_read_back_buffer"));
 
 
 		_vt_feed_back_resolution = { CLIENT_WIDTH / VT_FEED_BACK_SCALE_FACTOR, CLIENT_HEIGHT / VT_FEED_BACK_SCALE_FACTOR };
@@ -200,12 +200,12 @@ namespace fantasy
 		
         if (SceneSystem::loaded_submesh_count != 0)
 		{
-			uint2* mapped_data = static_cast<uint2*>(_vt_page_read_back_buffer->map(CpuAccessMode::Read));
+			uint4* mapped_data = static_cast<uint4*>(_vt_feed_back_read_back_buffer->map(CpuAccessMode::Read));
 			
 			_vt_feed_back_data.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y);
-			memcpy(_vt_feed_back_data.data(), mapped_data, static_cast<uint32_t>(_vt_feed_back_data.size()) * sizeof(uint2)); 
+			memcpy(_vt_feed_back_data.data(), mapped_data, static_cast<uint32_t>(_vt_feed_back_data.size()) * sizeof(uint4)); 
 
-			_vt_page_read_back_buffer->unmap();
+			_vt_feed_back_read_back_buffer->unmap();
 
 			
 			std::array<TextureTilesMapping, Material::TextureType_Num> tile_mappings;
@@ -246,10 +246,7 @@ namespace fantasy
 				}
 
 				_vt_physical_table.add_page(page);
-				_vt_indirect_table.set_page(
-					uint2(ix % _vt_feed_back_resolution.x, ix / _vt_feed_back_resolution.x), 
-					page.physical_position_in_page
-				);
+				_vt_indirect_table.set_page(ix, page.physical_position_in_page);
 			}
 
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)

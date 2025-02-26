@@ -25,7 +25,7 @@ namespace fantasy
 
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(9);
+			BindingLayoutItemArray binding_layout_items(8);
 			binding_layout_items[0] = BindingLayoutItem::create_constant_buffer(0);
 			binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_structured_buffer_srv(1);
@@ -34,7 +34,6 @@ namespace fantasy
 			binding_layout_items[5] = BindingLayoutItem::create_structured_buffer_srv(4);
 			binding_layout_items[6] = BindingLayoutItem::create_texture_uav(0);
 			binding_layout_items[7] = BindingLayoutItem::create_structured_buffer_uav(1);
-			binding_layout_items[8] = BindingLayoutItem::create_structured_buffer_uav(2);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -73,43 +72,25 @@ namespace fantasy
 			)));
 
 
-			uint32_t vt_page_buffer_element_num = 
-				(CLIENT_WIDTH / _vt_feed_back_scale_factor) * (CLIENT_HEIGHT / _vt_feed_back_scale_factor);
+			uint32_t feed_back_buffer_element_num = 
+				(CLIENT_WIDTH / VT_FEED_BACK_SCALE_FACTOR) * (CLIENT_HEIGHT / VT_FEED_BACK_SCALE_FACTOR);
 
-			ReturnIfFalse(_vt_page_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+			ReturnIfFalse(_vt_feed_back_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_read_write_structured_buffer(
-					sizeof(uint2) * vt_page_buffer_element_num, 
-					sizeof(uint2),
-					"vt_page_buffer"
+					sizeof(uint4) * feed_back_buffer_element_num, 
+					sizeof(uint4),
+					"vt_feed_back_buffer"
 				)
 			)));
-			cache->collect(_vt_page_buffer, ResourceType::Buffer);	
+			cache->collect(_vt_feed_back_buffer, ResourceType::Buffer);	
 
-			ReturnIfFalse(_vt_page_read_back_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+			ReturnIfFalse(_vt_feed_back_read_back_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_read_back_buffer(
-					sizeof(uint2) * vt_page_buffer_element_num, 
-					"vt_page_read_back_buffer"
+					sizeof(uint4) * feed_back_buffer_element_num, 
+					"vt_feed_back_read_back_buffer"
 				)
 			)));
-			cache->collect(_vt_page_read_back_buffer, ResourceType::Buffer);
-
-			
-			ReturnIfFalse(_virtual_shadow_page_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_read_write_structured_buffer(
-					CLIENT_WIDTH * CLIENT_HEIGHT * sizeof(uint2),
-                    sizeof(uint2), 
-					"virtual_shadow_page_buffer"
-				)
-			)));
-			cache->collect(_virtual_shadow_page_buffer, ResourceType::Buffer);		
-
-			ReturnIfFalse(_virtual_shadow_page_read_back_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_read_back_buffer(
-					CLIENT_WIDTH * CLIENT_HEIGHT * sizeof(uint2),
-					"virtual_shadow_page_read_back_buffer"
-				)
-			)));
-			cache->collect(_virtual_shadow_page_read_back_buffer, ResourceType::Buffer);
+			cache->collect(_vt_feed_back_read_back_buffer, ResourceType::Buffer);
 		}
 
 		// Texture.
@@ -243,11 +224,10 @@ namespace fantasy
 
 		// Binding Set.
 		{
-			_binding_set_items.resize(9);
+			_binding_set_items.resize(8);
 			_binding_set_items[0] = BindingSetItem::create_constant_buffer(0, _pass_constant_buffer);
 			_binding_set_items[6] = BindingSetItem::create_texture_uav(0, _vt_page_uv_texture);
-			_binding_set_items[7] = BindingSetItem::create_structured_buffer_uav(1, _vt_page_buffer);
-			_binding_set_items[8] = BindingSetItem::create_structured_buffer_uav(2, _virtual_shadow_page_buffer);
+			_binding_set_items[7] = BindingSetItem::create_structured_buffer_uav(1, _vt_feed_back_buffer);
 		}
 
 		// Graphics state.
@@ -387,33 +367,23 @@ namespace fantasy
 
 			ReturnIfFalse(clear_color_attachment(cmdlist, _frame_buffer.get()));
 			ReturnIfFalse(clear_depth_stencil_attachment(cmdlist, _frame_buffer.get()));
-			cmdlist->clear_buffer_uint(_vt_page_buffer.get(), BufferRange{ 0, _vt_page_buffer->get_desc().byte_size }, INVALID_SIZE_32);
-			cmdlist->clear_buffer_uint(_virtual_shadow_page_buffer.get(), BufferRange{ 0, _virtual_shadow_page_buffer->get_desc().byte_size }, INVALID_SIZE_32);
+			cmdlist->clear_buffer_uint(_vt_feed_back_buffer.get(), BufferRange{ 0, _vt_feed_back_buffer->get_desc().byte_size }, INVALID_SIZE_32);
 			cmdlist->clear_texture_uint(_vt_page_uv_texture.get(), TextureSubresourceSet{}, INVALID_SIZE_32);
 			
 			
 			ReturnIfFalse(cmdlist->draw_indirect(_graphics_state, 0, 1));
 			
 			
-			uint32_t vt_page_buffer_element_num = 
-				(CLIENT_WIDTH / _vt_feed_back_scale_factor) * (CLIENT_HEIGHT / _vt_feed_back_scale_factor);
+			uint32_t feed_back_buffer_element_num = 
+				(CLIENT_WIDTH / VT_FEED_BACK_SCALE_FACTOR) * (CLIENT_HEIGHT / VT_FEED_BACK_SCALE_FACTOR);
 
 			cmdlist->copy_buffer(
-				_vt_page_read_back_buffer.get(), 
+				_vt_feed_back_read_back_buffer.get(), 
 				0, 
-				_vt_page_buffer.get(), 
+				_vt_feed_back_buffer.get(), 
 				0, 
-				sizeof(uint2) * vt_page_buffer_element_num
+				_vt_feed_back_buffer->get_desc().byte_size
 			);
-
-			cmdlist->copy_buffer(
-				_virtual_shadow_page_read_back_buffer.get(), 
-				0, 
-				_virtual_shadow_page_buffer.get(), 
-				0, 
-				CLIENT_WIDTH * CLIENT_HEIGHT * sizeof(uint2)
-			);
-
 
 			cmdlist->set_texture_state(
 				_reverse_depth_texture.get(), 

@@ -43,17 +43,11 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     uint2 page_coordinate = vt_indirect_texture[indirect_uv];
     if (any(page_coordinate == INVALID_SIZE_32))
     {
-        bool found = false;
-        for (int x = VT_FEED_BACK_SCALE_FACTOR; x >= -VT_FEED_BACK_SCALE_FACTOR; --x)
-        {
-            for (int y = VT_FEED_BACK_SCALE_FACTOR; y >= -VT_FEED_BACK_SCALE_FACTOR; --y)
-            {
-                page_coordinate = vt_indirect_texture[indirect_uv + int2(x, y)];
-                if (all(page_coordinate != INVALID_SIZE_32)) { found = true; break; }
-            }
-            if (found) break;
-        }
-        if (!found) return;
+        world_space_normal_texture[pixel_id] = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        base_color_texture[pixel_id] = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        pbr_texture[pixel_id] = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        emissive_texture[pixel_id] = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        return;
     }
 
     float2 physical_uv = float2(page_uv + page_coordinate.xy * vt_page_size) / vt_physical_texture_size;

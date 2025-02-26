@@ -21,6 +21,11 @@ namespace fantasy
     {
         physical_page_pointers[pixel_id.y * _resolution.x + pixel_id.x] = physical_pos_in_page;
     }
+    
+    void VTIndirectTable::set_page(uint32_t pixel_index, uint2 physical_pos_in_page)
+    {
+        physical_page_pointers[pixel_index] = physical_pos_in_page;
+    }
 
     void VTIndirectTable::set_page_null(uint2 pixel_id) 
     { 

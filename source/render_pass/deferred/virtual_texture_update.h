@@ -36,14 +36,14 @@ namespace fantasy
 		VTIndirectTable _vt_indirect_table;
 
 		uint2 _vt_feed_back_resolution;
-		std::vector<uint2> _vt_feed_back_data;
+		std::vector<uint4> _vt_feed_back_data;
 		bool _update_texture_region_cache = false;
 		std::unordered_map<uint64_t, std::pair<TextureTilesMapping::Region, uint32_t>> _geometry_texture_region_cache;
 
 
 		std::shared_ptr<HeapInterface> _geometry_texture_heap;
 		
-		std::shared_ptr<BufferInterface> _vt_page_read_back_buffer;
+		std::shared_ptr<BufferInterface> _vt_feed_back_read_back_buffer;
 		
 		std::shared_ptr<TextureInterface> _vt_indirect_texture;
 		std::array<std::shared_ptr<TextureInterface>, Material::TextureType_Num> _vt_physical_textures;

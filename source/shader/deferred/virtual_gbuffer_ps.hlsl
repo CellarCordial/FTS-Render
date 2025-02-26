@@ -1,5 +1,6 @@
-#include "../common/gbuffer.hlsl"
+// #define VT_FEED_BACK_SCALE_FACTOR 1
 
+#include "../common/gbuffer.hlsl"
 
 cbuffer pass_constants : register(b0)
 {
@@ -51,8 +52,7 @@ struct PixelOutput
 StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
 
 RWTexture2D<uint2> vt_page_uv_texture : register(u0);
-RWStructuredBuffer<uint2> vt_page_buffer : register(u1);
-RWStructuredBuffer<uint2> virtual_shadow_page_buffer : register(u2);
+RWStructuredBuffer<uint4> vt_feed_back_buffer : register(u1);
 
 uint estimate_mip_level(float2 pixel_id)
 {
@@ -67,7 +67,12 @@ uint estimate_mip_level(float2 pixel_id)
 PixelOutput main(VertexOutput input)
 {
     uint2 pixel_id = uint2(input.sv_position.xy);
-    uint pixel_index = pixel_id.x + pixel_id.y * client_width;
+
+    bool feed_back = ((pixel_id.x | pixel_id.y) & (VT_FEED_BACK_SCALE_FACTOR - 1)) == 0;
+    uint2 feed_back_id = pixel_id / VT_FEED_BACK_SCALE_FACTOR;
+    uint feed_back_index = feed_back_id.x + feed_back_id.y * (client_width / VT_FEED_BACK_SCALE_FACTOR);
+
+    uint4 feed_back_data = uint4(INVALID_SIZE_32, INVALID_SIZE_32, INVALID_SIZE_32, INVALID_SIZE_32);
 
     GeometryConstant geometry = geometry_constant_buffer[input.geometry_id];
     if (all(geometry.texture_resolution != 0))
@@ -82,7 +87,7 @@ PixelOutput main(VertexOutput input)
 
         vt_page_uv_texture[pixel_id] = geometry_texture_pixel_id % vt_page_size;
 
-        if (((pixel_id.x | pixel_id.y) & (VT_FEED_BACK_SCALE_FACTOR - 1)) == 0)
+        if (feed_back)
         {
             uint2 page_id = geometry_texture_pixel_id / vt_page_size;
             uint page_id_mip_level = uint(
@@ -91,29 +96,30 @@ PixelOutput main(VertexOutput input)
                 (mip_level & 0xff)
             );
 
-            uint2 feed_back_id = pixel_id / VT_FEED_BACK_SCALE_FACTOR;
-            uint feed_back_index = feed_back_id.x + feed_back_id.y * (client_width / VT_FEED_BACK_SCALE_FACTOR);
-
-            vt_page_buffer[feed_back_index] = uint2(input.geometry_id, page_id_mip_level);
+            feed_back_data.xy = uint2(input.geometry_id, page_id_mip_level);
         }
     }
+
+    if (feed_back)
+    {
+        float4 shadow_view_proj_pos = mul(float4(input.world_space_position, 1.0f), shadow_view_proj);
+        shadow_view_proj_pos.xyz = shadow_view_proj_pos.xyz / shadow_view_proj_pos.z;
+
+        bool in_shadow_clip = shadow_view_proj_pos.w > 0.0f &&
+                            shadow_view_proj_pos.x >= -1.0f && shadow_view_proj_pos.x <= 1.0f &&
+                            shadow_view_proj_pos.y >= -1.0f && shadow_view_proj_pos.y <= 1.0f &&
+                            shadow_view_proj_pos.z >= 0.0f && shadow_view_proj_pos.z <= 1.0f;
+        if (in_shadow_clip)
+        {
+            float2 uv = shadow_view_proj_pos.xy * float2(0.5f, -0.5f) + 0.5f;
+            uint2 shadow_page_id = (uint2)(uv * virtual_shadow_resolution) / virtual_shadow_page_size;
+
+            feed_back_data.zw = shadow_page_id;
+        }
+
+        vt_feed_back_buffer[feed_back_index] = feed_back_data;
+    }
     
-    // float4 shadow_view_proj_pos = mul(float4(input.world_space_position, 1.0f), shadow_view_proj);
-    // shadow_view_proj_pos.xyz = shadow_view_proj_pos.xyz / shadow_view_proj_pos.z;
-
-    // // 是否在太阳投影的裁剪空间内.
-    // bool in_clip = shadow_view_proj_pos.w > 0.0f &&
-    //                shadow_view_proj_pos.x >= -1.0f && shadow_view_proj_pos.x <= 1.0f &&
-    //                shadow_view_proj_pos.y >= -1.0f && shadow_view_proj_pos.y <= 1.0f &&
-    //                shadow_view_proj_pos.z >= 0.0f && shadow_view_proj_pos.z <= 1.0f;
-    // if (in_clip)
-    // {
-    //     float2 uv = shadow_view_proj_pos.xy * float2(0.5f, -0.5f) + 0.5f;
-    //     uint2 shadow_page_id = (uint2)(uv * virtual_shadow_resolution) / virtual_shadow_page_size;
-
-    //     virtual_shadow_page_buffer[pixel_index] = shadow_page_id;
-    // }
-
 
     PixelOutput output;
     output.world_position_view_depth = float4(input.world_space_position, input.view_space_position.z);
