@@ -1,13 +1,11 @@
 #include "virtual_texture_update.h"
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
-#include "../../core/parallel/parallel.h"
 #include "../../scene/scene.h"
 #include <array>
 #include <cstdint>
 #include <cstring>
 #include <memory>
-#include <thread>
 #include <utility>
 #include <vector>
 
@@ -35,10 +33,8 @@ namespace fantasy
 		_geometry_texture_heap = check_cast<HeapInterface>(cache->require("geometry_texture_heap"));
 		_vt_page_read_back_buffer = check_cast<BufferInterface>(cache->require("vt_page_read_back_buffer"));
 
-		uint32_t* vt_feed_back_scale_factor;
-		ReturnIfFalse(cache->require_constants("vt_feed_back_scale_factor", (void**)&vt_feed_back_scale_factor));
 
-		_vt_feed_back_resolution = { CLIENT_WIDTH / *vt_feed_back_scale_factor, CLIENT_HEIGHT / *vt_feed_back_scale_factor };
+		_vt_feed_back_resolution = { CLIENT_WIDTH / VT_FEED_BACK_SCALE_FACTOR, CLIENT_HEIGHT / VT_FEED_BACK_SCALE_FACTOR };
 		_vt_indirect_table.initialize(_vt_feed_back_resolution.x, _vt_feed_back_resolution.y);
 
 		// Binding Layout.
@@ -70,6 +66,7 @@ namespace fantasy
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
+			cs_compile_desc.defines.push_back("VT_FEED_BACK_SCALE_FACTOR=" + std::to_string(VT_FEED_BACK_SCALE_FACTOR));
 			ShaderData cs_data = compile_shader(cs_compile_desc);
 
 			ShaderDesc cs_desc;
@@ -144,7 +141,6 @@ namespace fantasy
 
         _pass_constant.vt_page_size = VT_PAGE_SIZE;
         _pass_constant.vt_physical_texture_size = VT_PHYSICAL_TEXTURE_RESOLUTION;
-		_pass_constant.vt_feed_back_scale_factor = *vt_feed_back_scale_factor;
  
 		return true;
 	}
@@ -204,12 +200,6 @@ namespace fantasy
 		
         if (SceneSystem::loaded_submesh_count != 0)
 		{
-			if (_finish_pass_thread_id != INVALID_SIZE_64)
-			{
-				if (!parallel::thread_finished(_finish_pass_thread_id)) std::this_thread::yield();
-				ReturnIfFalse(parallel::thread_success(_finish_pass_thread_id));
-			}
-
 			uint2* mapped_data = static_cast<uint2*>(_vt_page_read_back_buffer->map(CpuAccessMode::Read));
 			
 			_vt_feed_back_data.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y);

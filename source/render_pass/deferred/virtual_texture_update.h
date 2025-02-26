@@ -18,11 +18,8 @@ namespace fantasy
 			uint2 client_resolution = { CLIENT_WIDTH, CLIENT_HEIGHT };
             uint32_t vt_page_size = VT_PAGE_SIZE;
             uint32_t vt_physical_texture_size = VT_PHYSICAL_TEXTURE_RESOLUTION;
-			uint32_t vt_feed_back_scale_factor = 0;
 		};
 	}
-
-	
 
 	class VirtualTextureUpdatePass : public RenderPassInterface
 	{
@@ -34,7 +31,6 @@ namespace fantasy
 
 	private:
 		constant::VirtualGeometryTexturePassConstant _pass_constant;
-		uint64_t _finish_pass_thread_id = INVALID_SIZE_64;
 		
 		VTPhysicalTable _vt_physical_table;
 		VTIndirectTable _vt_indirect_table;

@@ -7,6 +7,7 @@
 #include "../../scene/scene.h"
 #include <cstdint>
 #include <memory>
+#include <string>
 
 namespace fantasy
 {
@@ -21,8 +22,6 @@ namespace fantasy
 		);
 
 		_reverse_depth_texture = check_cast<TextureInterface>(cache->require("reverse_depth_texture"));
-		ReturnIfFalse(cache->collect_constants("vt_feed_back_scale_factor", &_vt_feed_back_scale_factor));
-		_pass_constant.vt_feed_back_scale_factor = _vt_feed_back_scale_factor;
 
 		// Binding Layout.
 		{
@@ -51,6 +50,7 @@ namespace fantasy
 			shader_compile_desc.shader_name = "deferred/virtual_gbuffer_ps.hlsl";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Pixel;
+			shader_compile_desc.defines.push_back("VT_FEED_BACK_SCALE_FACTOR=" + std::to_string(VT_FEED_BACK_SCALE_FACTOR));
 			ShaderData ps_data = compile_shader(shader_compile_desc);
 
 			ShaderDesc vs_desc;

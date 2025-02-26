@@ -29,7 +29,7 @@ namespace fantasy
 			
 			float4x4 shadow_view_proj;
 		
-			uint32_t vt_feed_back_scale_factor = 1;
+			uint32_t view_mode = 0;
 			uint32_t vt_page_size = VT_PAGE_SIZE;
 			uint32_t virtual_shadow_resolution = VIRTUAL_SHADOW_RESOLUTION;
 			uint32_t virtual_shadow_page_size = VIRTUAL_SHADOW_PAGE_SIZE;

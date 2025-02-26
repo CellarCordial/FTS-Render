@@ -10,7 +10,7 @@ cbuffer pass_constants : register(b0)
     
     float4x4 shadow_view_proj;
 
-    uint vt_feed_back_scale_factor;
+    uint view_mode;
     uint vt_page_size;
     uint virtual_shadow_resolution;
     uint virtual_shadow_page_size;
@@ -61,6 +61,9 @@ uint estimate_mip_level(float2 pixel_id)
     return max(0.0f, 0.5f * log2(max(dot(dx, dx), dot(dy, dy))));
 }
 
+
+#ifdef VT_FEED_BACK_SCALE_FACTOR
+
 PixelOutput main(VertexOutput input)
 {
     uint2 pixel_id = uint2(input.sv_position.xy);
@@ -79,7 +82,7 @@ PixelOutput main(VertexOutput input)
 
         vt_page_uv_texture[pixel_id] = geometry_texture_pixel_id % vt_page_size;
 
-        if (((pixel_id.x | pixel_id.y) & (vt_feed_back_scale_factor - 1)) == 0)
+        if (((pixel_id.x | pixel_id.y) & (VT_FEED_BACK_SCALE_FACTOR - 1)) == 0)
         {
             uint2 page_id = geometry_texture_pixel_id / vt_page_size;
             uint page_id_mip_level = uint(
@@ -88,8 +91,8 @@ PixelOutput main(VertexOutput input)
                 (mip_level & 0xff)
             );
 
-            uint2 feed_back_id = pixel_id / vt_feed_back_scale_factor;
-            uint feed_back_index = feed_back_id.x + feed_back_id.y * (client_width / vt_feed_back_scale_factor);
+            uint2 feed_back_id = pixel_id / VT_FEED_BACK_SCALE_FACTOR;
+            uint feed_back_index = feed_back_id.x + feed_back_id.y * (client_width / VT_FEED_BACK_SCALE_FACTOR);
 
             vt_page_buffer[feed_back_index] = uint2(input.geometry_id, page_id_mip_level);
         }
@@ -123,3 +126,5 @@ PixelOutput main(VertexOutput input)
     output.virtual_mesh_visual = float4(input.color, 1.0f);
     return output;
 }
+
+#endif
