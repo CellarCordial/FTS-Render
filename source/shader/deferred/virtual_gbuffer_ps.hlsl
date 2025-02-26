@@ -63,14 +63,14 @@ uint estimate_mip_level(float2 pixel_id)
 
 PixelOutput main(VertexOutput input)
 {
-    uint2 pixel_id = uint2(round(input.sv_position.xy));
+    uint2 pixel_id = uint2(input.sv_position.xy);
     uint pixel_index = pixel_id.x + pixel_id.y * client_width;
 
     GeometryConstant geometry = geometry_constant_buffer[input.geometry_id];
     if (all(geometry.texture_resolution != 0))
     {
         uint mip_level = estimate_mip_level(input.uv * geometry.texture_resolution);
-        if ((geometry.texture_resolution >> mip_level) < vt_page_size)
+        if (geometry.texture_resolution >> mip_level < vt_page_size)
         {
             mip_level = log2(geometry.texture_resolution / vt_page_size);
         }

@@ -13,6 +13,7 @@ Texture2D world_space_normal_texture : register(t1);
 Texture2D base_color_texture : register(t2);
 Texture2D pbr_texture : register(t3);
 Texture2D emissive_texture : register(t4);
+Texture2D virtual_mesh_texture : register(t5);
 
 
 #if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y)
@@ -34,7 +35,7 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     case 6: final_texture[pixel_id] = float4(pbr_texture[pixel_id].y, 0.0f, 0.0f, 1.0f); break;
     case 7: final_texture[pixel_id] = float4(pbr_texture[pixel_id].z, 0.0f, 0.0f, 1.0f); break;
     case 8: final_texture[pixel_id] = emissive_texture[pixel_id]; break;
-    // case 9: color = float4(shadow_map_texture[pixel_id], 0.0f, 0.0f, 1.0f); break;
+    case 9: final_texture[pixel_id] = virtual_mesh_texture[pixel_id]; break;
     };
 }
 

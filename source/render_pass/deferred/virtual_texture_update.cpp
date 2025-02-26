@@ -87,19 +87,14 @@ namespace fantasy
 		}
 
 		// Texture.
-		{	
-
-			const Format formats[Material::TextureType_Num] = {
-				Format::RGBA8_UNORM, Format::RGBA32_FLOAT, Format::RGBA8_UNORM, Format::R11G11B10_FLOAT
-			};
-
+		{
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
 			{
 				ReturnIfFalse(_vt_physical_textures[ix] = std::shared_ptr<TextureInterface>(device->create_texture(
 					TextureDesc::create_tiled_shader_resource_texture(
 						VT_PHYSICAL_TEXTURE_RESOLUTION,
 						VT_PHYSICAL_TEXTURE_RESOLUTION,
-						formats[ix],
+						Format::RGBA8_UNORM,
 						VTPhysicalTable::get_texture_name(ix)
 					)
 				)));
@@ -149,6 +144,7 @@ namespace fantasy
 
         _pass_constant.vt_page_size = VT_PAGE_SIZE;
         _pass_constant.vt_physical_texture_size = VT_PHYSICAL_TEXTURE_RESOLUTION;
+		_pass_constant.vt_feed_back_scale_factor = *vt_feed_back_scale_factor;
  
 		return true;
 	}
@@ -188,7 +184,7 @@ namespace fantasy
 
 							for (uint32_t mip = 1; mip < texture_desc.mip_levels; ++mip)
 							{
-								region.byte_offset = texture_desc.offset_in_heap + (mip0_size >> (mip - 1));
+								region.byte_offset += (mip0_size >> ((mip - 1) * 2));
 
 								uint64_t key = create_texture_region_cache_key(submesh_id, mip, type);
 								_geometry_texture_region_cache[key] = std::make_pair(region, (pixel_size << 16) | ((row_size_in_page >> mip) & 0xffff));
@@ -216,9 +212,8 @@ namespace fantasy
 
 			uint2* mapped_data = static_cast<uint2*>(_vt_page_read_back_buffer->map(CpuAccessMode::Read));
 			
-			uint32_t vt_page_num = _vt_feed_back_resolution.x * _vt_feed_back_resolution.y;
-			_vt_feed_back_data.resize(vt_page_num);
-			memcpy(_vt_feed_back_data.data(), mapped_data, vt_page_num * sizeof(uint2)); 
+			_vt_feed_back_data.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y);
+			memcpy(_vt_feed_back_data.data(), mapped_data, static_cast<uint32_t>(_vt_feed_back_data.size()) * sizeof(uint2)); 
 
 			_vt_page_read_back_buffer->unmap();
 
@@ -253,7 +248,8 @@ namespace fantasy
 						uint2 coordinate = page.get_coordinate_in_page();
 						region.x = page.physical_position_in_page.x * VT_PAGE_SIZE;
 						region.y = page.physical_position_in_page.y * VT_PAGE_SIZE;
-						region.byte_offset += (coordinate.x + coordinate.y * row_page_num) * VT_PAGE_SIZE * pixel_size;
+						region.byte_offset += (coordinate.x + coordinate.y * row_page_num) * 
+											  VT_PAGE_SIZE * VT_PAGE_SIZE * pixel_size;
 					
 						tile_mappings[jx].regions.emplace_back(region);
 					}
@@ -299,34 +295,5 @@ namespace fantasy
 		ReturnIfFalse(cmdlist->close());
 		
         return true;
-	}
-
-	bool VirtualTextureUpdatePass::finish_pass(RenderResourceCache* cache)
-	{
-		// for (const auto& info : _virtual_texture_position_infos)
-		// {
-		// 	for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
-		// 	{
-		// 		TextureSlice dst_slice = TextureSlice{
-		// 			.x = info.page_physical_pos_in_page.x * VT_PAGE_SIZE,
-		// 			.y = info.page_physical_pos_in_page.y * VT_PAGE_SIZE,
-		// 			.width = VT_PAGE_SIZE,
-		// 			.height = VT_PAGE_SIZE
-		// 		};
-		// 		// TextureSlice src_slice = TextureSlice{
-		// 		// 	.x = info.page->base_position.x,
-		// 		// 	.y = info.page->base_position.y,
-		// 		// 	.width = VT_PAGE_SIZE,
-		// 		// 	.height = VT_PAGE_SIZE
-		// 		// };
-
-		// 		if (info.texture[ix]) 
-		// 		{
-		// 			// 若为 nullptr, 相应的 factor 会是 0, 不必担心会因为没有覆盖 physical texture 中的 page 而担心. 
-		// 			// cmdlist->copy_texture(_vt_physical_textures[ix].get(), dst_slice, info.texture[ix], src_slice);
-		// 		}
-		// 	}
-		// }
-		return true;
 	}
 }

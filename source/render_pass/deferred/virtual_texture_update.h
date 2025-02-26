@@ -18,6 +18,7 @@ namespace fantasy
 			uint2 client_resolution = { CLIENT_WIDTH, CLIENT_HEIGHT };
             uint32_t vt_page_size = VT_PAGE_SIZE;
             uint32_t vt_physical_texture_size = VT_PHYSICAL_TEXTURE_RESOLUTION;
+			uint32_t vt_feed_back_scale_factor = 0;
 		};
 	}
 
@@ -30,7 +31,6 @@ namespace fantasy
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
-		bool finish_pass(RenderResourceCache* cache) override;
 
 	private:
 		constant::VirtualGeometryTexturePassConstant _pass_constant;

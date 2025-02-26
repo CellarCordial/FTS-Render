@@ -20,7 +20,7 @@ RWTexture2D<uint> physical_shadow_map_texture : register(u0);
 
 float4 main(VertexOutput input) : SV_Target
 {
-    uint2 pixel_id = (uint2)round(input.sv_position.xy);
+    uint2 pixel_id = uint2(input.sv_position.xy);
     uint2 uv = pixel_id - input.tile_id * tile_size_in_pixel;
 
     InterlockedMin(physical_shadow_map_texture[uv], asuint(input.view_space_position.z));

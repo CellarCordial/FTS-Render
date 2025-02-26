@@ -89,7 +89,7 @@ namespace fantasy
             uint32_t height = 1;
             uint32_t depth = 1;
 
-            uint64_t byte_offset;
+            uint64_t byte_offset = 0;
         };
         
         std::vector<Region> regions;

@@ -28,7 +28,7 @@ namespace fantasy
 	{	
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(7);
+			BindingLayoutItemArray binding_layout_items(8);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::FinalTestPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_texture_uav(0);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
@@ -36,6 +36,7 @@ namespace fantasy
 			binding_layout_items[4] = BindingLayoutItem::create_texture_srv(2);
 			binding_layout_items[5] = BindingLayoutItem::create_texture_srv(3);
 			binding_layout_items[6] = BindingLayoutItem::create_texture_srv(4);
+			binding_layout_items[7] = BindingLayoutItem::create_texture_srv(5);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -69,7 +70,7 @@ namespace fantasy
 
 		// Binding Set.
 		{
-			BindingSetItemArray binding_set_items(7);
+			BindingSetItemArray binding_set_items(8);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::FinalTestPassConstant));
 			binding_set_items[1] = BindingSetItem::create_texture_uav(0, check_cast<TextureInterface>(cache->require("final_texture")));
 			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
@@ -77,6 +78,7 @@ namespace fantasy
 			binding_set_items[4] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("base_color_texture")));
 			binding_set_items[5] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("pbr_texture")));
 			binding_set_items[6] = BindingSetItem::create_texture_srv(4, check_cast<TextureInterface>(cache->require("emissive_texture")));
+			binding_set_items[7] = BindingSetItem::create_texture_srv(5, check_cast<TextureInterface>(cache->require("virtual_mesh_visual_texture")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
 				_binding_layout
@@ -94,7 +96,18 @@ namespace fantasy
             {
                 if (ImGui::CollapsingHeader("Final Test"))
 				{
-                    const char* types[] = { "FinalGather", "World Position", "View Depth", "World Normal", "BaseColor", "Metallic", "Roughness", "Occlusion", "Emissive" };
+                    const char* types[] = { 
+						"FinalGather", 
+						"World Position", 
+						"View Depth", 
+						"World Normal", 
+						"BaseColor", 
+						"Metallic", 
+						"Roughness", 
+						"Occlusion", 
+						"Emissive", 
+						"Virtual Mesh" 
+					};
                     ImGui::Combo("Show Type", &_pass_constant.show_type, types, IM_ARRAYSIZE(types));
                 }
             }

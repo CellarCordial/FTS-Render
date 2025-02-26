@@ -203,7 +203,7 @@ namespace fantasy
 				TextureDesc::create_read_write_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RG32_FLOAT,
+					Format::RG32_UINT,
 					"vt_page_uv_texture"
 				)
 			)));
