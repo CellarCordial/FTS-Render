@@ -106,12 +106,12 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc shader_compile_desc;
-			shader_compile_desc.shader_name = ".slang";
+			shader_compile_desc.shader_name = ".hlsl";
 			shader_compile_desc.entry_point = "vertex_shader";
 			shader_compile_desc.target = ShaderTarget::Vertex;
 			shader_compile_desc.defines.push_back("Define=" + std::to_string(Define));
 			ShaderData vs_data = compile_shader(shader_compile_desc);
-			shader_compile_desc.shader_name = ".slang";
+			shader_compile_desc.shader_name = ".hlsl";
 			shader_compile_desc.entry_point = "pixel_shader";
 			shader_compile_desc.target = ShaderTarget::Pixel;
 			shader_compile_desc.defines.push_back("Define=" + std::to_string(Define));
