@@ -20,6 +20,7 @@ namespace fantasy
 			}
 		);
 
+		_reverse_depth_texture = check_cast<TextureInterface>(cache->require("reverse_depth_texture"));
 		ReturnIfFalse(cache->collect_constants("vt_feed_back_scale_factor", &_vt_feed_back_scale_factor));
 		_pass_constant.vt_feed_back_scale_factor = _vt_feed_back_scale_factor;
 
@@ -208,18 +209,6 @@ namespace fantasy
 				)
 			)));
 			cache->collect(_vt_page_uv_texture, ResourceType::Texture);
-
-			
-            ReturnIfFalse(_reverse_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-                TextureDesc::create_depth_stencil_texture(
-                    CLIENT_WIDTH, 
-                    CLIENT_HEIGHT, 
-                    Format::D32,
-                    "reverse_depth_texture",
-					true
-                )
-            )));
-			cache->collect(_reverse_depth_texture, ResourceType::Texture);
 		}
 
 		// Frame Buffer.

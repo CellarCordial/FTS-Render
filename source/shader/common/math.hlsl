@@ -164,5 +164,43 @@ uint murmur_mix(uint hash)
     return hash;
 }
 
+static uint morton_code(uint x)
+{
+    x &= 0x0000ffff;
+    x = (x ^ (x << 8)) & 0x00ff00ff;
+    x = (x ^ (x << 4)) & 0x0f0f0f0f;
+    x = (x ^ (x << 2)) & 0x33333333;
+    x = (x ^ (x << 1)) & 0x55555555;
+    return x;
+}
+
+static uint morton_encode(uint x,uint y)
+{
+    uint Morton = morton_code(x) | (morton_code(y) << 1);
+    return Morton;
+}
+
+static uint morton_encode(uint2 value)
+{
+    return morton_encode(value.x, value.y);
+}
+
+static uint reverse_morton_code(uint x)
+{
+    x &= 0x55555555;
+    x = (x ^ (x >> 1)) & 0x33333333;
+    x = (x ^ (x >> 2)) & 0x0f0f0f0f;
+    x = (x ^ (x >> 4)) & 0x00ff00ff;
+    x = (x ^ (x >> 8)) & 0x0000ffff;
+    return x;
+}
+
+static uint2 morton_decode(uint Morton)
+{
+    uint2 ret;
+    ret.x = reverse_morton_code(Morton);
+    ret.y = reverse_morton_code(Morton >> 1);
+    return ret;
+}
 
 #endif

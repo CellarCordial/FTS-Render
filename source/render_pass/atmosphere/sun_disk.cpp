@@ -98,20 +98,20 @@ namespace fantasy
 				)
 			);
 			frame_buffer_desc.depth_stencil_attachment = 
-				FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("depth_texture")));
+				FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("reverse_depth_texture")));
 			ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
 		}
 
 		// Pipeline.
 		{
 			GraphicsPipelineDesc pipeline_desc;
-			pipeline_desc.render_state.depth_stencil_state.enable_depth_test = true;
-			pipeline_desc.render_state.depth_stencil_state.enable_depth_write = false;
-			pipeline_desc.render_state.depth_stencil_state.depth_func = ComparisonFunc::LessOrEqual;
 			pipeline_desc.vertex_shader = _vs;
 			pipeline_desc.pixel_shader = _ps;
-			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			pipeline_desc.input_layout = _input_layout;
+			pipeline_desc.binding_layouts.push_back(_binding_layout);
+			pipeline_desc.render_state.depth_stencil_state.enable_depth_test = true;
+			pipeline_desc.render_state.depth_stencil_state.enable_depth_write = true;
+			pipeline_desc.render_state.depth_stencil_state.depth_func = ComparisonFunc::Greater;
 			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(
 				device->create_graphics_pipeline(pipeline_desc, _frame_buffer.get())
 			));

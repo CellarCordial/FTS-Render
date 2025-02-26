@@ -32,7 +32,7 @@ namespace fantasy
 	private:
 		constant::SkyPassConstant _pass_constant;
 
-		std::shared_ptr<TextureInterface> _depth_texture;
+        std::shared_ptr<TextureInterface> _reverse_depth_texture;
 		std::shared_ptr<SamplerInterface> _sampler; // U_Wrap VW_Clamp Linear
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;

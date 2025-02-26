@@ -8,7 +8,7 @@ namespace fantasy
     // {
     //     // mip 0 的 node_size_in_page 为 1, 逐级往上指数递增.
     //     uint32_t mip_node_size_in_page = std::pow(2, mip_level);
-    //     return &_mips[mip_level].pages[MortonEncode(page_id / mip_node_size_in_page)];
+    //     return &_mips[mip_level].pages[morton_encode(page_id / mip_node_size_in_page)];
     // }
 
     void VTIndirectTable::initialize(uint32_t width, uint32_t height)

@@ -38,9 +38,19 @@ void main(uint3 thread_id : SV_DispatchThreadID)
 
     uint2 pixel_id = thread_id.xy;
     uint2 page_uv = vt_page_uv_texture[pixel_id];
-    uint2 page_coordinate = vt_indirect_texture[pixel_id / vt_feed_back_scale_factor];
     if (page_uv.x == INVALID_SIZE_32 || page_uv.y == INVALID_SIZE_32) return;
-    if (page_coordinate.x == INVALID_SIZE_32 || page_coordinate.y == INVALID_SIZE_32) return;
+
+    uint2 indirect_uv = pixel_id / vt_feed_back_scale_factor;
+    uint2 page_coordinate = vt_indirect_texture[indirect_uv];
+    if (any(page_coordinate == INVALID_SIZE_32))
+    {
+        // TODO: 这里应该改进, 若镜头旋转过快也会导致模型部分区域 page_coordinate == INVALID_SIZE_32.
+        world_space_normal_texture[pixel_id] = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        base_color_texture[pixel_id] = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        pbr_texture[pixel_id] = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        emissive_texture[pixel_id] = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        return;
+    }
 
     float2 physical_uv = float2(page_uv + page_coordinate.xy * vt_page_size) / vt_physical_texture_size;
 

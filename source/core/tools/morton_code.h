@@ -6,7 +6,7 @@
 
 namespace fantasy 
 {
-    static uint32_t MortonCode2(uint32_t x)
+    static uint32_t morton_code(uint32_t x)
     {
         x &= 0x0000ffff;
         x = (x ^ (x << 8)) & 0x00ff00ff;
@@ -16,18 +16,18 @@ namespace fantasy
         return x;
     }
 
-    static uint32_t MortonEncode(uint32_t x,uint32_t y)
+    static uint32_t morton_encode(uint32_t x,uint32_t y)
     {
-        uint32_t Morton = MortonCode2(x) | (MortonCode2(y) << 1);
+        uint32_t Morton = morton_code(x) | (morton_code(y) << 1);
         return Morton;
     }
 
-    static uint32_t MortonEncode(uint2 value)
+    static uint32_t morton_encode(uint2 value)
     {
-        return MortonEncode(value.x, value.y);
+        return morton_encode(value.x, value.y);
     }
 
-    static uint32_t ReverseMortonCode2(uint32_t x)
+    static uint32_t reverse_morton_code(uint32_t x)
     {
         x &= 0x55555555;
         x = (x ^ (x >> 1)) & 0x33333333;
@@ -37,11 +37,11 @@ namespace fantasy
         return x;
     }
 
-    static uint2 MortonDecode(uint32_t Morton)
+    static uint2 morton_decode(uint32_t Morton)
     {
         uint2 ret;
-        ret.x = ReverseMortonCode2(Morton);
-        ret.y = ReverseMortonCode2(Morton >> 1);
+        ret.x = reverse_morton_code(Morton);
+        ret.y = reverse_morton_code(Morton >> 1);
         return ret;
     }
 
