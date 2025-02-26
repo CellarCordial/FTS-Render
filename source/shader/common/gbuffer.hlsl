@@ -14,7 +14,7 @@ struct GeometryConstant
     float metallic;
     float occlusion;
 
-    uint2 texture_resolution;
+    uint texture_resolution;
 };
 
 float3 calculate_normal(float3 texture_normal, float3 vertex_normal, float3 vertex_tangent)

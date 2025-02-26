@@ -42,6 +42,20 @@ namespace fantasy
         {
             return coordinate_mip_level & 0xff;
         }
+
+        bool operator==(const VTPage& other) const 
+        {
+            return geometry_id == other.geometry_id &&
+                   coordinate_mip_level == other.coordinate_mip_level &&
+                   physical_position_in_page == other.physical_position_in_page;
+        }
+
+        bool operator!=(const VTPage& other) const
+        {
+            return geometry_id != other.geometry_id ||
+                   coordinate_mip_level != other.coordinate_mip_level ||
+                   physical_position_in_page != other.physical_position_in_page;
+        }
     };
 
     class VTIndirectTable
@@ -56,6 +70,7 @@ namespace fantasy
         uint64_t get_data_size() const;
 
     private:
+        uint2 _resolution;
         std::vector<uint2> physical_page_pointers;
     };
 

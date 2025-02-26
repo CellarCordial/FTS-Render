@@ -143,7 +143,7 @@ namespace fantasy
         float metallic;
         float occlusion;
 
-        uint2 texture_resolution;
+        uint32_t texture_resolution;
     };
     
 	inline std::string get_geometry_texture_name(

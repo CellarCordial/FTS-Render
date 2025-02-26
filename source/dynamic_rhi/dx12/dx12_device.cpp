@@ -333,7 +333,7 @@ namespace fantasy
         CommandQueueType execution_queue_type
     )
     {
-        ID3D12Resource* d3d12_texture = reinterpret_cast<ID3D12Resource*>(texture>get_native_object());
+        ID3D12Resource* d3d12_texture = reinterpret_cast<ID3D12Resource*>(texture->get_native_object());
 
         const auto& tile_info = texture->get_tile_info();
 
@@ -351,9 +351,9 @@ namespace fantasy
             {
                 const TextureTilesMapping::Region& region = tile_mappings[ix].regions[jx];
 
-                d3d12_resource_coordiantes[jx].X = region.x;
-                d3d12_resource_coordiantes[jx].Y = region.y;
-                d3d12_resource_coordiantes[jx].Z = region.z;
+                d3d12_resource_coordiantes[jx].X = align(region.x, tile_info.width_in_texels) / tile_info.width_in_texels;
+                d3d12_resource_coordiantes[jx].Y = align(region.y, tile_info.height_in_texels) / tile_info.height_in_texels;
+                d3d12_resource_coordiantes[jx].Z = align(region.z, tile_info.depth_in_texels) / tile_info.depth_in_texels;
                 d3d12_resource_coordiantes[jx].Subresource = 
                     calculate_texture_subresource(region.mip_level, region.array_slice, texture->get_desc().mip_levels);
 

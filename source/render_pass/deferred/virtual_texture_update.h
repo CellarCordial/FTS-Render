@@ -16,8 +16,8 @@ namespace fantasy
 		struct VirtualGeometryTexturePassConstant
 		{
 			uint2 client_resolution = { CLIENT_WIDTH, CLIENT_HEIGHT };
-            uint32_t vt_page_size;
-            uint32_t vt_physical_texture_size;
+            uint32_t vt_page_size = VT_PAGE_SIZE;
+            uint32_t vt_physical_texture_size = VT_PHYSICAL_TEXTURE_RESOLUTION;
 		};
 	}
 

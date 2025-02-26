@@ -35,11 +35,10 @@ namespace fantasy
 		_geometry_texture_heap = check_cast<HeapInterface>(cache->require("geometry_texture_heap"));
 		_vt_page_read_back_buffer = check_cast<BufferInterface>(cache->require("vt_page_read_back_buffer"));
 
-		uint32_t vt_feed_back_scale_factor = 0;
-		uint32_t* vt_feed_back_scale_factor_ptr = &vt_feed_back_scale_factor;
-		ReturnIfFalse(cache->require_constants("vt_feed_back_scale_factor", (void**)&vt_feed_back_scale_factor_ptr));
+		uint32_t* vt_feed_back_scale_factor;
+		ReturnIfFalse(cache->require_constants("vt_feed_back_scale_factor", (void**)&vt_feed_back_scale_factor));
 
-		_vt_feed_back_resolution = { CLIENT_WIDTH / vt_feed_back_scale_factor, CLIENT_HEIGHT / vt_feed_back_scale_factor };
+		_vt_feed_back_resolution = { CLIENT_WIDTH / *vt_feed_back_scale_factor, CLIENT_HEIGHT / *vt_feed_back_scale_factor };
 		_vt_indirect_table.initialize(_vt_feed_back_resolution.x, _vt_feed_back_resolution.y);
 
 		// Binding Layout.
@@ -98,8 +97,8 @@ namespace fantasy
 			{
 				ReturnIfFalse(_vt_physical_textures[ix] = std::shared_ptr<TextureInterface>(device->create_texture(
 					TextureDesc::create_tiled_shader_resource_texture(
-						CLIENT_WIDTH,
-						CLIENT_HEIGHT,
+						VT_PHYSICAL_TEXTURE_RESOLUTION,
+						VT_PHYSICAL_TEXTURE_RESOLUTION,
 						formats[ix],
 						VTPhysicalTable::get_texture_name(ix)
 					)
@@ -168,6 +167,8 @@ namespace fantasy
 						uint32_t submesh_id = mesh->submesh_global_base_id + ix;
 						for (uint32_t type = 0; type < Material::TextureType_Num; ++type)
 						{
+							if (!material->submaterials[ix].images[type].is_valid()) continue;
+							
 							const auto& texture_desc = check_cast<TextureInterface>(cache->require(
 								get_geometry_texture_name(submesh_id, type, *name).c_str()
 							))->get_desc();
@@ -227,7 +228,7 @@ namespace fantasy
 			for (uint32_t ix = 0; ix < _vt_feed_back_data.size(); ++ix)
 			{
 				const auto& data = _vt_feed_back_data[ix];
-				if (data.x == INVALID_SIZE_32 && data.y == INVALID_SIZE_32) continue;
+				if (data.x == INVALID_SIZE_32 || data.y == INVALID_SIZE_32) continue;
 
 				VTPage page;
 				page.geometry_id = data.x;
@@ -236,21 +237,22 @@ namespace fantasy
 				if (!_vt_physical_table.check_page_loaded(page))
 				{
 					page.physical_position_in_page = _vt_physical_table.get_new_position();
-				}
-				else
-				{
+
 					for (uint32_t jx = 0; jx < Material::TextureType_Num; ++jx)
 					{
-						auto [region, pixel_size_row_page_num] = _geometry_texture_region_cache[create_texture_region_cache_key(
+						auto iter = _geometry_texture_region_cache.find(create_texture_region_cache_key(
 							page.geometry_id, page.get_mip_level(), jx
-						)];
+						));
 
+						if (iter == _geometry_texture_region_cache.end()) continue;
+
+						auto [region, pixel_size_row_page_num] = iter->second;
 						uint32_t pixel_size = pixel_size_row_page_num >> 16;
 						uint32_t row_page_num = pixel_size_row_page_num & 0xffff;
 					
 						uint2 coordinate = page.get_coordinate_in_page();
-						region.x = page.physical_position_in_page.x * VT_PAGE_SIZE * pixel_size;
-						region.y = page.physical_position_in_page.y * VT_PAGE_SIZE * pixel_size;
+						region.x = page.physical_position_in_page.x * VT_PAGE_SIZE;
+						region.y = page.physical_position_in_page.y * VT_PAGE_SIZE;
 						region.byte_offset += (coordinate.x + coordinate.y * row_page_num) * VT_PAGE_SIZE * pixel_size;
 					
 						tile_mappings[jx].regions.emplace_back(region);
@@ -291,7 +293,7 @@ namespace fantasy
 				static_cast<uint32_t>((align(CLIENT_HEIGHT, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
 			};
 
-			ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y));
+			ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constant));
 		}
 
 		ReturnIfFalse(cmdlist->close());

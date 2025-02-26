@@ -70,7 +70,7 @@ PixelOutput main(VertexOutput input)
     if (all(geometry.texture_resolution != 0))
     {
         uint mip_level = estimate_mip_level(input.uv * geometry.texture_resolution);
-        if (geometry.texture_resolution >> mip_level < vt_page_size)
+        if ((geometry.texture_resolution >> mip_level) < vt_page_size)
         {
             mip_level = log2(geometry.texture_resolution / vt_page_size);
         }

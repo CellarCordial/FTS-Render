@@ -333,7 +333,7 @@ namespace fantasy
 									.roughness = submaterial.roughness_factor,
 									.metallic = submaterial.metallic_factor,
 									.occlusion = submaterial.occlusion_factor,
-									.texture_resolution = uint2(submaterial.images[0].width, submaterial.images[0].height)
+									.texture_resolution = material->image_resolution
 								}
 							);
 						}

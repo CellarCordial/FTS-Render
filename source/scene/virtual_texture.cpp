@@ -11,14 +11,15 @@ namespace fantasy
     //     return &_mips[mip_level].pages[MortonEncode(page_id / mip_node_size_in_page)];
     // }
 
-    void VTIndirectTable::initialize(uint32_t width, uint32_t height) 
+    void VTIndirectTable::initialize(uint32_t width, uint32_t height)
     {
+        _resolution = { width, height };
         physical_page_pointers.resize(width * height, uint2(INVALID_SIZE_32));
     }
 
     void VTIndirectTable::set_page(uint2 pixel_id, uint2 physical_pos_in_page)
     {
-        physical_page_pointers[pixel_id.y * CLIENT_WIDTH + pixel_id.x] = physical_pos_in_page;
+        physical_page_pointers[pixel_id.y * _resolution.x + pixel_id.x] = physical_pos_in_page;
     }
 
     void VTIndirectTable::set_page_null(uint2 pixel_id) 
@@ -33,7 +34,7 @@ namespace fantasy
 
     uint64_t VTIndirectTable::get_data_size() const 
     { 
-        return physical_page_pointers.size(); 
+        return physical_page_pointers.size() * sizeof(uint2); 
     }
 
     VTPhysicalTable::VTPhysicalTable(uint32_t resolution) : 

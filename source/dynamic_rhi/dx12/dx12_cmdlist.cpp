@@ -825,9 +825,10 @@ namespace fantasy
         uint32_t row_num;
         uint64_t row_size_in_byte;
         uint64_t total_bytes;
-
+        
         _context->device->GetCopyableFootprints(&d3d12_resource_desc, subresource_index, 1, 0, &d3d12_foot_print, &row_num, &row_size_in_byte, &total_bytes);
-
+        ReturnIfFalse(total_bytes == data_size);
+        
         BufferInterface* upload_buffer;
         void* mapped_address;
         ReturnIfFalse(_upload_manager.suballocate_buffer(
