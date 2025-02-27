@@ -1,11 +1,11 @@
-# FTS-Render
+# GPU-Driven-SDF-DDGI
 
 ## Build
 
 ```powershell
-git clone https://github.com/CellarCordial/FTS-Render.git
-cd FTS-Render
-xmake build FTS-Render
+git clone https://github.com/CellarCordial/GPU-Driven-SDF-DDGI.git
+cd GPU-Driven-SDF-DDGI
+xmake build GPU-Driven-SDF-DDGI
 ```
 
 ## Control
