@@ -5,7 +5,7 @@ cbuffer pass_constants : register(b0)
 {
     float4x4 view_proj;
     float4x4 view_matrix;
-    uint2 page_size;
+    uint page_size;
 };
 
 struct Vertex

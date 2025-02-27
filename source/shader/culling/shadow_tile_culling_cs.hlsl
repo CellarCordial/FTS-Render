@@ -7,13 +7,14 @@
 
 cbuffer pass_constants : register(b0)
 {
-    uint shadow_tile_num;
+    float4x4 shadow_view_matrix;
+    
     uint group_count;
-    float near_plane;
     float far_plane;
+    float near_plane;
+    uint packed_shadow_page_id;
 
     uint cluster_tirangle_num;
-    uint axis_shadow_tile_num;
     float shadow_orthographic_length;
 };
 
@@ -22,13 +23,6 @@ RWStructuredBuffer<uint2> vt_shadow_visible_cluster_buffer : register(u1);
 
 StructuredBuffer<MeshClusterGroup> mesh_cluster_group_buffer : register(t0);
 StructuredBuffer<MeshCluster> mesh_cluster_buffer : register(t1);
-StructuredBuffer<uint2> vt_shadow_page_buffer : register(t2);
-StructuredBuffer<float4x4> shadow_tile_view_matrix_buffer : register(t3);
-
-Texture2D<float> shadow_hierarchical_zbuffer_texture : register(t4);
-
-SamplerState linear_clamp_sampler : register(s0);
-
 
 #if defined(THREAD_GROUP_SIZE_X)
 
@@ -55,31 +49,25 @@ void main(uint3 thread_id : SV_DispatchThreadID)
         uint cluster_id = group.cluster_index_offset + ix;
         MeshCluster cluster = mesh_cluster_buffer[cluster_id];
 
-        for (uint ix = 0; ix < shadow_tile_num; ++ix)
+        float3 cluster_view_space_position = mul(
+            float4(cluster.bounding_sphere.xyz, 1.0f), 
+            shadow_view_matrix
+        ).xyz;
+
+        if (tile_cull(cluster_view_space_position, cluster.bounding_sphere.w))
         {
-            uint2 packed_page = vt_shadow_page_buffer[ix];
-            uint2 tile_id = uint2(packed_page.x >> 16, packed_page.x & 0xffff);
+            uint current_pos;
+            InterlockedAdd(
+                vt_shadow_draw_indirect_buffer[0].instance_count,
+                1,
+                current_pos
+            );
+            current_pos++;
 
-            float3 cluster_view_space_position = mul(
-                float4(cluster.bounding_sphere.xyz, 1.0f), 
-                shadow_tile_view_matrix_buffer[tile_id.x + axis_shadow_tile_num * tile_id.y]
-            ).xyz;
-
-            if (tile_cull(cluster_view_space_position, cluster.bounding_sphere.w))
-            {
-                uint current_pos;
-                InterlockedAdd(
-                    vt_shadow_draw_indirect_buffer[0].instance_count,
-                    1,
-                    current_pos
-                );
-                current_pos++;
-
-                vt_shadow_draw_indirect_buffer[0].vertex_count = cluster_tirangle_num * 3;
-                vt_shadow_visible_cluster_buffer[current_pos] = uint2(
-                    cluster_id, packed_page.y
-                );
-            }
+            vt_shadow_draw_indirect_buffer[0].vertex_count = cluster_tirangle_num * 3;
+            vt_shadow_visible_cluster_buffer[current_pos] = uint2(
+                cluster_id, packed_shadow_page_id
+            );
         }
     }
 }

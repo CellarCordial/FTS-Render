@@ -2,19 +2,34 @@
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
 #include "../../scene/scene.h"
-#include "../../scene/light.h"
 #include <array>
 #include <cstdint>
 #include <cstring>
 #include <memory>
+#include <unordered_set>
 #include <utility>
 #include <vector>
+
+
+namespace std 
+{
+	template<>
+	struct hash<fantasy::uint2> 
+	{
+		size_t operator()(const fantasy::uint2& key) const 
+		{
+			uint32_t hash_0 = hash<uint32_t>()(key.x);
+			uint32_t hash_1 = hash<uint32_t>()(key.y);
+
+			return (uint64_t(hash_0) << 32) | uint64_t(hash_1);
+		}
+	};
+}
 
 namespace fantasy
 {
 #define THREAD_GROUP_SIZE_X 16
 #define THREAD_GROUP_SIZE_Y 16
-
 
 	uint64_t create_texture_region_cache_key(uint32_t geometry_id, uint32_t mip_level, uint32_t material_type)
 	{
@@ -31,37 +46,17 @@ namespace fantasy
 			}
 		);
 
+		// 设置 capacity 确保 std::vector 的内存地址不会发生变化.
+		uint32_t max_shadow_page_num = (VT_PHYSICAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE) * 
+									   (VT_PHYSICAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE);
+		_update_shadow_pages.reserve(max_shadow_page_num);
 		ReturnIfFalse(cache->collect_constants("update_shadow_pages", &_update_shadow_pages));
+
 		_geometry_texture_heap = check_cast<HeapInterface>(cache->require("geometry_texture_heap"));
 		_vt_feed_back_read_back_buffer = check_cast<BufferInterface>(cache->require("vt_feed_back_read_back_buffer"));
 
 		_vt_feed_back_resolution = { CLIENT_WIDTH / VT_FEED_BACK_SCALE_FACTOR, CLIENT_HEIGHT / VT_FEED_BACK_SCALE_FACTOR };
 		_vt_indirect_table.initialize(_vt_feed_back_resolution.x, _vt_feed_back_resolution.y);
-
-		DirectionalLight* _directional_light = cache->get_world()->get_global_entity()->get_component<DirectionalLight>();
-
-		uint32_t axis_tile_num = (VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE);
-		float3 tile_right = normalize(cross(float3(0.0f, 1.0f, 0.0f), _directional_light->direction));
-		float3 tile_up = normalize(cross(_directional_light->direction, tile_right));
-
-		float3 right_offset = tile_right * _directional_light->orthographic_length / axis_tile_num;
-		float3 up_offset = tile_up * _directional_light->orthographic_length / axis_tile_num;
-		
-		_shadow_tile_view_matrixs.resize(axis_tile_num * axis_tile_num);
-		for (uint32_t y = 0; y < axis_tile_num; ++y)
-		{
-			for (uint32_t x = 0; x < axis_tile_num; ++x)
-			{
-				float3 offset = x * right_offset + y * up_offset;
-				
-				_shadow_tile_view_matrixs[x + y * axis_tile_num] = look_at_left_hand(
-					_directional_light->get_position() + offset,
-					offset,
-					float3(0.0f, 1.0f, 0.0f)
-				);
-			}
-		}
-
 
 		// Binding Layout.
 		{
@@ -247,20 +242,20 @@ namespace fantasy
 
 			_vt_feed_back_read_back_buffer->unmap();
 
-			_update_shadow_pages.clear();
+			std::unordered_set<uint2> new_shadow_pages;
 			std::array<TextureTilesMapping, Material::TextureType_Num> tile_mappings;
 			
 			for (uint32_t ix = 0; ix < _vt_feed_back_data.size(); ++ix)
 			{
 				const auto& data = _vt_feed_back_data[ix];
-				if (data.z != INVALID_SIZE_32)
+				if (data.z != INVALID_SIZE_32 && new_shadow_pages.size() <= _update_shadow_pages.capacity())
 				{
 					VTShadowPage page{ .tile_id = uint2(data.z >> 16, data.z & 0xffff) };
 
 					if (!_physical_shadow_table.check_page_loaded(page))
 					{
 						page.physical_position_in_page = _physical_shadow_table.get_new_position();
-						_update_shadow_pages.push_back(uint2(
+						new_shadow_pages.insert(uint2(
 							(page.tile_id.x << 16) | (page.tile_id.y & 0xffff), 
 							(page.physical_position_in_page.x << 16) | (page.physical_position_in_page.y & 0xffff) 
 						));
@@ -319,6 +314,8 @@ namespace fantasy
 				);
 			}
 
+			_update_shadow_pages.clear();
+			_update_shadow_pages.insert(_update_shadow_pages.begin(), new_shadow_pages.begin(), new_shadow_pages.end());
 			ReturnIfFalse(cmdlist->write_buffer(
 				_vt_shadow_page_buffer.get(), 
 				_update_shadow_pages.data(), 

@@ -37,7 +37,6 @@ namespace fantasy
 		
 		std::vector<uint2> _update_shadow_pages;
 		VTPhysicalShadowTable _physical_shadow_table;
-		std::vector<float4x4> _shadow_tile_view_matrixs;
 
 		bool _update_texture_region_cache = false;
 		VTPhysicalTable _vt_physical_table;

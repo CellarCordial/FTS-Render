@@ -6,7 +6,6 @@
 
 #include "../render_pass/culling/mesh_cluster_culling.h"
 #include "../render_pass/culling/hierarchical_zbuffer.h"
-#include "../render_pass/culling/shadow_tile_culling.h"
 #include "../render_pass/deferred/virtual_gbuffer.h"
 #include "../render_pass/deferred/virtual_texture_update.h"
 #include "../render_pass/deferred/mipmap_generation.h"
@@ -142,7 +141,6 @@ namespace fantasy
 		RenderPassInterface* hierarchical_zbuffer_pass = render_graph->add_pass(std::make_shared<HierarchicalZBufferPass>());
 		RenderPassInterface* virtual_gbuffer_pass = render_graph->add_pass(std::make_shared<VirtualGBufferPass>());
 		RenderPassInterface* virtual_texture_update_pass = render_graph->add_pass(std::make_shared<VirtualTextureUpdatePass>());
-		RenderPassInterface* shadow_tile_culling_pass = render_graph->add_pass(std::make_shared<ShadowTileCullingPass>());
 		RenderPassInterface* virtual_shadow_map_pass = render_graph->add_pass(std::make_shared<VirtualShadowMapPass>());
 		RenderPassInterface* test_pass = render_graph->add_pass(std::make_shared<FinalTestPass>());
 
@@ -154,8 +152,7 @@ namespace fantasy
 		mesh_cluster_culling_pass->precede(virtual_gbuffer_pass);
 		virtual_gbuffer_pass->precede(hierarchical_zbuffer_pass);
 		virtual_gbuffer_pass->precede(virtual_texture_update_pass);
-		virtual_texture_update_pass->precede(shadow_tile_culling_pass);
-		shadow_tile_culling_pass->precede(virtual_shadow_map_pass);
+		virtual_texture_update_pass->precede(virtual_shadow_map_pass);
 		hierarchical_zbuffer_pass->precede(test_pass);
 		virtual_shadow_map_pass->precede(test_pass);
 
