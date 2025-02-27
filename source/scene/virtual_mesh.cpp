@@ -651,7 +651,7 @@ namespace fantasy
 				level_offset = old_cluster_num;
 				mip_level++;
 			}
-			virtual_submesh.mip_levels = mip_level + 1;
+			virtual_submesh.mip_levels = mip_level - 1;
 			
 			_indices.clear();
 			_vertices.clear();
@@ -725,7 +725,7 @@ namespace fantasy
 		build_adjacency_graph(_vertices, _indices, edge_link_graph, triangle_adjacency_graph);
 
 		GraphPartitionar partitionar;
-		partitionar.partition_graph(triangle_adjacency_graph, MeshCluster::cluster_size - 4, MeshCluster::cluster_size);
+		partitionar.partition_graph(triangle_adjacency_graph, MeshCluster::cluster_tirangle_num - 4, MeshCluster::cluster_tirangle_num);
 
 		for (const auto& [start, end] : partitionar.part_ranges)
 		{
@@ -936,7 +936,7 @@ namespace fantasy
 		// 接下来就是如上的流程, optimize() 后分割图建立新的下一级 cluster.
 
 		ReturnIfFalse(optimizer.optimize(
-			(MeshCluster::cluster_size - 2) * (static_cast<uint32_t>(cluster_group.cluster_indices.size()) / 2)
+			(MeshCluster::cluster_tirangle_num - 2) * (static_cast<uint32_t>(cluster_group.cluster_indices.size()) / 2)
 		));
 		parent_lod_error = std::max(parent_lod_error, std::sqrt(optimizer._max_error));
 		cluster_group.parent_lod_error = parent_lod_error;
@@ -951,7 +951,7 @@ namespace fantasy
 		);
 
 		GraphPartitionar partitionar;
-		partitionar.partition_graph(triangle_adjacency_graph, MeshCluster::cluster_size - 4, MeshCluster::cluster_size);
+		partitionar.partition_graph(triangle_adjacency_graph, MeshCluster::cluster_tirangle_num - 4, MeshCluster::cluster_tirangle_num);
 
 		for (const auto& [start, end] : partitionar.part_ranges)
 		{
@@ -1042,10 +1042,10 @@ namespace fantasy
 		{
 			serialization::BinaryInput input(cache_path);
 			
-			uint32_t cluster_size = 0, group_size = 0;
-			input(cluster_size, group_size);
+			uint32_t cluster_tirangle_num = 0, group_size = 0;
+			input(cluster_tirangle_num, group_size);
 			
-			if (cluster_size == MeshCluster::cluster_size && group_size == MeshClusterGroup::group_size)
+			if (cluster_tirangle_num == MeshCluster::cluster_tirangle_num && group_size == MeshClusterGroup::group_size)
 			{
 				uint64_t submesh_size = 0;
 				input(submesh_size);
@@ -1053,10 +1053,10 @@ namespace fantasy
 
 				for (auto& virtual_submesh : virtual_mesh->_submeshes)
 				{
-					uint64_t cluster_size = 0, cluster_group_size = 0;
-					input(virtual_submesh.mip_levels, cluster_size, cluster_group_size);
+					uint64_t cluster_tirangle_num = 0, cluster_group_size = 0;
+					input(virtual_submesh.mip_levels, cluster_tirangle_num, cluster_group_size);
 
-					virtual_submesh.clusters.resize(cluster_size);
+					virtual_submesh.clusters.resize(cluster_tirangle_num);
 					virtual_submesh.cluster_groups.resize(cluster_group_size);
 
 					for (auto& cluster : virtual_submesh.clusters)
@@ -1125,11 +1125,11 @@ namespace fantasy
 		if (!loaded_from_cache)
 		{
 			ReturnIfFalse(virtual_mesh->build(mesh));
-
+			
 			serialization::BinaryOutput output(cache_path);
 
 			output(
-				MeshCluster::cluster_size, 
+				MeshCluster::cluster_tirangle_num, 
 				MeshClusterGroup::group_size,
 				virtual_mesh->_submeshes.size()
 			);

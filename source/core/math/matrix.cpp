@@ -149,11 +149,15 @@ namespace fantasy
 		auto R = normalize(cross(up, L));
 		auto U = cross(L, R);
 
-        return inverse(float4x4(
+        float view_matrix[16];
+        float camera_matrix[16] = {
             R.x,     R.y,     R.z,     0.0f,
             U.x,     U.y,     U.z,     0.0f,
             L.x,     L.y,     L.z,     0.0f,
             pos.x, pos.y, pos.z, 1.0f
-        ));
+        };
+        if (!inverse_row_major(camera_matrix, view_matrix)) assert(!"Invalid view matrix.");
+        
+        return float4x4(view_matrix);
     }
 }

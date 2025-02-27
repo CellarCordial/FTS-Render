@@ -179,9 +179,6 @@ namespace fantasy
 				uint32_t* available_task_num = _current_model->get_component<uint32_t>();
 				(*available_task_num)--;
 				
-				std::string model_name = *_current_model->get_component<std::string>();
-				LOG_INFO(model_name + "geometry texture mip generated.");
-				
 				_current_model = nullptr;
 			
 				return true;

@@ -60,8 +60,11 @@ namespace fantasy
     struct Matrix4x4
     {
         Matrix4x4();
-
+        
+        explicit Matrix4x4(const T f[16]);
+        
         explicit Matrix4x4(const T f[4][4]);
+
 
         Matrix4x4(
             T f00, T f01, T f02, T f03,
@@ -140,7 +143,7 @@ namespace fantasy
     using double3x4 = Matrix3x4<double>;
     
 
-	float4x4 rotate(const float3& crRotation);
+	float4x4 rotate(const float3& rotation);
     float4x4 rotate(float theta, const float3& axis);
     float4x4 rotate(float theta, const float3& axis);
     float4x4 rotate_z(float theta);
@@ -148,12 +151,12 @@ namespace fantasy
     float4x4 rotate_x(float theta);
     float4x4 translate(const float3& delta);
     float4x4 scale(const float3& scale);
-	float4x4 look_at_left_hand(const float3& crPos, const float3& crLook, const float3& crUp);
-    float4x4 perspective_left_hand(float fFovAngleY, float fAspectRatio, float fNearZ, float fFarZ);
-	float4x4 orthographic_left_hand(float fWidth, float fHeight, float fNearZ, float fFarZ);
-    float4x4 perspective_left_hand_reverse_z(float fFovAngleY, float fAspectRatio, float fNearZ, float fFarZ);
+	float4x4 look_at_left_hand(const float3& pos, const float3& look, const float3& up);
+    float4x4 perspective_left_hand(float fov_y, float fAspectRatio, float near_z, float far_z);
+	float4x4 orthographic_left_hand(float width, float height, float near_z, float far_z);
+    float4x4 perspective_left_hand_reverse_z(float fov_y, float fAspectRatio, float near_z, float far_z);
 	float3x3 create_orthogonal_basis_from_z(const float3& Z);
-	float4x4 look_at_left_hand(const float3& crPos, const float3& crLook, const float3& crUp);
+	float4x4 look_at_left_hand(const float3& pos, const float3& look, const float3& up);
 
     template <typename T>
     requires std::is_same_v<T, float> || std::is_same_v<T, double>
@@ -474,6 +477,13 @@ namespace fantasy
         _data[0][1] = _data[0][2] = _data[0][3] = _data[1][0] = _data[1][2] = _data[1][3] =
         _data[2][0] = _data[2][1] = _data[2][3] = _data[3][0] = _data[3][1] = _data[3][2] = 0.0f;
     };
+
+    template <typename T>
+	requires std::is_arithmetic_v<T>
+    Matrix4x4<T>::Matrix4x4(const T f[16])
+    {
+        memcpy(_data, f, sizeof(T) * 16);
+    }
 
     template <typename T>
 	requires std::is_arithmetic_v<T>

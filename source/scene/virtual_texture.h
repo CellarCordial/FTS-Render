@@ -18,9 +18,9 @@ namespace fantasy
     static const uint32_t VT_PHYSICAL_TEXTURE_RESOLUTION = 4096;
     static const uint32_t VT_FEED_BACK_SCALE_FACTOR = 4;
 
-    static const uint32_t VIRTUAL_SHADOW_PAGE_SIZE = 1024;
-    static const uint32_t VIRTUAL_SHADOW_RESOLUTION = 16384;
-    static const uint32_t PHYSICAL_SHADOW_RESOLUTION = 8192;
+    static const uint32_t VT_SHADOW_PAGE_SIZE = 256;
+    static const uint32_t VT_VIRTUAL_SHADOW_RESOLUTION = 16384;
+    static const uint32_t VT_PHYSICAL_SHADOW_RESOLUTION = 4096;
 
     namespace event
 	{
@@ -79,7 +79,7 @@ namespace fantasy
     class VTPhysicalTable
     {
     public:
-        VTPhysicalTable(uint32_t resolution = VT_PHYSICAL_TEXTURE_RESOLUTION);
+        VTPhysicalTable(uint32_t resolution = VT_PHYSICAL_TEXTURE_RESOLUTION, uint32_t page_size = VT_PAGE_SIZE);
 
         bool check_page_loaded(VTPage& page) const;
         uint2 get_new_position();
@@ -89,11 +89,52 @@ namespace fantasy
         void reset();
         
         static std::string get_texture_name(uint32_t texture_type);
-        static uint64_t create_page_key(VTPage page);
+        static uint64_t create_page_key(const VTPage& page);
 
     private:
         uint32_t _resolution_in_page;
-        LruCache<VTPage> _tiles;
+        LruCache<VTPage> _pages;
+    };
+
+
+    struct VTShadowPage
+    {
+        uint2 tile_id;
+        uint2 physical_position_in_page;
+
+        bool operator==(const VTShadowPage& other) const 
+        {
+            return tile_id == other.tile_id &&
+                   physical_position_in_page == other.physical_position_in_page;
+        }
+
+        bool operator!=(const VTShadowPage& other) const
+        {
+            return tile_id != other.tile_id ||
+                   physical_position_in_page != other.physical_position_in_page;
+        }
+    };
+
+    class VTPhysicalShadowTable
+    {
+    public:
+        VTPhysicalShadowTable(
+            uint32_t resolution = VT_VIRTUAL_SHADOW_RESOLUTION, 
+            uint32_t page_size = VT_PHYSICAL_SHADOW_RESOLUTION
+        );
+
+        bool check_page_loaded(VTShadowPage& page) const;
+        uint2 get_new_position();
+
+        void add_pages(std::span<VTShadowPage> pages);
+        void add_page(const VTShadowPage& page);
+        void reset();
+
+        static uint64_t create_tile_key(const VTShadowPage& page);
+        
+    private:
+        uint32_t _resolution_in_page;
+        LruCache<VTShadowPage> _pages;
     };
 }
 

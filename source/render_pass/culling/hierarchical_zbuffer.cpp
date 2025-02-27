@@ -34,7 +34,7 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc cs_compile_desc;
-			cs_compile_desc.shader_name = "culling/hierarchical_zbuffer_cs.hlsl";
+			cs_compile_desc.shader_name = "culling/hierarchical_zbuffer_update_cs.hlsl";
 			cs_compile_desc.entry_point = "main";
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.resize(3);

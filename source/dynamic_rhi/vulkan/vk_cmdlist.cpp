@@ -772,6 +772,8 @@ namespace fantasy
         uint64_t data_size
     ) 
     {
+        if (data_size == 0) return true;
+        
         const TextureDesc& texture_desc = dst->get_desc();
 
         uint64_t mip_width = std::max(texture_desc.width >> mip_level, uint32_t(1));
@@ -853,6 +855,8 @@ namespace fantasy
         uint64_t dst_byte_offset
     )
     {
+        if (data_size == 0) return true;
+
         VKBuffer* buffer = check_cast<VKBuffer*>(buffer_);
 
         ReturnIfFalse(data_size <= buffer->desc.byte_size);

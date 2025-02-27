@@ -171,7 +171,7 @@ namespace fantasy
 
     namespace Geometry
     {
-        Mesh create_box(float fWidth, float fHeight, float depth, uint32_t subdivision_count);
+        Mesh create_box(float width, float height, float depth, uint32_t subdivision_count);
         Mesh create_sphere(float radius, uint32_t slice_count, uint32_t stack_count);
         Mesh create_geosphere(float radius, uint32_t numSubdivisions);
         Mesh create_cylinder(float bottom_radius, float top_radius, float height, uint32_t slice_count, uint32_t stack_count);

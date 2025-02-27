@@ -42,9 +42,9 @@ namespace fantasy
         return physical_page_pointers.size() * sizeof(uint2); 
     }
 
-    VTPhysicalTable::VTPhysicalTable(uint32_t resolution) : 
-        _resolution_in_page(resolution / VT_PAGE_SIZE),
-        _tiles(_resolution_in_page * _resolution_in_page)
+    VTPhysicalTable::VTPhysicalTable(uint32_t resolution, uint32_t page_size) : 
+        _resolution_in_page(resolution / page_size),
+        _pages(_resolution_in_page * _resolution_in_page)
     {
         assert(is_power_of_2(_resolution_in_page));
         reset();
@@ -52,30 +52,30 @@ namespace fantasy
 
     bool VTPhysicalTable::check_page_loaded(VTPage& page) const
     {
-        return _tiles.check_cache(create_page_key(page), page);
+        return _pages.check_cache(create_page_key(page), page);
     }
 
     uint2 VTPhysicalTable::get_new_position()
     {
-        return _tiles.evict().physical_position_in_page;
+        return _pages.evict().physical_position_in_page;
     }
 
     void VTPhysicalTable::add_page(const VTPage& page)
     {
-        _tiles.insert(create_page_key(page), page);
+        _pages.insert(create_page_key(page), page);
     }
 
     void VTPhysicalTable::add_pages(std::span<VTPage> pages)
     {
         for (const auto& page : pages)
         {
-            _tiles.insert(create_page_key(page), page);
+            _pages.insert(create_page_key(page), page);
         }
     }
 
     void VTPhysicalTable::reset() 
     { 
-        _tiles.reset(); 
+        _pages.reset(); 
 
         uint32_t page_num = _resolution_in_page * _resolution_in_page;
         for (uint32_t ix = 0; ix < page_num; ++ix)
@@ -86,11 +86,11 @@ namespace fantasy
             page.physical_position_in_page = postion;
             page.coordinate_mip_level = (postion.x << 20) | (postion.y << 8) | 0xff;    // 使每个的键值均不同.
 
-            _tiles.insert(create_page_key(page), page);
+            _pages.insert(create_page_key(page), page);
         }
     }
 
-    uint64_t VTPhysicalTable::create_page_key(VTPage page)
+    uint64_t VTPhysicalTable::create_page_key(const VTPage& page)
     {
         return (uint64_t(page.geometry_id) << 32) | page.coordinate_mip_level;
     }
@@ -112,5 +112,60 @@ namespace fantasy
 		default: break;
 		}
         return ret;
+    }
+
+
+    VTPhysicalShadowTable::VTPhysicalShadowTable(uint32_t resolution, uint32_t page_size) : 
+        _resolution_in_page(resolution / page_size),
+        _pages(_resolution_in_page * _resolution_in_page)
+    {
+        assert(is_power_of_2(_resolution_in_page));
+        reset();
+    }
+
+    bool VTPhysicalShadowTable::check_page_loaded(VTShadowPage& page) const
+    {
+        return _pages.check_cache(create_tile_key(page), page);
+    }
+
+    uint2 VTPhysicalShadowTable::get_new_position()
+    {
+        return _pages.evict().physical_position_in_page;
+    }
+
+    void VTPhysicalShadowTable::add_pages(std::span<VTShadowPage> pages)
+    {
+        for (const auto& page : pages)
+        {
+            _pages.insert(create_tile_key(page), page);
+        }
+    }
+
+    void VTPhysicalShadowTable::add_page(const VTShadowPage& page_id)
+    {
+        _pages.insert(create_tile_key(page_id), page_id);
+    }
+
+    void VTPhysicalShadowTable::reset()
+    {
+        _pages.reset(); 
+
+        uint32_t page_num = _resolution_in_page * _resolution_in_page;
+        for (uint32_t ix = 0; ix < page_num; ++ix)
+        {
+            uint2 pos(ix % _resolution_in_page, ix / _resolution_in_page); 
+            uint32_t axis_shadow_page_num = VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE;
+
+            VTShadowPage page;
+            page.physical_position_in_page = pos;
+            page.tile_id = pos + axis_shadow_page_num;  // 偏移后, 初始化数据将不会是任何有效的 virtual shadow page.
+            
+            _pages.insert(create_tile_key(page), page);
+        }
+    }
+
+    uint64_t VTPhysicalShadowTable::create_tile_key(const VTShadowPage& page)
+    {
+        return (uint64_t(page.tile_id.x) << 32) | uint64_t(page.tile_id.y);
     }
 }

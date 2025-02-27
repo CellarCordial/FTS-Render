@@ -12,32 +12,32 @@ cbuffer pass_constants : register(b0)
     float near_plane;
     float far_plane;
 
-    uint cluster_size;
-    float3 frustum_top_normal;
-
-    float3 frustum_right_normal;
+    uint cluster_tirangle_num;
+    uint axis_shadow_tile_num;
+    float shadow_orthographic_length;
 };
 
-struct ShadowTileInfo
-{
-    uint2 id;
-    float4x4 view_matrix;
-};
-
-struct ShadowVisibleInfo
-{
-    uint cluster_id;
-    uint2 tile_id;
-};
-
-RWStructuredBuffer<DrawIndirectArguments> virtual_shadow_draw_indirect_buffer : register(u0);
-RWStructuredBuffer<ShadowVisibleInfo> virtual_shadow_visible_cluster_id_buffer : register(u1);
+RWStructuredBuffer<DrawIndirectArguments> vt_shadow_draw_indirect_buffer : register(u0);
+RWStructuredBuffer<uint2> vt_shadow_visible_cluster_buffer : register(u1);
 
 StructuredBuffer<MeshClusterGroup> mesh_cluster_group_buffer : register(t0);
 StructuredBuffer<MeshCluster> mesh_cluster_buffer : register(t1);
-StructuredBuffer<ShadowTileInfo> shadow_tile_info_buffer : register(t2);
+StructuredBuffer<uint2> vt_shadow_page_buffer : register(t2);
+StructuredBuffer<float4x4> shadow_tile_view_matrix_buffer : register(t3);
+
+Texture2D<float> shadow_hierarchical_zbuffer_texture : register(t4);
+
+SamplerState linear_clamp_sampler : register(s0);
+
 
 #if defined(THREAD_GROUP_SIZE_X)
+
+bool tile_cull(float3 position, float radius)
+{
+    return !(position.z + radius < near_plane || position.z - radius > far_plane) &&
+            any(position.xy - radius - shadow_orthographic_length * 0.5f <= 0.0f) &&
+            any(position.xy + radius + shadow_orthographic_length * 0.5f >= 0.0f);
+}
 
 
 [numthreads(THREAD_GROUP_SIZE_X, 1, 1)]
@@ -48,8 +48,7 @@ void main(uint3 thread_id : SV_DispatchThreadID)
 
     MeshClusterGroup group = mesh_cluster_group_buffer[group_index];
 
-    // 使用第二高等级的 LOD 进行剔除.
-    if (group.mip_level != group.max_mip_level - 1) return;
+    if (group.mip_level != max(0, group.max_mip_level - 1)) return;
 
     for (uint ix = 0; ix < group.cluster_count; ++ix)
     {
@@ -58,37 +57,28 @@ void main(uint3 thread_id : SV_DispatchThreadID)
 
         for (uint ix = 0; ix < shadow_tile_num; ++ix)
         {
-            ShadowTileInfo tile_info = shadow_tile_info_buffer[ix];
+            uint2 packed_page = vt_shadow_page_buffer[ix];
+            uint2 tile_id = uint2(packed_page.x >> 16, packed_page.x & 0xffff);
 
-            float3 view_space_cluster_position = mul(float4(cluster.bounding_sphere.xyz, 1.0f), tile_info.view_matrix).xyz;
-            float distance = view_space_cluster_position.z;
-            bool visible = !(distance + cluster.bounding_sphere.w < near_plane || distance - cluster.bounding_sphere.w > far_plane) &&
-                            distance - cluster.bounding_sphere.w > near_plane && distance + cluster.bounding_sphere.w < far_plane;
+            float3 cluster_view_space_position = mul(
+                float4(cluster.bounding_sphere.xyz, 1.0f), 
+                shadow_tile_view_matrix_buffer[tile_id.x + axis_shadow_tile_num * tile_id.y]
+            ).xyz;
 
-            if (visible)
+            if (tile_cull(cluster_view_space_position, cluster.bounding_sphere.w))
             {
-                visible = dot(frustum_top_normal, view_space_cluster_position) < cluster.bounding_sphere.w;
-                visible = visible && dot(-frustum_top_normal, view_space_cluster_position) < cluster.bounding_sphere.w;
-                visible = visible && dot(frustum_right_normal, view_space_cluster_position) < cluster.bounding_sphere.w;
-                visible = visible && dot(-frustum_right_normal, view_space_cluster_position) < cluster.bounding_sphere.w;
-            }
-
-            if (visible)
-            {
-                ShadowVisibleInfo info;
-                info.cluster_id = cluster_id;
-                info.tile_id = tile_info.id;
-
                 uint current_pos;
                 InterlockedAdd(
-                    virtual_shadow_draw_indirect_buffer[0].instance_count,
+                    vt_shadow_draw_indirect_buffer[0].instance_count,
                     1,
                     current_pos
                 );
                 current_pos++;
 
-                virtual_shadow_draw_indirect_buffer[0].vertex_count = cluster_size;
-                virtual_shadow_visible_cluster_id_buffer[current_pos] = info;
+                vt_shadow_draw_indirect_buffer[0].vertex_count = cluster_tirangle_num * 3;
+                vt_shadow_visible_cluster_buffer[current_pos] = uint2(
+                    cluster_id, packed_page.y
+                );
             }
         }
     }

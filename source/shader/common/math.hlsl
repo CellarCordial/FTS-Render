@@ -164,7 +164,7 @@ uint murmur_mix(uint hash)
     return hash;
 }
 
-static uint morton_code(uint x)
+uint morton_code(uint x)
 {
     x &= 0x0000ffff;
     x = (x ^ (x << 8)) & 0x00ff00ff;
@@ -174,18 +174,18 @@ static uint morton_code(uint x)
     return x;
 }
 
-static uint morton_encode(uint x,uint y)
+uint morton_encode(uint x,uint y)
 {
     uint Morton = morton_code(x) | (morton_code(y) << 1);
     return Morton;
 }
 
-static uint morton_encode(uint2 value)
+uint morton_encode(uint2 value)
 {
     return morton_encode(value.x, value.y);
 }
 
-static uint reverse_morton_code(uint x)
+uint reverse_morton_code(uint x)
 {
     x &= 0x55555555;
     x = (x ^ (x >> 1)) & 0x33333333;
@@ -195,12 +195,25 @@ static uint reverse_morton_code(uint x)
     return x;
 }
 
-static uint2 morton_decode(uint Morton)
+uint2 morton_decode(uint Morton)
 {
     uint2 ret;
     ret.x = reverse_morton_code(Morton);
     ret.y = reverse_morton_code(Morton >> 1);
     return ret;
 }
+
+uint search_most_significant_bit(uint x)
+{
+    // 折半查找最高有效位.
+    uint res = 0, t = 16, y = 0;
+    y = -((x >> t) != 0 ? 1 : 0); res += y & t; x >>= y & t; t >>= 1;
+    y = -((x >> t) != 0 ? 1 : 0); res += y & t; x >>= y & t; t >>= 1;
+    y = -((x >> t) != 0 ? 1 : 0); res += y & t; x >>= y & t; t >>= 1;
+    y = -((x >> t) != 0 ? 1 : 0); res += y & t; x >>= y & t; t >>= 1;
+    y = (x >> t) != 0 ? 1 : 0, res += y;
+    return res;
+}
+
 
 #endif

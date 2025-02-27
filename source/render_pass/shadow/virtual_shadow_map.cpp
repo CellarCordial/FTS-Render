@@ -53,8 +53,8 @@ namespace fantasy
 			// InterlockedMin 不支持浮点数, 故在这里使用整数格式存储浮点数, 深度值永远为正数, 将浮点深度转化为整数可直接比较.
 			ReturnIfFalse(_physical_shadow_map_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_read_write_texture(
-					PHYSICAL_SHADOW_RESOLUTION,
-					PHYSICAL_SHADOW_RESOLUTION,
+					VT_PHYSICAL_SHADOW_RESOLUTION,
+					VT_PHYSICAL_SHADOW_RESOLUTION,
 					Format::R32_UINT,
 					"physical_shadow_map_texture"
 				)
@@ -92,7 +92,7 @@ namespace fantasy
 		{
 			_binding_set_items.resize(7);
 			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualShadowMapPassConstant));
-			_binding_set_items[2] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("virtual_shadow_visible_cluster_id_buffer")));
+			_binding_set_items[2] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("vt_shadow_visible_cluster_buffer")));
 			_binding_set_items[6] = BindingSetItem::create_texture_uav(0, _physical_shadow_map_texture);
 		}
 
@@ -101,7 +101,7 @@ namespace fantasy
 			_graphics_state.pipeline = _pipeline.get();
 			_graphics_state.frame_buffer = _frame_buffer.get();
 			_graphics_state.viewport_state = ViewportState::create_default_viewport(CLIENT_WIDTH, CLIENT_HEIGHT);
-			_graphics_state.indirect_buffer = check_cast<BufferInterface>(cache->require("virtual_shadow_draw_indirect_buffer")).get();
+			_graphics_state.indirect_buffer = check_cast<BufferInterface>(cache->require("vt_shadow_draw_indirect_buffer")).get();
 		}
 
 		return true;

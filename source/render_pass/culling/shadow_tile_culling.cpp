@@ -2,7 +2,6 @@
 
 #include "shadow_tile_culling.h"
 #include "../../shader/shader_compiler.h"
-#include "../../scene/virtual_texture.h"
 #include "../../core/tools/check_cast.h"
 #include "../../scene/scene.h"
 #include "../../scene/light.h"
@@ -11,15 +10,18 @@
 namespace fantasy
 {
 #define THREAD_GROUP_SIZE_X 16u
- 
-    struct ShadowVisibleInfo
-    {
-        uint32_t cluster_id;
-        uint2 tile_id;
-    };
 
 	bool ShadowTileCullingPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
+		cache->get_world()->get_global_entity()->get_component<event::AddModel>()->add_event(
+			[this]() -> bool
+			{
+				_mesh_update = true;
+				return true;
+			}
+		);
+		ReturnIfFalse(cache->require_constants("update_shadow_pages", (void**)&_update_shadow_pages));
+
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(6);
@@ -60,33 +62,33 @@ namespace fantasy
 
 		// Buffer.
 		{
-			ReturnIfFalse(_virtual_shadow_draw_indirect_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+			ReturnIfFalse(_vt_shadow_draw_indirect_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_read_write_structured_buffer(
 					sizeof(DrawIndexedIndirectArguments), 
 					sizeof(DrawIndexedIndirectArguments), 
-					"virtual_shadow_draw_indirect_buffer"
+					"vt_shadow_draw_indirect_buffer"
 				)
 			)));
-			cache->collect(_virtual_shadow_draw_indirect_buffer, ResourceType::Buffer);
+			cache->collect(_vt_shadow_draw_indirect_buffer, ResourceType::Buffer);
 
-            uint32_t virtual_shadow_resolution_in_page = VIRTUAL_SHADOW_RESOLUTION / VIRTUAL_SHADOW_PAGE_SIZE;
-			ReturnIfFalse(_virtual_shadow_visible_cluster_id_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+            uint32_t virtual_shadow_resolution_in_page = VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE;
+			ReturnIfFalse(_vt_shadow_visible_cluster_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_read_write_structured_buffer(
-					sizeof(ShadowVisibleInfo) * virtual_shadow_resolution_in_page * virtual_shadow_resolution_in_page, 
-					sizeof(ShadowVisibleInfo), 
-					"virtual_shadow_visible_cluster_id_buffer"
+					sizeof(uint2) * virtual_shadow_resolution_in_page * virtual_shadow_resolution_in_page, 
+					sizeof(uint2), 
+					"vt_shadow_visible_cluster_buffer"
 				)
 			)));
-			cache->collect(_virtual_shadow_visible_cluster_id_buffer, ResourceType::Buffer);
+			cache->collect(_vt_shadow_visible_cluster_buffer, ResourceType::Buffer);
 		}
  
 		// Binding Set.
 		{
 			_binding_set_items.resize(6);
 			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::ShadowTileCullingConstant));
-			_binding_set_items[1] = BindingSetItem::create_structured_buffer_uav(0, _virtual_shadow_draw_indirect_buffer);
-			_binding_set_items[2] = BindingSetItem::create_structured_buffer_uav(1, _virtual_shadow_visible_cluster_id_buffer);
-			_binding_set_items[5] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("shadow_tile_info_buffer")));
+			_binding_set_items[1] = BindingSetItem::create_structured_buffer_uav(0, _vt_shadow_draw_indirect_buffer);
+			_binding_set_items[2] = BindingSetItem::create_structured_buffer_uav(1, _vt_shadow_visible_cluster_buffer);
+			_binding_set_items[5] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("vt_shadow_page_buffer")));
 		}
 
 		// Compute state.
@@ -104,7 +106,7 @@ namespace fantasy
 
 		if (SceneSystem::loaded_submesh_count != 0)
 		{
-			_pass_constant.shadow_tile_num = VIRTUAL_SHADOW_RESOLUTION / VIRTUAL_SHADOW_PAGE_SIZE;
+			_pass_constant.shadow_tile_num = VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE;
 
 			uint32_t* cluster_group_count = nullptr;
 			ReturnIfFalse(cache->require_constants("cluster_group_count", (void**)&cluster_group_count));
@@ -113,10 +115,9 @@ namespace fantasy
 			DirectionalLight* light = cache->get_world()->get_global_entity()->get_component<DirectionalLight>();
 			_pass_constant.near_plane = light->near_plane;
 			_pass_constant.far_plane = light->far_plane;
-			_pass_constant.frustum_right_normal = normalize(cross(float3(0.0f, 1.0f, 0.0f), light->direction));
-			_pass_constant.frustum_top_normal = cross(light->direction, _pass_constant.frustum_right_normal);
+			_pass_constant.shadow_orthographic_length = light->orthographic_length;
 
-			if (!_resource_writed)
+			if (_mesh_update)
 			{
 				DeviceInterface* device = cmdlist->get_deivce();
 				_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(0, check_cast<BufferInterface>(cache->require("mesh_cluster_group_buffer")));
@@ -126,12 +127,11 @@ namespace fantasy
 					_binding_layout
 				)));
 				_compute_state.binding_sets[0] = _binding_set.get();
-				_resource_writed = true;
+				_mesh_update = false;
 			}
 
-			
             cmdlist->clear_buffer_uint(
-                _virtual_shadow_draw_indirect_buffer.get(), 
+                _vt_shadow_draw_indirect_buffer.get(), 
                 BufferRange(0, sizeof(DrawIndexedIndirectArguments)), 
                 0
             );

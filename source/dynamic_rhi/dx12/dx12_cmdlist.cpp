@@ -809,6 +809,8 @@ namespace fantasy
         uint64_t data_size
     )
     { 
+        if (data_size == 0) return true;
+
 		set_texture_state(dst, TextureSubresourceSet{ mip_level, 1, array_slice, 1 }, ResourceStates::CopyDst);
         commit_barriers();
 
@@ -875,6 +877,8 @@ namespace fantasy
 
     bool DX12CommandList::write_buffer(BufferInterface* buffer, const void* data, uint64_t data_size, uint64_t dst_byte_offset)
     {
+        if (data_size == 0) return true;
+
         BufferInterface* upload_buffer;
         uint64_t upload_offset;
         void* mapped_address;

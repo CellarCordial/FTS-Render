@@ -14,7 +14,7 @@ namespace fantasy
 		{
 			float4x4 view_proj;
 			float4x4 view_matrix;
-			uint2 tile_size_in_pixel = uint2(VIRTUAL_SHADOW_RESOLUTION / VIRTUAL_SHADOW_PAGE_SIZE);
+			uint2 page_size = uint2(VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE);
 		};
 	}
 

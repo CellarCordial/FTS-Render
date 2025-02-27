@@ -77,8 +77,8 @@ namespace fantasy
 
 			ReturnIfFalse(_vt_feed_back_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_read_write_structured_buffer(
-					sizeof(uint4) * feed_back_buffer_element_num, 
-					sizeof(uint4),
+					sizeof(uint3) * feed_back_buffer_element_num, 
+					sizeof(uint3),
 					"vt_feed_back_buffer"
 				)
 			)));
@@ -86,7 +86,7 @@ namespace fantasy
 
 			ReturnIfFalse(_vt_feed_back_read_back_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_read_back_buffer(
-					sizeof(uint4) * feed_back_buffer_element_num, 
+					sizeof(uint3) * feed_back_buffer_element_num, 
 					"vt_feed_back_read_back_buffer"
 				)
 			)));

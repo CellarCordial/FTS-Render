@@ -31,8 +31,8 @@ namespace fantasy
 		
 			uint32_t view_mode = 0;
 			uint32_t vt_page_size = VT_PAGE_SIZE;
-			uint32_t virtual_shadow_resolution = VIRTUAL_SHADOW_RESOLUTION;
-			uint32_t virtual_shadow_page_size = VIRTUAL_SHADOW_PAGE_SIZE;
+			uint32_t virtual_shadow_resolution = VT_VIRTUAL_SHADOW_RESOLUTION;
+			uint32_t virtual_shadow_page_size = VT_SHADOW_PAGE_SIZE;
 			
 			float3 camera_position;
 			uint32_t client_width = CLIENT_WIDTH;

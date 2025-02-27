@@ -15,7 +15,7 @@ cbuffer pass_constants : register(b0)
     uint hzb_resolution;
 
     uint group_count;
-    uint cluster_size;
+    uint cluster_tirangle_num;
     float near_plane;
     float far_plane;
 };
@@ -29,17 +29,6 @@ Texture2D hierarchical_zbuffer_texture : register(t2);
 
 SamplerState linear_clamp_sampler : register(s0);
 
-uint search_most_significant_bit(uint x)
-{
-    // 折半查找最高有效位.
-    uint res = 0, t = 16, y = 0;
-    y = -((x >> t) != 0 ? 1 : 0); res += y & t; x >>= y & t; t >>= 1;
-    y = -((x >> t) != 0 ? 1 : 0); res += y & t; x >>= y & t; t >>= 1;
-    y = -((x >> t) != 0 ? 1 : 0); res += y & t; x >>= y & t; t >>= 1;
-    y = -((x >> t) != 0 ? 1 : 0); res += y & t; x >>= y & t; t >>= 1;
-    y = (x >> t) != 0 ? 1 : 0, res += y;
-    return res;
-}
 
 bool hierarchical_zbuffer_cull(float3 view_space_position, float radius, float4x4 reverse_z_proj_matrix)
 {
@@ -141,7 +130,7 @@ void main(uint3 thread_id: SV_DispatchThreadID)
                     cluster_view_space_position.z + cluster.bounding_sphere.w < near_plane ||
                     cluster_view_space_position.z - cluster.bounding_sphere.w > far_plane
                 )
-                    return;
+                    continue;
 
                 // 判定是否在视锥体内, 以及从 hzb 中采样深度值进行比较.
                 visible = frustum_cull(cluster_view_space_position, cluster.bounding_sphere.w, reverse_z_proj_matrix) && 
@@ -162,7 +151,7 @@ void main(uint3 thread_id: SV_DispatchThreadID)
                         current_pos
                     );
 
-                    virtual_gbuffer_draw_indirect_buffer[0].vertex_count = cluster_size * 3;
+                    virtual_gbuffer_draw_indirect_buffer[0].vertex_count = cluster_tirangle_num * 3;
                     visible_cluster_id_buffer[current_pos] = cluster_id;
                 }
             }

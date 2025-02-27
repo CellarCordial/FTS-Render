@@ -90,7 +90,7 @@ namespace fantasy
 
     struct MeshCluster
     {
-        static const uint32_t cluster_size = 128;
+        static const uint32_t cluster_tirangle_num = 128;
 
         uint32_t geometry_id = 0;
         std::vector<Vertex> vertices;

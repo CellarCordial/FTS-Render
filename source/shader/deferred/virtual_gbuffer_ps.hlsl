@@ -52,7 +52,7 @@ struct PixelOutput
 StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
 
 RWTexture2D<uint2> vt_page_uv_texture : register(u0);
-RWStructuredBuffer<uint4> vt_feed_back_buffer : register(u1);
+RWStructuredBuffer<uint3> vt_feed_back_buffer : register(u1);
 
 uint estimate_mip_level(float2 pixel_id)
 {
@@ -72,7 +72,7 @@ PixelOutput main(VertexOutput input)
     uint2 feed_back_id = pixel_id / VT_FEED_BACK_SCALE_FACTOR;
     uint feed_back_index = feed_back_id.x + feed_back_id.y * (client_width / VT_FEED_BACK_SCALE_FACTOR);
 
-    uint4 feed_back_data = uint4(INVALID_SIZE_32, INVALID_SIZE_32, INVALID_SIZE_32, INVALID_SIZE_32);
+    uint3 feed_back_data = uint3(INVALID_SIZE_32, INVALID_SIZE_32, INVALID_SIZE_32);
 
     GeometryConstant geometry = geometry_constant_buffer[input.geometry_id];
     if (all(geometry.texture_resolution != 0))
@@ -114,7 +114,7 @@ PixelOutput main(VertexOutput input)
             float2 uv = shadow_view_proj_pos.xy * float2(0.5f, -0.5f) + 0.5f;
             uint2 shadow_page_id = (uint2)(uv * virtual_shadow_resolution) / virtual_shadow_page_size;
 
-            feed_back_data.zw = shadow_page_id;
+            feed_back_data.z = (shadow_page_id.x << 16) | (shadow_page_id.y & 0xffff);
         }
 
         vt_feed_back_buffer[feed_back_index] = feed_back_data;

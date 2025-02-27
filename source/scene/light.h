@@ -45,7 +45,7 @@ namespace fantasy
 
         float near_plane = 0.1f;
         float far_plane = 50.0f;
-        float orthographic_size = 20.0f;
+        float orthographic_length = 20.0f;
 
         
         DirectionalLight() { update_direction_view_proj(); }
@@ -62,7 +62,7 @@ namespace fantasy
             ));
 
             view_matrix = look_at_left_hand(get_position(), float3{}, float3(0.0f, 1.0f, 0.0f));
-            proj_matrix = orthographic_left_hand(orthographic_size, orthographic_size, near_plane, far_plane);
+            proj_matrix = orthographic_left_hand(orthographic_length, orthographic_length, near_plane, far_plane);
         }
 
         float3 get_position() const { return -direction * 20.0f; }
