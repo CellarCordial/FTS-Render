@@ -21,8 +21,3 @@ xmake build GPU-Driven-SDF-DDGI
 - Precomputed Atmospheric Scattering
 - Global Signed Distance Field Generate & Update
 
-## TODO
-- clusterd light culling
-- light cache update
-- ddgi
-    
