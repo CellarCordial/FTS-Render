@@ -3,7 +3,6 @@
 #include "../../core/tools/check_cast.h"
 #include "../../scene/light.h"
 #include "../../scene/camera.h"
-#include "atmosphere_properties.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -21,7 +20,7 @@ namespace fantasy
 		// BindingLayout.
 		{
 			BindingLayoutItemArray binding_layout_items(8);
-			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::AtmosphereProperties));
+			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::AerialLUTPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_constant_buffer(1);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(1);
@@ -75,7 +74,7 @@ namespace fantasy
 		// Binding Set.
 		{
 			BindingSetItemArray binding_set_items(8);
-			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::AtmosphereProperties));
+			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::AerialLUTPassConstant));
 			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, check_cast<BufferInterface>(cache->require("atmosphere_properties_buffer")));
 			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("multi_scattering_texture")));
 			binding_set_items[3] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("transmittance_texture")));

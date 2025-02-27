@@ -62,7 +62,7 @@ namespace fantasy
 
 
 		// Shadow Map Pass.
-		std::shared_ptr<TextureInterface> _physical_shadow_map_texture;
+		std::shared_ptr<TextureInterface> _vt_physical_shadow_texture;
 		std::shared_ptr<TextureInterface> _black_render_target_texture;
 		
 		BindingSetItemArray _binding_set_items;

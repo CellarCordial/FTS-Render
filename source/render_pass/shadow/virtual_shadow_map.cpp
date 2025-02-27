@@ -42,13 +42,12 @@ namespace fantasy
 
 		// Binding Layout.
 		{
-			BindingLayoutItemArray cull_binding_layout_items(6);
+			BindingLayoutItemArray cull_binding_layout_items(5);
 			cull_binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::ShadowTileCullingConstant));
 			cull_binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_uav(0);
 			cull_binding_layout_items[2] = BindingLayoutItem::create_structured_buffer_uav(1);
 			cull_binding_layout_items[3] = BindingLayoutItem::create_structured_buffer_srv(0);
 			cull_binding_layout_items[4] = BindingLayoutItem::create_structured_buffer_srv(1);
-			cull_binding_layout_items[5] = BindingLayoutItem::create_structured_buffer_srv(2);
 			ReturnIfFalse(_cull_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = cull_binding_layout_items }
 			)));
@@ -73,7 +72,7 @@ namespace fantasy
 		{
 			ComputePipelineDesc cull_pipeline_desc;
 			cull_pipeline_desc.compute_shader = _cs;
-			cull_pipeline_desc.binding_layouts.push_back(_binding_layout);
+			cull_pipeline_desc.binding_layouts.push_back(_cull_binding_layout);
 			ReturnIfFalse(_cull_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(cull_pipeline_desc)));
 		}
 
@@ -102,11 +101,10 @@ namespace fantasy
  
 		// Binding Set.
 		{
-			_cull_binding_set_items.resize(6);
+			_cull_binding_set_items.resize(5);
 			_cull_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::ShadowTileCullingConstant));
 			_cull_binding_set_items[1] = BindingSetItem::create_structured_buffer_uav(0, _vt_shadow_draw_indirect_buffer);
 			_cull_binding_set_items[2] = BindingSetItem::create_structured_buffer_uav(1, _vt_shadow_visible_cluster_buffer);
-			_cull_binding_set_items[5] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("vt_shadow_page_buffer")));
 		}
 
 		// Compute state.
@@ -158,15 +156,15 @@ namespace fantasy
 		// Texture.
 		{
 			// InterlockedMin 不支持浮点数, 故在这里使用整数格式存储浮点数, 深度值永远为正数, 将浮点深度转化为整数可直接比较.
-			ReturnIfFalse(_physical_shadow_map_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+			ReturnIfFalse(_vt_physical_shadow_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_read_write_texture(
 					VT_PHYSICAL_SHADOW_RESOLUTION,
 					VT_PHYSICAL_SHADOW_RESOLUTION,
 					Format::R32_UINT,
-					"physical_shadow_map_texture"
+					"vt_physical_shadow_texture"
 				)
 			)));
-			cache->collect(_physical_shadow_map_texture, ResourceType::Texture);
+			cache->collect(_vt_physical_shadow_texture, ResourceType::Texture);
 
 			ReturnIfFalse(_black_render_target_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target_texture(
@@ -200,7 +198,7 @@ namespace fantasy
 			_binding_set_items.resize(7);
 			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualShadowMapPassConstant));
 			_binding_set_items[2] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("vt_shadow_visible_cluster_buffer")));
-			_binding_set_items[6] = BindingSetItem::create_texture_uav(0, _physical_shadow_map_texture);
+			_binding_set_items[6] = BindingSetItem::create_texture_uav(0, _vt_physical_shadow_texture);
 		}
 
 		// Graphics state.
@@ -250,9 +248,9 @@ namespace fantasy
 				DeviceInterface* device = cmdlist->get_deivce();
 				_cull_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(0, check_cast<BufferInterface>(cache->require("mesh_cluster_group_buffer")));
 				_cull_binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("mesh_cluster_buffer")));
-				ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
+				ReturnIfFalse(_cull_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 					BindingSetDesc{ .binding_items = _cull_binding_set_items },
-					_binding_layout
+					_cull_binding_layout
 				)));
 				_compute_state.binding_sets[0] = _cull_binding_set.get();
 

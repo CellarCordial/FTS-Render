@@ -79,7 +79,7 @@ namespace fantasy
 		{
 			FrameBufferDesc FrameBufferDesc;
 			FrameBufferDesc.color_attachments.push_back(FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("final_texture"))));
-			FrameBufferDesc.depth_stencil_attachment = FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("depth_texture")));
+			FrameBufferDesc.depth_stencil_attachment = FrameBufferAttachment::create_attachment(check_cast<TextureInterface>(cache->require("reverse_depth_texture")));
 			ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(FrameBufferDesc)));
 		}
 
@@ -92,6 +92,7 @@ namespace fantasy
 			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			pipeline_desc.render_state.depth_stencil_state.enable_depth_test = true;
 			pipeline_desc.render_state.depth_stencil_state.enable_depth_write = true;
+			pipeline_desc.render_state.depth_stencil_state.depth_func = ComparisonFunc::Greater;
 			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(device->create_graphics_pipeline(
 				pipeline_desc,
 				_frame_buffer.get()
@@ -200,7 +201,7 @@ namespace fantasy
 			ReturnIfFalse(cache->get_world()->each<Camera>(
 				[this](Entity* entity, Camera* _camera) -> bool
 				{
-					_pass_constant0.view_proj = _camera->get_view_proj();
+					_pass_constant0.view_proj = _camera->get_reverse_z_view_proj();
 					_pass_constant1.camera_position = _camera->position;
 					return true;
 				}
@@ -228,7 +229,7 @@ namespace fantasy
 
 		if (!_writed_resource)
 		{
-			ReturnIfFalse(cmdlist->write_texture(_blue_noise_texture.get(), 0, 0, _blue_noise_image.data.get(), _blue_noise_image.size / _blue_noise_image.height));
+			ReturnIfFalse(cmdlist->write_texture(_blue_noise_texture.get(), 0, 0, _blue_noise_image.data.get(), _blue_noise_image.size));
 			_writed_resource = true;
 		}
 
@@ -271,7 +272,6 @@ namespace fantasy
 
 
 		RenderResourceCache* cache = render_graph->get_resource_cache();
-		cache->collect_constants("world_scale", &_world_scale);
 		cache->collect_constants("ground_albedo", &_ground_albedo);
 
 
@@ -292,8 +292,7 @@ namespace fantasy
 		DirectionalLight light;
 		light.update_direction_view_proj();
 
-		Entity* light_entity = world->create_entity();
-		DirectionalLight* light_ptr = light_entity->assign<DirectionalLight>(light);
+		DirectionalLight* light_ptr = world->get_global_entity()->get_component<DirectionalLight>();
 
 
 		gui::add(

@@ -134,19 +134,19 @@ namespace fantasy
 		event.entity->assign<Mesh>();
 		event.entity->assign<Material>();
 		event.entity->assign<Transform>();
-		event.entity->assign<VirtualMesh>();
+		// event.entity->assign<VirtualMesh>();
 		// event.entity->assign<SurfaceCache>();
 		// event.entity->assign<DistanceField>();
 		
 		_loaded_model_names.insert(event.model_path);
 		
-		uint32_t* available_task_num = event.entity->assign<uint32_t>(1);
+		// uint32_t* available_task_num = event.entity->assign<uint32_t>(1);
 		// ReturnIfFalse(_global_entity->get_component<event::GenerateSdf>()->broadcast(event.entity));
-		ReturnIfFalse(_global_entity->get_component<event::GenerateMipmap>()->broadcast(event.entity));
+		// ReturnIfFalse(_global_entity->get_component<event::GenerateMipmap>()->broadcast(event.entity));
 		// ReturnIfFalse(_global_entity->get_component<event::GenerateSurfaceCache>()->broadcast(event.entity));
 
-		if (*available_task_num > 0) std::this_thread::yield();
-		gui::notify_message(gui::ENotifyType::Info, "Loaded " + event.model_path);
+		// if (*available_task_num > 0) std::this_thread::yield();
+		// gui::notify_message(gui::ENotifyType::Info, "Loaded " + event.model_path);
 
 		// Entity* tmp_model_entity = event.entity;
 		// gui::add(

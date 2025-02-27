@@ -181,7 +181,7 @@ namespace fantasy
 							mul(translate(camera->position), translate(-LightDirection))
 						)
 					);
-					_pass_constant.world_view_proj = mul(world_matrix, camera->get_view_proj());
+					_pass_constant.world_view_proj = mul(world_matrix, camera->get_reverse_z_view_proj());
 
 					return true;
 				}

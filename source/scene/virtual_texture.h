@@ -68,6 +68,8 @@ namespace fantasy
         void set_page(uint32_t pixel_index, uint2 physical_pos_in_page);
         void set_page_null(uint2 pixel_i);
 
+        void reset();
+
         uint2* get_data();
         uint64_t get_data_size() const;
 

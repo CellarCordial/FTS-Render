@@ -242,9 +242,11 @@ namespace fantasy
 
 			_vt_feed_back_read_back_buffer->unmap();
 
+			_vt_indirect_table.reset();
+
 			std::unordered_set<uint2> new_shadow_pages;
 			std::array<TextureTilesMapping, Material::TextureType_Num> tile_mappings;
-			
+
 			for (uint32_t ix = 0; ix < _vt_feed_back_data.size(); ++ix)
 			{
 				const auto& data = _vt_feed_back_data[ix];
@@ -321,6 +323,7 @@ namespace fantasy
 				_update_shadow_pages.data(), 
 				_update_shadow_pages.size() * sizeof(uint2)
 			));
+
 
 			ReturnIfFalse(cmdlist->write_texture(
 				_vt_indirect_texture.get(), 

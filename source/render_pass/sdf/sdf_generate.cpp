@@ -202,7 +202,7 @@ namespace fantasy
 				0,
 				0,
 				mesh_df.sdf_data.data(),
-				SDF_RESOLUTION * SDF_RESOLUTION* pixel_size
+				mesh_df.sdf_data.size()
 			));
 
 			if (_current_mesh_sdf_index + 1 == static_cast<uint32_t>(_distance_field->mesh_distance_fields.size()))

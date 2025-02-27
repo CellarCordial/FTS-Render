@@ -1,4 +1,3 @@
-#include "../common/post_process.hlsl"
 #include "../common/atmosphere_properties.hlsl"
 
 cbuffer atomsphere_properties : register(b0)
@@ -30,7 +29,7 @@ VertexOutput main(float2 Pos : POSITION)
 {
 	VertexOutput output;
 	output.sv_position = mul(float4(Pos, 0.0f, 1.0f), WorldViewProj);
-	output.sv_position.z = output.sv_position.w;
+	output.sv_position.z = 0.001f;
 	output.clip_pos = output.sv_position;
 
     float2 uv = get_transmittance_uv(AP, camera_height, sun_theta);

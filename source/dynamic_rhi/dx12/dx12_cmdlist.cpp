@@ -820,16 +820,15 @@ namespace fantasy
             dst->get_desc().mip_levels
         );
 
-        ID3D12Resource* d3d12_resource = reinterpret_cast<ID3D12Resource*>(dst->get_native_object());
+        DX12Texture* texture = check_cast<DX12Texture*>(dst);
 
-        D3D12_RESOURCE_DESC d3d12_resource_desc = d3d12_resource->GetDesc();
+        D3D12_RESOURCE_DESC d3d12_resource_desc = texture->d3d12_resource_desc;
         D3D12_PLACED_SUBRESOURCE_FOOTPRINT d3d12_foot_print;
         uint32_t row_num;
         uint64_t row_size_in_byte;
         uint64_t total_bytes;
         
         _context->device->GetCopyableFootprints(&d3d12_resource_desc, subresource_index, 1, 0, &d3d12_foot_print, &row_num, &row_size_in_byte, &total_bytes);
-        ReturnIfFalse(total_bytes == data_size);
         
         BufferInterface* upload_buffer;
         void* mapped_address;
@@ -842,20 +841,23 @@ namespace fantasy
             D3D12_TEXTURE_DATA_PLACEMENT_ALIGNMENT
         ));
 
-        uint32_t row_pitch = d3d12_foot_print.Footprint.RowPitch;
-        uint32_t height = d3d12_foot_print.Footprint.Height;
-        uint32_t depth = d3d12_foot_print.Footprint.Depth;
-        uint32_t depth_pitch = row_pitch * height;
+        const auto& texture_desc = texture->get_desc();
+
+        uint64_t src_row_pitch = texture_desc.width * get_format_info(texture_desc.format).size;
+        uint64_t src_depth_pitch = src_row_pitch * texture_desc.height;
+
+        ReturnIfFalse(data_size == src_depth_pitch * texture_desc.depth);
+
+        uint64_t dst_row_pitch = d3d12_foot_print.Footprint.RowPitch;
+        uint64_t dst_depth_pitch = d3d12_foot_print.Footprint.RowPitch * row_num;
         
-        uint8_t* dst_address = reinterpret_cast<uint8_t*>(mapped_address);
-        for (uint32_t z = 0; z < depth; z++)
+        for (uint32_t z = 0; z < d3d12_foot_print.Footprint.Depth; z++)
         {
-            const uint8_t* src_address = reinterpret_cast<const uint8_t*>(data) + depth_pitch * z;
-            for (uint32_t row = 0; row < height; row++)
+            for (uint32_t row = 0; row < row_num; row++)
             {
-                memcpy(dst_address, src_address, row_pitch);
-                dst_address += row_pitch;
-                src_address += row_pitch;
+                const uint8_t* src_address = reinterpret_cast<const uint8_t*>(data) + src_row_pitch * row + src_depth_pitch * z;
+                uint8_t* dst_address = reinterpret_cast<uint8_t*>(mapped_address) + dst_row_pitch * row + dst_depth_pitch * z;
+                memcpy(dst_address, src_address, std::min(src_row_pitch, row_size_in_byte));
             }
         }
 

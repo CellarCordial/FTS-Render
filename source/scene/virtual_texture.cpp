@@ -32,6 +32,11 @@ namespace fantasy
         set_page(pixel_id, uint2(INVALID_SIZE_32)); 
     }
 
+    void VTIndirectTable::reset()
+    {
+        std::fill(physical_page_pointers.begin(), physical_page_pointers.end(), uint2(INVALID_SIZE_32));
+    }
+
     uint2* VTIndirectTable::get_data() 
     { 
         return physical_page_pointers.data(); 
