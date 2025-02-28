@@ -42,6 +42,7 @@ float RelativeLuminance(float3 c)
     return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
 }
 
+// TODO: fix shadow map.
 
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
 void main(uint3 thread_id : SV_DispatchThreadID)

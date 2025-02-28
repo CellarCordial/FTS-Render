@@ -57,7 +57,7 @@ namespace fantasy
 
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(13);
+			BindingLayoutItemArray binding_layout_items(14);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::VirtualTextureUpdatePassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(1);
@@ -70,7 +70,8 @@ namespace fantasy
 			binding_layout_items[9] = BindingLayoutItem::create_texture_uav(1);
 			binding_layout_items[10] = BindingLayoutItem::create_texture_uav(2);
 			binding_layout_items[11] = BindingLayoutItem::create_texture_uav(3);
-			binding_layout_items[12] = BindingLayoutItem::create_sampler(0);
+			binding_layout_items[12] = BindingLayoutItem::create_texture_uav(4);
+			binding_layout_items[13] = BindingLayoutItem::create_sampler(0);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -125,13 +126,23 @@ namespace fantasy
 				)
 			)));
 			cache->collect(_vt_indirect_texture, ResourceType::Texture);
+
+			ReturnIfFalse(_shadow_uv_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_read_write_texture(
+					CLIENT_WIDTH,
+					CLIENT_HEIGHT,
+					Format::RGB32_UINT,
+					"shadow_uv_depth_texture"
+				)
+			)));
+			cache->collect(_shadow_uv_depth_texture, ResourceType::Texture);
 		}
 
 		// Binding Set.
 		{
 			ReturnIfFalse(Material::TextureType_Num == 4);
 
-			BindingSetItemArray binding_set_items(13);
+			BindingSetItemArray binding_set_items(14);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualTextureUpdatePassConstant));
 			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("vt_page_uv_texture")));
 			binding_set_items[2] = BindingSetItem::create_texture_srv(1, _vt_indirect_texture);
@@ -144,7 +155,8 @@ namespace fantasy
 			binding_set_items[9] = BindingSetItem::create_texture_uav(1, check_cast<TextureInterface>(cache->require("base_color_texture")));
 			binding_set_items[10] = BindingSetItem::create_texture_uav(2, check_cast<TextureInterface>(cache->require("pbr_texture")));
 			binding_set_items[11] = BindingSetItem::create_texture_uav(3, check_cast<TextureInterface>(cache->require("emissive_texture")));
-			binding_set_items[12] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
+			binding_set_items[12] = BindingSetItem::create_texture_uav(4, _shadow_uv_depth_texture);
+			binding_set_items[13] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
             ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
                 BindingSetDesc{ .binding_items = binding_set_items },
                 _binding_layout
@@ -319,6 +331,9 @@ namespace fantasy
 				_vt_indirect_table.size() * sizeof(uint4)
 			));
 
+			
+	        cmdlist->clear_texture_uint(_shadow_uv_depth_texture.get(), TextureSubresourceSet{}, INVALID_SIZE_32);
+        
 			uint2 thread_group_num = {
 				static_cast<uint32_t>((align(CLIENT_WIDTH, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
 				static_cast<uint32_t>((align(CLIENT_HEIGHT, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),

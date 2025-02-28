@@ -112,11 +112,6 @@ namespace fantasy
 		ID3D12Device* d3d12_device;
 		ReturnIfFalse(SUCCEEDED(D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_1, IID_PPV_ARGS(&d3d12_device))));
 
-		D3D12_FEATURE_DATA_SHADER_MODEL d3d12_shader_model = { D3D_SHADER_MODEL_6_6 };
-		ReturnIfFalse(
-			SUCCEEDED(d3d12_device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &d3d12_shader_model, sizeof(d3d12_shader_model))) &&
-			d3d12_shader_model.HighestShaderModel >= D3D_SHADER_MODEL_6_6
-		);
 
 		ID3D12CommandQueue* d3d12_graphics_cmd_queue;
 		ID3D12CommandQueue* d3d12_compute_cmd_queue;

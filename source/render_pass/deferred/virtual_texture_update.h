@@ -50,6 +50,7 @@ namespace fantasy
 		
 		std::shared_ptr<BufferInterface> _vt_feed_back_read_back_buffer;
 		
+		std::shared_ptr<TextureInterface> _shadow_uv_depth_texture;
 		std::shared_ptr<TextureInterface> _vt_indirect_texture;
 		std::array<std::shared_ptr<TextureInterface>, Material::TextureType_Num> _vt_physical_textures;
 

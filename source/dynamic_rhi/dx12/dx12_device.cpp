@@ -71,6 +71,12 @@ namespace fantasy
             ReturnIfFalse(SUCCEEDED(context.device->QueryInterface(context.device8.GetAddressOf()))); 
         }
 
+		// D3D12_FEATURE_DATA_SHADER_MODEL d3d12_shader_model = { D3D_SHADER_MODEL_6_6 };
+		// ReturnIfFalse(
+		// 	SUCCEEDED(context.device->CheckFeatureSupport(D3D12_FEATURE_SHADER_MODEL, &d3d12_shader_model, sizeof(d3d12_shader_model))) &&
+		// 	d3d12_shader_model.HighestShaderModel >= D3D_SHADER_MODEL_6_6
+		// );
+
         ReturnIfFalse(desc.d3d12_graphics_cmd_queue && desc.d3d12_compute_cmd_queue);
         cmdqueues[static_cast<uint8_t>(CommandQueueType::Graphics)] = 
             std::make_unique<DX12CommandQueue>(&context, CommandQueueType::Graphics, desc.d3d12_graphics_cmd_queue);
