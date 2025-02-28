@@ -145,7 +145,7 @@ namespace fantasy
 		ReturnIfFalse(_global_entity->get_component<event::GenerateMipmap>()->broadcast(event.entity));
 		// ReturnIfFalse(_global_entity->get_component<event::GenerateSurfaceCache>()->broadcast(event.entity));
 
-		if (*available_task_num > 0) std::this_thread::yield();
+		while (*available_task_num > 0) std::this_thread::yield();
 		gui::notify_message(gui::ENotifyType::Info, "Loaded " + event.model_path);
 
 		// Entity* tmp_model_entity = event.entity;

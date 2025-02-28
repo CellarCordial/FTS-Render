@@ -167,11 +167,12 @@ namespace fantasy
 	bool MipmapGenerationPass::finish_pass(RenderResourceCache* cache)
 	{
 		_current_calculate_mip++;
-		if (_current_calculate_mip == _current_mip_levels)
+		if (_current_calculate_mip == _current_mip_levels || _current_mip_levels == 0)
 		{
 			_current_calculate_mip = 1;
 			_current_submaterial_index++;
-			if (_current_submaterial_index == _current_model->get_component<Material>()->submaterials.size()) 
+			if (_current_submaterial_index == _current_model->get_component<Material>()->submaterials.size() || 
+				_current_mip_levels == 0) 
 			{
 				_current_submaterial_index = 0;
 				_current_mip_levels = 0;

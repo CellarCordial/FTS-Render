@@ -197,7 +197,7 @@ namespace fantasy
 							if (!material->submaterials[ix].images[type].is_valid()) continue;
 							
 							const auto& texture_desc = check_cast<TextureInterface>(cache->require(
-								get_geometry_texture_name(submesh_id, type, *name).c_str()
+								get_geometry_texture_name(ix, type, *name).c_str()
 							))->get_desc();
 
 							uint32_t row_size_in_page = texture_desc.width / VT_PAGE_SIZE;
@@ -250,20 +250,20 @@ namespace fantasy
 			for (uint32_t ix = 0; ix < _vt_feed_back_data.size(); ++ix)
 			{
 				const auto& data = _vt_feed_back_data[ix];
-				if (data.z != INVALID_SIZE_32 && new_shadow_pages.size() <= _update_shadow_pages.capacity())
-				{
-					VTShadowPage page{ .tile_id = uint2(data.z >> 16, data.z & 0xffff) };
+				// if (data.z != INVALID_SIZE_32 && new_shadow_pages.size() <= _update_shadow_pages.capacity())
+				// {
+				// 	VTShadowPage page{ .tile_id = uint2(data.z >> 16, data.z & 0xffff) };
 
-					if (!_physical_shadow_table.check_page_loaded(page))
-					{
-						page.physical_position_in_page = _physical_shadow_table.get_new_position();
-						new_shadow_pages.insert(uint2(
-							(page.tile_id.x << 16) | (page.tile_id.y & 0xffff), 
-							(page.physical_position_in_page.x << 16) | (page.physical_position_in_page.y & 0xffff) 
-						));
-					}
-					_physical_shadow_table.add_page(page);
-				}
+				// 	if (!_physical_shadow_table.check_page_loaded(page))
+				// 	{
+				// 		page.physical_position_in_page = _physical_shadow_table.get_new_position();
+				// 		new_shadow_pages.insert(uint2(
+				// 			(page.tile_id.x << 16) | (page.tile_id.y & 0xffff), 
+				// 			(page.physical_position_in_page.x << 16) | (page.physical_position_in_page.y & 0xffff) 
+				// 		));
+				// 	}
+				// 	_physical_shadow_table.add_page(page);
+				// }
 
 
 				if (data.x == INVALID_SIZE_32 || data.y == INVALID_SIZE_32) continue;
