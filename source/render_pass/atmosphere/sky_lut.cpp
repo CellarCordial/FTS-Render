@@ -114,21 +114,14 @@ namespace fantasy
 			float* world_scale;
 			ReturnIfFalse(cache->require_constants("world_scale", reinterpret_cast<void**>(&world_scale)));
 
-			ReturnIfFalse(cache->get_world()->each<Camera>(
-				[this, world_scale](Entity* entity, Camera* _camera) -> bool
-				{
-					_pass_constant.camera_position = _camera->position * (*world_scale);
-					return true;
-				}
-			));
-			ReturnIfFalse(cache->get_world()->each<DirectionalLight>(
-				[this](Entity* entity, DirectionalLight* pLight) -> bool
-				{
-					_pass_constant.sun_direction = pLight->direction;
-					_pass_constant.sun_intensity = float3(pLight->intensity * pLight->color);
-					return true;
-				}
-			));
+			Entity* global_entity = cache->get_world()->get_global_entity();
+			DirectionalLight* light = global_entity->get_component<DirectionalLight>();
+			Camera* camera = global_entity->get_component<Camera>();
+
+			_pass_constant.sun_direction = light->direction;
+			_pass_constant.sun_intensity = float3(light->intensity * light->color);
+			_pass_constant.camera_position = camera->position * (*world_scale);
+
 		}
 
 		ReturnIfFalse(cmdlist->draw(_graphics_state, DrawArguments{ .index_count = 6 }, &_pass_constant));

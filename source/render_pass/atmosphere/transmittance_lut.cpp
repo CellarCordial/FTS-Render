@@ -1,7 +1,6 @@
 #include "transmittance_lut.h"
 #include "../../shader/shader_compiler.h"
 #include "../../core/math/vector.h"
-#include "../../scene/light.h"
 #include <memory>
 #include <string>
 
@@ -15,10 +14,6 @@ namespace fantasy
     bool TransmittanceLUTPass::compile(DeviceInterface* device, RenderResourceCache* cache)
     {
 		cache->collect_constants("world_scale", &_world_scale);
-
-		World* world = cache->get_world();
-		world->create_entity()->assign<DirectionalLight>();
-		world->create_entity()->assign<constant::AtmosphereProperties>();
 
 		// Binding Layout.
 		{
@@ -106,13 +101,8 @@ namespace fantasy
 
 		// Update constant.
 		{
-			ReturnIfFalse(cache->get_world()->each<constant::AtmosphereProperties>(
-				[this](Entity* entity, constant::AtmosphereProperties* properties) -> bool
-				{
-					_standard_atomsphere_properties = properties->to_standard_unit();
-					return true;
-				}
-			));
+			_standard_atomsphere_properties = 
+				cache->get_world()->get_global_entity()->get_component<constant::AtmosphereProperties>()->to_standard_unit();
 				
 			void* mapped_address = _atomsphere_properties_buffer->map(CpuAccessMode::Write);
 			memcpy(mapped_address, &_standard_atomsphere_properties, sizeof(constant::AtmosphereProperties));

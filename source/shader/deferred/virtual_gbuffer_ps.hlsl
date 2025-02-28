@@ -68,8 +68,9 @@ PixelOutput main(VertexOutput input)
 {
     uint2 pixel_id = uint2(input.sv_position.xy);
 
-    bool feed_back = ((pixel_id.x | pixel_id.y) & (VT_FEED_BACK_SCALE_FACTOR - 1)) == 0;
+    // bool feed_back = ((pixel_id.x | pixel_id.y) & (VT_FEED_BACK_SCALE_FACTOR - 1)) == 0;
     uint2 feed_back_id = pixel_id / VT_FEED_BACK_SCALE_FACTOR;
+    bool feed_back = all(pixel_id == feed_back_id * VT_FEED_BACK_SCALE_FACTOR + 2); 
     uint feed_back_index = feed_back_id.x + feed_back_id.y * (client_width / VT_FEED_BACK_SCALE_FACTOR);
 
     uint3 feed_back_data = uint3(INVALID_SIZE_32, INVALID_SIZE_32, INVALID_SIZE_32);

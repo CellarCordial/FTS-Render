@@ -110,26 +110,26 @@ namespace fantasy
 			ReturnIfFalse(cache->get_world()->each<Camera>(
 				[this](Entity* entity, Camera* _camera) -> bool
 				{
-					_pass_constant.camera_height = _pass_constant.world_scale * _camera->position.y;
-					_pass_constant.camera_position = _camera->position;
+					
+					return true;
+				}
+			));
+			Entity* global_entity = cache->get_world()->get_global_entity();
 
-					auto Frustum = _camera->get_frustum_directions();
-					_pass_constant.frustum_a = Frustum.A;
-					_pass_constant.frustum_b = Frustum.B;
-					_pass_constant.frustum_c = Frustum.C;
-					_pass_constant.frustum_d = Frustum.D;
-					return true;
-				}
-			));
-			ReturnIfFalse(cache->get_world()->each<DirectionalLight>(
-				[this](Entity* entity, DirectionalLight* pLight) -> bool
-				{
-					_pass_constant.sun_direction = pLight->direction;
-					_pass_constant.sun_theta = std::asin(-pLight->direction.y);
-					_pass_constant.shadow_view_proj = pLight->get_view_proj();
-					return true;
-				}
-			));
+			Camera* camera = global_entity->get_component<Camera>();
+			_pass_constant.camera_height = _pass_constant.world_scale * camera->position.y;
+			_pass_constant.camera_position = camera->position;
+
+			auto frustum = camera->get_frustum_directions();
+			_pass_constant.frustum_a = frustum.A;
+			_pass_constant.frustum_b = frustum.B;
+			_pass_constant.frustum_c = frustum.C;
+			_pass_constant.frustum_d = frustum.D;
+			
+			DirectionalLight* light = global_entity->get_component<DirectionalLight>();
+			_pass_constant.sun_direction = light->direction;
+			_pass_constant.sun_theta = std::asin(-light->direction.y);
+			_pass_constant.shadow_view_proj = light->get_view_proj();
 
 		}
 

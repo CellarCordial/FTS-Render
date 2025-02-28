@@ -30,6 +30,9 @@ namespace fantasy
     private:
 		constant::FinalTestPassConstant _pass_constant;
 
+        std::shared_ptr<TextureInterface> _final_texture;
+        std::shared_ptr<TextureInterface> _base_color_texture;
+
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 		std::shared_ptr<InputLayoutInterface> _input_layout;
 

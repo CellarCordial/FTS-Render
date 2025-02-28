@@ -21,8 +21,6 @@ namespace fantasy
 			}
 		);
 
-		_reverse_depth_texture = check_cast<TextureInterface>(cache->require("reverse_depth_texture"));
-
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(8);
@@ -140,7 +138,7 @@ namespace fantasy
 				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RGBA16_FLOAT,
+					Format::RGBA8_UNORM,
 					"base_color_texture",
 					true
 				)
@@ -162,12 +160,23 @@ namespace fantasy
 				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::R11G11B10_FLOAT,
+					Format::RGBA8_UNORM,
 					"emissive_texture",
 					true
 				)
 			)));
 			cache->collect(_emissive_texture, ResourceType::Texture);
+
+            ReturnIfFalse(_reverse_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+                TextureDesc::create_depth_stencil_texture(
+                    CLIENT_WIDTH, 
+                    CLIENT_HEIGHT, 
+                    Format::D32,
+                    "reverse_depth_texture",
+					true
+                )
+            )));
+			cache->collect(_reverse_depth_texture, ResourceType::Texture);
 
 			ReturnIfFalse(_virtual_mesh_visual_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target_texture(
@@ -246,7 +255,9 @@ namespace fantasy
 	bool VirtualGBufferPass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
 		ReturnIfFalse(cmdlist->open());
-
+		ReturnIfFalse(clear_color_attachment(cmdlist, _frame_buffer.get()));
+		ReturnIfFalse(clear_depth_stencil_attachment(cmdlist, _frame_buffer.get()));
+		
 		if (SceneSystem::loaded_submesh_count != 0)
 		{		
 			World* world = cache->get_world();
@@ -365,8 +376,6 @@ namespace fantasy
 			}
 			
 
-			ReturnIfFalse(clear_color_attachment(cmdlist, _frame_buffer.get()));
-			ReturnIfFalse(clear_depth_stencil_attachment(cmdlist, _frame_buffer.get()));
 			cmdlist->clear_buffer_uint(_vt_feed_back_buffer.get(), BufferRange{ 0, _vt_feed_back_buffer->get_desc().byte_size }, INVALID_SIZE_32);
 			cmdlist->clear_texture_uint(_vt_page_uv_texture.get(), TextureSubresourceSet{}, INVALID_SIZE_32);
 			

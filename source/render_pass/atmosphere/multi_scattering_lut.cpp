@@ -136,13 +136,8 @@ namespace fantasy
 
 		// Update constant.
 		{
-			ReturnIfFalse(cache->get_world()->each<DirectionalLight>(
-				[this](Entity* entity, DirectionalLight* light) -> bool
-				{
-					_pass_constants.sun_intensity = float3(light->intensity * light->color);
-					return true;
-				}
-			));
+			DirectionalLight* light = cache->get_world()->get_global_entity()->get_component<DirectionalLight>();
+			_pass_constants.sun_intensity = float3(light->intensity * light->color);
 			_pass_constants.ground_albedo = { 0.3f, 0.3f, 0.3f };
 		}
 		

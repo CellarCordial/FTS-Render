@@ -8,6 +8,8 @@ namespace fantasy
 {
 	bool SkyPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
+		_reverse_depth_texture = check_cast<TextureInterface>(cache->require("reverse_depth_texture"));
+
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(3);
@@ -40,20 +42,6 @@ namespace fantasy
 			ps_desc.shader_type = ShaderType::Pixel;
 			ps_desc.entry = "main";
 			ReturnIfFalse(_ps = std::unique_ptr<Shader>(create_shader(ps_desc, ps_data.data(), ps_data.size())));
-		}
-
-		// Texture.
-		{
-            ReturnIfFalse(_reverse_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-                TextureDesc::create_depth_stencil_texture(
-                    CLIENT_WIDTH, 
-                    CLIENT_HEIGHT, 
-                    Format::D32,
-                    "reverse_depth_texture",
-					true
-                )
-            )));
-			cache->collect(_reverse_depth_texture, ResourceType::Texture);
 		}
 
 		// Sampler.
@@ -113,18 +101,12 @@ namespace fantasy
 	{
 		ReturnIfFalse(cmdlist->open());
 
-		ReturnIfFalse(cache->get_world()->each<Camera>(
-			[this](Entity* entity, Camera* _camera) -> bool
-			{
-				auto frustum = _camera->get_frustum_directions();
-				_pass_constant.frustum_a = frustum.A;
-				_pass_constant.frustum_b = frustum.B;
-				_pass_constant.frustum_c = frustum.C;
-				_pass_constant.frustum_d = frustum.D;
-				return true;
-			}
-		));
-		clear_depth_stencil_attachment(cmdlist, _frame_buffer.get());
+		auto frustum = cache->get_world()->get_global_entity()->get_component<Camera>()->get_frustum_directions();
+		_pass_constant.frustum_a = frustum.A;
+		_pass_constant.frustum_b = frustum.B;
+		_pass_constant.frustum_c = frustum.C;
+		_pass_constant.frustum_d = frustum.D;
+
 
 		ReturnIfFalse(cmdlist->draw(
 			_graphics_state, 

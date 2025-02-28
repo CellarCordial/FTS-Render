@@ -24,6 +24,9 @@ namespace fantasy
 
 	bool FinalTestPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{	
+		_final_texture = check_cast<TextureInterface>(cache->require("final_texture"));
+		_base_color_texture = check_cast<TextureInterface>(cache->require("base_color_texture"));
+
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(8);
@@ -70,10 +73,10 @@ namespace fantasy
 		{
 			BindingSetItemArray binding_set_items(8);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::FinalTestPassConstant));
-			binding_set_items[1] = BindingSetItem::create_texture_uav(0, check_cast<TextureInterface>(cache->require("final_texture")));
+			binding_set_items[1] = BindingSetItem::create_texture_uav(0, _final_texture);
 			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
 			binding_set_items[3] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("world_space_normal_texture")));
-			binding_set_items[4] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("base_color_texture")));
+			binding_set_items[4] = BindingSetItem::create_texture_srv(2, _base_color_texture);
 			binding_set_items[5] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("pbr_texture")));
 			binding_set_items[6] = BindingSetItem::create_texture_srv(4, check_cast<TextureInterface>(cache->require("emissive_texture")));
 			binding_set_items[7] = BindingSetItem::create_texture_srv(5, check_cast<TextureInterface>(cache->require("virtual_mesh_visual_texture")));
@@ -117,6 +120,7 @@ namespace fantasy
 	bool FinalTestPass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
 		ReturnIfFalse(cmdlist->open());
+		cmdlist->copy_texture(_final_texture.get(), TextureSlice{}, _base_color_texture.get(), TextureSlice{});
 		uint2 thread_group_num = {
 			static_cast<uint32_t>((align(CLIENT_WIDTH, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
 			static_cast<uint32_t>((align(CLIENT_HEIGHT, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
@@ -144,10 +148,6 @@ namespace fantasy
 		RenderPassInterface* virtual_shadow_map_pass = render_graph->add_pass(std::make_shared<VirtualShadowMapPass>());
 		RenderPassInterface* test_pass = render_graph->add_pass(std::make_shared<FinalTestPass>());
 
-		sky_lut_pass->precede(sky_pass);
-		sky_pass->precede(sun_disk_pass);
-		sun_disk_pass->precede(virtual_gbuffer_pass);
-		
 		mesh_cluster_culling_pass->precede(virtual_gbuffer_pass);
 		virtual_gbuffer_pass->precede(hierarchical_zbuffer_pass);
 		virtual_gbuffer_pass->precede(virtual_texture_update_pass);
@@ -155,7 +155,14 @@ namespace fantasy
 		hierarchical_zbuffer_pass->precede(test_pass);
 		virtual_shadow_map_pass->precede(test_pass);
 
-		return test_pass;
+		test_pass->precede(sky_lut_pass);
+		sky_lut_pass->precede(sky_pass);
+		sky_pass->precede(sun_disk_pass);
+
+		World* world = render_graph->get_resource_cache()->get_world();
+		constant::AtmosphereProperties* properties = world->get_global_entity()->assign<constant::AtmosphereProperties>();
+
+		return sun_disk_pass;
     }
 } 
 

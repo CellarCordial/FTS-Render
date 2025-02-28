@@ -43,11 +43,15 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     uint2 page_coordinate = vt_indirect_texture[indirect_uv];
     if (any(page_coordinate == INVALID_SIZE_32))
     {
-        world_space_normal_texture[pixel_id] = float4(0.0f, 0.0f, 0.0f, 0.0f);
-        base_color_texture[pixel_id] = float4(0.0f, 0.0f, 0.0f, 0.0f);
-        pbr_texture[pixel_id] = float4(0.0f, 0.0f, 0.0f, 0.0f);
-        emissive_texture[pixel_id] = float4(0.0f, 0.0f, 0.0f, 0.0f);
-        return;
+        // 如果没有命中 indirect address, 则按 x 型向四周搜索.
+        int factor = VT_FEED_BACK_SCALE_FACTOR;
+        for (int offset = -factor; offset <= factor; ++offset)
+        {
+            page_coordinate = vt_indirect_texture[indirect_uv + offset];
+            if (all(page_coordinate != INVALID_SIZE_32)) break;
+            page_coordinate = vt_indirect_texture[indirect_uv + uint2(-offset, offset)];
+            if (all(page_coordinate != INVALID_SIZE_32)) break;
+        }
     }
 
     float2 physical_uv = float2(page_uv + page_coordinate.xy * vt_page_size) / vt_physical_texture_size;

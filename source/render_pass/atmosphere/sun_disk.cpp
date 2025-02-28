@@ -156,36 +156,27 @@ namespace fantasy
 			float* world_scale;
 			ReturnIfFalse(cache->require_constants("world_scale", reinterpret_cast<void**>(&world_scale)));
 
-			float3 LightDirection;
-			ReturnIfFalse(cache->get_world()->each<DirectionalLight>(
-				[this, &LightDirection](Entity* entity, DirectionalLight* light) -> bool
-				{
-					_pass_constant.sun_theta = std::asin(-light->direction.y);
-					_pass_constant.sun_radius = float3(light->intensity * light->color);
+			Entity* global_entity = cache->get_world()->get_global_entity();
+			DirectionalLight* light = global_entity->get_component<DirectionalLight>();
+			Camera* camera = global_entity->get_component<Camera>();
 
-					LightDirection = light->direction;
-					return true;
-				}
-			));
+			float3 LightDirection = light->direction;
+			
+			_pass_constant.sun_theta = std::asin(-light->direction.y);
+			_pass_constant.sun_radius = float3(light->intensity * light->color);
+			
+			_pass_constant.camera_height = camera->position.y * (*world_scale);
 
-			ReturnIfFalse(cache->get_world()->each<Camera>(
-				[&](Entity* entity, Camera* camera) -> bool
-				{
-					_pass_constant.camera_height = camera->position.y * (*world_scale);
+			float3x3 OrthogonalBasis = create_orthogonal_basis_from_z(LightDirection);
+			float4x4 world_matrix = mul(
+				scale(float3(_sun_disk_size)),
+				mul(
+					float4x4(OrthogonalBasis),
+					mul(translate(camera->position), translate(-LightDirection))
+				)
+			);
+			_pass_constant.world_view_proj = mul(world_matrix, camera->get_reverse_z_view_proj());
 
-					float3x3 OrthogonalBasis = create_orthogonal_basis_from_z(LightDirection);
-					float4x4 world_matrix = mul(
-						scale(float3(_sun_disk_size)),
-						mul(
-							float4x4(OrthogonalBasis),
-							mul(translate(camera->position), translate(-LightDirection))
-						)
-					);
-					_pass_constant.world_view_proj = mul(world_matrix, camera->get_reverse_z_view_proj());
-
-					return true;
-				}
-			));
 		}
 
 		ReturnIfFalse(cmdlist->draw(

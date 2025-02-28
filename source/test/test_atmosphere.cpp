@@ -276,9 +276,6 @@ namespace fantasy
 
 
 		World* world = cache->get_world();
-		Entity* entity = world->create_entity();
-		constant::AtmosphereProperties* properties = entity->assign<constant::AtmosphereProperties>();
-
 
 		if (
 			!world->broadcast(event::OnModelLoad{ 
@@ -289,10 +286,8 @@ namespace fantasy
 			return nullptr;
 
 
-		DirectionalLight light;
-		light.update_direction_view_proj();
-
-		DirectionalLight* light_ptr = world->get_global_entity()->get_component<DirectionalLight>();
+		DirectionalLight* light_ptr = world->get_global_entity()->assign<DirectionalLight>();
+		constant::AtmosphereProperties* properties = world->get_global_entity()->assign<constant::AtmosphereProperties>();
 
 
 		gui::add(
