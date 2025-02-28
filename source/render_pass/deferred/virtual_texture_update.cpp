@@ -61,7 +61,7 @@ namespace fantasy
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(13);
-			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::VirtualGeometryTexturePassConstant));
+			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::VirtualTextureUpdatePassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(1);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(2);
@@ -149,7 +149,7 @@ namespace fantasy
 			ReturnIfFalse(Material::TextureType_Num == 4);
 
 			BindingSetItemArray binding_set_items(13);
-			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualGeometryTexturePassConstant));
+			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualTextureUpdatePassConstant));
 			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("vt_page_uv_texture")));
 			binding_set_items[2] = BindingSetItem::create_texture_srv(1, _vt_indirect_texture);
 			binding_set_items[3] = BindingSetItem::create_texture_srv(2, _vt_physical_textures[0]);

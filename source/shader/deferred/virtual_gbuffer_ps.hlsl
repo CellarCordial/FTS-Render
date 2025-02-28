@@ -1,23 +1,11 @@
-// #define VT_FEED_BACK_SCALE_FACTOR 1
-
 #include "../common/gbuffer.hlsl"
 
 cbuffer pass_constants : register(b0)
 {
-    float4x4 view_proj;
-
-    float4x4 view_matrix;
-    float4x4 prev_view_matrix;
+    float4x4 reverse_z_view_proj;
     
-    float4x4 shadow_view_proj;
-
     uint view_mode;
     uint vt_page_size;
-    uint virtual_shadow_resolution;
-    uint virtual_shadow_page_size;
-    
-    float3 camera_position;
-    uint client_width;
 };
 
 struct VertexOutput
@@ -26,9 +14,7 @@ struct VertexOutput
 
     float3 color : COLOR;
     float3 world_space_position : WORLD_POSITION;
-
     float3 view_space_position : VIEW_POSITION;
-    float3 prev_view_space_position : PREV_VIEW_POSITION;
 
     float3 world_space_normal : NORMAL;
     float3 world_space_tangent : TANGENT;
@@ -40,7 +26,7 @@ struct VertexOutput
 struct PixelOutput
 {
     float4 world_position_view_depth : SV_Target0;
-    float4 view_space_velocity : SV_TARGET1;
+    float4 geometry_uv_miplevel_id : SV_TARGET1;
     float4 world_space_normal : SV_Target2;
     float4 world_space_tangent : SV_TARGET3;
     float4 base_color : SV_TARGET4;
@@ -51,9 +37,6 @@ struct PixelOutput
 
 StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
 
-RWTexture2D<uint2> vt_page_uv_texture : register(u0);
-RWStructuredBuffer<uint3> vt_feed_back_buffer : register(u1);
-
 uint estimate_mip_level(float2 pixel_id)
 {
     float2 dx = ddx(pixel_id);
@@ -62,69 +45,23 @@ uint estimate_mip_level(float2 pixel_id)
 }
 
 
-#ifdef VT_FEED_BACK_SCALE_FACTOR
-
 PixelOutput main(VertexOutput input)
 {
-    uint2 pixel_id = uint2(input.sv_position.xy);
-
-    // bool feed_back = ((pixel_id.x | pixel_id.y) & (VT_FEED_BACK_SCALE_FACTOR - 1)) == 0;
-    uint2 feed_back_id = pixel_id / VT_FEED_BACK_SCALE_FACTOR;
-    bool feed_back = all(pixel_id == feed_back_id * VT_FEED_BACK_SCALE_FACTOR + 2); 
-    uint feed_back_index = feed_back_id.x + feed_back_id.y * (client_width / VT_FEED_BACK_SCALE_FACTOR);
-
-    uint3 feed_back_data = uint3(INVALID_SIZE_32, INVALID_SIZE_32, INVALID_SIZE_32);
+    uint mip_level = INVALID_SIZE_32;
 
     GeometryConstant geometry = geometry_constant_buffer[input.geometry_id];
     if (all(geometry.texture_resolution != 0))
     {
-        uint mip_level = estimate_mip_level(input.uv * geometry.texture_resolution);
+        mip_level = estimate_mip_level(input.uv * geometry.texture_resolution);
         if (geometry.texture_resolution >> mip_level < vt_page_size)
         {
             mip_level = log2(geometry.texture_resolution / vt_page_size);
         }
-        uint2 geometry_texture_resolution = max(geometry.texture_resolution >> mip_level, vt_page_size);
-        uint2 geometry_texture_pixel_id = uint2(input.uv * geometry_texture_resolution);
-
-        vt_page_uv_texture[pixel_id] = geometry_texture_pixel_id % vt_page_size;
-
-        if (feed_back)
-        {
-            uint2 page_id = geometry_texture_pixel_id / vt_page_size;
-            uint page_id_mip_level = uint(
-                (page_id.x << 20) |
-                (page_id.y << 8) |
-                (mip_level & 0xff)
-            );
-
-            feed_back_data.xy = uint2(input.geometry_id, page_id_mip_level);
-        }
     }
-
-    if (feed_back)
-    {
-        float4 shadow_view_proj_pos = mul(float4(input.world_space_position, 1.0f), shadow_view_proj);
-        shadow_view_proj_pos.xyz = shadow_view_proj_pos.xyz / shadow_view_proj_pos.z;
-
-        bool in_shadow_clip = shadow_view_proj_pos.w > 0.0f &&
-                            shadow_view_proj_pos.x >= -1.0f && shadow_view_proj_pos.x <= 1.0f &&
-                            shadow_view_proj_pos.y >= -1.0f && shadow_view_proj_pos.y <= 1.0f &&
-                            shadow_view_proj_pos.z >= 0.0f && shadow_view_proj_pos.z <= 1.0f;
-        if (in_shadow_clip)
-        {
-            float2 uv = shadow_view_proj_pos.xy * float2(0.5f, -0.5f) + 0.5f;
-            uint2 shadow_page_id = (uint2)(uv * virtual_shadow_resolution) / virtual_shadow_page_size;
-
-            feed_back_data.z = (shadow_page_id.x << 16) | (shadow_page_id.y & 0xffff);
-        }
-
-        vt_feed_back_buffer[feed_back_index] = feed_back_data;
-    }
-    
 
     PixelOutput output;
     output.world_position_view_depth = float4(input.world_space_position, input.view_space_position.z);
-    output.view_space_velocity = float4(input.prev_view_space_position - input.view_space_position, 0.0f);
+    output.geometry_uv_miplevel_id = float4(input.uv, mip_level, input.geometry_id);
     output.world_space_normal = float4(input.world_space_normal, 0.0f);
     output.world_space_tangent = float4(input.world_space_tangent, 0.0f);
     output.base_color = geometry.base_color;
@@ -133,5 +70,3 @@ PixelOutput main(VertexOutput input)
     output.virtual_mesh_visual = float4(input.color, 1.0f);
     return output;
 }
-
-#endif

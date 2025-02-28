@@ -4,19 +4,9 @@
 cbuffer pass_constants : register(b0)
 {
     float4x4 reverse_z_view_proj;
-
     float4x4 view_matrix;
-    float4x4 prev_view_matrix;
-
-    float4x4 shadow_view_proj;
 
     uint view_mode;
-    uint vt_page_size;
-    uint virtual_shadow_resolution;
-    uint virtual_shadow_page_size;
-
-    float3 camera_position;
-    uint client_width;
 };
 
 struct Vertex
@@ -39,10 +29,8 @@ struct VertexOutput
     
     float3 color : COLOR;
     float3 world_space_position : WORLD_POSITION;
-
     float3 view_space_position : VIEW_POSITION;
-    float3 prev_view_space_position : PREV_VIEW_POSITION;
-    
+
     float3 world_space_normal : NORMAL;
     float3 world_space_tangent  : TANGENT;
     float2 uv : TEXCOORD;
@@ -97,7 +85,6 @@ VertexOutput main(uint instance_id: SV_InstanceID, uint vertex_index : SV_Vertex
     output.world_space_position = world_pos.xyz;
 
     output.view_space_position = mul(world_pos, view_matrix).xyz;
-    output.prev_view_space_position = mul(world_pos, prev_view_matrix).xyz;
 
     output.world_space_normal = normalize(mul(float4(vertex.normal, 1.0f), geometry.inv_trans_world)).xyz;
     output.world_space_tangent = normalize(mul(float4(vertex.tangent, 1.0f), geometry.inv_trans_world)).xyz;

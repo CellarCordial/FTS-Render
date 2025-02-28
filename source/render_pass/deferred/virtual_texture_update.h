@@ -13,7 +13,7 @@ namespace fantasy
 {
 	namespace constant
 	{
-		struct VirtualGeometryTexturePassConstant
+		struct VirtualTextureUpdatePassConstant
 		{
 			uint2 client_resolution = { CLIENT_WIDTH, CLIENT_HEIGHT };
             uint32_t vt_page_size = VT_PAGE_SIZE;
@@ -33,7 +33,7 @@ namespace fantasy
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
 	private:
-		constant::VirtualGeometryTexturePassConstant _pass_constant;
+		constant::VirtualTextureUpdatePassConstant _pass_constant;
 		
 		std::vector<uint2> _update_shadow_pages;
 		VTPhysicalShadowTable _physical_shadow_table;

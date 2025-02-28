@@ -1,4 +1,5 @@
 #include "camera.h"
+#include "GLFW/glfw3.h"
 #include <wtypesbase.h>
 
 namespace fantasy 
@@ -16,7 +17,7 @@ namespace fantasy
         double new_x, new_y;
         glfwGetCursorPos(_window, &new_x, &new_y);
         float2 new_pos(new_x, new_y);
-        auto cusor_state = glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_RIGHT);
+        auto cusor_state = glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_LEFT);
         if (cusor_state == GLFW_PRESS)
         {
              //glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
