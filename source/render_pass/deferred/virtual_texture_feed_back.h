@@ -3,11 +3,9 @@
 
 #include "../../render_graph/render_pass.h"
 #include "../../scene/virtual_texture.h"
-#include "../../scene/geometry.h"
-#include <array>
+#include "../../core/math/matrix.h"
 #include <cstdint>
 #include <memory>
-#include <unordered_map>
 
 namespace fantasy
 {
@@ -15,6 +13,12 @@ namespace fantasy
 	{
 		struct VirtualTextureFeedBackPassConstant
 		{
+			float4x4 shadow_view_proj;
+
+			uint32_t client_width = CLIENT_WIDTH;
+			uint32_t vt_page_size = VT_PAGE_SIZE;
+			uint32_t virtual_shadow_resolution = VT_VIRTUAL_SHADOW_RESOLUTION;
+			uint32_t virtual_shadow_page_size = VT_SHADOW_PAGE_SIZE;
 		};
 	}
 
@@ -29,6 +33,10 @@ namespace fantasy
 	private:
 		constant::VirtualTextureFeedBackPassConstant _pass_constant;
 		
+		std::shared_ptr<BufferInterface> _vt_feed_back_buffer;
+		std::shared_ptr<BufferInterface> _vt_feed_back_read_back_buffer;
+
+		std::shared_ptr<TextureInterface> _vt_page_uv_texture;
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 

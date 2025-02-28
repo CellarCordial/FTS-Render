@@ -1,6 +1,6 @@
-// #define THREAD_GROUP_SIZE_X 1
-// #define THREAD_GROUP_SIZE_Y 1
-// #define VT_FEED_BACK_SCALE_FACTOR 1
+#define THREAD_GROUP_SIZE_X 1
+#define THREAD_GROUP_SIZE_Y 1
+#define VT_FEED_BACK_SCALE_FACTOR 1
 
 #include "../common/gbuffer.hlsl"
 
@@ -13,7 +13,7 @@ cbuffer pass_constants : register(b0)
 };
 
 Texture2D<uint2> vt_page_uv_texture : register(t0);
-Texture2D<uint2> vt_indirect_texture : register(t1);
+Texture2D<uint4> vt_indirect_texture : register(t1);
 Texture2D<float4> vt_base_color_physical_texture : register(t2);
 Texture2D<float3> vt_normal_physical_texture : register(t3);
 Texture2D<float3> vt_pbr_physical_texture : register(t4);
@@ -40,7 +40,7 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     if (page_uv.x == INVALID_SIZE_32 || page_uv.y == INVALID_SIZE_32) return;
 
     uint2 indirect_uv = pixel_id / VT_FEED_BACK_SCALE_FACTOR;
-    uint2 page_coordinate = vt_indirect_texture[indirect_uv];
+    uint2 page_coordinate = vt_indirect_texture[indirect_uv].xy;
     if (any(page_coordinate == INVALID_SIZE_32))
     {
         // 如果没有命中 indirect address, 则按 x 型向四周搜索.

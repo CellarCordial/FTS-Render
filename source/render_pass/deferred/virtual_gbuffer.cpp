@@ -2,7 +2,6 @@
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
 #include "../../scene/virtual_mesh.h"
-#include "../../scene/light.h"
 #include "../../scene/camera.h"
 #include "../../scene/scene.h"
 #include <cstdint>
@@ -23,15 +22,13 @@ namespace fantasy
 
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(8);
-			binding_layout_items[0] = BindingLayoutItem::create_constant_buffer(0);
+			BindingLayoutItemArray binding_layout_items(6);
+			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::VirtualGBufferPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_structured_buffer_srv(1);
 			binding_layout_items[3] = BindingLayoutItem::create_structured_buffer_srv(2);
 			binding_layout_items[4] = BindingLayoutItem::create_structured_buffer_srv(3);
 			binding_layout_items[5] = BindingLayoutItem::create_structured_buffer_srv(4);
-			binding_layout_items[6] = BindingLayoutItem::create_texture_uav(0);
-			binding_layout_items[7] = BindingLayoutItem::create_structured_buffer_uav(1);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -47,7 +44,7 @@ namespace fantasy
 			shader_compile_desc.shader_name = "deferred/virtual_gbuffer_ps.hlsl";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Pixel;
-			shader_compile_desc.defines.push_back("VT_FEED_BACK_SCALE_FACTOR=" + std::to_string(VT_FEED_BACK_SCALE_FACTOR));
+			// shader_compile_desc.defines.push_back("VT_FEED_BACK_SCALE_FACTOR=" + std::to_string(VT_FEED_BACK_SCALE_FACTOR));
 			ShaderData ps_data = compile_shader(shader_compile_desc);
 
 			ShaderDesc vs_desc;
@@ -59,36 +56,6 @@ namespace fantasy
 			ps_desc.shader_type = ShaderType::Pixel;
 			ps_desc.entry = "main";
 			ReturnIfFalse(_ps = std::unique_ptr<Shader>(create_shader(ps_desc, ps_data.data(), ps_data.size())));
-		}
-
-		// Buffer
-		{
-			ReturnIfFalse(_pass_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_constant_buffer(
-					sizeof(constant::VirtualGBufferPassConstant)
-				)
-			)));
-
-
-			uint32_t feed_back_buffer_element_num = 
-				(CLIENT_WIDTH / VT_FEED_BACK_SCALE_FACTOR) * (CLIENT_HEIGHT / VT_FEED_BACK_SCALE_FACTOR);
-
-			ReturnIfFalse(_vt_feed_back_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_read_write_structured_buffer(
-					sizeof(uint3) * feed_back_buffer_element_num, 
-					sizeof(uint3),
-					"vt_feed_back_buffer"
-				)
-			)));
-			cache->collect(_vt_feed_back_buffer, ResourceType::Buffer);	
-
-			ReturnIfFalse(_vt_feed_back_read_back_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_read_back_buffer(
-					sizeof(uint3) * feed_back_buffer_element_num, 
-					"vt_feed_back_read_back_buffer"
-				)
-			)));
-			cache->collect(_vt_feed_back_read_back_buffer, ResourceType::Buffer);
 		}
 
 		// Texture.
@@ -103,15 +70,15 @@ namespace fantasy
 			)));
 			cache->collect(_world_position_view_depth_texture, ResourceType::Texture);
 
-			ReturnIfFalse(_view_space_velocity_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+			ReturnIfFalse(_geometry_uv_miplevel_id_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RGBA32_FLOAT,
-					"view_space_velocity_texture"
+					Format::RGBA32_UINT,
+					"geometry_uv_miplevel_id_texture"
 				)
 			)));
-			cache->collect(_view_space_velocity_texture, ResourceType::Texture);
+			cache->collect(_geometry_uv_miplevel_id_texture, ResourceType::Texture);
 
 			ReturnIfFalse(_world_space_normal_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target_texture(
@@ -190,22 +157,13 @@ namespace fantasy
 			cache->collect(_virtual_mesh_visual_texture, ResourceType::Texture);
 
 			
-			ReturnIfFalse(_vt_page_uv_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_read_write_texture(
-					CLIENT_WIDTH,
-					CLIENT_HEIGHT,
-					Format::RG32_UINT,
-					"vt_page_uv_texture"
-				)
-			)));
-			cache->collect(_vt_page_uv_texture, ResourceType::Texture);
 		}
 
 		// Frame Buffer.
 		{
 			FrameBufferDesc frame_buffer_desc;
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_position_view_depth_texture));
-			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_view_space_velocity_texture));
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_geometry_uv_miplevel_id_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_space_normal_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_space_tangent_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_base_color_texture));
@@ -233,10 +191,8 @@ namespace fantasy
 
 		// Binding Set.
 		{
-			_binding_set_items.resize(8);
-			_binding_set_items[0] = BindingSetItem::create_constant_buffer(0, _pass_constant_buffer);
-			_binding_set_items[6] = BindingSetItem::create_texture_uav(0, _vt_page_uv_texture);
-			_binding_set_items[7] = BindingSetItem::create_structured_buffer_uav(1, _vt_feed_back_buffer);
+			_binding_set_items.resize(6);
+			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualGBufferPassConstant));
 		}
 
 		// Graphics state.
@@ -265,13 +221,6 @@ namespace fantasy
 			Camera* camera = world->get_global_entity()->get_component<Camera>();
 			_pass_constant.view_matrix = camera->view_matrix;
 			_pass_constant.reverse_z_view_proj = camera->get_reverse_z_view_proj();
-			_pass_constant.prev_view_matrix = camera->prev_view_matrix;
-			_pass_constant.camera_position = camera->position;
-			_pass_constant.shadow_view_proj = world->get_global_entity()->get_component<DirectionalLight>()->get_view_proj();
-	
-			void* mapped_address = _pass_constant_buffer->map(CpuAccessMode::Write);
-			memcpy(mapped_address, &_pass_constant, sizeof(constant::VirtualGBufferPassConstant));
-			_pass_constant_buffer->unmap();
 	
 			if (!_resource_writed)
 			{
@@ -374,25 +323,9 @@ namespace fantasy
 	
 				_resource_writed = true;
 			}
-			
 
-			cmdlist->clear_buffer_uint(_vt_feed_back_buffer.get(), BufferRange{ 0, _vt_feed_back_buffer->get_desc().byte_size }, INVALID_SIZE_32);
-			cmdlist->clear_texture_uint(_vt_page_uv_texture.get(), TextureSubresourceSet{}, INVALID_SIZE_32);
+			ReturnIfFalse(cmdlist->draw_indirect(_graphics_state, 0, 1, &_pass_constant));
 			
-			
-			ReturnIfFalse(cmdlist->draw_indirect(_graphics_state, 0, 1));
-			
-			
-			uint32_t feed_back_buffer_element_num = 
-				(CLIENT_WIDTH / VT_FEED_BACK_SCALE_FACTOR) * (CLIENT_HEIGHT / VT_FEED_BACK_SCALE_FACTOR);
-
-			cmdlist->copy_buffer(
-				_vt_feed_back_read_back_buffer.get(), 
-				0, 
-				_vt_feed_back_buffer.get(), 
-				0, 
-				_vt_feed_back_buffer->get_desc().byte_size
-			);
 
 			cmdlist->set_texture_state(
 				_reverse_depth_texture.get(), 

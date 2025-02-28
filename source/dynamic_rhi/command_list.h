@@ -115,7 +115,7 @@ namespace fantasy
             TextureInterface* dst,
             uint32_t array_slice,
             uint32_t mip_level,
-            const uint8_t* data,
+            const void* data,
             uint64_t data_size
         ) = 0;
         

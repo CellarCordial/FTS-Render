@@ -70,17 +70,10 @@ void main(uint3 thread_id : SV_DispatchThreadID)
         float4 shadow_view_proj_pos = mul(float4(world_space_position, 1.0f), shadow_view_proj);
         shadow_view_proj_pos.xyz = shadow_view_proj_pos.xyz / shadow_view_proj_pos.z;
 
-        bool in_shadow_clip = shadow_view_proj_pos.w > 0.0f &&
-                            shadow_view_proj_pos.x >= -1.0f && shadow_view_proj_pos.x <= 1.0f &&
-                            shadow_view_proj_pos.y >= -1.0f && shadow_view_proj_pos.y <= 1.0f &&
-                            shadow_view_proj_pos.z >= 0.0f && shadow_view_proj_pos.z <= 1.0f;
-        if (in_shadow_clip)
-        {
-            float2 uv = shadow_view_proj_pos.xy * float2(0.5f, -0.5f) + 0.5f;
-            uint2 shadow_page_id = (uint2)(uv * virtual_shadow_resolution) / virtual_shadow_page_size;
+        float2 uv = shadow_view_proj_pos.xy * float2(0.5f, -0.5f) + 0.5f;
+        uint2 shadow_page_id = (uint2)(uv * virtual_shadow_resolution) / virtual_shadow_page_size;
 
-            feed_back_data.z = (shadow_page_id.x << 16) | (shadow_page_id.y & 0xffff);
-        }
+        feed_back_data.z = (shadow_page_id.x << 16) | (shadow_page_id.y & 0xffff);
 
         vt_feed_back_buffer[feed_back_index] = feed_back_data;
     }
