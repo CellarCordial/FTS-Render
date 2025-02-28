@@ -7,6 +7,7 @@ cbuffer pass_constants : register(b0)
     float4x4 view_matrix;
 
     uint view_mode;
+    uint vt_page_size;
 };
 
 struct Vertex

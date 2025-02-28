@@ -31,7 +31,7 @@ namespace fantasy
     {
         uint32_t geometry_id = INVALID_SIZE_32;
         uint32_t coordinate_mip_level = INVALID_SIZE_32;
-        uint2 physical_position_in_page;
+        uint2 physical_position_in_page = uint2(INVALID_SIZE_32);
 
         uint2 get_coordinate_in_page() const 
         {
@@ -133,10 +133,14 @@ namespace fantasy
         void reset();
 
         static uint64_t create_tile_key(const VTShadowPage& page);
+
+        void* get_data();
+        uint64_t get_size() const;
         
     private:
         uint32_t _resolution_in_page;
         LruCache<VTShadowPage> _pages;
+        std::vector<uint2> _data;
     };
 }
 

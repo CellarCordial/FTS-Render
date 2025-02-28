@@ -2,6 +2,7 @@
 #define RENDER_VIRTUAL_GBUFFER_PASS_H
  
 #include "../../render_graph/render_pass.h"
+#include "../../scene/virtual_texture.h"
 #include "../../scene/geometry.h"
 #include <memory>
 #include <vector>
@@ -24,6 +25,7 @@ namespace fantasy
 			float4x4 view_matrix;
 		
 			uint32_t view_mode = 0;
+			uint32_t vt_page_size = VT_PAGE_SIZE;
 		};
 	}
 

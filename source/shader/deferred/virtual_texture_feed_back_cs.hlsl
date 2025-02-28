@@ -7,20 +7,15 @@
 
 cbuffer pass_constants : register(b0)
 {
-    float4x4 shadow_view_proj;
-
     uint client_width;
     uint vt_page_size;
-    uint virtual_shadow_resolution;
-    uint virtual_shadow_page_size;
 };
 
 StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
 Texture2D<float4> geometry_uv_miplevel_id_texture : register(t1);
-Texture2D<float4> world_position_view_depth_texture : register(t2);
 
 RWTexture2D<uint2> vt_page_uv_texture : register(u0);
-RWStructuredBuffer<uint3> vt_feed_back_buffer : register(u1);
+RWStructuredBuffer<uint2> vt_feed_back_buffer : register(u1);
 
 
 #if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y) && defined(VT_FEED_BACK_SCALE_FACTOR)
@@ -31,17 +26,17 @@ void main(uint3 thread_id : SV_DispatchThreadID)
 {    
     uint2 pixel_id = thread_id.xy;
 
-    uint4 geometry_uv_miplevel_id = geometry_uv_miplevel_id_texture[pixel_id];
-    uint2 uv = geometry_uv_miplevel_id.xy;
-    uint mip_level = geometry_uv_miplevel_id.z;
-    uint geometry_id = geometry_uv_miplevel_id.w;
+    float4 geometry_uv_miplevel_id = geometry_uv_miplevel_id_texture[pixel_id];
+    float2 uv = geometry_uv_miplevel_id.xy;
+    uint mip_level = asuint(geometry_uv_miplevel_id.z);
+    uint geometry_id = asuint(geometry_uv_miplevel_id.w);
 
     uint2 feed_back_id = pixel_id / VT_FEED_BACK_SCALE_FACTOR;
     bool feed_back = all(pixel_id == feed_back_id * VT_FEED_BACK_SCALE_FACTOR + 2); 
     uint feed_back_index = feed_back_id.x + feed_back_id.y * (client_width / VT_FEED_BACK_SCALE_FACTOR);
 
     uint2 page_uv = uint2(INVALID_SIZE_32, INVALID_SIZE_32);
-    uint3 feed_back_data = uint3(INVALID_SIZE_32, INVALID_SIZE_32, INVALID_SIZE_32);
+    uint2 feed_back_data = uint2(INVALID_SIZE_32, INVALID_SIZE_32);
 
     GeometryConstant geometry = geometry_constant_buffer[geometry_id];
     if (all(geometry.texture_resolution != 0))
@@ -49,7 +44,7 @@ void main(uint3 thread_id : SV_DispatchThreadID)
         uint2 geometry_texture_resolution = max(geometry.texture_resolution >> mip_level, vt_page_size);
         uint2 geometry_texture_pixel_id = uint2(uv * geometry_texture_resolution);
 
-        page_uv = geometry_texture_pixel_id % vt_page_size;
+        vt_page_uv_texture[pixel_id] = geometry_texture_pixel_id % vt_page_size;
 
         if (feed_back)
         {
@@ -60,24 +55,9 @@ void main(uint3 thread_id : SV_DispatchThreadID)
                 (mip_level & 0xff)
             );
 
-            feed_back_data.xy = uint2(geometry_id, page_id_mip_level);
+            vt_feed_back_buffer[feed_back_index] = uint2(geometry_id, page_id_mip_level);
         }
     }
-
-    if (feed_back)
-    {
-        float3 world_space_position = world_position_view_depth_texture[pixel_id];
-        float4 shadow_view_proj_pos = mul(float4(world_space_position, 1.0f), shadow_view_proj);
-        shadow_view_proj_pos.xyz = shadow_view_proj_pos.xyz / shadow_view_proj_pos.z;
-
-        float2 uv = shadow_view_proj_pos.xy * float2(0.5f, -0.5f) + 0.5f;
-        uint2 shadow_page_id = (uint2)(uv * virtual_shadow_resolution) / virtual_shadow_page_size;
-
-        feed_back_data.z = (shadow_page_id.x << 16) | (shadow_page_id.y & 0xffff);
-
-    }
-    vt_page_uv_texture[pixel_id] = page_uv;
-    vt_feed_back_buffer[feed_back_index] = feed_back_data;
 }
 
 #endif

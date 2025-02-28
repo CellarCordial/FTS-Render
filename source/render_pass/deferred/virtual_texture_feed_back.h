@@ -3,7 +3,6 @@
 
 #include "../../render_graph/render_pass.h"
 #include "../../scene/virtual_texture.h"
-#include "../../core/math/matrix.h"
 #include <cstdint>
 #include <memory>
 
@@ -13,12 +12,8 @@ namespace fantasy
 	{
 		struct VirtualTextureFeedBackPassConstant
 		{
-			float4x4 shadow_view_proj;
-
 			uint32_t client_width = CLIENT_WIDTH;
 			uint32_t vt_page_size = VT_PAGE_SIZE;
-			uint32_t virtual_shadow_resolution = VT_VIRTUAL_SHADOW_RESOLUTION;
-			uint32_t virtual_shadow_page_size = VT_SHADOW_PAGE_SIZE;
 		};
 	}
 
@@ -31,6 +26,7 @@ namespace fantasy
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
 	private:
+		bool _resource_writed = false;
 		constant::VirtualTextureFeedBackPassConstant _pass_constant;
 		
 		std::shared_ptr<BufferInterface> _vt_feed_back_buffer;
@@ -43,6 +39,7 @@ namespace fantasy
 		std::shared_ptr<Shader> _cs;
 		std::unique_ptr<ComputePipelineInterface> _pipeline;
 
+		BindingSetItemArray _binding_set_items;
 		std::unique_ptr<BindingSetInterface> _binding_set;
 		ComputeState _compute_state;
 	};

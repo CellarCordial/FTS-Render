@@ -8,13 +8,11 @@
 #include "../render_pass/culling/hierarchical_zbuffer.h"
 #include "../render_pass/deferred/virtual_gbuffer.h"
 #include "../render_pass/deferred/virtual_texture_update.h"
-#include "../render_pass/deferred/virtual_texture_feed_back.h"
 #include "../render_pass/deferred/mipmap_generation.h"
-#include "../render_pass/shadow/virtual_shadow_map.h"
+#include "../render_pass/deferred/virtual_texture_feed_back.h"
 
 #include "../render_pass/atmosphere/multi_scattering_lut.h"
 #include "../render_pass/atmosphere/transmittance_lut.h"
-#include "../render_pass/atmosphere/aerial_lut.h"
 #include "../render_pass/atmosphere/sun_disk.h"
 #include "../render_pass/atmosphere/sky_lut.h"
 #include "../render_pass/atmosphere/sky.h"
@@ -31,20 +29,15 @@ namespace fantasy
 
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(13);
+			BindingLayoutItemArray binding_layout_items(8);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::FinalTestPassConstant));
-			binding_layout_items[1] = BindingLayoutItem::create_constant_buffer(1);
+			binding_layout_items[1] = BindingLayoutItem::create_texture_uav(0);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(1);
 			binding_layout_items[4] = BindingLayoutItem::create_texture_srv(2);
 			binding_layout_items[5] = BindingLayoutItem::create_texture_srv(3);
 			binding_layout_items[6] = BindingLayoutItem::create_texture_srv(4);
 			binding_layout_items[7] = BindingLayoutItem::create_texture_srv(5);
-			binding_layout_items[8] = BindingLayoutItem::create_texture_srv(6);
-			binding_layout_items[9] = BindingLayoutItem::create_texture_uav(0);
-			binding_layout_items[10] = BindingLayoutItem::create_sampler(0);
-			binding_layout_items[11] = BindingLayoutItem::create_sampler(1);
-			binding_layout_items[12] = BindingLayoutItem::create_sampler(2);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -75,24 +68,18 @@ namespace fantasy
 				device->create_compute_pipeline(pipeline_desc)
 			));
 		}
-		
-		
+
 		// Binding Set.
 		{
-			BindingSetItemArray binding_set_items(13);
+			BindingSetItemArray binding_set_items(8);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::FinalTestPassConstant));
-			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, check_cast<BufferInterface>(cache->require("atmosphere_properties_buffer")));
-			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("transmittance_texture")));
-			binding_set_items[3] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("aerial_lut_texture")));
-			binding_set_items[4] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("vt_physical_shadow_texture")));
-			binding_set_items[5] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("blue_noise_texture")));
-			binding_set_items[6] = BindingSetItem::create_texture_srv(4, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
-			binding_set_items[7] = BindingSetItem::create_texture_srv(5, check_cast<TextureInterface>(cache->require("world_space_normal_texture")));
-			binding_set_items[8] = BindingSetItem::create_texture_srv(6, check_cast<TextureInterface>(cache->require("shadow_uv_depth_texture")));
-			binding_set_items[9] = BindingSetItem::create_texture_uav(0, _final_texture);
-			binding_set_items[10] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
-			binding_set_items[11] = BindingSetItem::create_sampler(1, check_cast<SamplerInterface>(cache->require("point_clamp_sampler")));
-			binding_set_items[12] = BindingSetItem::create_sampler(2, check_cast<SamplerInterface>(cache->require("point_wrap_sampler")));
+			binding_set_items[1] = BindingSetItem::create_texture_uav(0, _final_texture);
+			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
+			binding_set_items[3] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("world_space_normal_texture")));
+			binding_set_items[4] = BindingSetItem::create_texture_srv(2, _base_color_texture);
+			binding_set_items[5] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("pbr_texture")));
+			binding_set_items[6] = BindingSetItem::create_texture_srv(4, check_cast<TextureInterface>(cache->require("emissive_texture")));
+			binding_set_items[7] = BindingSetItem::create_texture_srv(5, check_cast<TextureInterface>(cache->require("virtual_mesh_visual_texture")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
 				_binding_layout
@@ -147,7 +134,6 @@ namespace fantasy
     {
 		RenderPassInterface* transmittance_lut_pass = render_graph->add_pass(std::make_shared<TransmittanceLUTPass>());
 		RenderPassInterface* multi_scattering_lut_pass = render_graph->add_pass(std::make_shared<MultiScatteringLUTPass>());
-		RenderPassInterface* aerial_lut_pass = render_graph->add_pass(std::make_shared<AerialLUTPass>());
 		RenderPassInterface* sky_lut_pass = render_graph->add_pass(std::make_shared<SkyLUTPass>());
 		RenderPassInterface* sky_pass = render_graph->add_pass(std::make_shared<SkyPass>());
 		RenderPassInterface* sun_disk_pass = render_graph->add_pass(std::make_shared<SunDiskPass>());
@@ -158,19 +144,17 @@ namespace fantasy
 		RenderPassInterface* mesh_cluster_culling_pass = render_graph->add_pass(std::make_shared<MeshClusterCullingPass>());
 		RenderPassInterface* hierarchical_zbuffer_pass = render_graph->add_pass(std::make_shared<HierarchicalZBufferPass>());
 		RenderPassInterface* virtual_gbuffer_pass = render_graph->add_pass(std::make_shared<VirtualGBufferPass>());
-		RenderPassInterface* virtual_texture_feed_back_pass = render_graph->add_pass(std::make_shared<VirtualTextureFeedBackPass>());
 		RenderPassInterface* virtual_texture_update_pass = render_graph->add_pass(std::make_shared<VirtualTextureUpdatePass>());
-		RenderPassInterface* virtual_shadow_map_pass = render_graph->add_pass(std::make_shared<VirtualShadowMapPass>());
+		RenderPassInterface* virtual_texture_feed_back_pass = render_graph->add_pass(std::make_shared<VirtualTextureFeedBackPass>());
 		RenderPassInterface* test_pass = render_graph->add_pass(std::make_shared<FinalTestPass>());
 
 		mesh_cluster_culling_pass->precede(virtual_gbuffer_pass);
 		virtual_gbuffer_pass->precede(hierarchical_zbuffer_pass);
 		virtual_gbuffer_pass->precede(virtual_texture_feed_back_pass);
 		virtual_texture_feed_back_pass->precede(virtual_texture_update_pass);
-		virtual_texture_update_pass->precede(virtual_shadow_map_pass);
 		hierarchical_zbuffer_pass->precede(test_pass);
-		virtual_shadow_map_pass->precede(aerial_lut_pass);
-		aerial_lut_pass->precede(test_pass);
+		virtual_texture_update_pass->precede(test_pass);
+
 		test_pass->precede(sky_lut_pass);
 		sky_lut_pass->precede(sky_pass);
 		sky_pass->precede(sun_disk_pass);

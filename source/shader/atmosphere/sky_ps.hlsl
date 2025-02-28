@@ -3,15 +3,15 @@
 
 cbuffer pass_constants : register(b0)
 {
-    float3 FrustumA; float pad0;
-    float3 FrustumB; float pad1;
-    float3 FrustumC; float pad2;
-    float3 FrustumD; float pad3;
+    float3 frustum_A; float pad0;
+    float3 frustum_B; float pad1;
+    float3 frustum_C; float pad2;
+    float3 frustum_D; float pad3;
 };
 
 
-Texture2D<float3> gSkyLUT : register(t0);
-SamplerState gSampler : register(s0);
+Texture2D<float3> sky_lut_texture : register(t0);
+SamplerState sampler_ : register(s0);
 
 struct VertexOutput
 {
@@ -20,17 +20,17 @@ struct VertexOutput
 };
 
 
-float4 main(VertexOutput In) : SV_Target0
+float4 main(VertexOutput input) : SV_Target0
 {
-    float3 Dir = normalize(lerp(
-        lerp(FrustumA, FrustumB, In.uv.x),
-        lerp(FrustumC, FrustumD, In.uv.x),
-        In.uv.y
+    float3 dir = normalize(lerp(
+        lerp(frustum_A, frustum_B, input.uv.x),
+        lerp(frustum_C, frustum_D, input.uv.x),
+        input.uv.y
     ));
 
-    float3 SkyColor = gSkyLUT.Sample(gSampler, get_sky_uv(Dir));
-    SkyColor = simple_post_process(In.uv, SkyColor);
+    float3 sky_color = sky_lut_texture.Sample(sampler_, get_sky_uv(dir));
+    sky_color = simple_post_process(input.uv, sky_color);
 
-    return float4(SkyColor, 1.0f);
+    return float4(sky_color, 1.0f);
 }
 

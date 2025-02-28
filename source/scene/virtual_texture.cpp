@@ -173,4 +173,23 @@ namespace fantasy
     {
         return (uint64_t(page.tile_id.x) << 32) | uint64_t(page.tile_id.y);
     }
+    
+    void* VTPhysicalShadowTable::get_data()
+    {
+        _data.clear();
+        for (const auto& page : _pages.list)
+        {
+            _data.push_back(uint2(
+                (page.tile_id.x << 16) | (page.tile_id.y & 0xffff),
+                (page.physical_position_in_page.x << 16) | (page.physical_position_in_page.y & 0xffff)
+            ));
+        }
+        return _data.data();
+    }
+
+    uint64_t VTPhysicalShadowTable::get_size() const
+    {
+        return _data.size();
+    }
+
 }

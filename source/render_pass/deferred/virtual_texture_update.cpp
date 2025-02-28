@@ -46,9 +46,6 @@ namespace fantasy
 			}
 		);
 
-		// TODO:设置 capacity 确保 std::vector 的内存地址不会发生变化.
-		ReturnIfFalse(cache->collect_constants("update_shadow_pages", &_update_shadow_pages));
-
 		_geometry_texture_heap = check_cast<HeapInterface>(cache->require("geometry_texture_heap"));
 		_vt_feed_back_read_back_buffer = check_cast<BufferInterface>(cache->require("vt_feed_back_read_back_buffer"));
 
@@ -57,7 +54,7 @@ namespace fantasy
 
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(14);
+			BindingLayoutItemArray binding_layout_items(13);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::VirtualTextureUpdatePassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_texture_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(1);
@@ -70,8 +67,7 @@ namespace fantasy
 			binding_layout_items[9] = BindingLayoutItem::create_texture_uav(1);
 			binding_layout_items[10] = BindingLayoutItem::create_texture_uav(2);
 			binding_layout_items[11] = BindingLayoutItem::create_texture_uav(3);
-			binding_layout_items[12] = BindingLayoutItem::create_texture_uav(4);
-			binding_layout_items[13] = BindingLayoutItem::create_sampler(0);
+			binding_layout_items[12] = BindingLayoutItem::create_sampler(0);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -121,28 +117,18 @@ namespace fantasy
 				TextureDesc::create_read_write_texture(
 					_vt_feed_back_resolution.x,
 					_vt_feed_back_resolution.y,
-					Format::RGBA32_UINT,
+					Format::RG32_UINT,
 					"vt_indirect_texture"
 				)
 			)));
 			cache->collect(_vt_indirect_texture, ResourceType::Texture);
-
-			ReturnIfFalse(_shadow_uv_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_read_write_texture(
-					CLIENT_WIDTH,
-					CLIENT_HEIGHT,
-					Format::RGB32_UINT,
-					"shadow_uv_depth_texture"
-				)
-			)));
-			cache->collect(_shadow_uv_depth_texture, ResourceType::Texture);
 		}
 
 		// Binding Set.
 		{
 			ReturnIfFalse(Material::TextureType_Num == 4);
 
-			BindingSetItemArray binding_set_items(14);
+			BindingSetItemArray binding_set_items(13);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualTextureUpdatePassConstant));
 			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("vt_page_uv_texture")));
 			binding_set_items[2] = BindingSetItem::create_texture_srv(1, _vt_indirect_texture);
@@ -155,8 +141,7 @@ namespace fantasy
 			binding_set_items[9] = BindingSetItem::create_texture_uav(1, check_cast<TextureInterface>(cache->require("base_color_texture")));
 			binding_set_items[10] = BindingSetItem::create_texture_uav(2, check_cast<TextureInterface>(cache->require("pbr_texture")));
 			binding_set_items[11] = BindingSetItem::create_texture_uav(3, check_cast<TextureInterface>(cache->require("emissive_texture")));
-			binding_set_items[12] = BindingSetItem::create_texture_uav(4, _shadow_uv_depth_texture);
-			binding_set_items[13] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
+			binding_set_items[12] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
             ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
                 BindingSetDesc{ .binding_items = binding_set_items },
                 _binding_layout
@@ -233,7 +218,7 @@ namespace fantasy
 			uint3* mapped_data = static_cast<uint3*>(_vt_feed_back_read_back_buffer->map(CpuAccessMode::Read));
 			
 			_vt_feed_back_data.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y);
-			memcpy(_vt_feed_back_data.data(), mapped_data, static_cast<uint32_t>(_vt_feed_back_data.size()) * sizeof(uint3)); 
+			memcpy(_vt_feed_back_data.data(), mapped_data, static_cast<uint32_t>(_vt_feed_back_data.size()) * sizeof(uint2)); 
 
 			_vt_feed_back_read_back_buffer->unmap();
 
@@ -245,26 +230,7 @@ namespace fantasy
 			{
 				const auto& data = _vt_feed_back_data[ix];
 
-				if (data.x == INVALID_SIZE_32 || 
-					data.y == INVALID_SIZE_32 || 
-					data.z == INVALID_SIZE_32) 
-				{
-					continue;
-				}
-
-
-				VTShadowPage shadow_page{ .tile_id = uint2(data.z >> 16, data.z & 0xffff) };
-
-				if (!_vt_shadow_physical_table.check_page_loaded(shadow_page))
-				{
-					shadow_page.physical_position_in_page = _vt_shadow_physical_table.get_new_position();
-					new_shadow_pages.insert(uint2(
-						(shadow_page.tile_id.x << 16) | (shadow_page.tile_id.y & 0xffff), 
-						(shadow_page.physical_position_in_page.x << 16) | (shadow_page.physical_position_in_page.y & 0xffff) 
-					));
-				}
-				_vt_shadow_physical_table.add_page(shadow_page);
-
+				if (data.x == INVALID_SIZE_32 || data.y == INVALID_SIZE_32)  continue;
 
 				VTPage page;
 				page.geometry_id = data.x;
@@ -297,13 +263,7 @@ namespace fantasy
 				}
 
 				_vt_physical_table.add_page(page);
-
-				_vt_indirect_table[ix] = uint4(
-					page.physical_position_in_page.x,
-					page.physical_position_in_page.y,
-					shadow_page.physical_position_in_page.x,
-					shadow_page.physical_position_in_page.y
-				);
+				_vt_indirect_table[ix] = page.physical_position_in_page;
 			}
 
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
@@ -320,20 +280,15 @@ namespace fantasy
 				);
 			}
 
-			_update_shadow_pages.clear();
-			_update_shadow_pages.insert(_update_shadow_pages.begin(), new_shadow_pages.begin(), new_shadow_pages.end());
-
 			ReturnIfFalse(cmdlist->write_texture(
 				_vt_indirect_texture.get(), 
 				0, 
 				0, 
 				_vt_indirect_table.data(), 
-				_vt_indirect_table.size() * sizeof(uint4)
+				_vt_indirect_table.size() * sizeof(uint2)
 			));
 
 			
-	        cmdlist->clear_texture_uint(_shadow_uv_depth_texture.get(), TextureSubresourceSet{}, INVALID_SIZE_32);
-        
 			uint2 thread_group_num = {
 				static_cast<uint32_t>((align(CLIENT_WIDTH, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
 				static_cast<uint32_t>((align(CLIENT_HEIGHT, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),

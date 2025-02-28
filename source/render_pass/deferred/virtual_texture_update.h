@@ -24,33 +24,26 @@ namespace fantasy
 	class VirtualTextureUpdatePass : public RenderPassInterface
 	{
 	public:
-		VirtualTextureUpdatePass() : _vt_shadow_physical_table(VT_VIRTUAL_SHADOW_RESOLUTION, VT_SHADOW_PAGE_SIZE) 
-		{ 
-			type = RenderPassType::Compute; 
-		}
+		VirtualTextureUpdatePass() {  type = RenderPassType::Compute; }
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
 	private:
 		constant::VirtualTextureUpdatePassConstant _pass_constant;
-		
-		std::vector<uint2> _update_shadow_pages;
-		VTPhysicalShadowTable _vt_shadow_physical_table;
 
 		bool _update_texture_region_cache = false;
 		VTPhysicalTable _vt_physical_table;
-		std::vector<uint4> _vt_indirect_table;
+		std::vector<uint2> _vt_indirect_table;
 
 		uint2 _vt_feed_back_resolution;
-		std::vector<uint3> _vt_feed_back_data;
+		std::vector<uint2> _vt_feed_back_data;
 		std::unordered_map<uint64_t, std::pair<TextureTilesMapping::Region, uint32_t>> _geometry_texture_region_cache;
 
 		std::shared_ptr<HeapInterface> _geometry_texture_heap;
 		
 		std::shared_ptr<BufferInterface> _vt_feed_back_read_back_buffer;
 		
-		std::shared_ptr<TextureInterface> _shadow_uv_depth_texture;
 		std::shared_ptr<TextureInterface> _vt_indirect_texture;
 		std::array<std::shared_ptr<TextureInterface>, Material::TextureType_Num> _vt_physical_textures;
 

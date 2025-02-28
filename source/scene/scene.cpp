@@ -48,13 +48,7 @@ namespace fantasy
 
 	bool SceneSystem::tick(float delta)
 	{
-		ReturnIfFalse(_world->each<Camera>(
-			[delta](Entity* entity, Camera* camera) -> bool
-			{
-				camera->handle_input(delta);
-				return true;
-			}
-		));
+		_world->get_global_entity()->get_component<Camera>()->handle_input(delta);
 
 		static uint64_t thread_id = INVALID_SIZE_64;
 		static Entity* model_entity = nullptr;

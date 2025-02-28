@@ -3,6 +3,7 @@
 cbuffer pass_constants : register(b0)
 {
     float4x4 reverse_z_view_proj;
+    float4x4 view_matrix;
     
     uint view_mode;
     uint vt_page_size;
@@ -61,7 +62,7 @@ PixelOutput main(VertexOutput input)
 
     PixelOutput output;
     output.world_position_view_depth = float4(input.world_space_position, input.view_space_position.z);
-    output.geometry_uv_miplevel_id = float4(input.uv, mip_level, input.geometry_id);
+    output.geometry_uv_miplevel_id = float4(input.uv, asfloat(mip_level), asfloat(input.geometry_id));
     output.world_space_normal = float4(input.world_space_normal, 0.0f);
     output.world_space_tangent = float4(input.world_space_tangent, 0.0f);
     output.base_color = geometry.base_color;

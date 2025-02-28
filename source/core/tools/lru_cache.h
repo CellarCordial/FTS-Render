@@ -29,10 +29,10 @@ namespace fantasy
 
         T evict()
         {
-            if (_list.empty()) assert(!"Lru is empty.");
+            if (list.empty()) assert(!"Lru is empty.");
 
-            T evict = _list.back();
-            _list.pop_back();
+            T evict = list.back();
+            list.pop_back();
 
             return evict;
         }
@@ -42,30 +42,32 @@ namespace fantasy
             auto map_iter = _map.find(key);
             if(map_iter == _map.end())
             {
-                _list.push_front(value);
-                _map.insert(std::make_pair(key, _list.begin()));
-                if(_list.size() > _capacity)
+                list.push_front(value);
+                _map.insert(std::make_pair(key, list.begin()));
+                if(list.size() > _capacity)
                 {
                     _map.erase(map_iter);
-                    _list.pop_back();
+                    list.pop_back();
                 }
             }
-            else if (_list.front() != value)
+            else if (list.front() != value)
             {
-                _list.splice(_list.begin(), _list, map_iter->second);
+                list.splice(list.begin(), list, map_iter->second);
             }
         }
 
         void reset()
         {
             _map.clear();
-            _list.clear();
+            list.clear();
         }
 
+    public:
+        std::list<T> list;
+    
     private:
         uint32_t _capacity;
         std::unordered_map<uint64_t,  const typename std::list<T>::iterator> _map;
-        std::list<T> _list;
     };
 }
 

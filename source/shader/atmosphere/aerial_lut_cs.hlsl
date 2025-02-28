@@ -1,5 +1,5 @@
-// #define THREAD_GROUP_SIZE_X 1
-// #define THREAD_GROUP_SIZE_Y 1
+#define THREAD_GROUP_SIZE_X 1
+#define THREAD_GROUP_SIZE_Y 1
 
 #include "../common/atmosphere_properties.hlsl"
 #include "../common/intersect.hlsl"
@@ -29,20 +29,18 @@ Texture2D<float3> multi_scattering_texture : register(t0);
 Texture2D<float3> transmittance_texture : register(t1);
 Texture2D<float> shadow_map_texture : register(t2);
 
-SamplerState MT_sampler : register(s0);
-SamplerState shadow_map_sampler : register(s1);
+SamplerState linear_clamp_sampler : register(s0);
+SamplerState point_clamp_sampler : register(s1);
 
 RWTexture3D<float4> aerial_perspective_lut_texture : register(u0);
 
 #if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y)
 
 
-float RelativeLuminance(float3 c)
+float relative_luminance(float3 c)
 {
     return 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
 }
-
-// TODO: fix shadow map.
 
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
 void main(uint3 thread_id : SV_DispatchThreadID)
@@ -71,72 +69,72 @@ void main(uint3 thread_id : SV_DispatchThreadID)
         intersect_ray_sphere(world_ori, dir, AP.atmosphere_radius, distance);
     }
 
-    float fSliceDepth = max_distance / depth;
-    float fBegin = 0.0f, fEnd = min(0.5f * fSliceDepth, distance);
+    float slice_depth = max_distance / depth;
+    float begin = 0.0f, end = min(0.5f * slice_depth, distance);
 
-    float3 TransmittanceSum = float3(0.0f, 0.0f, 0.0f);
-    float3 InScatterSum = float3(0.0f, 0.0f, 0.0f);
+    float3 transmittance_sum = float3(0.0f, 0.0f, 0.0f);
+    float3 scatter_sum = float3(0.0f, 0.0f, 0.0f);
 
-    float fRandom = frac(sin(dot(float2(u, v), float2(12.9898f, 78.233f) * 2.0f)) * 43758.5453f);
+    float random = frac(sin(dot(float2(u, v), float2(12.9898f, 78.233f) * 2.0f)) * 43758.5453f);
 
     for (uint z = 0; z < depth; ++z)
     {
-        float dt = (fEnd - fBegin) / per_slice_march_step_count;
-        float t = fBegin;
+        float dt = (end - begin) / per_slice_march_step_count;
+        float t = begin;
         for (uint ix = 0; ix < per_slice_march_step_count; ++ix)
         {
-            float fNextT = t + dt;
-            float fMidT = lerp(t, fNextT, fRandom);
+            float next_t = t + dt;
+            float mid_t = lerp(t, next_t, random);
 
-            float3 Pos = world_ori + dir * fMidT;
-            float height = length(Pos) - AP.planet_radius;
+            float3 pos = world_ori + dir * mid_t;
+            float height = length(pos) - AP.planet_radius;
 
             float3 transmittance;
-            float3 InScatter;
-            get_scatter_transmittance(AP, height, InScatter, transmittance);
+            float3 in_scatter;
+            get_scatter_transmittance(AP, height, in_scatter, transmittance);
 
-            float3 DeltaTransmittance = dt * transmittance;
-            float3 EyeTransmittance = exp(-TransmittanceSum - 0.5f * DeltaTransmittance);
+            float3 delta_transimittance = dt * transmittance;
+            float3 eye_transimittance = exp(-transmittance_sum - 0.5f * delta_transimittance);
             float2 uv = get_transmittance_uv(AP, height, sun_theta);
 
-            if (!intersect_ray_sphere(Pos, -sun_dir, AP.planet_radius))
+            if (!intersect_ray_sphere(pos, -sun_dir, AP.planet_radius))
             {
-                float3 ShadowPos = camera_position + dir * fMidT / world_scale;
-                float4 shadow_clip = mul(float4(ShadowPos, 1.0f), shadow_view_proj);
+                float3 shadow_pos = camera_position + dir * mid_t / world_scale;
+                float4 shadow_clip = mul(float4(shadow_pos, 1.0f), shadow_view_proj);
                 float2 shadow_ndc = shadow_clip.xy / shadow_clip.w;
                 float2 shadow_uv = 0.5f + float2(0.5f, -0.5f) * shadow_ndc;
 
-                bool bInShdow = bool(enable_shadow);
-                if (bInShdow && all(saturate(shadow_uv) == shadow_uv))
+                bool in_shadow = bool(enable_shadow);
+                if (in_shadow && all(saturate(shadow_uv) == shadow_uv))
                 {
-                    float fRayZ = shadow_clip.z;
-                    float fShadowMapZ = shadow_map_texture.SampleLevel(shadow_map_sampler, shadow_uv, 0);
-                    bInShdow = fRayZ >= fShadowMapZ;
+                    float ray_z = shadow_clip.z;
+                    float shadow_map_z = shadow_map_texture.SampleLevel(point_clamp_sampler, shadow_uv, 0);
+                    in_shadow = ray_z >= shadow_map_z;
                 }
 
-                if (!bInShdow)
+                if (!in_shadow)
                 {
-                    float3 Phase = estimate_phase_func(AP, height, cos_theta);
-                    float3 SunTransmittance = transmittance_texture.SampleLevel(MT_sampler, uv, 0);
+                    float3 phase = estimate_phase_func(AP, height, cos_theta);
+                    float3 sun_transmittance = transmittance_texture.SampleLevel(linear_clamp_sampler, uv, 0);
 
-                    InScatterSum += dt * (EyeTransmittance * InScatter * Phase) * SunTransmittance;
+                    scatter_sum += dt * (eye_transimittance * in_scatter * phase) * sun_transmittance;
                 }
             }
 
             if (bool(enable_multi_scattering))
             {
-                float3 MultiScattering = multi_scattering_texture.SampleLevel(MT_sampler, uv, 0);
-                InScatterSum += dt * EyeTransmittance * InScatter * MultiScattering;
+                float3 multi_scattering = multi_scattering_texture.SampleLevel(linear_clamp_sampler, uv, 0);
+                scatter_sum += dt * eye_transimittance * in_scatter * multi_scattering;
             }
 
-            TransmittanceSum += DeltaTransmittance;
-            t = fNextT;
+            transmittance_sum += delta_transimittance;
+            t = next_t;
         }
 
-        aerial_perspective_lut_texture[uint3(thread_id.xy, z)] = float4(InScatterSum, RelativeLuminance(exp(-TransmittanceSum)));
+        aerial_perspective_lut_texture[uint3(thread_id.xy, z)] = float4(scatter_sum, relative_luminance(exp(-transmittance_sum)));
 
-        fBegin = fEnd;
-        fEnd = min(fEnd + fSliceDepth, distance);
+        begin = end;
+        end = min(end + slice_depth, distance);
     }
 }
 
