@@ -32,7 +32,7 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     uint geometry_id = asuint(geometry_uv_miplevel_id.w);
 
     uint2 feed_back_id = pixel_id / VT_FEED_BACK_SCALE_FACTOR;
-    bool feed_back = all(pixel_id == feed_back_id * VT_FEED_BACK_SCALE_FACTOR + 2); 
+    bool feed_back = all(pixel_id == feed_back_id * VT_FEED_BACK_SCALE_FACTOR + VT_FEED_BACK_SCALE_FACTOR / 2); 
     uint feed_back_index = feed_back_id.x + feed_back_id.y * (client_width / VT_FEED_BACK_SCALE_FACTOR);
 
     uint2 page_uv = uint2(INVALID_SIZE_32, INVALID_SIZE_32);
