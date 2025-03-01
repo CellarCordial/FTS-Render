@@ -24,7 +24,7 @@ namespace fantasy
 	class VirtualTextureUpdatePass : public RenderPassInterface
 	{
 	public:
-		VirtualTextureUpdatePass() {  type = RenderPassType::Compute; }
+		VirtualTextureUpdatePass() {  type = RenderPassType::Compute | RenderPassType::Immediately; }
 
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;

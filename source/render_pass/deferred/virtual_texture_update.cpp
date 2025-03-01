@@ -29,6 +29,7 @@ namespace fantasy
 		_vt_feed_back_read_back_buffer = check_cast<BufferInterface>(cache->require("vt_feed_back_read_back_buffer"));
 
 		_vt_feed_back_resolution = { CLIENT_WIDTH / VT_FEED_BACK_SCALE_FACTOR, CLIENT_HEIGHT / VT_FEED_BACK_SCALE_FACTOR };
+		_vt_feed_back_data.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y);
 		_vt_indirect_table.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y);
 
 		ReturnIfFalse(cache->collect_constants("vt_new_shadow_pages", &_vt_new_shadow_pages));
@@ -150,12 +151,8 @@ namespace fantasy
         if (SceneSystem::loaded_submesh_count != 0)
 		{
 			uint3* mapped_data = static_cast<uint3*>(_vt_feed_back_read_back_buffer->map(CpuAccessMode::Read));
-			
-			_vt_feed_back_data.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y);
 			memcpy(_vt_feed_back_data.data(), mapped_data, static_cast<uint32_t>(_vt_feed_back_data.size()) * sizeof(uint3)); 
-
 			_vt_feed_back_read_back_buffer->unmap();
-
 
 			std::array<TextureTilesMapping, Material::TextureType_Num> tile_mappings;
 

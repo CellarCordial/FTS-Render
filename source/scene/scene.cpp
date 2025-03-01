@@ -48,6 +48,8 @@ namespace fantasy
 
 	bool SceneSystem::tick(float delta)
 	{
+		if (!_init_scene_loaded) load_init_scene();
+
 		_world->get_global_entity()->get_component<Camera>()->handle_input(delta);
 
 		static uint64_t thread_id = INVALID_SIZE_64;
@@ -55,12 +57,12 @@ namespace fantasy
 
 		if (gui::has_file_selected())
 		{
+			std::string file_path = gui::get_selected_file_path();
+			std::string model_name = file_path.substr(file_path.find("asset"));
+			replace_back_slashes(model_name);
+
 			if (model_entity == nullptr)
 			{
-				std::string file_path = gui::get_selected_file_path();
-				std::string model_name = file_path.substr(file_path.find("asset"));
-				replace_back_slashes(model_name);
-
 				if (!_loaded_model_names.contains(model_name))
 				{
 					model_entity = _world->create_entity_delay();
@@ -97,6 +99,70 @@ namespace fantasy
 		return true;
 	}
 
+	void SceneSystem::confirm_init_models(const std::vector<std::string>& model_paths)
+	{
+		assert(_init_models.empty());
+		_init_models.insert(_init_models.end(), model_paths.begin(), model_paths.end());
+	}
+
+	bool SceneSystem::load_init_scene()
+	{
+		Entity* entity = _world->create_entity();
+
+		std::string proj_dir = PROJ_DIR;
+
+		for (const auto& model_path : _init_models)
+		{
+			Assimp::Importer assimp_importer;
+
+			assimp_scene = assimp_importer.ReadFile(
+				proj_dir + model_path, 
+				aiProcess_Triangulate | 
+				aiProcess_GenSmoothNormals | 
+				aiProcess_FlipUVs |
+				aiProcess_CalcTangentSpace
+			);
+	
+			if(!assimp_scene || assimp_scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !assimp_scene->mRootNode)
+			{
+				LOG_ERROR("Failed to load model.");
+				LOG_ERROR(assimp_importer.GetErrorString());
+				return false;
+			}
+	
+			std::string model_name = remove_file_extension(model_path.c_str());
+	
+			_sdf_data_path = proj_dir + "asset/cache/distance_field/" + model_name + ".sdf";
+			_surface_cache_path = proj_dir + "asset/cache/surface_cache/" + model_name + ".sc";
+			_model_directory = model_path.substr(0, model_path.find_last_of('/') + 1);
+	
+			entity->assign<std::string>(model_name);
+			entity->assign<Mesh>();
+			entity->assign<Material>();
+			entity->assign<Transform>();
+			entity->assign<VirtualMesh>();
+			// entity->assign<SurfaceCache>();
+			// entity->assign<DistanceField>();
+			
+			_loaded_model_names.insert(model_path);
+			
+			DirectionalLight* light = _world->get_global_entity()->get_component<DirectionalLight>();
+			light->direction_offset = (_scene_sphere.radius);
+			light->update_direction_view_proj();
+	
+			
+			uint32_t* available_task_num = entity->assign<uint32_t>(1);
+			// ReturnIfFalse(_global_entity->get_component<event::GenerateSdf>()->broadcast(entity));
+			ReturnIfFalse(_global_entity->get_component<event::GenerateMipmap>()->broadcast(entity));
+		}
+
+		loaded_submesh_count = _current_submesh_count;
+		ReturnIfFalse(_global_entity->get_component<event::AddModel>()->broadcast());
+
+		_init_scene_loaded = true;
+		return true;
+	}
+	
 	bool SceneSystem::publish(World* world, const event::OnModelLoad& event)
 	{
 		std::string proj_dir = PROJ_DIR;

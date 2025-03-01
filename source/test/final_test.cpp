@@ -17,6 +17,7 @@
 #include "../render_pass/atmosphere/sun_disk.h"
 #include "../render_pass/atmosphere/sky_lut.h"
 #include "../render_pass/atmosphere/sky.h"
+#include "test_base.h"
 
 namespace fantasy
 {	
@@ -131,6 +132,11 @@ namespace fantasy
 		return true;
 	}
 
+	FinalTest::FinalTest(GraphicsAPI api) : TestBase(api)
+	{
+		_init_model_paths.emplace_back("asset/model/Suzanne/Suzanne.gltf");
+	}
+
     RenderPassInterface* FinalTest::init_render_pass(RenderGraph* render_graph)
     {
 		RenderPassInterface* transmittance_lut_pass = render_graph->add_pass(std::make_shared<TransmittanceLUTPass>());
@@ -164,6 +170,9 @@ namespace fantasy
 
 		World* world = render_graph->get_resource_cache()->get_world();
 		constant::AtmosphereProperties* properties = world->get_global_entity()->assign<constant::AtmosphereProperties>();
+
+
+
 
 		return sun_disk_pass;
     }

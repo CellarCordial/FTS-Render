@@ -33,9 +33,12 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     uint2 pixel_id = thread_id.xy;
 
     float4 geometry_uv_miplevel_id = geometry_uv_miplevel_id_texture[pixel_id];
+    uint geometry_id = asuint(geometry_uv_miplevel_id.w);
+
+    if (geometry_id == INVALID_SIZE_32) return;
+
     float2 uv = geometry_uv_miplevel_id.xy;
     uint mip_level = asuint(geometry_uv_miplevel_id.z);
-    uint geometry_id = asuint(geometry_uv_miplevel_id.w);
 
     uint2 feed_back_id = pixel_id / VT_FEED_BACK_SCALE_FACTOR;
     bool feed_back = all(pixel_id == feed_back_id * VT_FEED_BACK_SCALE_FACTOR + VT_FEED_BACK_SCALE_FACTOR / 2); 

@@ -53,7 +53,6 @@ namespace fantasy
 
     bool TestBase::run()
     {
-        
         ReturnIfFalse(_render_graph->compile());
 		while (!glfwWindowShouldClose(_window))
 		{
@@ -88,7 +87,10 @@ namespace fantasy
 
     bool TestBase::init_scene()
     {
-		_world.register_system(new SceneSystem());
+		SceneSystem* system = new SceneSystem();
+		_world.register_system(system);
+
+		system->confirm_init_models(_init_model_paths);
 		auto* camera = _world.get_global_entity()->assign<Camera>(_window);
         gui::add(
             [camera]()

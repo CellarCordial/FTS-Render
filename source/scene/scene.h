@@ -34,6 +34,14 @@ namespace fantasy
 		bool publish(World* world, const event::OnComponentAssigned<SurfaceCache>& event) override;
 		bool publish(World* world, const event::OnComponentAssigned<DistanceField>& event) override;
 
+		void confirm_init_models(const std::vector<std::string>& model_paths);
+
+	private:
+		bool load_init_scene();
+
+		bool _init_scene_loaded = false;
+		std::vector<std::string> _init_models;
+
 	public:
 		inline static uint32_t loaded_submesh_count = 0;
 	

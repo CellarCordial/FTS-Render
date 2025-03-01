@@ -47,12 +47,18 @@ namespace fantasy
 
 		bool create_device();
 		bool create_swapchain();
-    private:
-        Timer _timer;
-        World _world;
-        GLFWwindow* _window = nullptr;
-        GraphicsAPI _api;
 
+    public:
+        std::vector<std::string> _init_model_paths;
+
+    private:
+        GLFWwindow* _window = nullptr;
+        Timer _timer;
+        
+        World _world;
+        
+        GraphicsAPI _api;
+        
         // D3D12.
         Microsoft::WRL::ComPtr<IDXGISwapChain> _d3d12_swap_chain;
         uint32_t _current_back_buffer_index = 0;

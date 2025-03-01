@@ -193,7 +193,7 @@ namespace fantasy
         {
             return file_brower->HasSelected();
         }
-
+        
         std::string get_selected_file_path()
         {
             std::string str = file_brower->GetSelected().string();

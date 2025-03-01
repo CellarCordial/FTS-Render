@@ -147,10 +147,6 @@ namespace fantasy
 			
 			ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constant));
 			
-			
-			uint32_t feed_back_buffer_element_num = 
-				(CLIENT_WIDTH / VT_FEED_BACK_SCALE_FACTOR) * (CLIENT_HEIGHT / VT_FEED_BACK_SCALE_FACTOR);
-	
 			cmdlist->copy_buffer(
 				_vt_feed_back_read_back_buffer.get(), 
 				0, 
