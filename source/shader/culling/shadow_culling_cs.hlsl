@@ -9,10 +9,10 @@ cbuffer pass_constants : register(b0)
 {
     float4x4 shadow_view_matrix;
     
-    uint group_count;
-    float far_plane;
-    float near_plane;
     uint packed_shadow_page_id;
+    uint group_count;
+    float near_plane;
+    float far_plane;
 
     uint cluster_tirangle_num;
     float shadow_orthographic_length;
@@ -62,7 +62,6 @@ void main(uint3 thread_id : SV_DispatchThreadID)
                 1,
                 current_pos
             );
-            current_pos++;
 
             vt_shadow_draw_indirect_buffer[0].vertex_count = cluster_tirangle_num * 3;
             vt_shadow_visible_cluster_buffer[current_pos] = uint2(

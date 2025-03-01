@@ -43,23 +43,6 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     uint2 indirect_uv = pixel_id / VT_FEED_BACK_SCALE_FACTOR;
     uint2 page_coordinate = vt_indirect_texture[indirect_uv];
 
-    // if (any(page_coordinate == INVALID_SIZE_32))
-    // {
-    //     // 如果没有命中 indirect address, 则按 x 型向四周搜索.
-    //     int factor = VT_FEED_BACK_SCALE_FACTOR;
-    //     for (int offset = 1; offset <= factor; ++offset)
-    //     {
-    //         page_coordinate = vt_indirect_texture[indirect_uv + uint2(-offset, -offset)];
-    //         if (all(page_coordinate != INVALID_SIZE_32)) break;
-    //         page_coordinate = vt_indirect_texture[indirect_uv + uint2(offset, -offset)];
-    //         if (all(page_coordinate != INVALID_SIZE_32)) break;
-    //         page_coordinate = vt_indirect_texture[indirect_uv + uint2(-offset, offset)];
-    //         if (all(page_coordinate != INVALID_SIZE_32)) break;
-    //         page_coordinate = vt_indirect_texture[indirect_uv + uint2(offset, offset)];
-    //         if (all(page_coordinate != INVALID_SIZE_32)) break;
-    //     }
-    // }
-
     float2 physical_uv = float2(page_uv + page_coordinate.xy * vt_page_size) / vt_physical_texture_size;
 
     float3 world_space_normal = calculate_normal(

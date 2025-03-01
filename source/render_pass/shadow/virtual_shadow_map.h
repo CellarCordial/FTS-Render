@@ -4,13 +4,14 @@
 #include "../../render_graph/render_pass.h"
 #include "../../scene/virtual_texture.h"
 #include "../../scene/virtual_mesh.h"
+#include "../../scene/light.h"
 #include <memory>
 
 namespace fantasy
 {
 	namespace constant
 	{
-		struct ShadowTileCullingConstant
+		struct ShadowCullingConstant
 		{
 			float4x4 shadow_view_matrix;
 			
@@ -23,7 +24,7 @@ namespace fantasy
 			float shadow_orthographic_length = 0.0f;
 		};
 
-		struct VirtualShadowMapPassConstant
+		struct ShadowPassConstant
 		{
 			float4x4 view_proj;
 			float4x4 view_matrix;
@@ -41,13 +42,18 @@ namespace fantasy
 
 	private:
 		bool _resource_writed = false;
+		
+		DirectionalLight* _directional_light = nullptr;
 		uint32_t* _cluster_group_count = nullptr;
-		std::vector<uint2>* _update_shadow_pages = nullptr;
-		std::vector<float4x4> _shadow_tile_view_matrixs;
-		constant::VirtualShadowMapPassConstant _pass_constant;
-		std::vector<constant::ShadowTileCullingConstant> _cull_pass_constants;
+
+		constant::ShadowPassConstant _pass_constant;
+
 
 		// Culling Pass.
+		std::vector<float4x4> _shadow_tile_view_matrixs;
+		std::vector<uint2>* _update_shadow_pages = nullptr;
+		std::vector<constant::ShadowCullingConstant> _cull_pass_constants;
+
         std::shared_ptr<BufferInterface> _vt_shadow_draw_indirect_buffer;
         std::shared_ptr<BufferInterface> _vt_shadow_visible_cluster_buffer;
 
@@ -62,21 +68,31 @@ namespace fantasy
 
 
 		// Shadow Map Pass.
+		uint32_t _normal_shadow_map_resolution = 2048;
+		constant::ShadowCullingConstant _shadow_map_cull_constant;
+
+		std::shared_ptr<TextureInterface> _shadow_map_texture;
+		
+		std::unique_ptr<FrameBufferInterface> _shadow_map_frame_buffer;
+		std::unique_ptr<GraphicsPipelineInterface> _shadow_map_pipeline;
+		GraphicsState _shadow_map_graphics_state;
+
+		
+		// Virtual Shadow Pass.
 		std::shared_ptr<TextureInterface> _vt_physical_shadow_texture;
 		std::shared_ptr<TextureInterface> _black_render_target_texture;
 		
-		BindingSetItemArray _binding_set_items;
-		std::shared_ptr<BindingLayoutInterface> _binding_layout;
-
-		std::shared_ptr<Shader> _vs;
-		std::shared_ptr<Shader> _ps;
-
-		std::unique_ptr<FrameBufferInterface> _frame_buffer;
-		std::unique_ptr<GraphicsPipelineInterface> _pipeline;
-
-		std::unique_ptr<BindingSetInterface> _binding_set;
-		GraphicsState _graphics_state;
-        DrawArguments _draw_arguments;
+		std::shared_ptr<BindingLayoutInterface> _virtual_shadow_binding_layout;
+		
+		std::shared_ptr<Shader> _virtual_shadow_vs;
+		std::shared_ptr<Shader> _virtual_shadow_ps;
+		
+		std::unique_ptr<FrameBufferInterface> _virtual_shadow_frame_buffer;
+		std::unique_ptr<GraphicsPipelineInterface> _virtual_shadow_pipeline;
+		
+		BindingSetItemArray _virtual_shadow_binding_set_items;
+		std::unique_ptr<BindingSetInterface> _virtual_shadow_binding_set;
+		GraphicsState _virtual_shadow_graphics_state;
 	};
 }
 

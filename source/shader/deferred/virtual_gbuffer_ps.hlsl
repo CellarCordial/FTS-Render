@@ -51,7 +51,7 @@ PixelOutput main(VertexOutput input)
     uint mip_level = INVALID_SIZE_32;
 
     GeometryConstant geometry = geometry_constant_buffer[input.geometry_id];
-    if (all(geometry.texture_resolution != 0))
+    if (geometry.texture_resolution != 0)
     {
         mip_level = estimate_mip_level(input.uv * geometry.texture_resolution);
         if (geometry.texture_resolution >> mip_level < vt_page_size)
