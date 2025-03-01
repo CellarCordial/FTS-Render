@@ -45,6 +45,7 @@ namespace fantasy
 		std::string _surface_cache_path;
 		uint32_t _current_submesh_count = 0;
 
+		Sphere _scene_sphere;
 		std::unordered_set<std::string> _loaded_model_names;
 
 		const aiScene* assimp_scene = nullptr;

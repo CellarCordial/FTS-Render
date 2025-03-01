@@ -1,5 +1,6 @@
 // #define THREAD_GROUP_SIZE_X 1
 // #define THREAD_GROUP_SIZE_Y 1
+// #define REVERSE_Z_BUFFER
 
 #include "../common/math.hlsl"
 
@@ -16,7 +17,7 @@ Texture2D<float> reverse_depth_texture : register(t0);
 RWTexture2D<float> hierarchical_zbuffer_texture[] : register(u0);
 
 
-#if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y)
+#if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y) && defined(REVERSE_Z_BUFFER)
 
 
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
@@ -37,7 +38,11 @@ void main(uint3 thread_id: SV_DispatchThreadID)
         z2 = reverse_depth_texture.Sample(linear_clamp_sampler, (client_uv + 0.5f + uint2(1, 1)) / client_resolution);
         z3 = reverse_depth_texture.Sample(linear_clamp_sampler, (client_uv + 0.5f + uint2(0, 1)) / client_resolution);
 
+#if REVERSE_Z_BUFFER
         hierarchical_zbuffer_texture[calc_mip_level][uv] = min4(z0, z1, z2, z3);
+#else
+        hierarchical_zbuffer_texture[calc_mip_level][uv] = max4(z0, z1, z2, z3);
+#endif
     }
     else
     {
@@ -47,7 +52,11 @@ void main(uint3 thread_id: SV_DispatchThreadID)
         z2 = hierarchical_zbuffer_texture[calc_mip_level - 1][uv + uint2(1, 1)].r;
         z3 = hierarchical_zbuffer_texture[calc_mip_level - 1][uv + uint2(0, 1)].r;
 
+#if REVERSE_Z_BUFFER
         hierarchical_zbuffer_texture[calc_mip_level][uv >> 1] = min4(z0, z1, z2, z3);
+#else
+        hierarchical_zbuffer_texture[calc_mip_level][uv >> 1] = max4(z0, z1, z2, z3);
+#endif
     }
 }
 

@@ -14,7 +14,7 @@ namespace fantasy
         _hierarchical_zbuffer_texture = check_cast<TextureInterface>(cache->require("hierarchical_zbuffer_texture"));
 
         uint32_t texture_mip_levels = _hierarchical_zbuffer_texture->get_desc().mip_levels;
-        _pass_constants.resize(texture_mip_levels + 1);
+        _pass_constants.resize(texture_mip_levels);
 
 		// Binding Layout.
 		{
@@ -37,19 +37,15 @@ namespace fantasy
 			cs_compile_desc.shader_name = "culling/hierarchical_zbuffer_update_cs.hlsl";
 			cs_compile_desc.entry_point = "main";
 			cs_compile_desc.target = ShaderTarget::Compute;
-			cs_compile_desc.defines.resize(3);
-			cs_compile_desc.defines[0] = "THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X);
-			cs_compile_desc.defines[1] = "THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y);
-
-			cs_compile_desc.defines[2] = "COPY_DEPTH=" + std::to_string(0);
-			ShaderData calc_mip_cs_data = compile_shader(cs_compile_desc);
-			cs_compile_desc.defines[2] = "COPY_DEPTH=" + std::to_string(1);
-			ShaderData copy_depth_cs_data = compile_shader(cs_compile_desc);
+			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
+			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
+			cs_compile_desc.defines.push_back("REVERSE_Z_BUFFER=1");
+			ShaderData cs_data = compile_shader(cs_compile_desc);
 
 			ShaderDesc cs_desc;
 			cs_desc.entry = "main";
 			cs_desc.shader_type = ShaderType::Compute;
-			ReturnIfFalse(_cs = std::unique_ptr<Shader>(create_shader(cs_desc, calc_mip_cs_data.data(), calc_mip_cs_data.size())));
+			ReturnIfFalse(_cs = std::unique_ptr<Shader>(create_shader(cs_desc, cs_data.data(), cs_data.size())));
 		}
 
 		// Pipeline.

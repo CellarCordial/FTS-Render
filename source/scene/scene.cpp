@@ -134,6 +134,11 @@ namespace fantasy
 		
 		_loaded_model_names.insert(event.model_path);
 		
+		DirectionalLight* light = _world->get_global_entity()->get_component<DirectionalLight>();
+		light->direction_offset = (_scene_sphere.radius);
+		light->update_direction_view_proj();
+
+		
 		uint32_t* available_task_num = event.entity->assign<uint32_t>(1);
 		// ReturnIfFalse(_global_entity->get_component<event::GenerateSdf>()->broadcast(event.entity));
 		ReturnIfFalse(_global_entity->get_component<event::GenerateMipmap>()->broadcast(event.entity));

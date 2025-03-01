@@ -14,14 +14,24 @@ namespace fantasy
 		struct ShadowCullingConstant
 		{
 			float4x4 shadow_view_matrix;
+			float4x4 shadow_proj_matrix;
 			
 			uint32_t packed_shadow_page_id = 0;
             uint32_t group_count = 0;
             float near_plane = 0.0f;
             float far_plane = 0.0f;
 			
-            uint32_t cluster_tirangle_num = MeshCluster::cluster_tirangle_num;
 			float shadow_orthographic_length = 0.0f;
+            uint32_t cluster_tirangle_num = MeshCluster::cluster_tirangle_num;
+			uint32_t shadow_map_resolution = 0;
+			uint32_t hzb_resolution = 0;
+		};
+
+		struct ShadowHiZUpdatePassConstant
+		{
+            uint2 shadow_map_resolution;
+            uint32_t hzb_resolution = 0;
+            uint32_t last_mip_level = 0;
 		};
 
 		struct ShadowPassConstant
@@ -42,7 +52,7 @@ namespace fantasy
 
 	private:
 		bool _resource_writed = false;
-		
+
 		DirectionalLight* _directional_light = nullptr;
 		uint32_t* _cluster_group_count = nullptr;
 
@@ -68,7 +78,7 @@ namespace fantasy
 
 
 		// Shadow Map Pass.
-		uint32_t _normal_shadow_map_resolution = 2048;
+		uint32_t _shadow_map_resolution = 2048;
 		constant::ShadowCullingConstant _shadow_map_cull_constant;
 
 		std::shared_ptr<TextureInterface> _shadow_map_texture;
@@ -77,6 +87,21 @@ namespace fantasy
 		std::unique_ptr<GraphicsPipelineInterface> _shadow_map_pipeline;
 		GraphicsState _shadow_map_graphics_state;
 
+
+		// Hi-Z Update Pass.
+		uint32_t _shadow_hzb_resolution = 1024;
+		std::shared_ptr<TextureInterface> _shadow_hi_z_texture;
+
+		std::vector<constant::ShadowHiZUpdatePassConstant> _hi_z_update_pass_constants;
+
+		std::shared_ptr<BindingLayoutInterface> _hi_z_update_binding_layout;
+
+		std::shared_ptr<Shader> _hi_z_update_cs;
+		std::unique_ptr<ComputePipelineInterface> _hi_z_update_pipeline;
+
+		std::unique_ptr<BindingSetInterface> _hi_z_update_binding_set;
+		ComputeState _hi_z_update_compute_state;
+		
 		
 		// Virtual Shadow Pass.
 		std::shared_ptr<TextureInterface> _vt_physical_shadow_texture;

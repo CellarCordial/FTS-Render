@@ -110,6 +110,10 @@ namespace fantasy
 			submeshes.size()
 		);
 
+		for (const auto& submesh : submeshes)
+		{
+			_scene_sphere = merge(_scene_sphere, submesh.bounding_sphere);
+		}
 		return true;
 	}
 
