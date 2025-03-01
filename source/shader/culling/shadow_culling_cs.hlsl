@@ -94,22 +94,30 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     MeshClusterGroup group = mesh_cluster_group_buffer[group_index];
 
     float pixel_length = shadow_orthographic_length / shadow_map_resolution;
-    if (pixel_length < group.max_parent_lod_error)  // check lod.
+
+#if HI_Z_CULLING
+    bool visible = pixel_length < group.max_parent_lod_error;
+#else
+    bool visible = group.mip_level == group.max_mip_level - 1;
+#endif
+
+    if (visible)
     {
         for (uint ix = 0; ix < group.cluster_count; ++ix)
         {
             uint cluster_id = group.cluster_index_offset + ix;
             MeshCluster cluster = mesh_cluster_buffer[cluster_id];
             
-            // check lod.
-            if (pixel_length < cluster.lod_error) return;
+#if HI_Z_CULLING
+            if (pixel_length < cluster.lod_error) return;   // check lod.
+#endif
 
             float3 cluster_view_space_position = mul(
                 float4(cluster.bounding_sphere.xyz, 1.0f), 
                 shadow_view_matrix
             ).xyz;
 
-            bool visible = tile_cull(cluster_view_space_position, cluster.bounding_sphere.w);
+            visible = tile_cull(cluster_view_space_position, cluster.bounding_sphere.w);
 #if HI_Z_CULLING
             visible = hierarchical_zbuffer_cull(cluster_view_space_position, cluster.bounding_sphere.w);
 #endif

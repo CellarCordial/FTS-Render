@@ -37,7 +37,6 @@ namespace fantasy
 		struct ShadowPassConstant
 		{
 			float4x4 view_proj;
-			float4x4 view_matrix;
 			uint32_t page_size = VT_SHADOW_PAGE_SIZE;
 		};
 	}
@@ -52,11 +51,10 @@ namespace fantasy
 
 	private:
 		bool _resource_writed = false;
+		bool _update_shadow_map = true;
 
 		DirectionalLight* _directional_light = nullptr;
 		uint32_t* _cluster_group_count = nullptr;
-
-		constant::ShadowPassConstant _pass_constant;
 
 		std::vector<VTShadowPage>* _vt_new_shadow_pages;
 
@@ -83,6 +81,7 @@ namespace fantasy
 
 		// Shadow Map Pass.
 		uint32_t _shadow_map_resolution = 2048;
+		constant::ShadowPassConstant _shadow_map_constants;
 		constant::ShadowCullingConstant _shadow_map_cull_constant;
 
 		std::shared_ptr<TextureInterface> _shadow_map_texture;
@@ -108,7 +107,10 @@ namespace fantasy
 		
 		
 		// Virtual Shadow Pass.
+		std::vector<constant::ShadowPassConstant> _virtual_shadow_pass_constants;
+
 		std::shared_ptr<TextureInterface> _vt_physical_shadow_texture;
+		std::shared_ptr<TextureInterface> _vt_physical_shadow_float_texture;
 		std::shared_ptr<TextureInterface> _black_render_target_texture;
 		
 		std::shared_ptr<BindingLayoutInterface> _virtual_shadow_binding_layout;

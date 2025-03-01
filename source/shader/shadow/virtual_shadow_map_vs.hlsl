@@ -4,7 +4,6 @@
 cbuffer pass_constants : register(b0)
 {
     float4x4 view_proj;
-    float4x4 view_matrix;
     uint page_size;
 };
 
@@ -25,7 +24,6 @@ StructuredBuffer<uint> cluster_triangle_buffer : register(t4);
 struct VertexOutput
 {
     float4 sv_position : SV_Position;
-    float3 view_space_position : VIEW_POSITION;
     uint2 page_id : PAGE_ID;
 };
 
@@ -52,7 +50,6 @@ VertexOutput main(uint instance_id: SV_InstanceID, uint vertex_index : SV_Vertex
     float4 world_pos = mul(float4(vertex.position, 1.0f), geometry_constant_buffer[cluster.geometry_id].world_matrix);
 
     output.sv_position = mul(world_pos, view_proj);
-    output.view_space_position = mul(world_pos, view_matrix).xyz;
-    output.page_id = visible_info.y;
+    output.page_id = uint2(visible_info.y >> 16, visible_info.y & 0xffff);
     return output;
 }

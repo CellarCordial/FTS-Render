@@ -44,8 +44,8 @@ namespace fantasy
         float4x4 proj_matrix;
 
         float near_plane = 0.1f;
-        float far_plane = 50.0f;
-        float orthographic_length = 20.0f;
+        float far_plane = 100.0f;
+        float orthographic_length = 100.0f;
         float direction_offset = 20.0f;
 
         
