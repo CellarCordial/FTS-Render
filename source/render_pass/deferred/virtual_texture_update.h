@@ -29,15 +29,24 @@ namespace fantasy
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
+		bool finish_pass(RenderResourceCache* cache) override;
+
+	private: 
+		bool update_texture_region_cache(RenderResourceCache* cache);
+
 	private:
 		constant::VirtualTextureUpdatePassConstant _pass_constant;
 
+		std::vector<uint4> _vt_indirect_table;
+
+		std::vector<VTShadowPage> _vt_new_shadow_pages;
+		VTPhysicalShadowTable _vt_physical_shadow_table;
+
 		bool _update_texture_region_cache = false;
 		VTPhysicalTable _vt_physical_table;
-		std::vector<uint2> _vt_indirect_table;
 
 		uint2 _vt_feed_back_resolution;
-		std::vector<uint2> _vt_feed_back_data;
+		std::vector<uint3> _vt_feed_back_data;
 		std::unordered_map<uint64_t, std::pair<TextureTilesMapping::Region, uint32_t>> _geometry_texture_region_cache;
 
 		std::shared_ptr<HeapInterface> _geometry_texture_heap;

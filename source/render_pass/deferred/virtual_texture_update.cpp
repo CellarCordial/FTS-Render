@@ -2,29 +2,8 @@
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
 #include "../../scene/scene.h"
-#include <array>
-#include <cstdint>
 #include <cstring>
-#include <memory>
-#include <unordered_set>
-#include <utility>
-#include <vector>
 
-
-namespace std 
-{
-	template<>
-	struct hash<fantasy::uint2> 
-	{
-		size_t operator()(const fantasy::uint2& key) const 
-		{
-			uint32_t hash_0 = hash<uint32_t>()(key.x);
-			uint32_t hash_1 = hash<uint32_t>()(key.y);
-
-			return (uint64_t(hash_0) << 32) | uint64_t(hash_1);
-		}
-	};
-}
 
 namespace fantasy
 {
@@ -51,6 +30,8 @@ namespace fantasy
 
 		_vt_feed_back_resolution = { CLIENT_WIDTH / VT_FEED_BACK_SCALE_FACTOR, CLIENT_HEIGHT / VT_FEED_BACK_SCALE_FACTOR };
 		_vt_indirect_table.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y);
+
+		ReturnIfFalse(cache->collect_constants("vt_new_shadow_pages", &_vt_new_shadow_pages));
 
 		// Binding Layout.
 		{
@@ -117,7 +98,7 @@ namespace fantasy
 				TextureDesc::create_read_write_texture(
 					_vt_feed_back_resolution.x,
 					_vt_feed_back_resolution.y,
-					Format::RG32_UINT,
+					Format::RGBA32_UINT,
 					"vt_indirect_texture"
 				)
 			)));
@@ -161,6 +142,122 @@ namespace fantasy
 	}
 
 	bool VirtualTextureUpdatePass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
+	{
+		ReturnIfFalse(update_texture_region_cache(cache));
+
+		ReturnIfFalse(cmdlist->open());
+		
+        if (SceneSystem::loaded_submesh_count != 0)
+		{
+			uint3* mapped_data = static_cast<uint3*>(_vt_feed_back_read_back_buffer->map(CpuAccessMode::Read));
+			
+			_vt_feed_back_data.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y);
+			memcpy(_vt_feed_back_data.data(), mapped_data, static_cast<uint32_t>(_vt_feed_back_data.size()) * sizeof(uint3)); 
+
+			_vt_feed_back_read_back_buffer->unmap();
+
+
+			std::array<TextureTilesMapping, Material::TextureType_Num> tile_mappings;
+
+			for (uint32_t ix = 0; ix < _vt_feed_back_data.size(); ++ix)
+			{
+				const auto& data = _vt_feed_back_data[ix];
+
+				if (data.z != INVALID_SIZE_32)
+				{
+					VTShadowPage page;
+					page.tile_id = { data.z >> 16, data.z & 0xffff };
+
+					if (!_vt_physical_shadow_table.check_page_loaded(page))
+					{
+						page.physical_position_in_page = _vt_physical_shadow_table.get_new_position();
+						_vt_new_shadow_pages.push_back(page);
+					}
+					_vt_physical_shadow_table.add_page(page);
+					_vt_indirect_table[ix].z = page.physical_position_in_page.x;
+					_vt_indirect_table[ix].w = page.physical_position_in_page.y;
+				}
+
+				if (data.x == INVALID_SIZE_32 || data.y == INVALID_SIZE_32)  continue;
+
+				VTPage page;
+				page.geometry_id = data.x;
+				page.coordinate_mip_level = data.y;
+
+				if (!_vt_physical_table.check_page_loaded(page))
+				{
+					page.physical_position_in_page = _vt_physical_table.get_new_position();
+
+					for (uint32_t jx = 0; jx < Material::TextureType_Num; ++jx)
+					{
+						auto iter = _geometry_texture_region_cache.find(create_texture_region_cache_key(
+							page.geometry_id, page.get_mip_level(), jx
+						));
+
+						if (iter == _geometry_texture_region_cache.end()) continue;
+
+						auto [region, pixel_size_row_page_num] = iter->second;
+						uint32_t pixel_size = pixel_size_row_page_num >> 16;
+						uint32_t row_page_num = pixel_size_row_page_num & 0xffff;
+					
+						uint2 coordinate = page.get_coordinate_in_page();
+						region.x = page.physical_position_in_page.x * VT_PAGE_SIZE;
+						region.y = page.physical_position_in_page.y * VT_PAGE_SIZE;
+						region.byte_offset += (coordinate.x + coordinate.y * row_page_num) * 
+											  VT_PAGE_SIZE * VT_PAGE_SIZE * pixel_size;
+					
+						tile_mappings[jx].regions.emplace_back(region);
+					}
+				}
+
+				_vt_physical_table.add_page(page);
+				_vt_indirect_table[ix].x = page.physical_position_in_page.x;
+				_vt_indirect_table[ix].y = page.physical_position_in_page.y;
+			}
+
+			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
+			{
+				if (tile_mappings[ix].regions.empty()) continue;
+
+				tile_mappings[ix].heap = _geometry_texture_heap.get();
+
+				cmdlist->get_deivce()->update_texture_tile_mappings(
+					_vt_physical_textures[ix].get(), 
+					&tile_mappings[ix], 
+					1,
+					CommandQueueType::Compute 
+				);
+			}
+
+			ReturnIfFalse(cmdlist->write_texture(
+				_vt_indirect_texture.get(), 
+				0, 
+				0, 
+				_vt_indirect_table.data(), 
+				_vt_indirect_table.size() * sizeof(uint4)
+			));
+
+			
+			uint2 thread_group_num = {
+				static_cast<uint32_t>((align(CLIENT_WIDTH, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
+				static_cast<uint32_t>((align(CLIENT_HEIGHT, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
+			};
+
+			ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constant));
+		}
+
+		ReturnIfFalse(cmdlist->close());
+		
+        return true;
+	}
+
+	bool VirtualTextureUpdatePass::finish_pass(RenderResourceCache* cache)
+	{
+		memset(_vt_indirect_table.data(), INVALID_SIZE_32, sizeof(uint4) * _vt_indirect_table.size());
+		return true;
+	}
+
+	bool VirtualTextureUpdatePass::update_texture_region_cache(RenderResourceCache* cache)
 	{
 		if (_update_texture_region_cache)
 		{
@@ -209,96 +306,7 @@ namespace fantasy
 
 			_update_texture_region_cache = false;
 		}
-
-
-		ReturnIfFalse(cmdlist->open());
-		
-        if (SceneSystem::loaded_submesh_count != 0)
-		{
-			uint3* mapped_data = static_cast<uint3*>(_vt_feed_back_read_back_buffer->map(CpuAccessMode::Read));
-			
-			_vt_feed_back_data.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y);
-			memcpy(_vt_feed_back_data.data(), mapped_data, static_cast<uint32_t>(_vt_feed_back_data.size()) * sizeof(uint2)); 
-
-			_vt_feed_back_read_back_buffer->unmap();
-
-
-			std::unordered_set<uint2> new_shadow_pages;
-			std::array<TextureTilesMapping, Material::TextureType_Num> tile_mappings;
-
-			for (uint32_t ix = 0; ix < _vt_feed_back_data.size(); ++ix)
-			{
-				const auto& data = _vt_feed_back_data[ix];
-
-				if (data.x == INVALID_SIZE_32 || data.y == INVALID_SIZE_32)  continue;
-
-				VTPage page;
-				page.geometry_id = data.x;
-				page.coordinate_mip_level = data.y;
-
-				if (!_vt_physical_table.check_page_loaded(page))
-				{
-					page.physical_position_in_page = _vt_physical_table.get_new_position();
-
-					for (uint32_t jx = 0; jx < Material::TextureType_Num; ++jx)
-					{
-						auto iter = _geometry_texture_region_cache.find(create_texture_region_cache_key(
-							page.geometry_id, page.get_mip_level(), jx
-						));
-
-						if (iter == _geometry_texture_region_cache.end()) continue;
-
-						auto [region, pixel_size_row_page_num] = iter->second;
-						uint32_t pixel_size = pixel_size_row_page_num >> 16;
-						uint32_t row_page_num = pixel_size_row_page_num & 0xffff;
-					
-						uint2 coordinate = page.get_coordinate_in_page();
-						region.x = page.physical_position_in_page.x * VT_PAGE_SIZE;
-						region.y = page.physical_position_in_page.y * VT_PAGE_SIZE;
-						region.byte_offset += (coordinate.x + coordinate.y * row_page_num) * 
-											  VT_PAGE_SIZE * VT_PAGE_SIZE * pixel_size;
-					
-						tile_mappings[jx].regions.emplace_back(region);
-					}
-				}
-
-				_vt_physical_table.add_page(page);
-				_vt_indirect_table[ix] = page.physical_position_in_page;
-			}
-
-			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
-			{
-				if (tile_mappings[ix].regions.empty()) continue;
-
-				tile_mappings[ix].heap = _geometry_texture_heap.get();
-
-				cmdlist->get_deivce()->update_texture_tile_mappings(
-					_vt_physical_textures[ix].get(), 
-					&tile_mappings[ix], 
-					1,
-					CommandQueueType::Compute 
-				);
-			}
-
-			ReturnIfFalse(cmdlist->write_texture(
-				_vt_indirect_texture.get(), 
-				0, 
-				0, 
-				_vt_indirect_table.data(), 
-				_vt_indirect_table.size() * sizeof(uint2)
-			));
-
-			
-			uint2 thread_group_num = {
-				static_cast<uint32_t>((align(CLIENT_WIDTH, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
-				static_cast<uint32_t>((align(CLIENT_HEIGHT, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
-			};
-
-			ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constant));
-		}
-
-		ReturnIfFalse(cmdlist->close());
-		
-        return true;
+		return true;
 	}
+
 }

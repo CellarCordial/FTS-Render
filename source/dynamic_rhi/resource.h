@@ -272,7 +272,8 @@ namespace fantasy
             uint32_t height, 
             Format format, 
             std::string name = "",
-            bool allow_unordered_access = false
+            bool allow_unordered_access = false,
+            Color clear_color = Color(0.0f)
         )
         {
             TextureDesc ret;
@@ -282,7 +283,7 @@ namespace fantasy
             ret.format = format;
             ret.allow_render_target = true;
             ret.use_clear_value = true;
-            ret.clear_value = Color{ 0.0f };
+            ret.clear_value = clear_color;
             ret.allow_unordered_access = allow_unordered_access;
             return ret;
         }

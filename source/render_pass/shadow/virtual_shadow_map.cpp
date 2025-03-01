@@ -21,32 +21,40 @@ namespace fantasy
 		);
 
 
-		// ReturnIfFalse(cache->require_constants("update_shadow_pages", (void**)&_update_shadow_pages));
+		ReturnIfFalse(cache->require_constants("vt_new_shadow_pages", (void**)&_vt_new_shadow_pages));
 		ReturnIfFalse(cache->require_constants("cluster_group_count", (void**)&_cluster_group_count));
 		_directional_light = cache->get_world()->get_global_entity()->get_component<DirectionalLight>();
 		
 
-		// uint32_t axis_tile_num = (VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE);
-		// float3 tile_right = normalize(cross(float3(0.0f, 1.0f, 0.0f), _directional_light->direction));
-		// float3 tile_up = normalize(cross(_directional_light->direction, tile_right));
+		uint32_t axis_tile_num = (VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE);
+		float3 tile_right = normalize(cross(float3(0.0f, 1.0f, 0.0f), _directional_light->direction));
+		float3 tile_up = normalize(cross(_directional_light->direction, tile_right));
 
-		// float3 right_offset = tile_right * _directional_light->orthographic_length / axis_tile_num;
-		// float3 up_offset = tile_up * _directional_light->orthographic_length / axis_tile_num;
+		float3 right_offset = tile_right * _directional_light->orthographic_length / axis_tile_num;
+		float3 up_offset = tile_up * _directional_light->orthographic_length / axis_tile_num;
+
+		float tile_orthographic_length = _directional_light->orthographic_length / axis_tile_num;
+		_shadow_tile_proj_matrix = orthographic_left_hand(
+			tile_orthographic_length, 
+			tile_orthographic_length, 
+			_directional_light->near_plane, 
+			_directional_light->far_plane
+		);
 		
-		// _shadow_tile_view_matrixs.resize(axis_tile_num * axis_tile_num);
-		// for (uint32_t y = 0; y < axis_tile_num; ++y)
-		// {
-		// 	for (uint32_t x = 0; x < axis_tile_num; ++x)
-		// 	{
-		// 		float3 offset = x * right_offset + y * up_offset;
+		_shadow_tile_view_matrixs.resize(axis_tile_num * axis_tile_num);
+		for (uint32_t y = 0; y < axis_tile_num; ++y)
+		{
+			for (uint32_t x = 0; x < axis_tile_num; ++x)
+			{
+				float3 offset = x * right_offset + y * up_offset;
 				
-		// 		_shadow_tile_view_matrixs[x + y * axis_tile_num] = look_at_left_hand(
-		// 			_directional_light->get_position() + offset,
-		// 			offset,
-		// 			float3(0.0f, 1.0f, 0.0f)
-		// 		);
-		// 	}
-		// }
+				_shadow_tile_view_matrixs[x + y * axis_tile_num] = look_at_left_hand(
+					_directional_light->get_position() + offset,
+					offset,
+					float3(0.0f, 1.0f, 0.0f)
+				);
+			}
+		}
 
         uint32_t hzb_mip_levels = search_most_significant_bit(_shadow_hzb_resolution) + 1;
 		// Texture.
@@ -175,21 +183,29 @@ namespace fantasy
 			cs_compile_desc.shader_name = "culling/shadow_culling_cs.hlsl";
 			cs_compile_desc.entry_point = "main";
 			cs_compile_desc.target = ShaderTarget::Compute;
-			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
+			cs_compile_desc.defines.resize(2);
+			cs_compile_desc.defines[0] = ("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
+			cs_compile_desc.defines[1] = ("HI_Z_CULLING=0");
 			ShaderData cs_data = compile_shader(cs_compile_desc);
+			cs_compile_desc.defines[1] = ("HI_Z_CULLING=1");
+			ShaderData hi_z_cs_data = compile_shader(cs_compile_desc);
+
 
 			ShaderDesc cs_desc;
 			cs_desc.entry = "main";
 			cs_desc.shader_type = ShaderType::Compute;
-			ReturnIfFalse(_cs = std::unique_ptr<Shader>(create_shader(cs_desc, cs_data.data(), cs_data.size())));
+			ReturnIfFalse(_cull_cs = std::unique_ptr<Shader>(create_shader(cs_desc, cs_data.data(), cs_data.size())));
+			ReturnIfFalse(_hi_z_cull_cs = std::unique_ptr<Shader>(create_shader(cs_desc, hi_z_cs_data.data(), hi_z_cs_data.size())));
 		}
 
 		// Pipeline.
 		{
 			ComputePipelineDesc cull_pipeline_desc;
-			cull_pipeline_desc.compute_shader = _cs;
 			cull_pipeline_desc.binding_layouts.push_back(_cull_binding_layout);
+			cull_pipeline_desc.compute_shader = _cull_cs;
 			ReturnIfFalse(_cull_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(cull_pipeline_desc)));
+			cull_pipeline_desc.compute_shader = _hi_z_cull_cs;
+			ReturnIfFalse(_hi_z_cull_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(cull_pipeline_desc)));
 		}
 
 		// Buffer.
@@ -226,8 +242,7 @@ namespace fantasy
 
 		// Compute state.
 		{
-			_compute_state.binding_sets.resize(1);
-			_compute_state.pipeline = _cull_pipeline.get();
+			_cull_compute_state.binding_sets.resize(1);
 		}
  
 
@@ -376,17 +391,20 @@ namespace fantasy
 			_shadow_map_cull_constant.shadow_orthographic_length = _directional_light->orthographic_length;
 			_shadow_map_cull_constant.shadow_map_resolution = _shadow_map_resolution;
 			_shadow_map_cull_constant.hzb_resolution = _shadow_hzb_resolution;
+			_shadow_map_cull_constant.shadow_proj_matrix = _shadow_tile_proj_matrix;
 
-			// uint32_t axis_shadow_tile_num = VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE;
-			// _cull_pass_constants.resize(_update_shadow_pages->size(), cull_constant);
-			// for (uint32_t ix = 0; ix < _cull_pass_constants.size(); ++ix)
-			// {
-			// 	_cull_pass_constants[ix].packed_shadow_page_id = (*_update_shadow_pages)[ix].y;
-			// 	uint32_t packed_tile_id = (*_update_shadow_pages)[ix].x;
-			// 	uint2 tile_id(packed_tile_id >> 16, packed_tile_id & 0xffff);
-			// 	_cull_pass_constants[ix].shadow_view_matrix = 
-			// 		_shadow_tile_view_matrixs[tile_id.x + tile_id.y * axis_shadow_tile_num];
-			// }
+			uint32_t axis_shadow_tile_num = VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE;
+			_cull_pass_constants.resize(_vt_new_shadow_pages->size(), _shadow_map_cull_constant);
+			for (uint32_t ix = 0; ix < _cull_pass_constants.size(); ++ix)
+			{
+				VTShadowPage page = (*_vt_new_shadow_pages)[ix];
+				
+				_cull_pass_constants[ix].packed_shadow_page_id = (page.physical_position_in_page.x << 16) | 
+																 (page.physical_position_in_page.y & 0xffff);
+				_cull_pass_constants[ix].shadow_view_matrix = 
+					_shadow_tile_view_matrixs[page.tile_id.x + page.tile_id.y * axis_shadow_tile_num];
+			}
+			_vt_new_shadow_pages->clear();
 
 			_pass_constant.view_matrix = _directional_light->view_matrix;
 			_pass_constant.view_proj = _directional_light->get_view_proj();
@@ -401,7 +419,7 @@ namespace fantasy
 					BindingSetDesc{ .binding_items = _cull_binding_set_items },
 					_cull_binding_layout
 				)));
-				_compute_state.binding_sets[0] = _cull_binding_set.get();
+				_cull_compute_state.binding_sets[0] = _cull_binding_set.get();
 
 				_virtual_shadow_binding_set_items[1] = BindingSetItem::create_structured_buffer_srv(0, check_cast<BufferInterface>(cache->require("geometry_constant_buffer")));
 				_virtual_shadow_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("mesh_cluster_buffer")));
@@ -412,7 +430,7 @@ namespace fantasy
 					_virtual_shadow_binding_layout
 				)));
 				_shadow_map_graphics_state.binding_sets[0] = _virtual_shadow_binding_set.get();
-				// _virtual_shadow_graphics_state.binding_sets[0] = _virtual_shadow_binding_set.get();
+				_virtual_shadow_graphics_state.binding_sets[0] = _virtual_shadow_binding_set.get();
 
 				_resource_writed = true;
 			}
@@ -429,8 +447,9 @@ namespace fantasy
 				0
 			);
 			
+			_cull_compute_state.pipeline = _cull_pipeline.get();
 			ReturnIfFalse(cmdlist->dispatch(
-				_compute_state, 
+				_cull_compute_state, 
 				align(*_cluster_group_count, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X, 
 				1, 
 				1, 
@@ -475,30 +494,31 @@ namespace fantasy
 			}
 
 
-			// for (auto& cull_constant : _cull_pass_constants)
-			// {
-			// 	cmdlist->clear_buffer_uint(
-			// 		_vt_shadow_draw_indirect_buffer.get(), 
-			// 		BufferRange(0, sizeof(DrawIndexedIndirectArguments)), 
-			// 		0
-			// 	);
+			_cull_compute_state.pipeline = _hi_z_cull_pipeline.get();
+			for (auto& cull_constant : _cull_pass_constants)
+			{
+				cmdlist->clear_buffer_uint(
+					_vt_shadow_draw_indirect_buffer.get(), 
+					BufferRange(0, sizeof(DrawIndexedIndirectArguments)), 
+					0
+				);
 	
-			// 	cmdlist->clear_buffer_uint(
-			// 		_vt_shadow_visible_cluster_buffer.get(), 
-			// 		BufferRange(0, _vt_shadow_visible_cluster_buffer->get_desc().byte_size), 
-			// 		0
-			// 	);
+				cmdlist->clear_buffer_uint(
+					_vt_shadow_visible_cluster_buffer.get(), 
+					BufferRange(0, _vt_shadow_visible_cluster_buffer->get_desc().byte_size), 
+					0
+				);
 	
-			// 	ReturnIfFalse(cmdlist->dispatch(
-			// 		_compute_state, 
-			// 		align(*_cluster_group_count, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X, 
-			// 		1, 
-			// 		1, 
-			// 		&cull_constant
-			// 	));
+				ReturnIfFalse(cmdlist->dispatch(
+					_cull_compute_state, 
+					align(*_cluster_group_count, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X, 
+					1, 
+					1, 
+					&cull_constant
+				));
 	
-			// 	ReturnIfFalse(cmdlist->draw_indexed_indirect(_virtual_shadow_graphics_state, 0, 1, &_pass_constant));
-			// }
+				ReturnIfFalse(cmdlist->draw_indexed_indirect(_virtual_shadow_graphics_state, 0, 1, &_pass_constant));
+			}
 
 		}
 

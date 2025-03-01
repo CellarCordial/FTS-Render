@@ -154,8 +154,8 @@ namespace fantasy
 		virtual_gbuffer_pass->precede(hierarchical_zbuffer_pass);
 		hierarchical_zbuffer_pass->precede(test_pass);
 		virtual_gbuffer_pass->precede(virtual_texture_feed_back_pass);
-		virtual_texture_feed_back_pass->precede(virtual_shadow_map_pass);
-		virtual_shadow_map_pass->precede(virtual_texture_update_pass);
+		virtual_texture_feed_back_pass->precede(virtual_texture_update_pass);
+		virtual_texture_update_pass->precede(virtual_shadow_map_pass);
 		virtual_texture_update_pass->precede(test_pass);
 
 		test_pass->precede(sky_lut_pass);

@@ -75,7 +75,9 @@ namespace fantasy
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA32_FLOAT,
-					"geometry_uv_miplevel_id_texture"
+					"geometry_uv_miplevel_id_texture",
+					false,
+					Color(std::bit_cast<float>(INVALID_SIZE_32))
 				)
 			)));
 			cache->collect(_geometry_uv_miplevel_id_texture, ResourceType::Texture);

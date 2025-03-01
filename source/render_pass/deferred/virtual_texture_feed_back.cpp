@@ -3,6 +3,7 @@
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
 #include "../../scene/scene.h"
+#include "../../scene/light.h"
 
 
 namespace fantasy
@@ -22,12 +23,13 @@ namespace fantasy
 
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(5);
+			BindingLayoutItemArray binding_layout_items(6);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::VirtualTextureFeedBackPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(1);
-			binding_layout_items[3] = BindingLayoutItem::create_texture_uav(0);
-			binding_layout_items[4] = BindingLayoutItem::create_structured_buffer_uav(1);
+			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(2);
+			binding_layout_items[4] = BindingLayoutItem::create_texture_uav(0);
+			binding_layout_items[5] = BindingLayoutItem::create_structured_buffer_uav(1);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -66,8 +68,8 @@ namespace fantasy
 
 			ReturnIfFalse(_vt_feed_back_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_read_write_structured_buffer(
-					sizeof(uint2) * feed_back_buffer_element_num, 
-					sizeof(uint2),
+					sizeof(uint3) * feed_back_buffer_element_num, 
+					sizeof(uint3),
 					"vt_feed_back_buffer"
 				)
 			)));
@@ -75,7 +77,7 @@ namespace fantasy
 
 			ReturnIfFalse(_vt_feed_back_read_back_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_read_back_buffer(
-					sizeof(uint2) * feed_back_buffer_element_num, 
+					sizeof(uint3) * feed_back_buffer_element_num, 
 					"vt_feed_back_read_back_buffer"
 				)
 			)));
@@ -95,16 +97,14 @@ namespace fantasy
 			cache->collect(_vt_page_uv_texture, ResourceType::Texture);
 		}
         
-        
-        
-        
 		// Binding Set.
 		{
-			_binding_set_items.resize(5);
+			_binding_set_items.resize(6);
 			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualTextureFeedBackPassConstant));
 			_binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("geometry_uv_miplevel_id_texture")));
-			_binding_set_items[3] = BindingSetItem::create_texture_uav(0, _vt_page_uv_texture);
-			_binding_set_items[4] = BindingSetItem::create_structured_buffer_uav(1, _vt_feed_back_buffer);
+			_binding_set_items[3] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
+			_binding_set_items[4] = BindingSetItem::create_texture_uav(0, _vt_page_uv_texture);
+			_binding_set_items[5] = BindingSetItem::create_structured_buffer_uav(1, _vt_feed_back_buffer);
 		}
 
 		// Compute state.
@@ -133,6 +133,9 @@ namespace fantasy
 				_compute_state.binding_sets[0] = _binding_set.get();
 				_resource_writed = true;
 			}
+
+			_pass_constant.shadow_view_proj = 
+				cache->get_world()->get_global_entity()->get_component<DirectionalLight>()->get_view_proj();
 
 			uint2 thread_group_num = {
 				static_cast<uint32_t>((align(CLIENT_WIDTH, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),

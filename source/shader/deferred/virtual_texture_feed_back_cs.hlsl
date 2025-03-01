@@ -7,15 +7,21 @@
 
 cbuffer pass_constants : register(b0)
 {
+    float4x4 shadow_view_proj;
+    
     uint client_width;
     uint vt_page_size;
+    uint vt_shadow_page_size;
+    uint vt_virtual_shadow_resolution;
 };
 
 StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t0);
 Texture2D<float4> geometry_uv_miplevel_id_texture : register(t1);
+Texture2D<float4> world_position_view_depth_texture : register(t2);
+
 
 RWTexture2D<uint2> vt_page_uv_texture : register(u0);
-RWStructuredBuffer<uint2> vt_feed_back_buffer : register(u1);
+RWStructuredBuffer<uint3> vt_feed_back_buffer : register(u1);
 
 
 #if defined(THREAD_GROUP_SIZE_X) && defined(THREAD_GROUP_SIZE_Y) && defined(VT_FEED_BACK_SCALE_FACTOR)
@@ -35,8 +41,6 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     bool feed_back = all(pixel_id == feed_back_id * VT_FEED_BACK_SCALE_FACTOR + VT_FEED_BACK_SCALE_FACTOR / 2); 
     uint feed_back_index = feed_back_id.x + feed_back_id.y * (client_width / VT_FEED_BACK_SCALE_FACTOR);
 
-    uint2 page_uv = uint2(INVALID_SIZE_32, INVALID_SIZE_32);
-    uint2 feed_back_data = uint2(INVALID_SIZE_32, INVALID_SIZE_32);
 
     GeometryConstant geometry = geometry_constant_buffer[geometry_id];
     if (all(geometry.texture_resolution != 0))
@@ -55,8 +59,20 @@ void main(uint3 thread_id : SV_DispatchThreadID)
                 (mip_level & 0xff)
             );
 
-            vt_feed_back_buffer[feed_back_index] = uint2(geometry_id, page_id_mip_level);
+            vt_feed_back_buffer[feed_back_index].xy = uint2(geometry_id, page_id_mip_level);
         }
+    }
+
+    if (feed_back)
+    {
+        float3 world_space_position = world_position_view_depth_texture[pixel_id].xyz;
+        float4 shadow_view_proj_pos = mul(float4(world_space_position, 1.0f), shadow_view_proj);
+        shadow_view_proj_pos.xy = shadow_view_proj_pos.xy / shadow_view_proj_pos.w;
+
+        float2 uv = shadow_view_proj_pos.xy * float2(0.5f, -0.5f) + 0.5f;
+        uint2 shadow_tile_id = (uint2)(uv * vt_virtual_shadow_resolution) / vt_shadow_page_size;
+
+        vt_feed_back_buffer[feed_back_index].z = (shadow_tile_id.x << 16) | (shadow_tile_id.y & 0xffff);
     }
 }
 

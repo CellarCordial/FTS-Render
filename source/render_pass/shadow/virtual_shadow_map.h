@@ -58,10 +58,12 @@ namespace fantasy
 
 		constant::ShadowPassConstant _pass_constant;
 
+		std::vector<VTShadowPage>* _vt_new_shadow_pages;
+
 
 		// Culling Pass.
+		float4x4 _shadow_tile_proj_matrix;
 		std::vector<float4x4> _shadow_tile_view_matrixs;
-		std::vector<uint2>* _update_shadow_pages = nullptr;
 		std::vector<constant::ShadowCullingConstant> _cull_pass_constants;
 
         std::shared_ptr<BufferInterface> _vt_shadow_draw_indirect_buffer;
@@ -70,11 +72,13 @@ namespace fantasy
         BindingSetItemArray _cull_binding_set_items;
         std::shared_ptr<BindingLayoutInterface> _cull_binding_layout;
 
-		std::shared_ptr<Shader> _cs;
+		std::shared_ptr<Shader> _cull_cs;
 		std::unique_ptr<ComputePipelineInterface> _cull_pipeline;
+		std::shared_ptr<Shader> _hi_z_cull_cs;
+		std::unique_ptr<ComputePipelineInterface> _hi_z_cull_pipeline;
 
 		std::unique_ptr<BindingSetInterface> _cull_binding_set;
-		ComputeState _compute_state;
+		ComputeState _cull_compute_state;
 
 
 		// Shadow Map Pass.

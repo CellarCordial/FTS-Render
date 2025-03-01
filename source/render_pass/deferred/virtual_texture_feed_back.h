@@ -3,6 +3,7 @@
 
 #include "../../render_graph/render_pass.h"
 #include "../../scene/virtual_texture.h"
+#include "../../core/math/matrix.h"
 #include <cstdint>
 #include <memory>
 
@@ -12,8 +13,11 @@ namespace fantasy
 	{
 		struct VirtualTextureFeedBackPassConstant
 		{
+			float4x4 shadow_view_proj;
 			uint32_t client_width = CLIENT_WIDTH;
 			uint32_t vt_page_size = VT_PAGE_SIZE;
+			uint32_t vt_shadow_page_size = VT_SHADOW_PAGE_SIZE;
+			uint32_t vt_virtual_shadow_resolution = VT_VIRTUAL_SHADOW_RESOLUTION;
 		};
 	}
 

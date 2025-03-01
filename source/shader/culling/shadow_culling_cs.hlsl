@@ -1,5 +1,5 @@
 // #define THREAD_GROUP_SIZE_X 1
-// #define HI_Z_CULLING
+// #define HI_Z_CULLING 1
 
 #include "../common/indirect_argument.hlsl"
 #include "../common/gbuffer.hlsl"
@@ -82,7 +82,7 @@ bool tile_cull(float3 position, float radius)
             any(position.xy + radius + shadow_orthographic_length * 0.5f >= 0.0f);
 }
 
-#if defined(THREAD_GROUP_SIZE_X)
+#if defined(THREAD_GROUP_SIZE_X) && defined(HI_Z_CULLING)
 
 
 [numthreads(THREAD_GROUP_SIZE_X, 1, 1)]
@@ -110,7 +110,7 @@ void main(uint3 thread_id : SV_DispatchThreadID)
             ).xyz;
 
             bool visible = tile_cull(cluster_view_space_position, cluster.bounding_sphere.w);
-#ifdef HI_Z_CULLING
+#if HI_Z_CULLING
             visible = hierarchical_zbuffer_cull(cluster_view_space_position, cluster.bounding_sphere.w);
 #endif
             if (visible)

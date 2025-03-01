@@ -121,8 +121,8 @@ namespace fantasy
     {
     public:
         VTPhysicalShadowTable(
-            uint32_t resolution = VT_VIRTUAL_SHADOW_RESOLUTION, 
-            uint32_t page_size = VT_PHYSICAL_SHADOW_RESOLUTION
+            uint32_t resolution = VT_PHYSICAL_SHADOW_RESOLUTION, 
+            uint32_t page_size = VT_SHADOW_PAGE_SIZE
         );
 
         bool check_page_loaded(VTShadowPage& page) const;
@@ -134,13 +134,9 @@ namespace fantasy
 
         static uint64_t create_tile_key(const VTShadowPage& page);
 
-        void* get_data();
-        uint64_t get_size() const;
-        
     private:
         uint32_t _resolution_in_page;
         LruCache<VTShadowPage> _pages;
-        std::vector<uint2> _data;
     };
 }
 
