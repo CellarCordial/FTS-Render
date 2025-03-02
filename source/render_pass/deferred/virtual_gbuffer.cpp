@@ -74,7 +74,7 @@ namespace fantasy
 				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RGBA32_UINT,
+					Format::RGBA32_FLOAT,
 					"geometry_uv_mip_id_texture",
 					false,
 					Color(std::bit_cast<float>(INVALID_SIZE_32))

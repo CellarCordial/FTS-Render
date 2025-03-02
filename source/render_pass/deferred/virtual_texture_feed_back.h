@@ -15,6 +15,7 @@ namespace fantasy
 		{
 			float4x4 shadow_view_proj;
 			uint32_t client_width = CLIENT_WIDTH;
+			uint32_t vt_page_size = VT_PAGE_SIZE;
 			uint32_t vt_shadow_page_size = VT_SHADOW_PAGE_SIZE;
 			uint32_t vt_virtual_shadow_resolution = VT_VIRTUAL_SHADOW_RESOLUTION;
 		};
@@ -34,6 +35,8 @@ namespace fantasy
 		
 		std::shared_ptr<BufferInterface> _vt_feed_back_buffer;
 		std::shared_ptr<BufferInterface> _vt_feed_back_read_back_buffer;
+
+		std::shared_ptr<TextureInterface> _vt_page_uv_texture;
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 

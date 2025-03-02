@@ -23,12 +23,13 @@ namespace fantasy
 
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(5);
+			BindingLayoutItemArray binding_layout_items(6);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::VirtualTextureFeedBackPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(1);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(2);
-			binding_layout_items[4] = BindingLayoutItem::create_structured_buffer_uav(0);
+			binding_layout_items[4] = BindingLayoutItem::create_texture_uav(0);
+			binding_layout_items[5] = BindingLayoutItem::create_structured_buffer_uav(1);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -82,14 +83,28 @@ namespace fantasy
 			)));
 			cache->collect(_vt_feed_back_read_back_buffer, ResourceType::Buffer);
 		}
+
+		// Texture.
+		{
+			ReturnIfFalse(_vt_page_uv_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_read_write_texture(
+					CLIENT_WIDTH,
+					CLIENT_HEIGHT,
+					Format::RG32_UINT,
+					"vt_page_uv_texture"
+				)
+			)));
+			cache->collect(_vt_page_uv_texture, ResourceType::Texture);
+		}
         
 		// Binding Set.
 		{
-			_binding_set_items.resize(5);
+			_binding_set_items.resize(6);
 			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualTextureFeedBackPassConstant));
 			_binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("geometry_uv_mip_id_texture")));
 			_binding_set_items[3] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
-			_binding_set_items[4] = BindingSetItem::create_structured_buffer_uav(0, _vt_feed_back_buffer);
+			_binding_set_items[4] = BindingSetItem::create_texture_uav(0, _vt_page_uv_texture);
+			_binding_set_items[5] = BindingSetItem::create_structured_buffer_uav(1, _vt_feed_back_buffer);
 		}
 
 		// Compute state.
@@ -128,6 +143,7 @@ namespace fantasy
 			};
 
 			cmdlist->clear_buffer_uint(_vt_feed_back_buffer.get(), BufferRange{ 0, _vt_feed_back_buffer->get_desc().byte_size }, INVALID_SIZE_32);
+			cmdlist->clear_texture_uint(_vt_page_uv_texture.get(), TextureSubresourceSet{}, INVALID_SIZE_32);
 			
 			ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constant));
 			
