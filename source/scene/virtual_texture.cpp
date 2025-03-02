@@ -159,7 +159,7 @@ namespace fantasy
         for (uint32_t ix = 0; ix < page_num; ++ix)
         {
             uint2 pos(ix % _resolution_in_page, ix / _resolution_in_page); 
-            uint32_t axis_shadow_page_num = VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE;
+            uint32_t axis_shadow_page_num = VT_VIRTUAL_SHADOW_RESOLUTION / VT_PAGE_SIZE;
 
             VTShadowPage page;
             page.physical_position_in_page = pos;

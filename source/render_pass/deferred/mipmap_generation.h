@@ -35,7 +35,7 @@ namespace fantasy
 		std::array<std::shared_ptr<TextureInterface>, Material::TextureType_Num> _current_textures;
 		std::array<constant::MipmapGenerationPassConstant, Material::TextureType_Num> _pass_constants;
 
-		uint64_t _geometry_texture_heap_capacity = 1024 * 1024 * 64;
+		uint64_t _geometry_texture_heap_capacity = 2048 * 2048 * 64;
 		std::shared_ptr<HeapInterface> _geometry_texture_heap;
 		uint64_t _current_heap_offset = 0;
 

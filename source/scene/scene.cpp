@@ -184,12 +184,13 @@ namespace fantasy
 			return false;
         }
 
-		std::string model_name = remove_file_extension(event.model_path.c_str());
-
+		_model_directory = event.model_path.substr(0, event.model_path.find_last_of('/'));
+		std::string model_name = _model_directory.substr(_model_directory.find_last_of('/') + 1);
+		_model_directory += "/";
+		
 		_sdf_data_path = proj_dir + "asset/cache/distance_field/" + model_name + ".sdf";
 		_surface_cache_path = proj_dir + "asset/cache/surface_cache/" + model_name + ".sc";
-		_model_directory = event.model_path.substr(0, event.model_path.find_last_of('/') + 1);
-
+		
 		event.entity->assign<std::string>(model_name);
 		event.entity->assign<Mesh>();
 		event.entity->assign<Material>();

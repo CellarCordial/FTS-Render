@@ -20,7 +20,7 @@ namespace fantasy
 				_resource_writed = false;	
 				_update_shadow_map = true;
 
-				uint32_t axis_tile_num = (VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE);
+				uint32_t axis_tile_num = (VT_VIRTUAL_SHADOW_RESOLUTION / VT_PAGE_SIZE);
 				float3 tile_right = normalize(cross(float3(0.0f, 1.0f, 0.0f), _directional_light->direction));
 				float3 tile_up = normalize(cross(_directional_light->direction, tile_right));
 		
@@ -226,7 +226,7 @@ namespace fantasy
 			)));
 			cache->collect(_vt_shadow_draw_indirect_buffer, ResourceType::Buffer);
 
-            uint32_t virtual_shadow_resolution_in_page = VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE;
+            uint32_t virtual_shadow_resolution_in_page = VT_VIRTUAL_SHADOW_RESOLUTION / VT_PAGE_SIZE;
 			ReturnIfFalse(_vt_shadow_visible_cluster_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_read_write_structured_buffer(
 					sizeof(uint2) * virtual_shadow_resolution_in_page * virtual_shadow_resolution_in_page, 
@@ -298,8 +298,8 @@ namespace fantasy
 			// InterlockedMin 不支持浮点数, 故在这里使用整数格式存储浮点数, 深度值永远为正数, 将浮点深度转化为整数可直接比较.
 			ReturnIfFalse(_vt_physical_shadow_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_read_write_texture(
-					VT_PHYSICAL_SHADOW_RESOLUTION,
-					VT_PHYSICAL_SHADOW_RESOLUTION,
+					VT_PHYSICAL_TEXTURE_RESOLUTION,
+					VT_PHYSICAL_TEXTURE_RESOLUTION,
 					Format::R32_UINT,
 					"vt_physical_shadow_texture"
 				)
@@ -308,8 +308,8 @@ namespace fantasy
 			
 			ReturnIfFalse(_vt_physical_shadow_float_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_read_write_texture(
-					VT_PHYSICAL_SHADOW_RESOLUTION,
-					VT_PHYSICAL_SHADOW_RESOLUTION,
+					VT_PHYSICAL_TEXTURE_RESOLUTION,
+					VT_PHYSICAL_TEXTURE_RESOLUTION,
 					Format::R32_FLOAT,
 					"vt_physical_shadow_float_texture"
 				)
@@ -318,8 +318,8 @@ namespace fantasy
 
 			ReturnIfFalse(_black_render_target_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target_texture(
-					VT_SHADOW_PAGE_SIZE,
-					VT_SHADOW_PAGE_SIZE,
+					VT_PAGE_SIZE,
+					VT_PAGE_SIZE,
 					Format::RGBA8_UNORM,
 					"",
 					false,
@@ -359,7 +359,7 @@ namespace fantasy
 			_virtual_shadow_graphics_state.binding_sets.resize(1);
 			_virtual_shadow_graphics_state.pipeline = _virtual_shadow_pipeline.get();
 			_virtual_shadow_graphics_state.frame_buffer = _virtual_shadow_frame_buffer.get();
-			_virtual_shadow_graphics_state.viewport_state = ViewportState::create_default_viewport(VT_SHADOW_PAGE_SIZE, VT_SHADOW_PAGE_SIZE);
+			_virtual_shadow_graphics_state.viewport_state = ViewportState::create_default_viewport(VT_PAGE_SIZE, VT_PAGE_SIZE);
 			_virtual_shadow_graphics_state.indirect_buffer = _vt_shadow_draw_indirect_buffer.get();
 		}
 
@@ -416,7 +416,7 @@ namespace fantasy
 			_shadow_map_constants.view_proj = _directional_light->get_view_proj();
 
 
-			uint32_t axis_shadow_tile_num = VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE;
+			uint32_t axis_shadow_tile_num = VT_VIRTUAL_SHADOW_RESOLUTION / VT_PAGE_SIZE;
 			float tile_orthographic_length = _directional_light->orthographic_length / axis_shadow_tile_num;
 
 			_cull_pass_constants.resize(_vt_new_shadow_pages->size(), _shadow_map_cull_constant);

@@ -37,7 +37,7 @@ namespace fantasy
 		struct ShadowPassConstant
 		{
 			float4x4 view_proj;
-			uint32_t page_size = VT_SHADOW_PAGE_SIZE;
+			uint32_t page_size = VT_PAGE_SIZE;
 		};
 	}
 
