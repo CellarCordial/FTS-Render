@@ -260,10 +260,10 @@ namespace fantasy
 									.world_matrix = submesh.world_matrix,
 									.inv_trans_world = inverse(transpose(submesh.world_matrix)),
 									.base_color = float4(submaterial.base_color_factor),
-									.emissive = float4(submaterial.emissive_factor),
+									.occlusion = submaterial.occlusion_factor,
 									.roughness = submaterial.roughness_factor,
 									.metallic = submaterial.metallic_factor,
-									.occlusion = submaterial.occlusion_factor,
+									.emissive = float4(submaterial.emissive_factor),
 									.texture_resolution = material->image_resolution
 								}
 							);

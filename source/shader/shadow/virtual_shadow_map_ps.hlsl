@@ -24,5 +24,5 @@ float4 main(VertexOutput input) : SV_Target0
     float depth = input.sv_position.z / input.sv_position.w;
     InterlockedMin(vt_physical_shadow_texture[uv], asuint(depth));
 
-    return float4(depth, float2(input.page_id) / 16, 0.0f);
+    return float4(depth, float2(input.page_id), 0.0f);
 }

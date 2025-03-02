@@ -28,7 +28,7 @@ namespace fantasy
 
 	private:
 		Entity* _current_model = nullptr;
-		uint32_t _current_mip_levels = 0;
+		uint32_t _current_mip_levels = 1;
 		uint2 _current_texture_resolution;
 		uint32_t _current_calculate_mip = 1;
 		uint32_t _current_submaterial_index = 0;

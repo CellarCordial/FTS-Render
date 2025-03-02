@@ -56,7 +56,7 @@ namespace fantasy
         {
             TextureType_BaseColor,
             TextureType_Normal,
-            TextureType_PBR,    // Metallic, Roughness, Occlusion.
+            TextureType_PBR,    // Occlusion, Roughness, Metallic.
             TextureType_Emissive,
             TextureType_Num
         };
@@ -64,9 +64,9 @@ namespace fantasy
         struct SubMaterial
         {
 			float base_color_factor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+			float occlusion_factor = 0.0f;
 			float roughness_factor = 0.0f;
 			float metallic_factor = 0.0f;
-			float occlusion_factor = 0.0f;
 			float emissive_factor[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
             Image images[TextureType_Num];
@@ -138,10 +138,10 @@ namespace fantasy
         float4x4 inv_trans_world;
 
         float4 base_color;
-        float4 emissive;
+        float occlusion;
         float roughness;
         float metallic;
-        float occlusion;
+        float4 emissive;
 
         uint32_t texture_resolution;
     };

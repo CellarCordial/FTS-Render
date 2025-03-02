@@ -12,13 +12,15 @@
 
 namespace fantasy 
 {
-	const static uint32_t LOWEST_TEXTURE_RESOLUTION = 1024;
+    const static uint32_t VT_PAGE_SIZE = 128;
+	const static uint32_t LOWEST_TEXTURE_RESOLUTION = 512;
 	const static uint32_t HIGHEST_TEXTURE_RESOLUTION = 4096;
-
+    static const uint32_t VT_PHYSICAL_TEXTURE_RESOLUTION = 4096;
     static const uint32_t VT_FEED_BACK_SCALE_FACTOR = 10;
-    const static uint32_t VT_PAGE_SIZE = 1024;
-    static const uint32_t VT_PHYSICAL_TEXTURE_RESOLUTION = 8192;
+
+    static const uint32_t VT_SHADOW_PAGE_SIZE = 1024;
     static const uint32_t VT_VIRTUAL_SHADOW_RESOLUTION = 16384;
+    static const uint32_t VT_PHYSICAL_SHADOW_RESOLUTION = 8192;
 
     namespace event
 	{
@@ -119,8 +121,8 @@ namespace fantasy
     {
     public:
         VTPhysicalShadowTable(
-            uint32_t resolution = VT_PHYSICAL_TEXTURE_RESOLUTION, 
-            uint32_t page_size = VT_PAGE_SIZE
+            uint32_t resolution = VT_PHYSICAL_SHADOW_RESOLUTION, 
+            uint32_t page_size = VT_SHADOW_PAGE_SIZE
         );
 
         bool check_page_loaded(VTShadowPage& page) const;

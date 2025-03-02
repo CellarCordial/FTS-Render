@@ -73,7 +73,7 @@ bool hierarchical_zbuffer_cull(float3 view_space_position, float radius, float4x
     float cluster_near_z = view_space_position.z - radius;
     cluster_near_z = reverse_z_proj_matrix[2][2] + reverse_z_proj_matrix[3][2] / cluster_near_z;
 
-    return cluster_near_z > min_z;
+    return cluster_near_z > min_z - 0.1f;
 }
 
 bool frustum_cull(float3 view_space_position, float radius, float4x4 reverse_z_proj_matrix)

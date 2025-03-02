@@ -29,8 +29,8 @@ namespace fantasy
 		_vt_feed_back_read_back_buffer = check_cast<BufferInterface>(cache->require("vt_feed_back_read_back_buffer"));
 
 		_vt_feed_back_resolution = { CLIENT_WIDTH / VT_FEED_BACK_SCALE_FACTOR, CLIENT_HEIGHT / VT_FEED_BACK_SCALE_FACTOR };
-		_vt_feed_back_data.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y);
-		_vt_indirect_table.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y);
+		_vt_feed_back_data.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y, uint3(INVALID_SIZE_32));
+		_vt_indirect_table.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y, uint4(INVALID_SIZE_32));
 
 		ReturnIfFalse(cache->collect_constants("vt_new_shadow_pages", &_vt_new_shadow_pages));
 

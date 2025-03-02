@@ -90,7 +90,7 @@ namespace fantasy
 			DeviceInterface* device = cmdlist->get_deivce();
 			ReturnIfFalse(cmdlist->open());
 
-			if (_current_mip_levels == 0)
+			if (_current_mip_levels == 1)
 			{
 				const auto& model_name = *_current_model->get_component<std::string>();
 				const Material* material = _current_model->get_component<Material>();
@@ -170,9 +170,9 @@ namespace fantasy
 	bool MipmapGenerationPass::finish_pass(RenderResourceCache* cache)
 	{
 		_current_calculate_mip++;
-		if (_current_calculate_mip == _current_mip_levels || _current_mip_levels == 0)
+		if (_current_calculate_mip == _current_mip_levels || _current_mip_levels == 1)
 		{
-			_current_mip_levels = 0;
+			_current_mip_levels = 1;
 			_current_calculate_mip = 1;
 			_current_submaterial_index++;
 			if (_current_submaterial_index == _current_model->get_component<Material>()->submaterials.size()) 

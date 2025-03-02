@@ -9,10 +9,10 @@ struct GeometryConstant
     float4x4 inv_trans_world;
 
     float4 base_color;
-    float4 emissive;
+    float occlusion;
     float roughness;
     float metallic;
-    float occlusion;
+    float4 emissive;
 
     uint texture_resolution;
 };

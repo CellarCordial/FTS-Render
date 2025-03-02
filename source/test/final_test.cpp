@@ -134,7 +134,7 @@ namespace fantasy
 
 	FinalTest::FinalTest(GraphicsAPI api) : TestBase(api)
 	{
-		_init_model_paths.emplace_back("asset/model/Suzanne/Suzanne.gltf");
+		_init_model_paths.emplace_back("asset/model/BoomBox/BoomBox.gltf");
 	}
 
     RenderPassInterface* FinalTest::init_render_pass(RenderGraph* render_graph)
@@ -170,9 +170,6 @@ namespace fantasy
 
 		World* world = render_graph->get_resource_cache()->get_world();
 		constant::AtmosphereProperties* properties = world->get_global_entity()->assign<constant::AtmosphereProperties>();
-
-
-
 
 		return sun_disk_pass;
     }
