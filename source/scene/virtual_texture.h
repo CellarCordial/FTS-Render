@@ -12,11 +12,13 @@
 
 namespace fantasy 
 {
-    const static uint32_t VT_PAGE_SIZE = 128;
-	const static uint32_t LOWEST_TEXTURE_RESOLUTION = 512;
-	const static uint32_t HIGHEST_TEXTURE_RESOLUTION = 4096;
+    static const uint32_t VT_PAGE_SIZE = 128;
+	static const uint32_t LOWEST_TEXTURE_RESOLUTION = 512;
+	static const uint32_t HIGHEST_TEXTURE_RESOLUTION = 2048;
     static const uint32_t VT_PHYSICAL_TEXTURE_RESOLUTION = 4096;
-    static const uint32_t VT_FEED_BACK_SCALE_FACTOR = 10;
+    static const uint32_t VT_FEED_BACK_SCALE_FACTOR = 20;
+
+    static const uint32_t VT_TEXTURE_MIP_LEVELS = 5; // std::log2(HIGHEST_TEXTURE_RESOLUTION / VT_PAGE_SIZE) + 1
 
     static const uint32_t VT_SHADOW_PAGE_SIZE = 1024;
     static const uint32_t VT_VIRTUAL_SHADOW_RESOLUTION = 16384;

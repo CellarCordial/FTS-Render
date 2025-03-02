@@ -30,26 +30,38 @@ namespace fantasy
 
 		_vt_feed_back_resolution = { CLIENT_WIDTH / VT_FEED_BACK_SCALE_FACTOR, CLIENT_HEIGHT / VT_FEED_BACK_SCALE_FACTOR };
 		_vt_feed_back_data.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y, uint3(INVALID_SIZE_32));
-		_vt_indirect_table.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y, uint4(INVALID_SIZE_32));
 
 		ReturnIfFalse(cache->collect_constants("vt_new_shadow_pages", &_vt_new_shadow_pages));
 
+
+        _pass_constant.vt_page_size = VT_PAGE_SIZE;
+        _pass_constant.vt_physical_texture_size = VT_PHYSICAL_TEXTURE_RESOLUTION;
+		_pass_constant.vt_texture_id_offset = 0;
+
+		for (int32_t mip = 0; mip < VT_TEXTURE_MIP_LEVELS; ++mip)
+		{
+			_pass_constant.vt_axis_mip_tile_num[mip] = (HIGHEST_TEXTURE_RESOLUTION >> mip) / VT_PAGE_SIZE;
+			_pass_constant.vt_texture_mip_offset[mip] = _pass_constant.vt_texture_id_offset;
+			_pass_constant.vt_texture_id_offset += std::pow(4, VT_TEXTURE_MIP_LEVELS - mip - 1);
+		}
+ 
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(13);
+			BindingLayoutItemArray binding_layout_items(14);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::VirtualTextureUpdatePassConstant));
-			binding_layout_items[1] = BindingLayoutItem::create_texture_srv(0);
+			binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(1);
 			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(2);
 			binding_layout_items[4] = BindingLayoutItem::create_texture_srv(3);
 			binding_layout_items[5] = BindingLayoutItem::create_texture_srv(4);
 			binding_layout_items[6] = BindingLayoutItem::create_texture_srv(5);
 			binding_layout_items[7] = BindingLayoutItem::create_texture_srv(6);
-			binding_layout_items[8] = BindingLayoutItem::create_texture_uav(0);
-			binding_layout_items[9] = BindingLayoutItem::create_texture_uav(1);
-			binding_layout_items[10] = BindingLayoutItem::create_texture_uav(2);
-			binding_layout_items[11] = BindingLayoutItem::create_texture_uav(3);
-			binding_layout_items[12] = BindingLayoutItem::create_sampler(0);
+			binding_layout_items[8] = BindingLayoutItem::create_texture_srv(7);
+			binding_layout_items[9] = BindingLayoutItem::create_texture_uav(0);
+			binding_layout_items[10] = BindingLayoutItem::create_texture_uav(1);
+			binding_layout_items[11] = BindingLayoutItem::create_texture_uav(2);
+			binding_layout_items[12] = BindingLayoutItem::create_texture_uav(3);
+			binding_layout_items[13] = BindingLayoutItem::create_sampler(0);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -63,7 +75,7 @@ namespace fantasy
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
-			cs_compile_desc.defines.push_back("VT_FEED_BACK_SCALE_FACTOR=" + std::to_string(VT_FEED_BACK_SCALE_FACTOR));
+			cs_compile_desc.defines.push_back("VT_TEXTURE_MIP_LEVELS=" + std::to_string(VT_TEXTURE_MIP_LEVELS));
 			ShaderData cs_data = compile_shader(cs_compile_desc);
 
 			ShaderDesc cs_desc;
@@ -95,56 +107,49 @@ namespace fantasy
 				cache->collect(_vt_physical_textures[ix], ResourceType::Texture);
 			}
 
-			ReturnIfFalse(_vt_indirect_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+			ReturnIfFalse(_vt_shadow_indirect_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_read_write_texture(
 					_vt_feed_back_resolution.x,
 					_vt_feed_back_resolution.y,
-					Format::RGBA32_UINT,
-					"vt_indirect_texture"
+					Format::RG32_UINT,
+					"vt_shadow_indirect_texture"
 				)
 			)));
-			cache->collect(_vt_indirect_texture, ResourceType::Texture);
+			cache->collect(_vt_shadow_indirect_texture, ResourceType::Texture);
 		}
 
 		// Binding Set.
 		{
 			ReturnIfFalse(Material::TextureType_Num == 4);
 
-			BindingSetItemArray binding_set_items(13);
-			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualTextureUpdatePassConstant));
-			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("vt_page_uv_texture")));
-			binding_set_items[2] = BindingSetItem::create_texture_srv(1, _vt_indirect_texture);
-			binding_set_items[3] = BindingSetItem::create_texture_srv(2, _vt_physical_textures[0]);
-			binding_set_items[4] = BindingSetItem::create_texture_srv(3, _vt_physical_textures[1]);
-			binding_set_items[5] = BindingSetItem::create_texture_srv(4, _vt_physical_textures[2]);
-			binding_set_items[6] = BindingSetItem::create_texture_srv(5, _vt_physical_textures[3]);
-			binding_set_items[7] = BindingSetItem::create_texture_srv(6, check_cast<TextureInterface>(cache->require("world_space_tangent_texture")));
-			binding_set_items[8] = BindingSetItem::create_texture_uav(0, check_cast<TextureInterface>(cache->require("world_space_normal_texture")));
-			binding_set_items[9] = BindingSetItem::create_texture_uav(1, check_cast<TextureInterface>(cache->require("base_color_texture")));
-			binding_set_items[10] = BindingSetItem::create_texture_uav(2, check_cast<TextureInterface>(cache->require("pbr_texture")));
-			binding_set_items[11] = BindingSetItem::create_texture_uav(3, check_cast<TextureInterface>(cache->require("emissive_texture")));
-			binding_set_items[12] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
-            ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
-                BindingSetDesc{ .binding_items = binding_set_items },
-                _binding_layout
-            )));
+			_binding_set_items.resize(14);
+			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualTextureUpdatePassConstant));
+			_binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("vt_tile_uv_texture")));
+			_binding_set_items[3] = BindingSetItem::create_texture_srv(2, _vt_physical_textures[0]);
+			_binding_set_items[4] = BindingSetItem::create_texture_srv(3, _vt_physical_textures[1]);
+			_binding_set_items[5] = BindingSetItem::create_texture_srv(4, _vt_physical_textures[2]);
+			_binding_set_items[6] = BindingSetItem::create_texture_srv(5, _vt_physical_textures[3]);
+			_binding_set_items[7] = BindingSetItem::create_texture_srv(6, check_cast<TextureInterface>(cache->require("world_space_tangent_texture")));
+			_binding_set_items[8] = BindingSetItem::create_texture_srv(7, check_cast<TextureInterface>(cache->require("geometry_uv_mip_id_texture")));
+			_binding_set_items[9] = BindingSetItem::create_texture_uav(0, check_cast<TextureInterface>(cache->require("world_space_normal_texture")));
+			_binding_set_items[10] = BindingSetItem::create_texture_uav(1, check_cast<TextureInterface>(cache->require("base_color_texture")));
+			_binding_set_items[11] = BindingSetItem::create_texture_uav(2, check_cast<TextureInterface>(cache->require("pbr_texture")));
+			_binding_set_items[12] = BindingSetItem::create_texture_uav(3, check_cast<TextureInterface>(cache->require("emissive_texture")));
+			_binding_set_items[13] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
 		}
 
 		// Compute state.
 		{
-			_compute_state.binding_sets.push_back(_binding_set.get());
+			_compute_state.binding_sets.resize(1);
 			_compute_state.pipeline = _pipeline.get();
 		}
 
-        _pass_constant.vt_page_size = VT_PAGE_SIZE;
-        _pass_constant.vt_physical_texture_size = VT_PHYSICAL_TEXTURE_RESOLUTION;
- 
 		return true;
 	}
 
 	bool VirtualTextureUpdatePass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
-		ReturnIfFalse(update_texture_region_cache(cache));
+		ReturnIfFalse(update_texture_region_cache(cmdlist->get_deivce(), cache));
 
 		ReturnIfFalse(cmdlist->open());
 		
@@ -171,8 +176,8 @@ namespace fantasy
 						_vt_new_shadow_pages.push_back(page);
 					}
 					_vt_physical_shadow_table.add_page(page);
-					_vt_indirect_table[ix].z = page.physical_position_in_page.x;
-					_vt_indirect_table[ix].w = page.physical_position_in_page.y;
+
+					// TODO: update shadow tile to pages.
 				}
 
 				if (data.x == INVALID_SIZE_32 || data.y == INVALID_SIZE_32)  continue;
@@ -206,10 +211,16 @@ namespace fantasy
 						tile_mappings[jx].regions.emplace_back(region);
 					}
 				}
-
 				_vt_physical_table.add_page(page);
-				_vt_indirect_table[ix].x = page.physical_position_in_page.x;
-				_vt_indirect_table[ix].y = page.physical_position_in_page.y;
+
+				uint32_t mip = page.get_mip_level();
+				uint32_t indirect_index = page.geometry_id * _pass_constant.vt_texture_id_offset + 
+										  _pass_constant.vt_texture_mip_offset[mip] + 
+										  page.get_coordinate_in_page().y * _pass_constant.vt_axis_mip_tile_num[mip] +
+										  page.get_coordinate_in_page().x;
+
+				_vt_indirect_data[indirect_index] = (page.physical_position_in_page.x << 16) |
+													(page.physical_position_in_page.y & 0xffff);
 			}
 
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
@@ -226,14 +237,11 @@ namespace fantasy
 				);
 			}
 
-			ReturnIfFalse(cmdlist->write_texture(
-				_vt_indirect_texture.get(), 
-				0, 
-				0, 
-				_vt_indirect_table.data(), 
-				_vt_indirect_table.size() * sizeof(uint4)
+			ReturnIfFalse(cmdlist->write_buffer(
+				_vt_indirect_buffer.get(), 
+				_vt_indirect_data.data(), 
+				_vt_indirect_data.size() * sizeof(uint32_t)
 			));
-
 			
 			uint2 thread_group_num = {
 				static_cast<uint32_t>((align(CLIENT_WIDTH, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
@@ -248,16 +256,36 @@ namespace fantasy
         return true;
 	}
 
-	bool VirtualTextureUpdatePass::finish_pass(RenderResourceCache* cache)
-	{
-		memset(_vt_indirect_table.data(), INVALID_SIZE_32, sizeof(uint4) * _vt_indirect_table.size());
-		return true;
-	}
-
-	bool VirtualTextureUpdatePass::update_texture_region_cache(RenderResourceCache* cache)
+	bool VirtualTextureUpdatePass::update_texture_region_cache(DeviceInterface* device, RenderResourceCache* cache)
 	{
 		if (_update_texture_region_cache)
 		{
+			_vt_indirect_data.resize(_pass_constant.vt_texture_id_offset * SceneSystem::loaded_submesh_count, INVALID_SIZE_32);
+
+			// Buffer.
+			{
+				ReturnIfFalse(_vt_indirect_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+					BufferDesc::create_structured_buffer(
+						sizeof(uint32_t) * _pass_constant.vt_texture_id_offset * SceneSystem::loaded_submesh_count,
+						sizeof(uint32_t),
+						"vt_indirect_buffer"
+					)
+				)));
+				cache->collect(_vt_indirect_buffer, ResourceType::Buffer);
+			}
+
+			// Binding Set.
+			{
+				_binding_set_items[1] = BindingSetItem::create_structured_buffer_srv(0, _vt_indirect_buffer);
+				ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
+					BindingSetDesc{ .binding_items = _binding_set_items },
+					_binding_layout
+				)));
+
+				_compute_state.binding_sets[0] = _binding_set.get();
+			}
+
+
 			bool res = cache->get_world()->each<std::string, Mesh, Material>(
 				[this, cache](Entity* entity, std::string* name, Mesh* mesh, Material* material) -> bool
 				{

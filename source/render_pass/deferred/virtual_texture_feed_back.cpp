@@ -86,15 +86,15 @@ namespace fantasy
 
 		// Texture.
 		{
-			ReturnIfFalse(_vt_page_uv_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+			ReturnIfFalse(_vt_tile_uv_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_read_write_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RG32_UINT,
-					"vt_page_uv_texture"
+					Format::RGBA32_UINT,
+					"vt_tile_uv_texture"
 				)
 			)));
-			cache->collect(_vt_page_uv_texture, ResourceType::Texture);
+			cache->collect(_vt_tile_uv_texture, ResourceType::Texture);
 		}
         
 		// Binding Set.
@@ -103,7 +103,7 @@ namespace fantasy
 			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualTextureFeedBackPassConstant));
 			_binding_set_items[2] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("geometry_uv_mip_id_texture")));
 			_binding_set_items[3] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
-			_binding_set_items[4] = BindingSetItem::create_texture_uav(0, _vt_page_uv_texture);
+			_binding_set_items[4] = BindingSetItem::create_texture_uav(0, _vt_tile_uv_texture);
 			_binding_set_items[5] = BindingSetItem::create_structured_buffer_uav(1, _vt_feed_back_buffer);
 		}
 
@@ -143,7 +143,7 @@ namespace fantasy
 			};
 
 			cmdlist->clear_buffer_uint(_vt_feed_back_buffer.get(), BufferRange{ 0, _vt_feed_back_buffer->get_desc().byte_size }, INVALID_SIZE_32);
-			cmdlist->clear_texture_uint(_vt_page_uv_texture.get(), TextureSubresourceSet{}, INVALID_SIZE_32);
+			cmdlist->clear_texture_uint(_vt_tile_uv_texture.get(), TextureSubresourceSet{}, INVALID_SIZE_32);
 			
 			ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constant));
 			

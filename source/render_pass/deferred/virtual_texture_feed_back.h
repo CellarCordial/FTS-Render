@@ -36,7 +36,7 @@ namespace fantasy
 		std::shared_ptr<BufferInterface> _vt_feed_back_buffer;
 		std::shared_ptr<BufferInterface> _vt_feed_back_read_back_buffer;
 
-		std::shared_ptr<TextureInterface> _vt_page_uv_texture;
+		std::shared_ptr<TextureInterface> _vt_tile_uv_texture;
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;
 

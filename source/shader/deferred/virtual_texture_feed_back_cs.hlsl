@@ -20,7 +20,7 @@ Texture2D<float4> geometry_uv_mip_id_texture : register(t1);
 Texture2D<float4> world_position_view_depth_texture : register(t2);
 
 
-RWTexture2D<uint2> vt_page_uv_texture : register(u0);
+RWTexture2D<uint4> vt_tile_uv_texture : register(u0);
 RWStructuredBuffer<uint3> vt_feed_back_buffer : register(u1);
 
 
@@ -50,19 +50,22 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     {
         uint2 geometry_texture_resolution = max(geometry.texture_resolution >> mip_level, vt_page_size);
         uint2 geometry_texture_pixel_id = uint2(uv * geometry_texture_resolution);
+        uint2 tile_id = geometry_texture_pixel_id / vt_page_size;
 
-        vt_page_uv_texture[pixel_id] = geometry_texture_pixel_id % vt_page_size;
+        vt_tile_uv_texture[pixel_id] = uint4(
+            geometry_texture_pixel_id % vt_page_size,
+            tile_id
+        );
 
         if (feed_back)
         {
-            uint2 page_id = geometry_texture_pixel_id / vt_page_size;
-            uint page_id_mip_level = uint(
-                (page_id.x << 20) |
-                (page_id.y << 8) |
+            uint tile_id_mip_level = uint(
+                (tile_id.x << 20) |
+                (tile_id.y << 8) |
                 (mip_level & 0xff)
             );
 
-            vt_feed_back_buffer[feed_back_index].xy = uint2(geometry_id, page_id_mip_level);
+            vt_feed_back_buffer[feed_back_index].xy = uint2(geometry_id, tile_id_mip_level);
         }
     }
 
