@@ -48,56 +48,62 @@ namespace fantasy
     }
 
     VTPhysicalTable::VTPhysicalTable(uint32_t resolution, uint32_t page_size) : 
-        _resolution_in_page(resolution / page_size),
-        _pages(_resolution_in_page * _resolution_in_page)
+        _resolution_in_page(resolution / page_size)
+        // _pages(_resolution_in_page * _resolution_in_page)
     {
         assert(is_power_of_2(_resolution_in_page));
         reset();
     }
 
-    bool VTPhysicalTable::check_page_loaded(VTPage& page) const
+    bool VTPhysicalTable::check_texture_loaded(VirtualTexture& texture) const
     {
-        return _pages.check_cache(create_page_key(page), page);
-    }
-
-    uint2 VTPhysicalTable::get_new_position()
-    {
-        return _pages.evict().physical_position_in_page;
-    }
-
-    void VTPhysicalTable::add_page(const VTPage& page)
-    {
-        _pages.insert(create_page_key(page), page);
-    }
-
-    void VTPhysicalTable::add_pages(std::span<VTPage> pages)
-    {
-        for (const auto& page : pages)
+        auto iter = _textures.find(create_texture_key(texture));
+        if (iter != _textures.end())
         {
-            _pages.insert(create_page_key(page), page);
+            texture = iter->second;
+            return true;
+        }
+        return false;
+    }
+
+    uint2 VTPhysicalTable::get_new_position(uint32_t resolution_in_page)
+    {
+        return uint2();
+    }
+
+    void VTPhysicalTable::add_texture(const VirtualTexture& texture)
+    {
+        // _pages.insert(create_page_key(texture), texture);
+    }
+
+    void VTPhysicalTable::add_textures(std::span<VirtualTexture> textures)
+    {
+        for (const auto& texture : textures)
+        {
+            // _pages.insert(create_page_key(texture), texture);
         }
     }
 
     void VTPhysicalTable::reset() 
     { 
-        _pages.reset(); 
+        // _pages.reset(); 
 
         uint32_t page_num = _resolution_in_page * _resolution_in_page;
         for (uint32_t ix = 0; ix < page_num; ++ix)
         {
             uint2 postion(ix % _resolution_in_page, ix / _resolution_in_page); 
             
-            VTPage page;
-            page.physical_position_in_page = postion;
-            page.coordinate_mip_level = (postion.x << 20) | (postion.y << 8) | 0xff;    // 使每个的键值均不同.
+            VirtualTexture texture;
+            texture.physical_position = postion;
+            texture.mip_level = (postion.x << 20) | (postion.y << 8) | 0xff;    // 使每个的键值均不同.
 
-            _pages.insert(create_page_key(page), page);
+            // _pages.insert(create_page_key(texture), texture);
         }
     }
 
-    uint64_t VTPhysicalTable::create_page_key(const VTPage& page)
+    uint64_t VTPhysicalTable::create_texture_key(const VirtualTexture& texture)
     {
-        return (uint64_t(page.geometry_id) << 32) | page.coordinate_mip_level;
+        return (uint64_t(texture.geometry_id) << 32) | texture.mip_level;
     }
 
 

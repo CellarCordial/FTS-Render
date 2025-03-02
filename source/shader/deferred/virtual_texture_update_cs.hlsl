@@ -12,7 +12,7 @@ cbuffer pass_constants : register(b0)
     uint vt_physical_texture_size;
 };
 
-Texture2D<uint2> vt_page_uv_texture : register(t0);
+Texture2D<uint4> geometry_uv_mip_id_texture : register(t0);
 Texture2D<uint4> vt_indirect_texture : register(t1);
 Texture2D<float4> vt_base_color_physical_texture : register(t2);
 Texture2D<float3> vt_normal_physical_texture : register(t3);
@@ -37,8 +37,11 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     if (thread_id.x >= client_resolution.x || thread_id.y >= client_resolution.y) return;
 
     uint2 pixel_id = thread_id.xy;
-    uint2 page_uv = vt_page_uv_texture[pixel_id];
-    if (page_uv.x == INVALID_SIZE_32 || page_uv.y == INVALID_SIZE_32) return;
+    
+    uint4 geometry_uv_mip_id = geometry_uv_mip_id_texture[pixel_id];
+    uint geometry_id = geometry_uv_mip_id.w;
+
+    if (geometry_id == INVALID_SIZE_32) return;
 
     uint2 indirect_uv = pixel_id / VT_FEED_BACK_SCALE_FACTOR;
     uint2 page_coordinate = vt_indirect_texture[indirect_uv].xy;
@@ -60,7 +63,8 @@ void main(uint3 thread_id : SV_DispatchThreadID)
         }
     }
 
-    float2 physical_uv = float2(page_uv + page_coordinate.xy * vt_page_size) / vt_physical_texture_size;
+    uint2 texture_uv = geometry_uv_mip_id.xy;
+    float2 physical_uv = float2(texture_uv + page_coordinate.xy) / vt_physical_texture_size;
 
     float3 world_space_normal = calculate_normal(
         vt_normal_physical_texture.Sample(linear_clamp_sampler, physical_uv).xyz,

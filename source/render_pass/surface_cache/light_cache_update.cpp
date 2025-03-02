@@ -117,17 +117,17 @@
 // 					{
 // 						if (mesh->mesh_id == mesh_id)
 // 						{
-//                             VTPage* page = _surface_lut.query_page(page_id, 0);
+//                             VirtualTexture* page = _surface_lut.query_page(page_id, 0);
 										
 //                             uint2 page_physical_pos;
 
 //                             {
 //                                 std::lock_guard lock(info_mutex);
 
-//                                 VTPage::LoadFlag flag = page->flag;
+//                                 VirtualTexture::LoadFlag flag = page->flag;
 //                                 page_physical_pos = _surface_atlas_table.add_page(page) * SURFACE_RESOLUTION;
 
-//                                 if (flag == VTPage::LoadFlag::Unload)
+//                                 if (flag == VirtualTexture::LoadFlag::Unload)
 //                                 {
                                    
 //                                 }

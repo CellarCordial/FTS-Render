@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <span>
+#include <unordered_map>
 #include <vector>
 #include <string>
 #include "../core/tools/lru_cache.h"
@@ -14,8 +15,8 @@ namespace fantasy
 {
     const static uint32_t VT_PAGE_SIZE = 128;
 	const static uint32_t LOWEST_TEXTURE_RESOLUTION = 512;
-	const static uint32_t HIGHEST_TEXTURE_RESOLUTION = 4096;
-    static const uint32_t VT_PHYSICAL_TEXTURE_RESOLUTION = 4096;
+	const static uint32_t HIGHEST_TEXTURE_RESOLUTION = 2048;
+    static const uint32_t VT_PHYSICAL_TEXTURE_RESOLUTION = 8192;
     static const uint32_t VT_FEED_BACK_SCALE_FACTOR = 10;
 
     static const uint32_t VT_SHADOW_PAGE_SIZE = 1024;
@@ -27,35 +28,25 @@ namespace fantasy
 		DELCARE_DELEGATE_EVENT(GenerateMipmap, Entity*);
 	};
 
-    struct VTPage
+    struct VirtualTexture
     {
         uint32_t geometry_id = INVALID_SIZE_32;
-        uint32_t coordinate_mip_level = INVALID_SIZE_32;
-        uint2 physical_position_in_page = uint2(INVALID_SIZE_32);
+        uint32_t mip_level = INVALID_SIZE_32;
+        uint32_t resolution_in_page = INVALID_SIZE_32;
+        uint2 physical_position = uint2(INVALID_SIZE_32);
 
-        uint2 get_coordinate_in_page() const 
-        {
-            uint32_t coordinate = coordinate_mip_level >> 8;
-            return uint2(coordinate >> 12 , coordinate & 0xfff);
-        }
-
-        uint32_t get_mip_level() const
-        {
-            return coordinate_mip_level & 0xff;
-        }
-
-        bool operator==(const VTPage& other) const 
+        bool operator==(const VirtualTexture& other) const 
         {
             return geometry_id == other.geometry_id &&
-                   coordinate_mip_level == other.coordinate_mip_level &&
-                   physical_position_in_page == other.physical_position_in_page;
+                   mip_level == other.mip_level &&
+                   physical_position == other.physical_position;
         }
 
-        bool operator!=(const VTPage& other) const
+        bool operator!=(const VirtualTexture& other) const
         {
             return geometry_id != other.geometry_id ||
-                   coordinate_mip_level != other.coordinate_mip_level ||
-                   physical_position_in_page != other.physical_position_in_page;
+                   mip_level != other.mip_level ||
+                   physical_position != other.physical_position;
         }
     };
 
@@ -78,24 +69,33 @@ namespace fantasy
         std::vector<uint2> physical_page_pointers;
     };
 
+
+    struct VTPage
+    {
+        uint32_t morton_code;
+
+    };
+
     class VTPhysicalTable
     {
     public:
         VTPhysicalTable(uint32_t resolution = VT_PHYSICAL_TEXTURE_RESOLUTION, uint32_t page_size = VT_PAGE_SIZE);
 
-        bool check_page_loaded(VTPage& page) const;
-        uint2 get_new_position();
+        bool check_texture_loaded(VirtualTexture& texture) const;
+        uint2 get_new_position(uint32_t resolution_in_page);
 
-        void add_pages(std::span<VTPage> pages);
-        void add_page(const VTPage& page);
+        void add_textures(std::span<VirtualTexture> textures);
+        void add_texture(const VirtualTexture& texture);
         void reset();
         
         static std::string get_texture_name(uint32_t texture_type);
-        static uint64_t create_page_key(const VTPage& page);
+        static uint64_t create_texture_key(const VirtualTexture& page);
 
     private:
         uint32_t _resolution_in_page;
-        LruCache<VTPage> _pages;
+        MortonLruCache<VTPage> _pages;
+
+        std::unordered_map<uint64_t, VirtualTexture> _textures;
     };
 
 

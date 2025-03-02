@@ -92,6 +92,8 @@ namespace fantasy
 			_world->add_delay_entity(model_entity);
 			ReturnIfFalse(_global_entity->get_component<event::AddModel>()->broadcast());
 
+			ReturnIfFalse(_current_submesh_count <= Mesh::max_submesh_num);
+
 			loaded_submesh_count = _current_submesh_count;
 			thread_id = INVALID_SIZE_64;
 			model_entity = nullptr;

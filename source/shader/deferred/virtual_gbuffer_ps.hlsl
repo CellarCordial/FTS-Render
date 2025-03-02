@@ -27,7 +27,7 @@ struct VertexOutput
 struct PixelOutput
 {
     float4 world_position_view_depth : SV_Target0;
-    float4 geometry_uv_miplevel_id : SV_TARGET1;
+    uint4 geometry_uv_mip_id : SV_TARGET1;
     float4 world_space_normal : SV_Target2;
     float4 world_space_tangent : SV_TARGET3;
     float4 base_color : SV_TARGET4;
@@ -62,7 +62,7 @@ PixelOutput main(VertexOutput input)
 
     PixelOutput output;
     output.world_position_view_depth = float4(input.world_space_position, input.view_space_position.z);
-    output.geometry_uv_miplevel_id = float4(input.uv, asfloat(mip_level), asfloat(input.geometry_id));
+    output.geometry_uv_mip_id = uint4(uint2(input.uv) * geometry.texture_resolution, mip_level, input.geometry_id);
     output.world_space_normal = float4(input.world_space_normal, 0.0f);
     output.world_space_tangent = float4(input.world_space_tangent, 0.0f);
     output.base_color = geometry.base_color;

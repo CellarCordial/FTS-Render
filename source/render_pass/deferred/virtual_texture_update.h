@@ -46,7 +46,8 @@ namespace fantasy
 		VTPhysicalTable _vt_physical_table;
 
 		uint2 _vt_feed_back_resolution;
-		std::vector<uint3> _vt_feed_back_data;
+		std::vector<uint2> _vt_feed_back_data;
+		std::unordered_map<uint32_t, uint32_t> _geometry_texture_resolution_cache;
 		std::unordered_map<uint64_t, std::pair<TextureTilesMapping::Region, uint32_t>> _geometry_texture_region_cache;
 
 		std::shared_ptr<HeapInterface> _geometry_texture_heap;

@@ -70,17 +70,17 @@ namespace fantasy
 			)));
 			cache->collect(_world_position_view_depth_texture, ResourceType::Texture);
 
-			ReturnIfFalse(_geometry_uv_miplevel_id_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+			ReturnIfFalse(_geometry_uv_mip_id_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RGBA32_FLOAT,
-					"geometry_uv_miplevel_id_texture",
+					Format::RGBA32_UINT,
+					"geometry_uv_mip_id_texture",
 					false,
 					Color(std::bit_cast<float>(INVALID_SIZE_32))
 				)
 			)));
-			cache->collect(_geometry_uv_miplevel_id_texture, ResourceType::Texture);
+			cache->collect(_geometry_uv_mip_id_texture, ResourceType::Texture);
 
 			ReturnIfFalse(_world_space_normal_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target_texture(
@@ -165,7 +165,7 @@ namespace fantasy
 		{
 			FrameBufferDesc frame_buffer_desc;
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_position_view_depth_texture));
-			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_geometry_uv_miplevel_id_texture));
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_geometry_uv_mip_id_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_space_normal_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_space_tangent_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_base_color_texture));

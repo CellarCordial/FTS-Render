@@ -115,6 +115,8 @@ namespace fantasy
 
     struct Mesh
     {
+        static const uint32_t max_submesh_num = sizeof(uint16_t);
+        
         struct Submesh
         {
             std::vector<Vertex> vertices;

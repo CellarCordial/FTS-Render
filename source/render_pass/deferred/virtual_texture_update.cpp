@@ -29,7 +29,7 @@ namespace fantasy
 		_vt_feed_back_read_back_buffer = check_cast<BufferInterface>(cache->require("vt_feed_back_read_back_buffer"));
 
 		_vt_feed_back_resolution = { CLIENT_WIDTH / VT_FEED_BACK_SCALE_FACTOR, CLIENT_HEIGHT / VT_FEED_BACK_SCALE_FACTOR };
-		_vt_feed_back_data.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y, uint3(INVALID_SIZE_32));
+		_vt_feed_back_data.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y, uint2(INVALID_SIZE_32));
 		_vt_indirect_table.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y, uint4(INVALID_SIZE_32));
 
 		ReturnIfFalse(cache->collect_constants("vt_new_shadow_pages", &_vt_new_shadow_pages));
@@ -112,7 +112,7 @@ namespace fantasy
 
 			BindingSetItemArray binding_set_items(13);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualTextureUpdatePassConstant));
-			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("vt_page_uv_texture")));
+			binding_set_items[1] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("geometry_uv_mip_id_texture")));
 			binding_set_items[2] = BindingSetItem::create_texture_srv(1, _vt_indirect_texture);
 			binding_set_items[3] = BindingSetItem::create_texture_srv(2, _vt_physical_textures[0]);
 			binding_set_items[4] = BindingSetItem::create_texture_srv(3, _vt_physical_textures[1]);
@@ -150,8 +150,8 @@ namespace fantasy
 		
         if (SceneSystem::loaded_submesh_count != 0)
 		{
-			uint3* mapped_data = static_cast<uint3*>(_vt_feed_back_read_back_buffer->map(CpuAccessMode::Read));
-			memcpy(_vt_feed_back_data.data(), mapped_data, static_cast<uint32_t>(_vt_feed_back_data.size()) * sizeof(uint3)); 
+			uint2* mapped_data = static_cast<uint2*>(_vt_feed_back_read_back_buffer->map(CpuAccessMode::Read));
+			memcpy(_vt_feed_back_data.data(), mapped_data, static_cast<uint32_t>(_vt_feed_back_data.size()) * sizeof(uint2)); 
 			_vt_feed_back_read_back_buffer->unmap();
 
 			std::array<TextureTilesMapping, Material::TextureType_Num> tile_mappings;
@@ -160,10 +160,10 @@ namespace fantasy
 			{
 				const auto& data = _vt_feed_back_data[ix];
 
-				if (data.z != INVALID_SIZE_32)
+				if (data.y != INVALID_SIZE_32)
 				{
 					VTShadowPage page;
-					page.tile_id = { data.z >> 16, data.z & 0xffff };
+					page.tile_id = { data.y >> 16, data.y & 0xffff };
 
 					if (!_vt_physical_shadow_table.check_page_loaded(page))
 					{
@@ -175,41 +175,38 @@ namespace fantasy
 					_vt_indirect_table[ix].w = page.physical_position_in_page.y;
 				}
 
-				if (data.x == INVALID_SIZE_32 || data.y == INVALID_SIZE_32)  continue;
+				if (data.x == INVALID_SIZE_32)  continue;
 
-				VTPage page;
-				page.geometry_id = data.x;
-				page.coordinate_mip_level = data.y;
+				VirtualTexture texture;
+				texture.geometry_id = data.x >> 16;
+				texture.mip_level = data.x & 0xffff;
+				texture.resolution_in_page = _geometry_texture_resolution_cache[texture.geometry_id];
 
-				if (!_vt_physical_table.check_page_loaded(page))
+				if (!_vt_physical_table.check_texture_loaded(texture))
 				{
-					page.physical_position_in_page = _vt_physical_table.get_new_position();
+					texture.physical_position = 
+						_vt_physical_table.get_new_position(texture.resolution_in_page) * VT_PAGE_SIZE;
 
 					for (uint32_t jx = 0; jx < Material::TextureType_Num; ++jx)
 					{
 						auto iter = _geometry_texture_region_cache.find(create_texture_region_cache_key(
-							page.geometry_id, page.get_mip_level(), jx
+							texture.geometry_id, texture.mip_level, jx
 						));
 
 						if (iter == _geometry_texture_region_cache.end()) continue;
 
-						auto [region, pixel_size_row_page_num] = iter->second;
-						uint32_t pixel_size = pixel_size_row_page_num >> 16;
-						uint32_t row_page_num = pixel_size_row_page_num & 0xffff;
+						auto [region, pixel_size] = iter->second;
 					
-						uint2 coordinate = page.get_coordinate_in_page();
-						region.x = page.physical_position_in_page.x * VT_PAGE_SIZE;
-						region.y = page.physical_position_in_page.y * VT_PAGE_SIZE;
-						region.byte_offset += (coordinate.x + coordinate.y * row_page_num) * 
-											  VT_PAGE_SIZE * VT_PAGE_SIZE * pixel_size;
+						region.x = texture.physical_position.x;
+						region.y = texture.physical_position.y;
 					
 						tile_mappings[jx].regions.emplace_back(region);
 					}
 				}
 
-				_vt_physical_table.add_page(page);
-				_vt_indirect_table[ix].x = page.physical_position_in_page.x;
-				_vt_indirect_table[ix].y = page.physical_position_in_page.y;
+				_vt_physical_table.add_texture(texture);
+				_vt_indirect_table[ix].x = texture.physical_position.x;
+				_vt_indirect_table[ix].y = texture.physical_position.y;
 			}
 
 			for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
@@ -265,7 +262,9 @@ namespace fantasy
 					{
 						if (material->image_resolution == 0) continue;
 
-						uint32_t submesh_id = mesh->submesh_global_base_id + ix;
+						uint32_t global_submesh_id = mesh->submesh_global_base_id + ix;
+						_geometry_texture_resolution_cache[global_submesh_id] = material->image_resolution / VT_PAGE_SIZE;
+
 						for (uint32_t type = 0; type < Material::TextureType_Num; ++type)
 						{
 							if (!material->submaterials[ix].images[type].is_valid()) continue;
@@ -274,25 +273,24 @@ namespace fantasy
 								get_geometry_texture_name(ix, type, *name).c_str()
 							))->get_desc();
 
-							uint32_t row_size_in_page = texture_desc.width / VT_PAGE_SIZE;
 							uint32_t pixel_size = get_format_info(texture_desc.format).size;
 
 							uint32_t mip0_size = texture_desc.width * texture_desc.height * pixel_size;
 
 							TextureTilesMapping::Region region;
-							region.width = VT_PAGE_SIZE;
-							region.height = VT_PAGE_SIZE;
+							region.width = texture_desc.width;
+							region.height = texture_desc.height;
 							region.byte_offset = texture_desc.offset_in_heap;
 
-							uint64_t key = create_texture_region_cache_key(submesh_id, 0, type);
-							_geometry_texture_region_cache[key] = std::make_pair(region, (pixel_size << 16) | (row_size_in_page & 0xffff));
+							uint64_t key = create_texture_region_cache_key(global_submesh_id, 0, type);
+							_geometry_texture_region_cache[key] = std::make_pair(region, pixel_size);
 
 							for (uint32_t mip = 1; mip < texture_desc.mip_levels; ++mip)
 							{
 								region.byte_offset += (mip0_size >> ((mip - 1) * 2));
 
-								uint64_t key = create_texture_region_cache_key(submesh_id, mip, type);
-								_geometry_texture_region_cache[key] = std::make_pair(region, (pixel_size << 16) | ((row_size_in_page >> mip) & 0xffff));
+								uint64_t key = create_texture_region_cache_key(global_submesh_id, mip, type);
+								_geometry_texture_region_cache[key] = std::make_pair(region, pixel_size);
 							}
 						}
 					}

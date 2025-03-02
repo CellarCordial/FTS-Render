@@ -52,7 +52,7 @@ namespace fantasy
 		std::shared_ptr<BufferInterface> _draw_indexed_indirect_arguments_buffer;
 		
 		std::shared_ptr<TextureInterface> _world_position_view_depth_texture;
-		std::shared_ptr<TextureInterface> _geometry_uv_miplevel_id_texture;
+		std::shared_ptr<TextureInterface> _geometry_uv_mip_id_texture;
 		std::shared_ptr<TextureInterface> _world_space_normal_texture;
 		std::shared_ptr<TextureInterface> _world_space_tangent_texture;
 		std::shared_ptr<TextureInterface> _base_color_texture;
