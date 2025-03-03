@@ -79,7 +79,7 @@ namespace fantasy
 			binding_set_items[1] = BindingSetItem::create_texture_uav(0, _final_texture);
 			binding_set_items[2] = BindingSetItem::create_texture_srv(0, check_cast<TextureInterface>(cache->require("world_position_view_depth_texture")));
 			binding_set_items[3] = BindingSetItem::create_texture_srv(1, check_cast<TextureInterface>(cache->require("world_space_normal_texture")));
-			binding_set_items[4] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("_base_color_texture")));
+			binding_set_items[4] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("base_color_texture")));
 			binding_set_items[5] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("pbr_texture")));
 			binding_set_items[6] = BindingSetItem::create_texture_srv(4, check_cast<TextureInterface>(cache->require("emissive_texture")));
 			binding_set_items[7] = BindingSetItem::create_texture_srv(5, check_cast<TextureInterface>(cache->require("virtual_mesh_visual_texture")));

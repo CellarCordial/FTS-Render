@@ -30,9 +30,9 @@ namespace fantasy
 			binding_layout_items[8] = BindingLayoutItem::create_texture_srv(5);
 			binding_layout_items[9] = BindingLayoutItem::create_texture_srv(6);
 			binding_layout_items[10] = BindingLayoutItem::create_texture_srv(7);
-			binding_layout_items[14] = BindingLayoutItem::create_sampler(0);
-			binding_layout_items[15] = BindingLayoutItem::create_sampler(1);
-			binding_layout_items[16] = BindingLayoutItem::create_sampler(2);
+			binding_layout_items[11] = BindingLayoutItem::create_sampler(0);
+			binding_layout_items[12] = BindingLayoutItem::create_sampler(1);
+			binding_layout_items[13] = BindingLayoutItem::create_sampler(2);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -41,7 +41,7 @@ namespace fantasy
 		// Shader.
 		{
 			ShaderCompileDesc shader_compile_desc;
-			shader_compile_desc.shader_name = "test/final_test_cs.hlsl";
+			shader_compile_desc.shader_name = "atmosphere/aerial_shadow_cs.hlsl";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Compute;
 			shader_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
@@ -77,6 +77,7 @@ namespace fantasy
 					"blue_noise_texture"
 				)
 			)));
+            cache->collect(_blue_noise_texture, ResourceType::Texture);
 		}
 
 		// Binding Set.
@@ -90,8 +91,8 @@ namespace fantasy
 			binding_set_items[5] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("base_color_texture")));
 			binding_set_items[6] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("aerial_lut_texture")));
 			binding_set_items[7] = BindingSetItem::create_texture_srv(4, check_cast<TextureInterface>(cache->require("transmittance_texture")));
-			binding_set_items[8] = BindingSetItem::create_texture_srv(5, check_cast<TextureInterface>(cache->require("shadow_map_texture")));
-			binding_set_items[9] = BindingSetItem::create_texture_srv(6, check_cast<TextureInterface>(cache->require("blue_noise_texture")));
+			binding_set_items[8] = BindingSetItem::create_texture_srv(5, check_cast<TextureInterface>(cache->require("shadow_map_texture")), TextureSubresourceSet{}, Format::R32_FLOAT);
+			binding_set_items[9] = BindingSetItem::create_texture_srv(6, _blue_noise_texture);
 			binding_set_items[10] = BindingSetItem::create_texture_srv(7, check_cast<TextureInterface>(cache->require("geometry_uv_mip_id_texture")));
 			binding_set_items[11] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
 			binding_set_items[12] = BindingSetItem::create_sampler(1, check_cast<SamplerInterface>(cache->require("point_clamp_sampler")));

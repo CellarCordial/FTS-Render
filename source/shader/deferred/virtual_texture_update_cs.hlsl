@@ -72,11 +72,17 @@ void main(uint3 thread_id : SV_DispatchThreadID)
 
     float2 physical_uv = float2(interal_uv + page_id.xy * vt_page_size) / vt_physical_texture_size;
 
-    float3 world_space_normal = calculate_normal(
-        vt_normal_physical_texture.Sample(linear_clamp_sampler, physical_uv).xyz,
-        normalize(world_space_normal_texture[pixel_id].xyz),
-        normalize(world_space_tangent_texture[pixel_id].xyz)
-    );
+    float3 vt_normal = vt_normal_physical_texture.Sample(linear_clamp_sampler, physical_uv).xyz;
+    if (dot(vt_normal, vt_normal) != 0.0f)
+    {
+        float3 world_space_normal = calculate_normal(
+            vt_normal,
+            normalize(world_space_normal_texture[pixel_id].xyz),
+            normalize(world_space_tangent_texture[pixel_id].xyz)
+        );
+        world_space_normal_texture[pixel_id] = float4(world_space_normal, 0.0f);
+    }
+
     float4 base_color =
         vt_base_color_physical_texture.Sample(linear_clamp_sampler, physical_uv) *
         base_color_texture[pixel_id];
@@ -87,7 +93,6 @@ void main(uint3 thread_id : SV_DispatchThreadID)
         vt_emissive_physical_texture.Sample(linear_clamp_sampler, physical_uv) * 
         emissive_texture[pixel_id];
 
-    world_space_normal_texture[pixel_id] = float4(world_space_normal, 0.0f);
     base_color_texture[pixel_id] = base_color;
     pbr_texture[pixel_id] = float4(pbr, 1.0f);
     emissive_texture[pixel_id] = emissive;

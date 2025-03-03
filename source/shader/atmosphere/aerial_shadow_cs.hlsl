@@ -1,5 +1,5 @@
-#define THREAD_GROUP_SIZE_X 1
-#define THREAD_GROUP_SIZE_Y 1
+// #define THREAD_GROUP_SIZE_X 1
+// #define THREAD_GROUP_SIZE_Y 1
 
 #include "../common/post_process.hlsl"
 #include "../common/atmosphere_properties.hlsl"
@@ -78,7 +78,7 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     float3 sun_radiance = base_color_texture[pixel_id].xyz * max(0.0f, dot(world_space_normal, -sun_dir));
 
     // 将物体位置沿着法线稍微偏移 0.03 个单位。这种偏移可以避免阴影失真 z-fighting.
-    float4 shadow_clip = mul(float4(world_space_position + 0.03 * world_space_normal, 1.0f), shadow_view_proj);
+    float4 shadow_clip = mul(float4(world_space_position + 0.07 * world_space_normal, 1.0f), shadow_view_proj);
     float2 shadow_ndc = shadow_clip.xy / shadow_clip.w;
     float2 shadow_uv = 0.5f + float2(0.5f, -0.5f) * shadow_ndc;
 
