@@ -40,8 +40,8 @@ namespace fantasy
 
 		for (int32_t mip = 0; mip < VT_TEXTURE_MIP_LEVELS; ++mip)
 		{
-			_pass_constant.vt_axis_mip_tile_num[mip] = (HIGHEST_TEXTURE_RESOLUTION >> mip) / VT_PAGE_SIZE;
-			_pass_constant.vt_texture_mip_offset[mip] = _pass_constant.vt_texture_id_offset;
+			_pass_constant.vt_axis_mip_tile_num[mip / 4][mip % 4] = (HIGHEST_TEXTURE_RESOLUTION >> mip) / VT_PAGE_SIZE;
+			_pass_constant.vt_texture_mip_offset[mip / 4][mip % 4] = _pass_constant.vt_texture_id_offset;
 			_pass_constant.vt_texture_id_offset += std::pow(4, VT_TEXTURE_MIP_LEVELS - mip - 1);
 		}
  
@@ -75,7 +75,7 @@ namespace fantasy
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
-			cs_compile_desc.defines.push_back("VT_TEXTURE_MIP_LEVELS=" + std::to_string(VT_TEXTURE_MIP_LEVELS));
+			cs_compile_desc.defines.push_back("VT_TEXTURE_MIP_LEVELS_UINT_4=" + std::to_string(VT_TEXTURE_MIP_LEVELS / 4 + 1));
 			ShaderData cs_data = compile_shader(cs_compile_desc);
 
 			ShaderDesc cs_desc;
@@ -214,10 +214,11 @@ namespace fantasy
 				_vt_physical_table.add_page(page);
 
 				uint32_t mip = page.get_mip_level();
+				uint2 tile_id = page.get_coordinate_in_page();
 				uint32_t indirect_index = page.geometry_id * _pass_constant.vt_texture_id_offset + 
-										  _pass_constant.vt_texture_mip_offset[mip] + 
-										  page.get_coordinate_in_page().y * _pass_constant.vt_axis_mip_tile_num[mip] +
-										  page.get_coordinate_in_page().x;
+										  _pass_constant.vt_texture_mip_offset[mip / 4][mip % 4] + 
+										  tile_id.y * _pass_constant.vt_axis_mip_tile_num[mip / 4][mip % 4] +
+										  tile_id.x;
 
 				_vt_indirect_data[indirect_index] = (page.physical_position_in_page.x << 16) |
 													(page.physical_position_in_page.y & 0xffff);

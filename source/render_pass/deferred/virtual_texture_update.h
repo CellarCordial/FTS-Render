@@ -19,9 +19,9 @@ namespace fantasy
             uint32_t vt_page_size = VT_PAGE_SIZE;
             uint32_t vt_physical_texture_size = VT_PHYSICAL_TEXTURE_RESOLUTION;
 
-			uint32_t vt_texture_id_offset;
-			uint32_t vt_texture_mip_offset[VT_TEXTURE_MIP_LEVELS];
-			uint32_t vt_axis_mip_tile_num[VT_TEXTURE_MIP_LEVELS];
+			uint4 vt_texture_mip_offset[VT_TEXTURE_MIP_LEVELS / 4 + 1];
+			uint4 vt_axis_mip_tile_num[VT_TEXTURE_MIP_LEVELS / 4 + 1];
+			uint32_t vt_texture_id_offset = 0;
 		};
 	}
 
