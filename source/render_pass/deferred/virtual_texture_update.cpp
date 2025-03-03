@@ -149,12 +149,12 @@ namespace fantasy
 
 	bool VirtualTextureUpdatePass::execute(CommandListInterface* cmdlist, RenderResourceCache* cache)
 	{
-		ReturnIfFalse(update_texture_region_cache(cmdlist->get_deivce(), cache));
-
 		ReturnIfFalse(cmdlist->open());
 		
         if (SceneSystem::loaded_submesh_count != 0)
 		{
+			ReturnIfFalse(update_texture_region_cache(cmdlist->get_deivce(), cache));
+
 			uint3* mapped_data = static_cast<uint3*>(_vt_feed_back_read_back_buffer->map(CpuAccessMode::Read));
 			memcpy(_vt_feed_back_data.data(), mapped_data, static_cast<uint32_t>(_vt_feed_back_data.size()) * sizeof(uint3)); 
 			_vt_feed_back_read_back_buffer->unmap();

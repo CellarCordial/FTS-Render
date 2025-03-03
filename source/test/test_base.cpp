@@ -95,7 +95,7 @@ namespace fantasy
         gui::add(
             [camera]()
             {
-				ImGui::SliderInt("Camera Speed", &camera->speed, 1, 10);
+				ImGui::SliderInt("Camera Speed", &camera->speed, 1, 30);
                 ImGui::Separator();
             }
         );

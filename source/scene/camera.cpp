@@ -134,7 +134,7 @@ namespace fantasy
 
     void Camera::vertical(float size)
     {
-        size *= speed * 0.2f;
+        size *= speed * 0.8f;
 
         position = size * up + position;
 
