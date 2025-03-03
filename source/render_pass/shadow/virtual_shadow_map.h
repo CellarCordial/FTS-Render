@@ -50,6 +50,12 @@ namespace fantasy
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
 
 	private:
+		bool compile_culling_pass(DeviceInterface* device, RenderResourceCache* cache);
+		bool compile_shadow_map_pass(DeviceInterface* device, RenderResourceCache* cache);
+		bool compile_hi_z_update_pass(DeviceInterface* device, RenderResourceCache* cache);
+		bool compile_virtual_shadow_pass(DeviceInterface* device, RenderResourceCache* cache);
+
+	private:
 		bool _resource_writed = false;
 		bool _update_shadow_map = true;
 

@@ -63,7 +63,7 @@ namespace fantasy
 		_directional_light = cache->get_world()->get_global_entity()->get_component<DirectionalLight>();
 
 
-        uint32_t hzb_mip_levels = search_most_significant_bit(_shadow_hzb_resolution) + 1;
+		
 		// Texture.
 		{
 			ReturnIfFalse(_shadow_map_texture = std::shared_ptr<TextureInterface>(device->create_texture(
@@ -75,325 +75,12 @@ namespace fantasy
 				)
 			)));
 			cache->collect(_shadow_map_texture, ResourceType::Texture);
-
-			TextureDesc desc;
-			desc.name = "shadow_hi_z_texture";
-			desc.width = _shadow_hzb_resolution;
-			desc.height = _shadow_hzb_resolution;
-			desc.format = Format::R32_FLOAT;
-			desc.mip_levels = hzb_mip_levels;
-			desc.allow_unordered_access = true;
-			ReturnIfFalse(_shadow_hi_z_texture = std::shared_ptr<TextureInterface>(device->create_texture(desc)));
 		}
 
-		// Binding Layout.
-		{
-			BindingLayoutItemArray binding_layout_items(3 + hzb_mip_levels);
-			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::ShadowHiZUpdatePassConstant));
-			binding_layout_items[1] = BindingLayoutItem::create_sampler(0);
-			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
-            for (uint32_t ix = 0; ix < hzb_mip_levels; ++ix)
-            {
-			    binding_layout_items[3 + ix] = BindingLayoutItem::create_texture_uav(ix);
-            }
-			ReturnIfFalse(_hi_z_update_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
-				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
-			)));
-		}
-
-		// Shader.
-		{
-			ShaderCompileDesc cs_compile_desc;
-			cs_compile_desc.shader_name = "culling/hierarchical_zbuffer_update_cs.hlsl";
-			cs_compile_desc.entry_point = "main";
-			cs_compile_desc.target = ShaderTarget::Compute;
-			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
-			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
-			cs_compile_desc.defines.push_back("REVERSE_Z_BUFFER=0");
-			ShaderData cs_data = compile_shader(cs_compile_desc);
-
-			ShaderDesc cs_desc;
-			cs_desc.entry = "main";
-			cs_desc.shader_type = ShaderType::Compute;
-			ReturnIfFalse(_hi_z_update_cs = std::unique_ptr<Shader>(create_shader(cs_desc, cs_data.data(), cs_data.size())));
-		}
-
-		// Pipeline.
-		{
-			ComputePipelineDesc pipeline_desc;
-			pipeline_desc.binding_layouts.push_back(_hi_z_update_binding_layout);
-			pipeline_desc.compute_shader = _hi_z_update_cs;
-			ReturnIfFalse(_hi_z_update_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
-		}
-
-		// Binding Set.
-		{
-			BindingSetItemArray binding_set_items(3 + hzb_mip_levels);
-			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::ShadowHiZUpdatePassConstant));
-			binding_set_items[1] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
-			binding_set_items[2] = BindingSetItem::create_texture_srv(0, _shadow_map_texture, TextureSubresourceSet{}, Format::R32_FLOAT);
-            for (uint32_t ix = 0; ix < hzb_mip_levels; ++ix)
-            {
-			    binding_set_items[3 + ix] = BindingSetItem::create_texture_uav(
-                    ix, 
-                    _shadow_hi_z_texture,
-                    TextureSubresourceSet{
-                        .base_mip_level = ix,
-                        .mip_level_count = 1,
-                        .base_array_slice = 0,
-                        .array_slice_count = 1  
-                    }
-                );
-            }
-			ReturnIfFalse(_hi_z_update_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
-				BindingSetDesc{ .binding_items = binding_set_items },
-				_hi_z_update_binding_layout
-			)));
-		}
-
-		// Compute state.
-		{
-			_hi_z_update_compute_state.binding_sets.push_back(_hi_z_update_binding_set.get());
-			_hi_z_update_compute_state.pipeline = _hi_z_update_pipeline.get();
-		}
-
-		_hi_z_update_pass_constants.resize(hzb_mip_levels);
-        for (uint32_t ix = 0; ix < _hi_z_update_pass_constants.size(); ++ix)
-		{
-			_hi_z_update_pass_constants[ix].shadow_map_resolution = uint2(_shadow_map_resolution);
-			_hi_z_update_pass_constants[ix].last_mip_level = ix;
-			_hi_z_update_pass_constants[ix].hzb_resolution = _shadow_hzb_resolution;
-		}
- 
-
-
-		// Culling Pass.
-
-		// Binding Layout.
-		{
-			BindingLayoutItemArray cull_binding_layout_items(7);
-			cull_binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::ShadowCullingConstant));
-			cull_binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_uav(0);
-			cull_binding_layout_items[2] = BindingLayoutItem::create_structured_buffer_uav(1);
-			cull_binding_layout_items[3] = BindingLayoutItem::create_structured_buffer_srv(0);
-			cull_binding_layout_items[4] = BindingLayoutItem::create_structured_buffer_srv(1);
-			cull_binding_layout_items[5] = BindingLayoutItem::create_texture_srv(2);
-			cull_binding_layout_items[6] = BindingLayoutItem::create_sampler(0);
-			ReturnIfFalse(_cull_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
-				BindingLayoutDesc{ .binding_layout_items = cull_binding_layout_items }
-			)));
-		}
-
-		// Shader.
-		{
-			ShaderCompileDesc cs_compile_desc;
-			cs_compile_desc.shader_name = "culling/shadow_culling_cs.hlsl";
-			cs_compile_desc.entry_point = "main";
-			cs_compile_desc.target = ShaderTarget::Compute;
-			cs_compile_desc.defines.resize(2);
-			cs_compile_desc.defines[0] = ("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
-			cs_compile_desc.defines[1] = ("HI_Z_CULLING=0");
-			ShaderData cs_data = compile_shader(cs_compile_desc);
-			cs_compile_desc.defines[1] = ("HI_Z_CULLING=1");
-			ShaderData hi_z_cs_data = compile_shader(cs_compile_desc);
-
-
-			ShaderDesc cs_desc;
-			cs_desc.entry = "main";
-			cs_desc.shader_type = ShaderType::Compute;
-			ReturnIfFalse(_cull_cs = std::unique_ptr<Shader>(create_shader(cs_desc, cs_data.data(), cs_data.size())));
-			ReturnIfFalse(_hi_z_cull_cs = std::unique_ptr<Shader>(create_shader(cs_desc, hi_z_cs_data.data(), hi_z_cs_data.size())));
-		}
-
-		// Pipeline.
-		{
-			ComputePipelineDesc cull_pipeline_desc;
-			cull_pipeline_desc.binding_layouts.push_back(_cull_binding_layout);
-			cull_pipeline_desc.compute_shader = _cull_cs;
-			ReturnIfFalse(_cull_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(cull_pipeline_desc)));
-			cull_pipeline_desc.compute_shader = _hi_z_cull_cs;
-			ReturnIfFalse(_hi_z_cull_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(cull_pipeline_desc)));
-		}
-
-		// Buffer.
-		{
-			ReturnIfFalse(_vt_shadow_draw_indirect_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_read_write_structured_buffer(
-					sizeof(DrawIndexedIndirectArguments), 
-					sizeof(DrawIndexedIndirectArguments), 
-					"vt_shadow_draw_indirect_buffer"
-				)
-			)));
-			cache->collect(_vt_shadow_draw_indirect_buffer, ResourceType::Buffer);
-
-            uint32_t virtual_shadow_resolution_in_page = VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE;
-			ReturnIfFalse(_vt_shadow_visible_cluster_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-				BufferDesc::create_read_write_structured_buffer(
-					sizeof(uint2) * virtual_shadow_resolution_in_page * virtual_shadow_resolution_in_page, 
-					sizeof(uint2), 
-					"vt_shadow_visible_cluster_buffer"
-				)
-			)));
-			cache->collect(_vt_shadow_visible_cluster_buffer, ResourceType::Buffer);
-		}
- 
-		// Binding Set.
-		{
-			_cull_binding_set_items.resize(7);
-			_cull_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::ShadowCullingConstant));
-			_cull_binding_set_items[1] = BindingSetItem::create_structured_buffer_uav(0, _vt_shadow_draw_indirect_buffer);
-			_cull_binding_set_items[2] = BindingSetItem::create_structured_buffer_uav(1, _vt_shadow_visible_cluster_buffer);
-			_cull_binding_set_items[5] = BindingSetItem::create_texture_srv(2, _shadow_hi_z_texture);
-			_cull_binding_set_items[6] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
-		}
-
-		// Compute state.
-		{
-			_cull_compute_state.binding_sets.resize(1);
-		}
- 
-
-		// Virtual Shadow Pass.
-
-		// Binding Layout.
-		{
-			BindingLayoutItemArray binding_layout_items(7);
-			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::ShadowPassConstant));
-			binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_srv(0);
-			binding_layout_items[2] = BindingLayoutItem::create_structured_buffer_srv(1);
-			binding_layout_items[3] = BindingLayoutItem::create_structured_buffer_srv(2);
-			binding_layout_items[4] = BindingLayoutItem::create_structured_buffer_srv(3);
-			binding_layout_items[5] = BindingLayoutItem::create_structured_buffer_srv(4);
-			binding_layout_items[6] = BindingLayoutItem::create_texture_uav(0);
-			ReturnIfFalse(_virtual_shadow_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
-				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
-			)));
-		}
-
-		// Shader.
-		{
-			ShaderCompileDesc shader_compile_desc;
-			shader_compile_desc.shader_name = "shadow/virtual_shadow_map_vs.hlsl";
-			shader_compile_desc.entry_point = "main";
-			shader_compile_desc.target = ShaderTarget::Vertex;
-			ShaderData vs_data = compile_shader(shader_compile_desc);
-			shader_compile_desc.shader_name = "shadow/virtual_shadow_map_ps.hlsl";
-			shader_compile_desc.entry_point = "main";
-			shader_compile_desc.target = ShaderTarget::Pixel;
-			ShaderData ps_data = compile_shader(shader_compile_desc);
-
-			ShaderDesc vs_desc;
-			vs_desc.entry = "main";
-			vs_desc.shader_type = ShaderType::Vertex;
-			ReturnIfFalse(_virtual_shadow_vs = std::unique_ptr<Shader>(create_shader(vs_desc, vs_data.data(), vs_data.size())));
-
-			ShaderDesc ps_desc;
-			ps_desc.shader_type = ShaderType::Pixel;
-			ps_desc.entry = "main";
-			ReturnIfFalse(_virtual_shadow_ps = std::unique_ptr<Shader>(create_shader(ps_desc, ps_data.data(), ps_data.size())));
-		}
-
-		// Texture.
-		{
-			// InterlockedMin 不支持浮点数, 故在这里使用整数格式存储浮点数, 深度值永远为正数, 将浮点深度转化为整数可直接比较.
-			ReturnIfFalse(_vt_physical_shadow_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_read_write_texture(
-					VT_PHYSICAL_SHADOW_RESOLUTION,
-					VT_PHYSICAL_SHADOW_RESOLUTION,
-					Format::R32_UINT,
-					"vt_physical_shadow_texture"
-				)
-			)));
-			cache->collect(_vt_physical_shadow_texture, ResourceType::Texture);
-			
-			ReturnIfFalse(_vt_physical_shadow_float_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_read_write_texture(
-					VT_PHYSICAL_SHADOW_RESOLUTION,
-					VT_PHYSICAL_SHADOW_RESOLUTION,
-					Format::R32_FLOAT,
-					"vt_physical_shadow_float_texture"
-				)
-			)));
-			cache->collect(_vt_physical_shadow_float_texture, ResourceType::Texture);
-
-			ReturnIfFalse(_black_render_target_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_render_target_texture(
-					VT_SHADOW_PAGE_SIZE,
-					VT_SHADOW_PAGE_SIZE,
-					Format::RGBA8_UNORM,
-					"",
-					false,
-					Color(1.0f)
-				)
-			)));
-		}
- 
-		// Frame Buffer.
-		{
-			FrameBufferDesc frame_buffer_desc;
-			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_black_render_target_texture));
-			ReturnIfFalse(_virtual_shadow_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
-		}
- 
-		// Pipeline.
-		{
-			GraphicsPipelineDesc pipeline_desc;
-			pipeline_desc.vertex_shader = _virtual_shadow_vs;
-			pipeline_desc.pixel_shader = _virtual_shadow_ps;
-			pipeline_desc.binding_layouts.push_back(_virtual_shadow_binding_layout);
-			ReturnIfFalse(_virtual_shadow_pipeline = std::unique_ptr<GraphicsPipelineInterface>(
-				device->create_graphics_pipeline(pipeline_desc, _virtual_shadow_frame_buffer.get())
-			));
-		}
-
-		// Binding Set.
-		{
-			_virtual_shadow_binding_set_items.resize(7);
-			_virtual_shadow_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::ShadowPassConstant));
-			_virtual_shadow_binding_set_items[2] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("vt_shadow_visible_cluster_buffer")));
-			_virtual_shadow_binding_set_items[6] = BindingSetItem::create_texture_uav(0, _vt_physical_shadow_texture);
-		}
-
-		// Graphics state.
-		{
-			_virtual_shadow_graphics_state.binding_sets.resize(1);
-			_virtual_shadow_graphics_state.pipeline = _virtual_shadow_pipeline.get();
-			_virtual_shadow_graphics_state.frame_buffer = _virtual_shadow_frame_buffer.get();
-			_virtual_shadow_graphics_state.viewport_state = ViewportState::create_default_viewport(VT_SHADOW_PAGE_SIZE, VT_SHADOW_PAGE_SIZE);
-			_virtual_shadow_graphics_state.indirect_buffer = _vt_shadow_draw_indirect_buffer.get();
-		}
-
-
-		// Shadow Map Pass.
-		
-		// Frame Buffer.
-		{
-			FrameBufferDesc frame_buffer_desc;
-			frame_buffer_desc.depth_stencil_attachment = FrameBufferAttachment::create_attachment(_shadow_map_texture);
-			ReturnIfFalse(_shadow_map_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
-		}
- 
-		// Pipeline.
-		{
-			GraphicsPipelineDesc pipeline_desc;
-			pipeline_desc.vertex_shader = _virtual_shadow_vs;
-			pipeline_desc.binding_layouts.push_back(_virtual_shadow_binding_layout);
-			pipeline_desc.render_state.depth_stencil_state.enable_depth_test = true;
-			pipeline_desc.render_state.depth_stencil_state.enable_depth_write = true;
-			pipeline_desc.render_state.depth_stencil_state.depth_func = ComparisonFunc::Less;
-			ReturnIfFalse(_shadow_map_pipeline = std::unique_ptr<GraphicsPipelineInterface>(
-				device->create_graphics_pipeline(pipeline_desc, _shadow_map_frame_buffer.get())
-			));
-		}
-
-		// Graphics state.
-		{
-			_shadow_map_graphics_state.binding_sets.resize(1);
-			_shadow_map_graphics_state.pipeline = _shadow_map_pipeline.get();
-			_shadow_map_graphics_state.frame_buffer = _shadow_map_frame_buffer.get();
-			_shadow_map_graphics_state.viewport_state = ViewportState::create_default_viewport(_shadow_map_resolution, _shadow_map_resolution);
-			_shadow_map_graphics_state.indirect_buffer = _vt_shadow_draw_indirect_buffer.get();
-		}
+		ReturnIfFalse(compile_hi_z_update_pass(device, cache));
+		ReturnIfFalse(compile_culling_pass(device, cache));
+		ReturnIfFalse(compile_virtual_shadow_pass(device, cache));
+		ReturnIfFalse(compile_shadow_map_pass(device, cache));
 
 		return true;
 	}
@@ -570,6 +257,337 @@ namespace fantasy
 		}
 
 		ReturnIfFalse(cmdlist->close());
+		return true;
+	}
+
+	bool VirtualShadowMapPass::compile_culling_pass(DeviceInterface* device, RenderResourceCache* cache)
+	{
+		// Binding Layout.
+		{
+			BindingLayoutItemArray cull_binding_layout_items(7);
+			cull_binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::ShadowCullingConstant));
+			cull_binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_uav(0);
+			cull_binding_layout_items[2] = BindingLayoutItem::create_structured_buffer_uav(1);
+			cull_binding_layout_items[3] = BindingLayoutItem::create_structured_buffer_srv(0);
+			cull_binding_layout_items[4] = BindingLayoutItem::create_structured_buffer_srv(1);
+			cull_binding_layout_items[5] = BindingLayoutItem::create_texture_srv(2);
+			cull_binding_layout_items[6] = BindingLayoutItem::create_sampler(0);
+			ReturnIfFalse(_cull_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
+				BindingLayoutDesc{ .binding_layout_items = cull_binding_layout_items }
+			)));
+		}
+
+		// Shader.
+		{
+			ShaderCompileDesc cs_compile_desc;
+			cs_compile_desc.shader_name = "culling/shadow_culling_cs.hlsl";
+			cs_compile_desc.entry_point = "main";
+			cs_compile_desc.target = ShaderTarget::Compute;
+			cs_compile_desc.defines.resize(2);
+			cs_compile_desc.defines[0] = ("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
+			cs_compile_desc.defines[1] = ("HI_Z_CULLING=0");
+			ShaderData cs_data = compile_shader(cs_compile_desc);
+			cs_compile_desc.defines[1] = ("HI_Z_CULLING=1");
+			ShaderData hi_z_cs_data = compile_shader(cs_compile_desc);
+
+
+			ShaderDesc cs_desc;
+			cs_desc.entry = "main";
+			cs_desc.shader_type = ShaderType::Compute;
+			ReturnIfFalse(_cull_cs = std::unique_ptr<Shader>(create_shader(cs_desc, cs_data.data(), cs_data.size())));
+			ReturnIfFalse(_hi_z_cull_cs = std::unique_ptr<Shader>(create_shader(cs_desc, hi_z_cs_data.data(), hi_z_cs_data.size())));
+		}
+
+		// Pipeline.
+		{
+			ComputePipelineDesc cull_pipeline_desc;
+			cull_pipeline_desc.binding_layouts.push_back(_cull_binding_layout);
+			cull_pipeline_desc.compute_shader = _cull_cs;
+			ReturnIfFalse(_cull_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(cull_pipeline_desc)));
+			cull_pipeline_desc.compute_shader = _hi_z_cull_cs;
+			ReturnIfFalse(_hi_z_cull_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(cull_pipeline_desc)));
+		}
+
+		// Buffer.
+		{
+			ReturnIfFalse(_vt_shadow_draw_indirect_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+				BufferDesc::create_read_write_structured_buffer(
+					sizeof(DrawIndexedIndirectArguments), 
+					sizeof(DrawIndexedIndirectArguments), 
+					"vt_shadow_draw_indirect_buffer"
+				)
+			)));
+			cache->collect(_vt_shadow_draw_indirect_buffer, ResourceType::Buffer);
+
+            uint32_t virtual_shadow_resolution_in_page = VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE;
+			ReturnIfFalse(_vt_shadow_visible_cluster_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+				BufferDesc::create_read_write_structured_buffer(
+					sizeof(uint2) * virtual_shadow_resolution_in_page * virtual_shadow_resolution_in_page, 
+					sizeof(uint2), 
+					"vt_shadow_visible_cluster_buffer"
+				)
+			)));
+			cache->collect(_vt_shadow_visible_cluster_buffer, ResourceType::Buffer);
+		}
+ 
+		// Binding Set.
+		{
+			_cull_binding_set_items.resize(7);
+			_cull_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::ShadowCullingConstant));
+			_cull_binding_set_items[1] = BindingSetItem::create_structured_buffer_uav(0, _vt_shadow_draw_indirect_buffer);
+			_cull_binding_set_items[2] = BindingSetItem::create_structured_buffer_uav(1, _vt_shadow_visible_cluster_buffer);
+			_cull_binding_set_items[5] = BindingSetItem::create_texture_srv(2, _shadow_hi_z_texture);
+			_cull_binding_set_items[6] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
+		}
+
+		// Compute state.
+		{
+			_cull_compute_state.binding_sets.resize(1);
+		}
+
+		return true;
+	}
+
+	bool VirtualShadowMapPass::compile_shadow_map_pass(DeviceInterface* device, RenderResourceCache* cache)
+	{
+		// Frame Buffer.
+		{
+			FrameBufferDesc frame_buffer_desc;
+			frame_buffer_desc.depth_stencil_attachment = FrameBufferAttachment::create_attachment(_shadow_map_texture);
+			ReturnIfFalse(_shadow_map_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
+		}
+ 
+		// Pipeline.
+		{
+			GraphicsPipelineDesc pipeline_desc;
+			pipeline_desc.vertex_shader = _virtual_shadow_vs;
+			pipeline_desc.binding_layouts.push_back(_virtual_shadow_binding_layout);
+			pipeline_desc.render_state.depth_stencil_state.enable_depth_test = true;
+			pipeline_desc.render_state.depth_stencil_state.enable_depth_write = true;
+			pipeline_desc.render_state.depth_stencil_state.depth_func = ComparisonFunc::Less;
+			ReturnIfFalse(_shadow_map_pipeline = std::unique_ptr<GraphicsPipelineInterface>(
+				device->create_graphics_pipeline(pipeline_desc, _shadow_map_frame_buffer.get())
+			));
+		}
+
+		// Graphics state.
+		{
+			_shadow_map_graphics_state.binding_sets.resize(1);
+			_shadow_map_graphics_state.pipeline = _shadow_map_pipeline.get();
+			_shadow_map_graphics_state.frame_buffer = _shadow_map_frame_buffer.get();
+			_shadow_map_graphics_state.viewport_state = ViewportState::create_default_viewport(_shadow_map_resolution, _shadow_map_resolution);
+			_shadow_map_graphics_state.indirect_buffer = _vt_shadow_draw_indirect_buffer.get();
+		}
+
+		return true;
+	}
+
+	bool VirtualShadowMapPass::compile_hi_z_update_pass(DeviceInterface* device, RenderResourceCache* cache)
+	{
+        uint32_t hzb_mip_levels = search_most_significant_bit(_shadow_hzb_resolution) + 1;
+		// Texture.
+		{
+			TextureDesc desc;
+			desc.name = "shadow_hi_z_texture";
+			desc.width = _shadow_hzb_resolution;
+			desc.height = _shadow_hzb_resolution;
+			desc.format = Format::R32_FLOAT;
+			desc.mip_levels = hzb_mip_levels;
+			desc.allow_unordered_access = true;
+			ReturnIfFalse(_shadow_hi_z_texture = std::shared_ptr<TextureInterface>(device->create_texture(desc)));
+		}
+
+		// Binding Layout.
+		{
+			BindingLayoutItemArray binding_layout_items(3 + hzb_mip_levels);
+			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::ShadowHiZUpdatePassConstant));
+			binding_layout_items[1] = BindingLayoutItem::create_sampler(0);
+			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(0);
+            for (uint32_t ix = 0; ix < hzb_mip_levels; ++ix)
+            {
+			    binding_layout_items[3 + ix] = BindingLayoutItem::create_texture_uav(ix);
+            }
+			ReturnIfFalse(_hi_z_update_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
+				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
+			)));
+		}
+
+		// Shader.
+		{
+			ShaderCompileDesc cs_compile_desc;
+			cs_compile_desc.shader_name = "culling/hierarchical_zbuffer_update_cs.hlsl";
+			cs_compile_desc.entry_point = "main";
+			cs_compile_desc.target = ShaderTarget::Compute;
+			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
+			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_Y=" + std::to_string(THREAD_GROUP_SIZE_Y));
+			cs_compile_desc.defines.push_back("REVERSE_Z_BUFFER=0");
+			ShaderData cs_data = compile_shader(cs_compile_desc);
+
+			ShaderDesc cs_desc;
+			cs_desc.entry = "main";
+			cs_desc.shader_type = ShaderType::Compute;
+			ReturnIfFalse(_hi_z_update_cs = std::unique_ptr<Shader>(create_shader(cs_desc, cs_data.data(), cs_data.size())));
+		}
+
+		// Pipeline.
+		{
+			ComputePipelineDesc pipeline_desc;
+			pipeline_desc.binding_layouts.push_back(_hi_z_update_binding_layout);
+			pipeline_desc.compute_shader = _hi_z_update_cs;
+			ReturnIfFalse(_hi_z_update_pipeline = std::unique_ptr<ComputePipelineInterface>(device->create_compute_pipeline(pipeline_desc)));
+		}
+
+		// Binding Set.
+		{
+			BindingSetItemArray binding_set_items(3 + hzb_mip_levels);
+			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::ShadowHiZUpdatePassConstant));
+			binding_set_items[1] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
+			binding_set_items[2] = BindingSetItem::create_texture_srv(0, _shadow_map_texture, TextureSubresourceSet{}, Format::R32_FLOAT);
+            for (uint32_t ix = 0; ix < hzb_mip_levels; ++ix)
+            {
+			    binding_set_items[3 + ix] = BindingSetItem::create_texture_uav(
+                    ix, 
+                    _shadow_hi_z_texture,
+                    TextureSubresourceSet{
+                        .base_mip_level = ix,
+                        .mip_level_count = 1,
+                        .base_array_slice = 0,
+                        .array_slice_count = 1  
+                    }
+                );
+            }
+			ReturnIfFalse(_hi_z_update_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
+				BindingSetDesc{ .binding_items = binding_set_items },
+				_hi_z_update_binding_layout
+			)));
+		}
+
+		// Compute state.
+		{
+			_hi_z_update_compute_state.binding_sets.push_back(_hi_z_update_binding_set.get());
+			_hi_z_update_compute_state.pipeline = _hi_z_update_pipeline.get();
+		}
+
+		_hi_z_update_pass_constants.resize(hzb_mip_levels);
+        for (uint32_t ix = 0; ix < _hi_z_update_pass_constants.size(); ++ix)
+		{
+			_hi_z_update_pass_constants[ix].shadow_map_resolution = uint2(_shadow_map_resolution);
+			_hi_z_update_pass_constants[ix].last_mip_level = ix;
+			_hi_z_update_pass_constants[ix].hzb_resolution = _shadow_hzb_resolution;
+		}
+		return true;
+	}
+
+	bool VirtualShadowMapPass::compile_virtual_shadow_pass(DeviceInterface* device, RenderResourceCache* cache)
+	{
+		// Binding Layout.
+		{
+			BindingLayoutItemArray binding_layout_items(7);
+			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::ShadowPassConstant));
+			binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_srv(0);
+			binding_layout_items[2] = BindingLayoutItem::create_structured_buffer_srv(1);
+			binding_layout_items[3] = BindingLayoutItem::create_structured_buffer_srv(2);
+			binding_layout_items[4] = BindingLayoutItem::create_structured_buffer_srv(3);
+			binding_layout_items[5] = BindingLayoutItem::create_structured_buffer_srv(4);
+			binding_layout_items[6] = BindingLayoutItem::create_texture_uav(0);
+			ReturnIfFalse(_virtual_shadow_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
+				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
+			)));
+		}
+
+		// Shader.
+		{
+			ShaderCompileDesc shader_compile_desc;
+			shader_compile_desc.shader_name = "shadow/virtual_shadow_map_vs.hlsl";
+			shader_compile_desc.entry_point = "main";
+			shader_compile_desc.target = ShaderTarget::Vertex;
+			ShaderData vs_data = compile_shader(shader_compile_desc);
+			shader_compile_desc.shader_name = "shadow/virtual_shadow_map_ps.hlsl";
+			shader_compile_desc.entry_point = "main";
+			shader_compile_desc.target = ShaderTarget::Pixel;
+			ShaderData ps_data = compile_shader(shader_compile_desc);
+
+			ShaderDesc vs_desc;
+			vs_desc.entry = "main";
+			vs_desc.shader_type = ShaderType::Vertex;
+			ReturnIfFalse(_virtual_shadow_vs = std::unique_ptr<Shader>(create_shader(vs_desc, vs_data.data(), vs_data.size())));
+
+			ShaderDesc ps_desc;
+			ps_desc.shader_type = ShaderType::Pixel;
+			ps_desc.entry = "main";
+			ReturnIfFalse(_virtual_shadow_ps = std::unique_ptr<Shader>(create_shader(ps_desc, ps_data.data(), ps_data.size())));
+		}
+
+		// Texture.
+		{
+			// InterlockedMin 不支持浮点数, 故在这里使用整数格式存储浮点数, 深度值永远为正数, 将浮点深度转化为整数可直接比较.
+			ReturnIfFalse(_vt_physical_shadow_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_read_write_texture(
+					VT_PHYSICAL_SHADOW_RESOLUTION,
+					VT_PHYSICAL_SHADOW_RESOLUTION,
+					Format::R32_UINT,
+					"vt_physical_shadow_texture"
+				)
+			)));
+			cache->collect(_vt_physical_shadow_texture, ResourceType::Texture);
+			
+			ReturnIfFalse(_vt_physical_shadow_float_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_read_write_texture(
+					VT_PHYSICAL_SHADOW_RESOLUTION,
+					VT_PHYSICAL_SHADOW_RESOLUTION,
+					Format::R32_FLOAT,
+					"vt_physical_shadow_float_texture"
+				)
+			)));
+			cache->collect(_vt_physical_shadow_float_texture, ResourceType::Texture);
+
+			ReturnIfFalse(_black_render_target_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_render_target_texture(
+					VT_SHADOW_PAGE_SIZE,
+					VT_SHADOW_PAGE_SIZE,
+					Format::RGBA8_UNORM,
+					"",
+					false,
+					Color(1.0f)
+				)
+			)));
+		}
+ 
+		// Frame Buffer.
+		{
+			FrameBufferDesc frame_buffer_desc;
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_black_render_target_texture));
+			ReturnIfFalse(_virtual_shadow_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
+		}
+ 
+		// Pipeline.
+		{
+			GraphicsPipelineDesc pipeline_desc;
+			pipeline_desc.vertex_shader = _virtual_shadow_vs;
+			pipeline_desc.pixel_shader = _virtual_shadow_ps;
+			pipeline_desc.binding_layouts.push_back(_virtual_shadow_binding_layout);
+			ReturnIfFalse(_virtual_shadow_pipeline = std::unique_ptr<GraphicsPipelineInterface>(
+				device->create_graphics_pipeline(pipeline_desc, _virtual_shadow_frame_buffer.get())
+			));
+		}
+
+		// Binding Set.
+		{
+			_virtual_shadow_binding_set_items.resize(7);
+			_virtual_shadow_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::ShadowPassConstant));
+			_virtual_shadow_binding_set_items[2] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("vt_shadow_visible_cluster_buffer")));
+			_virtual_shadow_binding_set_items[6] = BindingSetItem::create_texture_uav(0, _vt_physical_shadow_texture);
+		}
+
+		// Graphics state.
+		{
+			_virtual_shadow_graphics_state.binding_sets.resize(1);
+			_virtual_shadow_graphics_state.pipeline = _virtual_shadow_pipeline.get();
+			_virtual_shadow_graphics_state.frame_buffer = _virtual_shadow_frame_buffer.get();
+			_virtual_shadow_graphics_state.viewport_state = ViewportState::create_default_viewport(VT_SHADOW_PAGE_SIZE, VT_SHADOW_PAGE_SIZE);
+			_virtual_shadow_graphics_state.indirect_buffer = _vt_shadow_draw_indirect_buffer.get();
+		}
+
 		return true;
 	}
 }

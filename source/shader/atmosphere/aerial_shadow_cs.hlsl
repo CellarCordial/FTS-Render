@@ -6,10 +6,6 @@
 
 cbuffer pass_constant : register(b0)
 {
-    int show_type;
-    uint2 client_resolution;
-    float world_scale;
-
     float4x4 shadow_view_proj;
 
     float3 sun_dir;
@@ -22,6 +18,9 @@ cbuffer pass_constant : register(b0)
     float2 blue_noise_uv_factor;
 
     float3 camera_position;
+    float world_scale;
+
+    uint2 client_resolution;
 };
 
 
@@ -30,21 +29,17 @@ cbuffer atomsphere_properties : register(b1)
     AtmosphereProperties AP;
 };
 
-
 RWTexture2D<float4> final_texture : register(u0);
 
 Texture2D world_position_view_depth_texture : register(t0);
 Texture2D world_space_normal_texture : register(t1);
 Texture2D base_color_texture : register(t2);
-Texture2D pbr_texture : register(t3);
-Texture2D emissive_texture : register(t4);
-Texture2D virtual_mesh_texture : register(t5);
 
-Texture3D<float4> aerial_lut_texture : register(t6);
-Texture2D<float3> transmittance_texture : register(t7);
-Texture2D<float> shadow_map_texture : register(t8);
-Texture2D<float2> blue_noise_texture : register(t9);
-Texture2D<float4> geometry_uv_mip_id_texture : register(t10);
+Texture3D<float4> aerial_lut_texture : register(t3);
+Texture2D<float3> transmittance_texture : register(t4);
+Texture2D<float> shadow_map_texture : register(t5);
+Texture2D<float2> blue_noise_texture : register(t6);
+Texture2D<float4> geometry_uv_mip_id_texture : register(t7);
 
 SamplerState linear_clamp_sampler : register(s0);
 SamplerState point_clamp_sampler : register(s1);
@@ -59,19 +54,6 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     if (any(thread_id.xy >= client_resolution)) return;
 
     uint2 pixel_id = thread_id.xy;
-    switch (show_type)
-    {
-    case 0: break;
-    case 1: final_texture[pixel_id] = float4(world_position_view_depth_texture[pixel_id].xyz, 1.0f); return;
-    case 2: final_texture[pixel_id] = float4(world_position_view_depth_texture[pixel_id].w, 0.0f, 0.0f, 1.0f); return;
-    case 3: final_texture[pixel_id] = world_space_normal_texture[pixel_id]; return;
-    case 4: final_texture[pixel_id] = base_color_texture[pixel_id]; return;
-    case 5: final_texture[pixel_id] = float4(pbr_texture[pixel_id].x, 0.0f, 0.0f, 1.0f); return;
-    case 6: final_texture[pixel_id] = float4(pbr_texture[pixel_id].y, 0.0f, 0.0f, 1.0f); return;
-    case 7: final_texture[pixel_id] = float4(pbr_texture[pixel_id].z, 0.0f, 0.0f, 1.0f); return;
-    case 8: final_texture[pixel_id] = emissive_texture[pixel_id]; return;
-    case 9: final_texture[pixel_id] = virtual_mesh_texture[pixel_id]; return;
-    };
 
     if (geometry_uv_mip_id_texture[pixel_id].w == INVALID_SIZE_32) return;
 
