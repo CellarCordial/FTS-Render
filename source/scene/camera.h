@@ -61,8 +61,8 @@ namespace fantasy
         float4x4 proj_matrix;
         float4x4 reverse_z_proj_matrix;
         
-        float3 position = { 0.0f, 0.1f, -5.0f };
-        float3 direction = { 0.0f, 0.0f, 1.0f };
+        float3 position = { 0.0f, 0.1f, 5.0f };
+        float3 direction = { 0.0f, 0.0f, -1.0f };
         float3 up = { 0.0f, 1.0f, 0.0f };
         int32_t speed = 5;
 
@@ -81,7 +81,7 @@ namespace fantasy
 
         bool _view_need_update = true;
 
-        float2 _mouse_position;
+        float2 _mouse_position = float2(FLT_MAX);
 
         GLFWwindow* _window;
     };

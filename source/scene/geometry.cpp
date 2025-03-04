@@ -152,11 +152,11 @@ namespace fantasy
 				aiString material_name;
 				if (assimp_material->GetTexture(aiTextureType_BASE_COLOR, 0, &material_name) == aiReturn_SUCCESS)
 					submaterial.images[Material::TextureType_BaseColor] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
-				if (assimp_material->GetTexture(aiTextureType_NORMAL_CAMERA, 0, &material_name) == aiReturn_SUCCESS)
+				if (assimp_material->GetTexture(aiTextureType_HEIGHT, 0, &material_name) == aiReturn_SUCCESS)
 					submaterial.images[Material::TextureType_BaseColor] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
 				if (assimp_material->GetTexture(aiTextureType_METALNESS, 0, &material_name) == aiReturn_SUCCESS)
 					submaterial.images[Material::TextureType_PBR] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
-				if (assimp_material->GetTexture(aiTextureType_EMISSION_COLOR, 0, &material_name) == aiReturn_SUCCESS)
+				if (assimp_material->GetTexture(aiTextureType_EMISSIVE, 0, &material_name) == aiReturn_SUCCESS)
 					submaterial.images[Material::TextureType_Emissive] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
 			},
 			material->submaterials.size()
@@ -164,10 +164,16 @@ namespace fantasy
 
 
 		// 确保所有模型纹理都为同一个分辨率, 横纵相同且都为 2 的幂次方大小.
-		uint2 resolution = uint2(
-			material->submaterials[0].images[0].width,
-			material->submaterials[0].images[0].height
-		);
+		uint2 resolution;
+		for (const auto& submaterial : material->submaterials)
+		{
+			for (const auto& image : submaterial.images)
+			{
+				resolution.x = std::max(resolution.x, image.width);
+				resolution.y = std::max(resolution.y, image.height);
+			}
+		}
+
 		ReturnIfFalse(resolution.x == resolution.y);
 		if (!is_power_of_2(resolution.x))
 		{

@@ -33,6 +33,7 @@ namespace fantasy
         }
 
         serialization::BinaryOutput output(cache_path);
+        output(desc.defines.size());
         for (const auto& define : desc.defines) output(define);
         output(data._data.size());
         output.save_binary_data(data._data.data(), data._data.size());
@@ -44,17 +45,21 @@ namespace fantasy
         
         serialization::BinaryInput input(cache_path);
 
-        for (const auto& define : desc.defines)
+        uint64_t size;
+        input(size);
+
+        if (desc.defines.size() != size) return ShaderData{};
+        for (uint32_t ix = 0; ix < size; ++ix)
         {
             std::string cache_define;
             input(cache_define);
-            if (cache_define != define) return ShaderData{};
+            if (cache_define != desc.defines[ix]) return ShaderData{};
         }
 
-        uint64_t ByteCodeSize = 0;
-        input(ByteCodeSize);
-        shader_data._data.resize(ByteCodeSize);
-        input.load_binary_data(shader_data._data.data(), ByteCodeSize);
+        uint64_t byte_code_size = 0;
+        input(byte_code_size);
+        shader_data._data.resize(byte_code_size);
+        input.load_binary_data(shader_data._data.data(), byte_code_size);
 
         return shader_data;
     }

@@ -4,9 +4,6 @@
 #include "../../scene/virtual_mesh.h"
 #include "../../scene/camera.h"
 #include "../../scene/scene.h"
-#include <cstdint>
-#include <memory>
-#include <string>
 
 namespace fantasy
 {
@@ -22,13 +19,21 @@ namespace fantasy
 
 		// Binding Layout.
 		{
+#ifdef SIMPLE_VIRTUAL_MESH
+			BindingLayoutItemArray binding_layout_items(5);
+#else
 			BindingLayoutItemArray binding_layout_items(6);
+#endif
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::VirtualGBufferPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_structured_buffer_srv(1);
 			binding_layout_items[3] = BindingLayoutItem::create_structured_buffer_srv(2);
 			binding_layout_items[4] = BindingLayoutItem::create_structured_buffer_srv(3);
+
+#ifndef SIMPLE_VIRTUAL_MESH
 			binding_layout_items[5] = BindingLayoutItem::create_structured_buffer_srv(4);
+#endif
+
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -40,11 +45,15 @@ namespace fantasy
 			shader_compile_desc.shader_name = "deferred/virtual_gbuffer_vs.hlsl";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Vertex;
+#ifdef SIMPLE_VIRTUAL_MESH
+			shader_compile_desc.defines.push_back("SIMPLE_VIRTUAL_MESH=1");
+#endif
 			ShaderData vs_data = compile_shader(shader_compile_desc);
+
+
 			shader_compile_desc.shader_name = "deferred/virtual_gbuffer_ps.hlsl";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Pixel;
-			// shader_compile_desc.defines.push_back("VT_FEED_BACK_SCALE_FACTOR=" + std::to_string(VT_FEED_BACK_SCALE_FACTOR));
 			ShaderData ps_data = compile_shader(shader_compile_desc);
 
 			ShaderDesc vs_desc;
@@ -193,7 +202,12 @@ namespace fantasy
 
 		// Binding Set.
 		{
+			
+#ifdef SIMPLE_VIRTUAL_MESH
+			_binding_set_items.resize(5);
+#else
 			_binding_set_items.resize(6);
+#endif
 			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualGBufferPassConstant));
 		}
 
@@ -231,6 +245,12 @@ namespace fantasy
 					{
 						for (const auto& virtual_submesh : virtual_mesh->_submeshes)
 						{
+#ifdef SIMPLE_VIRTUAL_MESH
+							for (const auto& cluster: virtual_submesh.clusters)
+							{
+								_cluster_vertices.insert(_cluster_vertices.end(), cluster.vertices.begin(), cluster.vertices.end());
+							}
+#else
 							for (const auto& group : virtual_submesh.cluster_groups)
 							{
 								for (auto ix : group.cluster_indices)
@@ -251,6 +271,7 @@ namespace fantasy
 									}
 								}
 							}
+#endif
 						}
 						for (const auto& submesh : mesh->submeshes)
 						{
@@ -275,6 +296,17 @@ namespace fantasy
 	
 	
 				DeviceInterface* device = cmdlist->get_deivce();
+
+				
+				ReturnIfFalse(_geometry_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+						BufferDesc::create_structured_buffer(
+							sizeof(GeometryConstantGpu) * _geometry_constants.size(), 
+							sizeof(GeometryConstantGpu),
+							"geometry_constant_buffer"
+						)
+					)
+				));
+				cache->collect(_geometry_constant_buffer, ResourceType::Buffer);
 	
 				ReturnIfFalse(_cluster_vertex_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 						BufferDesc::create_structured_buffer(
@@ -286,6 +318,7 @@ namespace fantasy
 				));
 				cache->collect(_cluster_vertex_buffer, ResourceType::Buffer);
 
+#ifndef SIMPLE_VIRTUAL_MESH
 				ReturnIfFalse(_cluster_triangle_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 						BufferDesc::create_structured_buffer(
 							sizeof(uint32_t) * _cluster_triangles.size(), 
@@ -295,27 +328,25 @@ namespace fantasy
 					)
 				));
 				cache->collect(_cluster_triangle_buffer, ResourceType::Buffer);
+#endif
 
-				ReturnIfFalse(_geometry_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-						BufferDesc::create_structured_buffer(
-							sizeof(GeometryConstantGpu) * _geometry_constants.size(), 
-							sizeof(GeometryConstantGpu),
-							"geometry_constant_buffer"
-						)
-					)
-				));
-				cache->collect(_geometry_constant_buffer, ResourceType::Buffer);
 	
-				ReturnIfFalse(cmdlist->write_buffer(_cluster_vertex_buffer.get(), _cluster_vertices.data(), sizeof(Vertex) * _cluster_vertices.size()));
-				ReturnIfFalse(cmdlist->write_buffer(_cluster_triangle_buffer.get(), _cluster_triangles.data(), sizeof(uint32_t) * _cluster_triangles.size()));
 				ReturnIfFalse(cmdlist->write_buffer(_geometry_constant_buffer.get(), _geometry_constants.data(), sizeof(GeometryConstantGpu) * _geometry_constants.size()));
+				ReturnIfFalse(cmdlist->write_buffer(_cluster_vertex_buffer.get(), _cluster_vertices.data(), sizeof(Vertex) * _cluster_vertices.size()));
 	
+#ifndef SIMPLE_VIRTUAL_MESH
+				ReturnIfFalse(cmdlist->write_buffer(_cluster_triangle_buffer.get(), _cluster_triangles.data(), sizeof(uint32_t) * _cluster_triangles.size()));
+#endif
 				_binding_set.reset();
 				_binding_set_items[1] = BindingSetItem::create_structured_buffer_srv(0, _geometry_constant_buffer);
 				_binding_set_items[2] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("visible_cluster_id_buffer")));
 				_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("mesh_cluster_buffer")));
 				_binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(3, _cluster_vertex_buffer);
+
+#ifndef SIMPLE_VIRTUAL_MESH
 				_binding_set_items[5] = BindingSetItem::create_structured_buffer_srv(4, _cluster_triangle_buffer);
+#endif
+
 				ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 					BindingSetDesc{ .binding_items = _binding_set_items },
 					_binding_layout

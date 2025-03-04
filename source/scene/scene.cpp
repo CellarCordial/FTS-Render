@@ -121,8 +121,8 @@ namespace fantasy
 				proj_dir + model_path, 
 				aiProcess_Triangulate | 
 				aiProcess_GenSmoothNormals | 
-				aiProcess_FlipUVs |
-				aiProcess_CalcTangentSpace
+				aiProcess_CalcTangentSpace | 
+				aiProcess_ConvertToLeftHanded
 			);
 	
 			if(!assimp_scene || assimp_scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !assimp_scene->mRootNode)
@@ -175,8 +175,8 @@ namespace fantasy
 			proj_dir + event.model_path, 
 			aiProcess_Triangulate | 
 			aiProcess_GenSmoothNormals | 
-			aiProcess_FlipUVs |
-			aiProcess_CalcTangentSpace
+			aiProcess_CalcTangentSpace | 
+			aiProcess_ConvertToLeftHanded
 		);
 
         if(!assimp_scene || assimp_scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !assimp_scene->mRootNode)

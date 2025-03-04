@@ -20,16 +20,9 @@ namespace fantasy
 
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(9);
+			BindingLayoutItemArray binding_layout_items(2);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::GBufferPassConstant));
-			binding_layout_items[1] = BindingLayoutItem::create_texture_srv(0);
-			binding_layout_items[2] = BindingLayoutItem::create_texture_srv(1);
-			binding_layout_items[3] = BindingLayoutItem::create_texture_srv(2);
-			binding_layout_items[4] = BindingLayoutItem::create_texture_srv(3);
-			binding_layout_items[5] = BindingLayoutItem::create_texture_srv(4);
-			binding_layout_items[6] = BindingLayoutItem::create_texture_srv(5);
-			binding_layout_items[7] = BindingLayoutItem::create_structured_buffer_srv(6);
-			binding_layout_items[8] = BindingLayoutItem::create_sampler(0);
+			binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_srv(6);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -100,7 +93,7 @@ namespace fantasy
 			)));
 			cache->collect(_black_texture, ResourceType::Texture);
 
-            ReturnIfFalse(_world_position_view_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+			ReturnIfFalse(_world_position_view_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
@@ -108,74 +101,97 @@ namespace fantasy
 					"world_position_view_depth_texture"
 				)
 			)));
-            ReturnIfFalse(_world_space_normal_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+			cache->collect(_world_position_view_depth_texture, ResourceType::Texture);
+
+			ReturnIfFalse(_geometry_uv_mip_id_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA32_FLOAT,
-					"world_space_normal_texture"
+					"geometry_uv_mip_id_texture",
+					false,
+					Color(std::bit_cast<float>(INVALID_SIZE_32))
 				)
 			)));
-            ReturnIfFalse(_base_color_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+			cache->collect(_geometry_uv_mip_id_texture, ResourceType::Texture);
+
+			ReturnIfFalse(_world_space_normal_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA32_FLOAT,
-					"base_color_texture"
+					"world_space_normal_texture",
+					true
 				)
 			)));
-            ReturnIfFalse(_pbr_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+			cache->collect(_world_space_normal_texture, ResourceType::Texture);
+
+			ReturnIfFalse(_world_space_tangent_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
 					Format::RGBA32_FLOAT,
-					"pbr_texture"
+					"world_space_tangent_texture"
 				)
 			)));
-            ReturnIfFalse(_emissive_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+			cache->collect(_world_space_tangent_texture, ResourceType::Texture);
+
+			ReturnIfFalse(_base_color_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RGBA32_FLOAT,
-					"emissive_texture"
+					Format::RGBA8_UNORM,
+					"base_color_texture",
+					true
 				)
 			)));
-            ReturnIfFalse(_view_space_velocity_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+			cache->collect(_base_color_texture, ResourceType::Texture);
+
+			ReturnIfFalse(_pbr_texture = std::shared_ptr<TextureInterface>(device->create_texture(
 				TextureDesc::create_render_target_texture(
 					CLIENT_WIDTH,
 					CLIENT_HEIGHT,
-					Format::RGBA32_FLOAT,
-					"view_space_velocity_texture"
+					Format::RGBA8_UNORM,
+					"pbr_texture",
+					true
 				)
 			)));
-            ReturnIfFalse(_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+			cache->collect(_pbr_texture, ResourceType::Texture);
+
+			ReturnIfFalse(_emissive_texture = std::shared_ptr<TextureInterface>(device->create_texture(
+				TextureDesc::create_render_target_texture(
+					CLIENT_WIDTH,
+					CLIENT_HEIGHT,
+					Format::RGBA8_UNORM,
+					"emissive_texture",
+					true
+				)
+			)));
+			cache->collect(_emissive_texture, ResourceType::Texture);
+
+            ReturnIfFalse(_reverse_depth_texture = std::shared_ptr<TextureInterface>(device->create_texture(
                 TextureDesc::create_depth_stencil_texture(
                     CLIENT_WIDTH, 
                     CLIENT_HEIGHT, 
                     Format::D32,
-                    "depth_texture"
+                    "reverse_depth_texture",
+					true
                 )
             )));
-            
-			cache->collect(_world_position_view_depth_texture, ResourceType::Texture);
-			cache->collect(_world_space_normal_texture, ResourceType::Texture);
-			cache->collect(_base_color_texture, ResourceType::Texture);
-			cache->collect(_pbr_texture, ResourceType::Texture);
-			cache->collect(_emissive_texture, ResourceType::Texture);
-			cache->collect(_view_space_velocity_texture, ResourceType::Texture);
-			cache->collect(_depth_texture, ResourceType::Texture);
+			cache->collect(_reverse_depth_texture, ResourceType::Texture);
         }  
  
 		// Frame Buffer.
 		{
 			FrameBufferDesc frame_buffer_desc;
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_position_view_depth_texture));
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_geometry_uv_mip_id_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_space_normal_texture));
+			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_world_space_tangent_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_base_color_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_pbr_texture));
 			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_emissive_texture));
-			frame_buffer_desc.color_attachments.push_back(FrameBufferAttachment::create_attachment(_view_space_velocity_texture));
-			frame_buffer_desc.depth_stencil_attachment = FrameBufferAttachment::create_attachment(_depth_texture);
+			frame_buffer_desc.depth_stencil_attachment = FrameBufferAttachment::create_attachment(_reverse_depth_texture);
 			ReturnIfFalse(_frame_buffer = std::unique_ptr<FrameBufferInterface>(device->create_frame_buffer(frame_buffer_desc)));
 		}
  
@@ -188,7 +204,7 @@ namespace fantasy
 			pipeline_desc.binding_layouts.push_back(_binding_layout);
 			pipeline_desc.render_state.depth_stencil_state.enable_depth_test = true;
 			pipeline_desc.render_state.depth_stencil_state.enable_depth_write = true;
-			pipeline_desc.render_state.depth_stencil_state.depth_func = ComparisonFunc::LessOrEqual;
+			pipeline_desc.render_state.depth_stencil_state.depth_func = ComparisonFunc::Greater;
 			ReturnIfFalse(_pipeline = std::unique_ptr<GraphicsPipelineInterface>(
 				device->create_graphics_pipeline(pipeline_desc, _frame_buffer.get())
 			));
@@ -216,7 +232,7 @@ namespace fantasy
 
         for (uint32_t ix = 0; ix < _draw_arguments.size(); ++ix)
         {
-			_pass_constant.geometry_constant_index = ix;
+			_pass_constant.geometry_id = ix;
 			_graphics_state.binding_sets[0] = _binding_sets[ix].get();
             ReturnIfFalse(cmdlist->draw_indexed(_graphics_state, _draw_arguments[ix], &_pass_constant));
         }
@@ -243,7 +259,7 @@ namespace fantasy
             [this](Entity* entity, Camera* camera) -> bool
             {
                 _pass_constant.view_matrix = camera->view_matrix;
-                _pass_constant.view_proj = camera->get_view_proj();
+                _pass_constant.reverse_z_view_proj = camera->get_reverse_z_view_proj();
                 return true;
             }
         ))
@@ -317,7 +333,7 @@ namespace fantasy
 						{
 							const auto& submaterial = material->submaterials[submesh.material_index];
 
-							geometry_constant.diffuse = float4(submaterial.base_color_factor);
+							geometry_constant.base_color = float4(submaterial.base_color_factor);
 							geometry_constant.emissive = float4(submaterial.emissive_factor);    
 							geometry_constant.roughness = submaterial.roughness_factor;
 							geometry_constant.metallic = submaterial.metallic_factor;
@@ -386,8 +402,8 @@ namespace fantasy
 
 			ReturnIfFalse(_geometry_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 				BufferDesc::create_structured_buffer(
-					_geometry_constants.size() * sizeof(constant::GeometryConstant), 
-					sizeof(constant::GeometryConstant),
+					_geometry_constants.size() * sizeof(GeometryConstantGpu), 
+					sizeof(GeometryConstantGpu),
 					"geometry_constant_buffer"
 				)
 			)));
@@ -404,7 +420,7 @@ namespace fantasy
 			ReturnIfFalse(cmdlist->write_buffer(
                 _geometry_constant_buffer.get(), 
                 _geometry_constants.data(), 
-                _geometry_constants.size() * sizeof(constant::GeometryConstant)
+                _geometry_constants.size() * sizeof(GeometryConstantGpu)
             ));
 
 			for (uint32_t ix = 0; ix < binding_set_item_arrays.size(); ++ix)

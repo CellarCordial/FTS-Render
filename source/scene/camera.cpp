@@ -16,7 +16,10 @@ namespace fantasy
     {
         double new_x, new_y;
         glfwGetCursorPos(_window, &new_x, &new_y);
+
         float2 new_pos(new_x, new_y);
+        if (_mouse_position == float2(FLT_MAX)) _mouse_position = new_pos;
+        
         auto cusor_state = glfwGetMouseButton(_window, GLFW_MOUSE_BUTTON_RIGHT);
         if (cusor_state == GLFW_PRESS)
         {

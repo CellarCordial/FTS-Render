@@ -140,7 +140,10 @@ namespace fantasy
 				_virtual_shadow_binding_set_items[1] = BindingSetItem::create_structured_buffer_srv(0, check_cast<BufferInterface>(cache->require("geometry_constant_buffer")));
 				_virtual_shadow_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("mesh_cluster_buffer")));
 				_virtual_shadow_binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(3, check_cast<BufferInterface>(cache->require("cluster_vertex_buffer")));
+				
+#ifndef SIMPLE_VIRTUAL_MESH
 				_virtual_shadow_binding_set_items[5] = BindingSetItem::create_structured_buffer_srv(4, check_cast<BufferInterface>(cache->require("cluster_triangle_buffer")));
+#endif				
 				ReturnIfFalse(_virtual_shadow_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 					BindingSetDesc{ .binding_items = _virtual_shadow_binding_set_items },
 					_virtual_shadow_binding_layout
@@ -482,14 +485,22 @@ namespace fantasy
 	{
 		// Binding Layout.
 		{
+#ifdef SIMPLE_VIRTUAL_MESH
+			BindingLayoutItemArray binding_layout_items(6);
+#else
 			BindingLayoutItemArray binding_layout_items(7);
+#endif
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::ShadowPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_structured_buffer_srv(1);
 			binding_layout_items[3] = BindingLayoutItem::create_structured_buffer_srv(2);
 			binding_layout_items[4] = BindingLayoutItem::create_structured_buffer_srv(3);
+#ifndef SIMPLE_VIRTUAL_MESH
 			binding_layout_items[5] = BindingLayoutItem::create_structured_buffer_srv(4);
 			binding_layout_items[6] = BindingLayoutItem::create_texture_uav(0);
+#else
+			binding_layout_items[5] = BindingLayoutItem::create_texture_uav(0);
+#endif
 			ReturnIfFalse(_virtual_shadow_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -501,7 +512,11 @@ namespace fantasy
 			shader_compile_desc.shader_name = "shadow/virtual_shadow_map_vs.hlsl";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Vertex;
+#ifdef SIMPLE_VIRTUAL_MESH
+			shader_compile_desc.defines.push_back("SIMPLE_VIRTUAL_MESH=1");
+#endif
 			ShaderData vs_data = compile_shader(shader_compile_desc);
+
 			shader_compile_desc.shader_name = "shadow/virtual_shadow_map_ps.hlsl";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Pixel;
@@ -573,10 +588,15 @@ namespace fantasy
 
 		// Binding Set.
 		{
+#ifdef SIMPLE_VIRTUAL_MESH
+			_virtual_shadow_binding_set_items.resize(6);
+			_virtual_shadow_binding_set_items[5] = BindingSetItem::create_texture_uav(0, _vt_physical_shadow_texture);
+#else
 			_virtual_shadow_binding_set_items.resize(7);
+			_virtual_shadow_binding_set_items[6] = BindingSetItem::create_texture_uav(0, _vt_physical_shadow_texture);
+#endif
 			_virtual_shadow_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::ShadowPassConstant));
 			_virtual_shadow_binding_set_items[2] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("vt_shadow_visible_cluster_buffer")));
-			_virtual_shadow_binding_set_items[6] = BindingSetItem::create_texture_uav(0, _vt_physical_shadow_texture);
 		}
 
 		// Graphics state.

@@ -618,6 +618,8 @@ namespace fantasy
 		removed_index_indices.clear();
 	}
 
+#ifndef SIMPLE_VIRTUAL_MESH
+
 	bool VirtualMesh::build(const Mesh* mesh)
 	{
 		for (const auto& submesh : mesh->submeshes)
@@ -636,7 +638,7 @@ namespace fantasy
 			while (true)
 			{
 				uint32_t level_cluster_count = virtual_submesh.clusters.size() - level_offset;
-				if(level_cluster_count<=1) break;
+				if (level_cluster_count <= 1) break;
 			
 				uint32_t old_cluster_num = virtual_submesh.clusters.size();
 				uint32_t old_group_num = virtual_submesh.cluster_groups.size();
@@ -1027,6 +1029,7 @@ namespace fantasy
 		}
 		return true;
 	}
+#endif
 
     bool SceneSystem::publish(World* world, const event::OnComponentAssigned<VirtualMesh>& event)
 	{
@@ -1034,7 +1037,13 @@ namespace fantasy
 		Mesh* mesh = event.entity->get_component<Mesh>();
 		
 		std::string* name = event.entity->get_component<std::string>();
-		std::string cache_path = std::string(PROJ_DIR) + "asset/cache/virtual_mesh/" + *name + ".vm";
+		std::string cache_path = std::string(PROJ_DIR) + "asset/cache/virtual_mesh/" + *name;
+
+#ifdef SIMPLE_VIRTUAL_MESH
+		cache_path += ".svm";
+#else
+		cache_path += ".vm";
+#endif
 
 		bool loaded_from_cache = false;
 
@@ -1099,7 +1108,7 @@ namespace fantasy
 					}
 					for (auto& cluster_group : virtual_submesh.cluster_groups)
 					{
-						input(cluster_group.mip_level, cluster_group.cluster_indices);
+						input(cluster_group.mip_level, cluster_group.cluster_count, cluster_group.cluster_indices);
 
 						uint64_t external_edge_count = 0;
 						input(external_edge_count);
@@ -1183,6 +1192,7 @@ namespace fantasy
 				{
 					output(
 						cluster_group.mip_level, 
+						cluster_group.cluster_count, 
 						cluster_group.cluster_indices,
 						cluster_group.external_edges.size()
 					);

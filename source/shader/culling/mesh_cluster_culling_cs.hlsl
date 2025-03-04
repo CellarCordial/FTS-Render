@@ -1,4 +1,5 @@
 // #define THREAD_GROUP_SIZE_X 1
+// #define SIMPLE_VIRTUAL_MESH 1
 
 #include "../common/gbuffer.hlsl"
 #include "../common/math.hlsl"
@@ -109,38 +110,44 @@ void main(uint3 thread_id: SV_DispatchThreadID)
 
     MeshClusterGroup group = mesh_cluster_group_buffer[group_index];
     float3 group_view_space_position = mul(float4(group.bounding_sphere.xyz, 1.0f), view_matrix).xyz;
+
+#if !SIMPLE_VIRTUAL_MESH
     if (!check_lod(group_view_space_position, group.bounding_sphere.w, group.max_parent_lod_error))
+#endif
     {
         for (uint ix = 0; ix < group.cluster_count; ++ix)
         {
             uint cluster_id = group.cluster_index_offset + ix;
             MeshCluster cluster = mesh_cluster_buffer[cluster_id];
+
+#if !SIMPLE_VIRTUAL_MESH
             bool visible = check_lod(
                 mul(float4(cluster.lod_bounding_sphere.xyz, 1.0f), view_matrix).xyz,
                 cluster.lod_bounding_sphere.w,
                 cluster.lod_error
             );
+#else
+            bool visible = true;
+#endif
 
             if (visible)
             {
                 float3 cluster_view_space_position = mul(float4(cluster.bounding_sphere.xyz, 1.0f), view_matrix).xyz;
 
                 // 包围球在 z 轴上的最远端不超过近平面或最近端超过远平面, 则将该 cluster 剔除.
-                if (
-                    cluster_view_space_position.z + cluster.bounding_sphere.w < near_plane ||
-                    cluster_view_space_position.z - cluster.bounding_sphere.w > far_plane
-                )
-                    continue;
+                // if (
+                //     cluster_view_space_position.z + cluster.bounding_sphere.w < near_plane ||
+                //     cluster_view_space_position.z - cluster.bounding_sphere.w > far_plane
+                // )
+                //     continue;
 
                 // 判定是否在视锥体内, 以及从 hzb 中采样深度值进行比较.
-                visible = frustum_cull(cluster_view_space_position, cluster.bounding_sphere.w, reverse_z_proj_matrix) && 
-                          cluster_view_space_position.z - cluster.bounding_sphere.w > near_plane &&
-                          cluster_view_space_position.z + cluster.bounding_sphere.w < far_plane &&
-                          hierarchical_zbuffer_cull(
-                            cluster_view_space_position,
-                            cluster.bounding_sphere.w,
-                            reverse_z_proj_matrix
-                          );
+                // visible = 
+                //           hierarchical_zbuffer_cull(
+                //             cluster_view_space_position,
+                //             cluster.bounding_sphere.w,
+                //             reverse_z_proj_matrix
+                //           );
                 
                 if (visible)
                 {

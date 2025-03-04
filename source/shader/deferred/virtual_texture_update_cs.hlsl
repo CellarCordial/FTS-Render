@@ -83,19 +83,26 @@ void main(uint3 thread_id : SV_DispatchThreadID)
         world_space_normal_texture[pixel_id] = float4(world_space_normal, 0.0f);
     }
 
-    float4 base_color =
-        vt_base_color_physical_texture.Sample(linear_clamp_sampler, physical_uv) *
-        base_color_texture[pixel_id];
-    float3 pbr =
-        vt_pbr_physical_texture.Sample(linear_clamp_sampler, physical_uv).rgb *
-        pbr_texture[pixel_id].rgb;
-    float4 emissive =
-        vt_emissive_physical_texture.Sample(linear_clamp_sampler, physical_uv) * 
-        emissive_texture[pixel_id];
+    float4 vt_base_color = vt_base_color_physical_texture.Sample(linear_clamp_sampler, physical_uv);
+    if (dot(vt_base_color, vt_base_color) != 0.0f)
+    {
+        float4 base_color = vt_base_color * base_color_texture[pixel_id];
+        base_color_texture[pixel_id] = base_color;
+    }
 
-    base_color_texture[pixel_id] = base_color;
-    pbr_texture[pixel_id] = float4(pbr, 1.0f);
-    emissive_texture[pixel_id] = emissive;
+    float3 vt_pbr = vt_pbr_physical_texture.Sample(linear_clamp_sampler, physical_uv).rgb;
+    if (dot(vt_pbr, vt_pbr) != 0.0f)
+    {
+        float3 pbr = vt_pbr * pbr_texture[pixel_id].rgb;
+        pbr_texture[pixel_id] = float4(pbr, 1.0f);
+    }
+
+    float4 vt_emissive = vt_emissive_physical_texture.Sample(linear_clamp_sampler, physical_uv);
+    if (dot(vt_emissive, vt_emissive) != 0.0f)
+    {
+        float4 emissive = vt_emissive * emissive_texture[pixel_id];
+        emissive_texture[pixel_id] = emissive;
+    }
 }
 
 #endif

@@ -2,6 +2,7 @@
 #define RENDER_PASS_GBUFFER_H
 
 #include "../../render_graph/render_pass.h"
+#include "../../scene/virtual_texture.h"
 #include "../../core/math/matrix.h"
 #include "../../scene/geometry.h"
 #include <cstdint>
@@ -13,24 +14,11 @@ namespace fantasy
     {
         struct GBufferPassConstant
         {
-            float4x4 view_proj;
+            float4x4 reverse_z_view_proj;
             float4x4 view_matrix;
-            float4x4 prev_view_matrix;
 
-            uint32_t geometry_constant_index;
-            float3 pad;
-        };
-
-        struct GeometryConstant
-        {
-            float4x4 world_matrix;
-            float4x4 inv_trans_world;
-
-            float4 diffuse;   
-            float4 emissive;
-            float roughness = 0.0f;
-            float metallic = 0.0f;
-            float occlusion = 0.0f;
+            uint32_t geometry_id;
+            uint32_t vt_page_size = VT_PAGE_SIZE;
         };
     }
 
@@ -53,7 +41,7 @@ namespace fantasy
         std::vector<Vertex> _vertices;
 
         constant::GBufferPassConstant _pass_constant;
-        std::vector<constant::GeometryConstant> _geometry_constants;
+        std::vector<GeometryConstantGpu> _geometry_constants;
 
         Image _black_image;
         std::shared_ptr<TextureInterface> _black_texture;
@@ -63,12 +51,13 @@ namespace fantasy
 		std::shared_ptr<BufferInterface> _geometry_constant_buffer;
 
         std::shared_ptr<TextureInterface> _world_position_view_depth_texture;
+        std::shared_ptr<TextureInterface> _geometry_uv_mip_id_texture;
         std::shared_ptr<TextureInterface> _world_space_normal_texture;
+        std::shared_ptr<TextureInterface> _world_space_tangent_texture;
         std::shared_ptr<TextureInterface> _base_color_texture;
         std::shared_ptr<TextureInterface> _pbr_texture;
         std::shared_ptr<TextureInterface> _emissive_texture;
-        std::shared_ptr<TextureInterface> _view_space_velocity_texture;
-        std::shared_ptr<TextureInterface> _depth_texture;
+        std::shared_ptr<TextureInterface> _reverse_depth_texture;
 
         std::shared_ptr<SamplerInterface> _anisotropic_warp_sampler;
 		
