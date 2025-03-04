@@ -95,6 +95,8 @@ namespace fantasy
         gui::add(
             [camera]()
             {
+				ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", camera->position.x, camera->position.y, camera->position.z);
+				ImGui::Text("Camera Direction: (%.2f, %.2f, %.2f)", camera->direction.x, camera->direction.y, camera->direction.z);
 				ImGui::SliderInt("Camera Speed", &camera->speed, 1, 30);
                 ImGui::Separator();
             }
