@@ -253,21 +253,6 @@ namespace fantasy
 
                 auto& cluster = submesh.clusters[ix];
 
-                // TODO
-                // uint32_t index_offset = 0;
-                // cluster.indices.resize(quad_num_per_cluster * 6);
-                // for (uint32_t jx = 0; jx < cluster.indices.size(); jx += 6)
-                // {
-                //     cluster.indices[jx + 0] = index_offset;
-                //     cluster.indices[jx + 1] = index_offset + 1;
-                //     cluster.indices[jx + 2] = index_offset + 2;
-                //     cluster.indices[jx + 3] = index_offset + 2;
-                //     cluster.indices[jx + 4] = index_offset + 3;
-                //     cluster.indices[jx + 5] = index_offset;
-
-                //     index_offset += 4;
-                // }
-
                 auto& vertices = cluster.vertices;
 
                 vertices.resize(quad_num_per_cluster * 4);

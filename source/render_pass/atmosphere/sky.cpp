@@ -8,8 +8,6 @@ namespace fantasy
 {
 	bool SkyPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
-		_reverse_depth_texture = check_cast<TextureInterface>(cache->require("reverse_depth_texture"));
-
 		// Binding Layout.
 		{
 			BindingLayoutItemArray binding_layout_items(3);

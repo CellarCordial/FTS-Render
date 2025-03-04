@@ -69,7 +69,7 @@ float4 main(VertexOutput In) : SV_Target0
     float3 sun_radiance = ground_albedo * max(0.0f, dot(In.world_space_normal, -sun_dir));
 
     // 将物体位置沿着法线稍微偏移 0.03 个单位。这种偏移可以避免阴影失真 z-fighting.
-    float4 shadow_clip = mul(float4(In.world_space_position + 0.03 * In.world_space_normal, 1.0f), shadow_view_proj);
+    float4 shadow_clip = mul(float4(In.world_space_position + 0.07 * In.world_space_normal, 1.0f), shadow_view_proj);
     float2 shadow_ndc = shadow_clip.xy / shadow_clip.w;
     float2 shadow_uv = 0.5f + float2(0.5f, -0.5f) * shadow_ndc;
 
