@@ -16,5 +16,5 @@ xmake build GPU-Driven-SDF-DDGI
 ## Display
 
 ### Precomputed Atmospheric Scattering
-<img src="image/Atmosphere.gif" style="zoom: 67%;" />
+![](image/Atmosphere.gif)
 
