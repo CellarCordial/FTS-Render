@@ -1,4 +1,4 @@
-// #define SIMPLE_VIRTUAL_MESH 1
+// #define NANITE 1
 
 #include "../common/gbuffer.hlsl"
 
@@ -21,7 +21,7 @@ StructuredBuffer<uint2> vt_shadow_visible_cluster_buffer : register(t1);
 StructuredBuffer<MeshCluster> cluster_buffer : register(t2);
 StructuredBuffer<Vertex> cluster_vertex_buffer : register(t3);
 
-#if !SIMPLE_VIRTUAL_MESH
+#if NANITE
 StructuredBuffer<uint> cluster_triangle_buffer : register(t4);
 #endif
 
@@ -43,7 +43,7 @@ VertexOutput main(uint instance_id: SV_InstanceID, uint vertex_index : SV_Vertex
     MeshCluster cluster = cluster_buffer[cluster_index];
     uint triangle_index = vertex_index / 3;
 
-#if !SIMPLE_VIRTUAL_MESH
+#if NANITE
     if (triangle_index >= cluster.triangle_count)
     {
         output.sv_position = float4(0.0, 0.0, 0.0, 0.0) / 0.0;
@@ -51,7 +51,7 @@ VertexOutput main(uint instance_id: SV_InstanceID, uint vertex_index : SV_Vertex
     }
 #endif
 
-#if !SIMPLE_VIRTUAL_MESH
+#if NANITE
     // 因为一个 cluster 最多有 MeshCluster::cluster_size 个顶点 (默认 128个), 小于 255, 故 index 占用 8 个字节.
     uint packed_triangle = cluster_triangle_buffer[cluster.triangle_offset + triangle_index];
     uint index_id = (packed_triangle >> (vertex_index % 3 * 8)) & 255;

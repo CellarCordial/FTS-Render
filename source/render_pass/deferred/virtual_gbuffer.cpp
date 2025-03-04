@@ -19,20 +19,17 @@ namespace fantasy
 
 		// Binding Layout.
 		{
-#ifdef SIMPLE_VIRTUAL_MESH
-			BindingLayoutItemArray binding_layout_items(5);
-#else
+#if NANITE
 			BindingLayoutItemArray binding_layout_items(6);
+			binding_layout_items[5] = BindingLayoutItem::create_structured_buffer_srv(4);
+#else
+			BindingLayoutItemArray binding_layout_items(5);
 #endif
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::VirtualGBufferPassConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_srv(0);
 			binding_layout_items[2] = BindingLayoutItem::create_structured_buffer_srv(1);
 			binding_layout_items[3] = BindingLayoutItem::create_structured_buffer_srv(2);
 			binding_layout_items[4] = BindingLayoutItem::create_structured_buffer_srv(3);
-
-#ifndef SIMPLE_VIRTUAL_MESH
-			binding_layout_items[5] = BindingLayoutItem::create_structured_buffer_srv(4);
-#endif
 
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
@@ -45,8 +42,8 @@ namespace fantasy
 			shader_compile_desc.shader_name = "deferred/virtual_gbuffer_vs.hlsl";
 			shader_compile_desc.entry_point = "main";
 			shader_compile_desc.target = ShaderTarget::Vertex;
-#ifdef SIMPLE_VIRTUAL_MESH
-			shader_compile_desc.defines.push_back("SIMPLE_VIRTUAL_MESH=1");
+#if NANITE
+			shader_compile_desc.defines.push_back("NANITE=1");
 #endif
 			ShaderData vs_data = compile_shader(shader_compile_desc);
 
@@ -203,10 +200,10 @@ namespace fantasy
 		// Binding Set.
 		{
 			
-#ifdef SIMPLE_VIRTUAL_MESH
-			_binding_set_items.resize(5);
-#else
+#if NANITE
 			_binding_set_items.resize(6);
+#else
+			_binding_set_items.resize(5);
 #endif
 			_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::VirtualGBufferPassConstant));
 		}
@@ -245,31 +242,31 @@ namespace fantasy
 					{
 						for (const auto& virtual_submesh : virtual_mesh->_submeshes)
 						{
-#ifdef SIMPLE_VIRTUAL_MESH
-							for (const auto& cluster: virtual_submesh.clusters)
-							{
-								_cluster_vertices.insert(_cluster_vertices.end(), cluster.vertices.begin(), cluster.vertices.end());
-							}
-#else
+#if NANITE
 							for (const auto& group : virtual_submesh.cluster_groups)
 							{
 								for (auto ix : group.cluster_indices)
 								{
 									const auto& cluster = virtual_submesh.clusters[ix];
 									_cluster_vertices.insert(_cluster_vertices.end(), cluster.vertices.begin(), cluster.vertices.end());
-	
+
 									for(uint32_t ix = 0; ix < cluster.indices.size(); ix += 3)
 									{
 										uint32_t i0 = cluster.indices[ix + 0];
 										uint32_t i1 = cluster.indices[ix + 1];
 										uint32_t i2 = cluster.indices[ix + 2];
-	
+
 										uint32_t max_index = 0xff;
 										ReturnIfFalse(i0 <= max_index && i1 <= max_index && i2 <= max_index);
-	
+
 										_cluster_triangles.push_back(uint32_t(i0 | (i1 << 8) | (i2 << 16)));
 									}
 								}
+							}
+#else
+							for (const auto& cluster: virtual_submesh.clusters)
+							{
+								_cluster_vertices.insert(_cluster_vertices.end(), cluster.vertices.begin(), cluster.vertices.end());
 							}
 #endif
 						}
@@ -317,33 +314,28 @@ namespace fantasy
 					)
 				));
 				cache->collect(_cluster_vertex_buffer, ResourceType::Buffer);
-
-#ifndef SIMPLE_VIRTUAL_MESH
-				ReturnIfFalse(_cluster_triangle_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-						BufferDesc::create_structured_buffer(
-							sizeof(uint32_t) * _cluster_triangles.size(), 
-							sizeof(uint32_t),
-							"cluster_triangle_buffer"
-						)
-					)
-				));
-				cache->collect(_cluster_triangle_buffer, ResourceType::Buffer);
-#endif
-
 	
 				ReturnIfFalse(cmdlist->write_buffer(_geometry_constant_buffer.get(), _geometry_constants.data(), sizeof(GeometryConstantGpu) * _geometry_constants.size()));
 				ReturnIfFalse(cmdlist->write_buffer(_cluster_vertex_buffer.get(), _cluster_vertices.data(), sizeof(Vertex) * _cluster_vertices.size()));
-	
-#ifndef SIMPLE_VIRTUAL_MESH
-				ReturnIfFalse(cmdlist->write_buffer(_cluster_triangle_buffer.get(), _cluster_triangles.data(), sizeof(uint32_t) * _cluster_triangles.size()));
-#endif
+
 				_binding_set.reset();
 				_binding_set_items[1] = BindingSetItem::create_structured_buffer_srv(0, _geometry_constant_buffer);
 				_binding_set_items[2] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("visible_cluster_id_buffer")));
 				_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("mesh_cluster_buffer")));
 				_binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(3, _cluster_vertex_buffer);
 
-#ifndef SIMPLE_VIRTUAL_MESH
+#if NANITE
+
+				ReturnIfFalse(_cluster_triangle_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+					BufferDesc::create_structured_buffer(
+						sizeof(uint32_t) * _cluster_triangles.size(), 
+						sizeof(uint32_t),
+						"cluster_triangle_buffer"
+					)
+				)
+				));
+				cache->collect(_cluster_triangle_buffer, ResourceType::Buffer);
+				ReturnIfFalse(cmdlist->write_buffer(_cluster_triangle_buffer.get(), _cluster_triangles.data(), sizeof(uint32_t) * _cluster_triangles.size()));
 				_binding_set_items[5] = BindingSetItem::create_structured_buffer_srv(4, _cluster_triangle_buffer);
 #endif
 

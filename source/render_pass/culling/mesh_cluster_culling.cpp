@@ -47,8 +47,8 @@ namespace fantasy
 			cs_compile_desc.target = ShaderTarget::Compute;
 			cs_compile_desc.defines.push_back("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
 
-#ifdef SIMPLE_VIRTUAL_MESH
-			cs_compile_desc.defines.push_back("SIMPLE_VIRTUAL_MESH=1");
+#if NANITE
+			cs_compile_desc.defines.push_back("NANITE=1");
 #endif
 
 			ShaderData cs_data = compile_shader(cs_compile_desc);
@@ -155,19 +155,8 @@ namespace fantasy
                     {
                         for (const auto& submesh : virtual_mesh->_submeshes)
                         {
-#ifdef SIMPLE_VIRTUAL_MESH
-                            _pass_constant.group_count++;
-                            _mesh_cluster_groups.emplace_back(convert_mesh_cluster_group(submesh.cluster_groups[0], cluster_count, 0));
-                            for (const auto& cluster : submesh.clusters)
-                            {
-                                _mesh_clusters.emplace_back(convert_mesh_cluster(cluster, vertex_offset, triangle_offset));
-                                vertex_offset += static_cast<uint32_t>(cluster.vertices.size());
-                                triangle_offset += MeshCluster::cluster_tirangle_num;
-                            }
-                            cluster_count += submesh.cluster_groups[0].cluster_count;
-#else
+#if NANITE
                             _pass_constant.group_count += static_cast<uint32_t>(submesh.cluster_groups.size());
-                                
                             for (const auto& group : submesh.cluster_groups)
                             {
                                 _mesh_cluster_groups.emplace_back(convert_mesh_cluster_group(group, cluster_count, submesh.mip_levels - 1));
@@ -183,6 +172,16 @@ namespace fantasy
                                 
                                 cluster_count += static_cast<uint32_t>(group.cluster_indices.size());
                             }
+#else
+                            _pass_constant.group_count++;
+                            _mesh_cluster_groups.emplace_back(convert_mesh_cluster_group(submesh.cluster_groups[0], cluster_count, 0));
+                            for (const auto& cluster : submesh.clusters)
+                            {
+                                _mesh_clusters.emplace_back(convert_mesh_cluster(cluster, vertex_offset, triangle_offset));
+                                vertex_offset += static_cast<uint32_t>(cluster.vertices.size());
+                                triangle_offset += MeshCluster::cluster_tirangle_num;
+                            }
+                            cluster_count += submesh.cluster_groups[0].cluster_count;
 #endif
                         }  
                         return true;

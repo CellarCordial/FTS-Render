@@ -120,7 +120,7 @@ namespace fantasy
         float parent_lod_error = 0.0f;
     };
 
-#ifndef SIMPLE_VIRTUAL_MESH
+#if NANITE
     class VirtualMesh
     {
     public:

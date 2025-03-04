@@ -618,7 +618,7 @@ namespace fantasy
 		removed_index_indices.clear();
 	}
 
-#ifndef SIMPLE_VIRTUAL_MESH
+#if NANITE
 
 	bool VirtualMesh::build(const Mesh* mesh)
 	{
@@ -654,7 +654,7 @@ namespace fantasy
 				mip_level++;
 			}
 			virtual_submesh.mip_levels = mip_level - 1;
-			
+
 			_indices.clear();
 			_vertices.clear();
 		}
@@ -787,7 +787,6 @@ namespace fantasy
 
 	bool VirtualMesh::build_cluster_groups(VirtualSubmesh& submesh, uint32_t level_offset, uint32_t level_cluster_count, uint32_t mip_level)
 	{
-		// 即创建 clusters 的 LOD.
 
 		const std::span<MeshCluster> clusters_view(submesh.clusters.begin() + level_offset, level_cluster_count);
 
@@ -1039,8 +1038,8 @@ namespace fantasy
 		std::string* name = event.entity->get_component<std::string>();
 		std::string cache_path = std::string(PROJ_DIR) + "asset/cache/virtual_mesh/" + *name;
 
-#ifdef SIMPLE_VIRTUAL_MESH
-		cache_path += ".svm";
+#if NANITE
+		cache_path += ".nanite";
 #else
 		cache_path += ".vm";
 #endif

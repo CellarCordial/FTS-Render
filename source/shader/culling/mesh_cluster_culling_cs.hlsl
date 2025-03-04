@@ -1,5 +1,5 @@
 // #define THREAD_GROUP_SIZE_X 1
-// #define SIMPLE_VIRTUAL_MESH 1
+// #define NANITE 1
 
 #include "../common/gbuffer.hlsl"
 #include "../common/math.hlsl"
@@ -111,7 +111,7 @@ void main(uint3 thread_id: SV_DispatchThreadID)
     MeshClusterGroup group = mesh_cluster_group_buffer[group_index];
     float3 group_view_space_position = mul(float4(group.bounding_sphere.xyz, 1.0f), view_matrix).xyz;
 
-#if !SIMPLE_VIRTUAL_MESH
+#if NANITE
     if (!check_lod(group_view_space_position, group.bounding_sphere.w, group.max_parent_lod_error))
 #endif
     {
@@ -120,7 +120,7 @@ void main(uint3 thread_id: SV_DispatchThreadID)
             uint cluster_id = group.cluster_index_offset + ix;
             MeshCluster cluster = mesh_cluster_buffer[cluster_id];
 
-#if !SIMPLE_VIRTUAL_MESH
+#if NANITE
             bool visible = check_lod(
                 mul(float4(cluster.lod_bounding_sphere.xyz, 1.0f), view_matrix).xyz,
                 cluster.lod_bounding_sphere.w,
