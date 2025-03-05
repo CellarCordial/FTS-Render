@@ -164,8 +164,6 @@ namespace fantasy
 
 			std::array<TextureTilesMapping, Material::TextureType_Num> tile_mappings;
 
-			std::vector<VTPage> vt_pages;
-
 			for (uint32_t ix = 0; ix < _vt_feed_back_data.size(); ++ix)
 			{
 				const auto& data = _vt_feed_back_data[ix];
@@ -215,7 +213,6 @@ namespace fantasy
 						tile_mappings[jx].regions.emplace_back(region);
 					}
 					_vt_physical_table.add_page(page);
-					if (vt_pages.empty() || vt_pages.back() != page) vt_pages.push_back(page);
 				}
 
 				uint32_t mip = page.get_mip_level();
