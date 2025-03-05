@@ -7,7 +7,7 @@ namespace fantasy
     Camera::Camera(GLFWwindow* window) : 
         _window(window)
     {
-        set_lens(60.0f, 1.0f * CLIENT_WIDTH / CLIENT_HEIGHT, 0.1f, 100.0f);
+        set_lens(60.0f, 1.0f * CLIENT_WIDTH / CLIENT_HEIGHT, 0.01f, 100.0f);
         update_view_matrix();
         prev_view_matrix = view_matrix;
     }
@@ -118,7 +118,7 @@ namespace fantasy
 
 	void Camera::walk(float size)
     {
-        size *= speed * 0.2f;
+        size *= speed * 0.05f;
 
         position = size * direction + position;
 
@@ -127,7 +127,7 @@ namespace fantasy
 
     void Camera::strafe(float size)
     {
-        size *= speed * 0.2f;
+        size *= speed * 0.05f;
 
         float3 right = cross(up, direction);
         position = size * right + position;
@@ -137,7 +137,7 @@ namespace fantasy
 
     void Camera::vertical(float size)
     {
-        size *= speed * 0.2f;
+        size *= speed * 0.05f;
 
         position = size * up + position;
 

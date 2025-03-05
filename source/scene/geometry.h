@@ -149,7 +149,7 @@ namespace fantasy
     };
     
 	inline std::string get_geometry_texture_name(
-        uint32_t submesh_index,
+        uint32_t material_index,
         uint32_t image_type, 
         const std::string& model_name
     )
@@ -158,18 +158,34 @@ namespace fantasy
 		switch (image_type) 
 		{
 		case Material::TextureType_BaseColor: 
-			texture_name = model_name + "_base_color_" + std::to_string(submesh_index); break;
+			texture_name = model_name + "_base_color_" + std::to_string(material_index); break;
 		case Material::TextureType_Normal:  
-			texture_name = model_name + "_normal_" + std::to_string(submesh_index); break;
+			texture_name = model_name + "_normal_" + std::to_string(material_index); break;
 		case Material::TextureType_PBR:  
-			texture_name = model_name + "_pbr_" + std::to_string(submesh_index); break;
+			texture_name = model_name + "_pbr_" + std::to_string(material_index); break;
 		case Material::TextureType_Emissive:  
-			texture_name = model_name + "_emissive_" + std::to_string(submesh_index); break;
+			texture_name = model_name + "_emissive_" + std::to_string(material_index); break;
 		default: break;
 		}
 		return texture_name;
 	}
 
+    inline std::string get_texture_type_name(uint32_t image_type)
+    {
+		std::string texture_name;
+		switch (image_type) 
+		{
+		case Material::TextureType_BaseColor: 
+			return "base_color";
+		case Material::TextureType_Normal:  
+			return "normal";
+		case Material::TextureType_PBR:  
+			return "pbr";
+		case Material::TextureType_Emissive:  
+			return "emissive";
+		}
+        return "";
+    }
 
     namespace Geometry
     {

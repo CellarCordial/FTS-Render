@@ -25,7 +25,10 @@ namespace fantasy
 			}
 		);
 
-		_geometry_texture_heap = check_cast<HeapInterface>(cache->require("geometry_texture_heap"));
+		for (uint32_t ix = 0; ix < Material::TextureType_Num; ++ix)
+		{
+			_geometry_texture_heaps[ix] = check_cast<HeapInterface>(cache->require(std::string(get_texture_type_name(ix) + "_texture_heap").c_str()));
+		}
 		_vt_feed_back_read_back_buffer = check_cast<BufferInterface>(cache->require("vt_feed_back_read_back_buffer"));
 
 		_vt_feed_back_resolution = { CLIENT_WIDTH / VT_FEED_BACK_SCALE_FACTOR, CLIENT_HEIGHT / VT_FEED_BACK_SCALE_FACTOR };
@@ -161,24 +164,25 @@ namespace fantasy
 
 			std::array<TextureTilesMapping, Material::TextureType_Num> tile_mappings;
 
+			std::vector<VTPage> vt_pages;
+
 			for (uint32_t ix = 0; ix < _vt_feed_back_data.size(); ++ix)
 			{
 				const auto& data = _vt_feed_back_data[ix];
 
-				// if (data.z != INVALID_SIZE_32)
-				// {
-				// 	VTShadowPage page;
-				// 	page.tile_id = { data.z >> 16, data.z & 0xffff };
+				if (data.z != INVALID_SIZE_32)
+				{
+					VTShadowPage page;
+					page.tile_id = { data.z >> 16, data.z & 0xffff };
 
-				// 	if (!_vt_physical_shadow_table.check_page_loaded(page))
-				// 	{
-				// 		page.physical_position_in_page = _vt_physical_shadow_table.get_new_position();
-				// 		_vt_new_shadow_pages.push_back(page);
-				// 	}
-				// 	_vt_physical_shadow_table.add_page(page);
-
-				// 	// TODO: update shadow tile to pages.
-				// }
+					if (!_vt_physical_shadow_table.check_page_loaded(page))
+					{
+						page.physical_position_in_page = _vt_physical_shadow_table.get_new_position();
+						_vt_new_shadow_pages.push_back(page);
+						_vt_physical_shadow_table.add_page(page);
+					}
+					// TODO: update shadow tile to pages.
+				}
 
 				if (data.x == INVALID_SIZE_32 || data.y == INVALID_SIZE_32)  continue;
 
@@ -210,8 +214,9 @@ namespace fantasy
 					
 						tile_mappings[jx].regions.emplace_back(region);
 					}
+					_vt_physical_table.add_page(page);
+					if (vt_pages.empty() || vt_pages.back() != page) vt_pages.push_back(page);
 				}
-				_vt_physical_table.add_page(page);
 
 				uint32_t mip = page.get_mip_level();
 				uint2 tile_id = page.get_coordinate_in_page();
@@ -228,7 +233,7 @@ namespace fantasy
 			{
 				if (tile_mappings[ix].regions.empty()) continue;
 
-				tile_mappings[ix].heap = _geometry_texture_heap.get();
+				tile_mappings[ix].heap = _geometry_texture_heaps[ix].get();
 
 				cmdlist->get_deivce()->update_texture_tile_mappings(
 					_vt_physical_textures[ix].get(), 
@@ -290,17 +295,17 @@ namespace fantasy
 			bool res = cache->get_world()->each<std::string, Mesh, Material>(
 				[this, cache](Entity* entity, std::string* name, Mesh* mesh, Material* material) -> bool
 				{
-					for (uint32_t ix = 0; ix < material->submaterials.size(); ++ix)
+					for (uint32_t ix = 0; ix < mesh->submeshes.size(); ++ix)
 					{
 						if (material->image_resolution == 0) continue;
 
 						uint32_t submesh_id = mesh->submesh_global_base_id + ix;
 						for (uint32_t type = 0; type < Material::TextureType_Num; ++type)
 						{
-							if (!material->submaterials[ix].images[type].is_valid()) continue;
+							if (!material->submaterials[mesh->submeshes[ix].material_index].images[type].is_valid()) continue;
 							
 							const auto& texture_desc = check_cast<TextureInterface>(cache->require(
-								get_geometry_texture_name(ix, type, *name).c_str()
+								get_geometry_texture_name(mesh->submeshes[ix].material_index, type, *name).c_str()
 							))->get_desc();
 
 							uint32_t row_size_in_page = texture_desc.width / VT_PAGE_SIZE;

@@ -3,7 +3,7 @@
 
 cbuffer pass_constants : register(b0)
 {
-    uint2 output_resolution;
+    uint output_resolution;
     uint input_mip_level;
 };
 
@@ -17,7 +17,7 @@ SamplerState linear_clamp_sampler : register(s0);
 [numthreads(THREAD_GROUP_SIZE_X, THREAD_GROUP_SIZE_Y, 1)]
 void main(uint3 thread_id: SV_DispatchThreadID)
 {
-    if (thread_id.x >= output_resolution.x || thread_id.y >= output_resolution.y) return;
+    if (thread_id.x >= output_resolution || thread_id.y >= output_resolution) return;
 
     float2 uv = float2(thread_id.x + 0.5f, thread_id.y + 0.5f) / output_resolution;
 

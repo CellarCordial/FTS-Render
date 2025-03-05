@@ -16,7 +16,7 @@ namespace fantasy
 	static const uint32_t LOWEST_TEXTURE_RESOLUTION = 512;
 	static const uint32_t HIGHEST_TEXTURE_RESOLUTION = 2048;
     static const uint32_t VT_PHYSICAL_TEXTURE_RESOLUTION = 4096;
-    static const uint32_t VT_FEED_BACK_SCALE_FACTOR = 20;
+    static const uint32_t VT_FEED_BACK_SCALE_FACTOR = 10;
 
     static const uint32_t VT_TEXTURE_MIP_LEVELS = 5; // std::log2(HIGHEST_TEXTURE_RESOLUTION / VT_PAGE_SIZE) + 1
 
@@ -32,17 +32,25 @@ namespace fantasy
     struct VTPage
     {
         uint32_t geometry_id = INVALID_SIZE_32;
-        uint32_t coordinate_mip_level = INVALID_SIZE_32;
+        uint32_t mip_level;
+        uint32_t tile_x;
+        uint32_t tile_y;
         uint2 physical_position_in_page = uint2(INVALID_SIZE_32);
+        uint32_t coordinate_mip_level = INVALID_SIZE_32;
 
-        uint2 get_coordinate_in_page() const 
+
+        uint2 get_coordinate_in_page()
         {
             uint32_t coordinate = coordinate_mip_level >> 8;
+            
+            tile_x = coordinate >> 12;
+            tile_y = coordinate & 0xfff;
             return uint2(coordinate >> 12 , coordinate & 0xfff);
         }
 
-        uint32_t get_mip_level() const
+        uint32_t get_mip_level()
         {
+            mip_level = coordinate_mip_level & 0xff;
             return coordinate_mip_level & 0xff;
         }
 
@@ -85,7 +93,7 @@ namespace fantasy
     public:
         VTPhysicalTable(uint32_t resolution = VT_PHYSICAL_TEXTURE_RESOLUTION, uint32_t page_size = VT_PAGE_SIZE);
 
-        bool check_page_loaded(VTPage& page) const;
+        bool check_page_loaded(VTPage& page);
         uint2 get_new_position();
 
         void add_pages(std::span<VTPage> pages);
@@ -127,7 +135,7 @@ namespace fantasy
             uint32_t page_size = VT_SHADOW_PAGE_SIZE
         );
 
-        bool check_page_loaded(VTShadowPage& page) const;
+        bool check_page_loaded(VTShadowPage& page);
         uint2 get_new_position();
 
         void add_pages(std::span<VTShadowPage> pages);

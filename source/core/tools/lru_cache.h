@@ -16,12 +16,13 @@ namespace fantasy
         {
         }
 
-        bool check_cache(uint64_t key, T& out_element) const
+        bool check_cache(uint64_t key, T& out_element)
         {
             auto iter = _map.find(key);
             if (iter != _map.end())
             {
                 out_element = iter->second->second;
+                _list.splice(_list.begin(), _list, iter->second);
                 return true;
             }
             return false;
@@ -47,7 +48,7 @@ namespace fantasy
                 _map.insert(std::make_pair(key, _list.begin()));
                 if(_list.size() > _capacity)
                 {
-                    _map.erase(map_iter);
+                    _map.erase(_list.back().first);
                     _list.pop_back();
                 }
             }

@@ -51,7 +51,8 @@ namespace fantasy
 		std::vector<uint3> _vt_feed_back_data;
 		std::unordered_map<uint64_t, std::pair<TextureTilesMapping::Region, uint32_t>> _geometry_texture_region_cache;
 
-		std::shared_ptr<HeapInterface> _geometry_texture_heap;
+		// std::shared_ptr<HeapInterface> _geometry_texture_heap;
+		std::array<std::shared_ptr<HeapInterface>, Material::TextureType_Num> _geometry_texture_heaps;
 		
 		std::shared_ptr<BufferInterface> _vt_feed_back_read_back_buffer;
 		

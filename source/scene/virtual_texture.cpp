@@ -55,7 +55,7 @@ namespace fantasy
         reset();
     }
 
-    bool VTPhysicalTable::check_page_loaded(VTPage& page) const
+    bool VTPhysicalTable::check_page_loaded(VTPage& page)
     {
         return _pages.check_cache(create_page_key(page), page);
     }
@@ -128,7 +128,7 @@ namespace fantasy
         reset();
     }
 
-    bool VTPhysicalShadowTable::check_page_loaded(VTShadowPage& page) const
+    bool VTPhysicalShadowTable::check_page_loaded(VTShadowPage& page)
     {
         return _pages.check_cache(create_tile_key(page), page);
     }
