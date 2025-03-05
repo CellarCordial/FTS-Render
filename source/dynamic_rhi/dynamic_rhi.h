@@ -1,7 +1,9 @@
 ﻿#ifndef RHI_DYNAMIC_H
 #define RHI_DYNAMIC_H
 
+#include "binding.h"
 #include "device.h"
+#include "resource.h"
 #include <d3d12.h>
 #include <vulkan/vulkan.hpp>
 #include <wrl/client.h>
@@ -21,6 +23,13 @@ namespace fantasy
     };
 
     DeviceInterface* CreateDevice(const DX12DeviceDesc& desc);
+
+    D3D12_GPU_DESCRIPTOR_HANDLE get_texture_gpu_handle(
+        DeviceInterface* device, 
+        TextureInterface* texture, 
+        const TextureSubresourceSet &subresource, 
+        ResourceViewType view_type
+    );
     
     //////////////////////////////////////////////////////////////////////////////////////////////
     // Vulkan

@@ -33,6 +33,14 @@ namespace fantasy
         return device;
     }
 
+    D3D12_GPU_DESCRIPTOR_HANDLE get_texture_gpu_handle(DeviceInterface* device_, TextureInterface* texture_, const TextureSubresourceSet &subresource, ResourceViewType view_type)
+    {
+        DX12Device* device = check_cast<DX12Device*>(device_);
+        DX12Texture* texture = check_cast<DX12Texture*>(texture_);
+        uint32_t index = texture->get_view_index(view_type, subresource);
+        device->descriptor_manager.shader_resource_heap.copy_to_shader_visible_heap(index);
+        return device->descriptor_manager.shader_resource_heap.get_gpu_handle(index);
+    }
 
     DX12Device::DX12Device(const DX12DeviceDesc& desc_) : 
         descriptor_manager(&context), desc(desc_)

@@ -13,8 +13,8 @@ namespace fantasy
 	{
 		enum class VirtualGBufferViewMode : uint32_t
 		{
-			Triangle,
 			Cluster,
+			Triangle,
 			ClusterGroup,
 			ClusterMip
 		};
@@ -37,6 +37,9 @@ namespace fantasy
 		bool compile(DeviceInterface* device, RenderResourceCache* cache) override;
 		bool execute(CommandListInterface* cmdlist, RenderResourceCache* cache) override;
         bool finish_pass(RenderResourceCache* cache) override;
+
+	public:
+		constant::VirtualGBufferViewMode view_mode = constant::VirtualGBufferViewMode::Cluster;
 	
 	private:
 		bool _resource_writed = false;

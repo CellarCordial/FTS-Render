@@ -19,6 +19,7 @@
 #include "../render_pass/atmosphere/sun_disk.h"
 #include "../render_pass/atmosphere/sky_lut.h"
 #include "../render_pass/atmosphere/sky.h"
+#include "imgui.h"
 #include "test_base.h"
 
 namespace fantasy
@@ -175,6 +176,7 @@ namespace fantasy
 
 		World* world = render_graph->get_resource_cache()->get_world();
 		constant::AtmosphereProperties* properties = world->get_global_entity()->assign<constant::AtmosphereProperties>();
+
 
 		return sun_disk_pass;
     }
