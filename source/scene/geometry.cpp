@@ -152,8 +152,8 @@ namespace fantasy
 				aiString material_name;
 				if (assimp_material->GetTexture(aiTextureType_BASE_COLOR, 0, &material_name) == aiReturn_SUCCESS)
 					submaterial.images[Material::TextureType_BaseColor] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
-				if (assimp_material->GetTexture(aiTextureType_HEIGHT, 0, &material_name) == aiReturn_SUCCESS)
-					submaterial.images[Material::TextureType_BaseColor] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
+				if (assimp_material->GetTexture(aiTextureType_NORMALS, 0, &material_name) == aiReturn_SUCCESS)
+					submaterial.images[Material::TextureType_Normal] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
 				if (assimp_material->GetTexture(aiTextureType_METALNESS, 0, &material_name) == aiReturn_SUCCESS)
 					submaterial.images[Material::TextureType_PBR] = Image::load_image_from_file((file_path + material_name.C_Str()).c_str());
 				if (assimp_material->GetTexture(aiTextureType_EMISSIVE, 0, &material_name) == aiReturn_SUCCESS)
