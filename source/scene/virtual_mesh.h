@@ -4,9 +4,13 @@
 #include <cstdint>
 
 #include "../core/math/bounds.h"
+
+#if NANITE
 #include "../core/Math/surface.h"
 #include "../core/tools/hash_table.h"
 #include "../core/tools/bit_allocator.h"
+#endif
+
 #include "geometry.h"
 #include <utility>
 #include <vector>
@@ -14,6 +18,38 @@
 namespace fantasy 
 {
 
+    struct MeshCluster
+    {
+        static const uint32_t cluster_tirangle_num = 128;
+
+        uint32_t geometry_id = 0;
+        std::vector<Vertex> vertices;
+        
+        std::vector<uint32_t> indices;
+        std::vector<uint32_t> external_edges;
+        
+        uint32_t group_id = 0;
+        uint32_t mip_level = 0;
+        float lod_error = 0.0f;
+
+        Sphere bounding_sphere;
+        Sphere lod_bounding_sphere;
+    };
+
+    struct MeshClusterGroup
+    {
+        static const uint32_t group_size = 32;
+
+        uint32_t mip_level = 0;
+        uint32_t cluster_count = 0;
+        std::vector<uint32_t> cluster_indices;
+        std::vector<std::pair<uint32_t,uint32_t>> external_edges;
+
+        Sphere bounding_sphere;
+        float parent_lod_error = 0.0f;
+    };
+
+#if NANITE
     class MeshOptimizer
     {
     public:
@@ -89,38 +125,6 @@ namespace fantasy
         std::vector<uint32_t> edge_need_reevaluate_indices;
     };
 
-    struct MeshCluster
-    {
-        static const uint32_t cluster_tirangle_num = 128;
-
-        uint32_t geometry_id = 0;
-        std::vector<Vertex> vertices;
-        
-        std::vector<uint32_t> indices;
-        std::vector<uint32_t> external_edges;
-        
-        uint32_t group_id = 0;
-        uint32_t mip_level = 0;
-        float lod_error = 0.0f;
-
-        Sphere bounding_sphere;
-        Sphere lod_bounding_sphere;
-    };
-
-    struct MeshClusterGroup
-    {
-        static const uint32_t group_size = 32;
-
-        uint32_t mip_level = 0;
-        uint32_t cluster_count = 0;
-        std::vector<uint32_t> cluster_indices;
-        std::vector<std::pair<uint32_t,uint32_t>> external_edges;
-
-        Sphere bounding_sphere;
-        float parent_lod_error = 0.0f;
-    };
-
-#if NANITE
     class VirtualMesh
     {
     public:
@@ -157,35 +161,7 @@ namespace fantasy
     class VirtualMesh
     {
     public:
-        bool build(const Mesh* mesh)
-        {		
-            for (const auto& submesh : mesh->submeshes)
-            {
-                _indices.insert(_indices.end(), submesh.indices.begin(), submesh.indices.end());
-                _vertices.insert(_vertices.end(), submesh.vertices.begin(), submesh.vertices.end());
-                convert_triangles_to_quads();
-    
-                auto& virtual_submesh = _submeshes.emplace_back();
-                cluster_quad(virtual_submesh);
-
-                Sphere group_sphere;
-                for (const auto& cluster : virtual_submesh.clusters) 
-                {
-                    group_sphere = merge(group_sphere, cluster.bounding_sphere);
-                }
-                virtual_submesh.cluster_groups.push_back(MeshClusterGroup{
-                    .cluster_count = static_cast<uint32_t>(virtual_submesh.clusters.size()),
-                    .bounding_sphere = group_sphere
-                });
-                
-                _indices.clear();
-                _vertices.clear();
-            }
-            _indices.shrink_to_fit();
-            _vertices.shrink_to_fit();
-
-            return true;          
-        }
+        bool build(const Mesh* mesh);
         
         struct VirtualSubmesh
         {
@@ -216,157 +192,8 @@ namespace fantasy
             float3 get_center() const { return (v1.position + v2.position + v3.position + v4.position) / 4; }
         };
 
-        void cluster_quad(VirtualSubmesh& submesh)
-        {
-            std::vector<Quad> quads(_indices.size() / 4);
-            for (uint32_t ix = 0; ix < quads.size(); ++ix)
-            {
-                quads[ix] = Quad{
-                    .v1 = _vertices[_indices[ix * 4 + 0]],
-                    .v2 = _vertices[_indices[ix * 4 + 1]],
-                    .v3 = _vertices[_indices[ix * 4 + 2]],
-                    .v4 = _vertices[_indices[ix * 4 + 3]]
-                };
-            }
-
-            // 64 个 quad 为一个 cluster.
-            uint32_t quad_num_per_cluster = MeshCluster::cluster_tirangle_num / 2;
-            uint32_t new_cluster_num = static_cast<uint32_t>(quads.size()) / quad_num_per_cluster;
-            uint32_t supply_quad_num = quad_num_per_cluster - static_cast<uint32_t>(quads.size()) % quad_num_per_cluster;
-            
-            for (uint32_t ix = 0; ix < supply_quad_num; ++ix) quads.push_back(Quad());
-            new_cluster_num += supply_quad_num == 0 ? 0 : 1;
-
-            submesh.clusters.resize(new_cluster_num);
-            for (uint32_t ix = 0; ix < new_cluster_num; ++ix)
-            {
-                float3 center = quads[0].get_center();
-                
-                std::sort(
-                    quads.begin(), 
-                    quads.end(),
-                    [&center](const Quad& q0, const Quad& q1)
-                    {
-                        return distance(q0.get_center(), center) < distance(q1.get_center(), center);
-                    }
-                );
-
-                auto& cluster = submesh.clusters[ix];
-
-                auto& vertices = cluster.vertices;
-
-                vertices.resize(quad_num_per_cluster * 4);
-                for (uint32_t jx = 0; jx < quad_num_per_cluster; ++jx)
-                {
-                    vertices[jx * 4 + 0] = quads[jx].v1;
-                    vertices[jx * 4 + 1] = quads[jx].v2;
-                    vertices[jx * 4 + 2] = quads[jx].v3;
-                    vertices[jx * 4 + 3] = quads[jx].v4;
-                }
-                
-                quads.erase(quads.begin(), quads.begin() + quad_num_per_cluster);
-
-                std::vector<float3> vertex_positons(vertices.size());
-                for (uint32_t jx = 0; jx < vertices.size(); ++jx) vertex_positons[jx] = vertices[jx].position;
-
-                cluster.bounding_sphere = Sphere(vertex_positons);
-            }
-        }
-
-        void convert_triangles_to_quads()
-        {
-            std::vector<Triangle> triangles(_indices.size() / 3);
-            std::vector<Vertex> quad_vertices;
-            std::vector<uint32_t> quad_indices;
-
-            for (uint32_t ix = 0; ix < triangles.size(); ++ix)
-            {
-                triangles[ix] = Triangle{
-                    .v1 = _indices[ix * 3 + 0],
-                    .v2 = _indices[ix * 3 + 1],
-                    .v3 = _indices[ix * 3 + 2]
-                };
-            }
-
-            for (uint32_t ix = 0; ix < triangles.size(); ++ix)
-            {
-                auto& src_tri = triangles[ix];
-                if (src_tri.merged) continue;
-
-                bool found = false;
-                for (uint32_t jx = ix + 1; jx < triangles.size(); ++jx)
-                {
-                    auto& dst_tri = triangles[jx];
-                    if (dst_tri.merged) continue;
-
-                    std::vector<uint32_t> combine_quad_indices;
-                    add_triangle_index(combine_quad_indices, src_tri.v1);
-                    add_triangle_index(combine_quad_indices, src_tri.v2);
-                    add_triangle_index(combine_quad_indices, src_tri.v3);
-                    add_triangle_index(combine_quad_indices, dst_tri.v1);
-                    add_triangle_index(combine_quad_indices, dst_tri.v2);
-                    add_triangle_index(combine_quad_indices, dst_tri.v3);
-
-                    // 并非相邻的三角形.
-                    if (combine_quad_indices.size() != 8) continue;
-
-                    src_tri.merged = true;
-                    dst_tri.merged = true;
-
-                    for (uint32_t kx = 0; kx < 4; ++kx)
-                    {
-                        quad_vertices.push_back(_vertices[combine_quad_indices[kx * 2]]);
-                    }
-
-                    uint32_t index_start = static_cast<uint32_t>(quad_indices.size());
-                    assert(index_start % 4 == 0);
-
-                    quad_indices.push_back(index_start);
-                    if (combine_quad_indices[5] == 0) quad_indices.push_back(index_start + 3); // v1 v2是公用边
-                    quad_indices.push_back(index_start + 1);
-                    if (combine_quad_indices[1] == 0) quad_indices.push_back(index_start + 3); // v2 v3是公用边
-                    quad_indices.push_back(index_start + 2);
-                    if (combine_quad_indices[3] == 0) quad_indices.push_back(index_start + 3); // v1 v3是公用边
-
-                    found = true; break;
-                }
-
-                if (!found)
-                {
-                    src_tri.merged = true;
-
-                    uint32_t index_start = static_cast<uint32_t>(quad_indices.size());
-                    assert(index_start % 4 == 0);
-
-                    quad_vertices.push_back(_vertices[src_tri.v1]);
-                    quad_vertices.push_back(_vertices[src_tri.v2]);
-                    quad_vertices.push_back(_vertices[src_tri.v3]);
-                    quad_vertices.push_back(Vertex());
-
-                    quad_indices.push_back(index_start);
-                    quad_indices.push_back(index_start + 1);
-                    quad_indices.push_back(index_start + 2);
-                    quad_indices.push_back(index_start);
-                }
-            }
-
-            _vertices = quad_vertices;
-            _indices = quad_indices;
-        }
-
-        void add_triangle_index(std::vector<uint32_t>& quad_indices, uint32_t index)
-        {
-            for (int ix = 0; ix < quad_indices.size(); ix += 2)
-            {
-                if (quad_indices[ix] == index) 
-                {
-                    quad_indices[ix + 1] = 1;
-                    return;
-                }
-            }
-            quad_indices.push_back(index);
-            quad_indices.push_back(0);
-        }
+        void cluster_quad(VirtualSubmesh& submesh);
+        void convert_triangles_to_quads();
 
     private:
         std::vector<uint32_t> _indices;

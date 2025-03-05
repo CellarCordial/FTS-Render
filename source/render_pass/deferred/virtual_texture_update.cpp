@@ -165,20 +165,20 @@ namespace fantasy
 			{
 				const auto& data = _vt_feed_back_data[ix];
 
-				if (data.z != INVALID_SIZE_32)
-				{
-					VTShadowPage page;
-					page.tile_id = { data.z >> 16, data.z & 0xffff };
+				// if (data.z != INVALID_SIZE_32)
+				// {
+				// 	VTShadowPage page;
+				// 	page.tile_id = { data.z >> 16, data.z & 0xffff };
 
-					if (!_vt_physical_shadow_table.check_page_loaded(page))
-					{
-						page.physical_position_in_page = _vt_physical_shadow_table.get_new_position();
-						_vt_new_shadow_pages.push_back(page);
-					}
-					_vt_physical_shadow_table.add_page(page);
+				// 	if (!_vt_physical_shadow_table.check_page_loaded(page))
+				// 	{
+				// 		page.physical_position_in_page = _vt_physical_shadow_table.get_new_position();
+				// 		_vt_new_shadow_pages.push_back(page);
+				// 	}
+				// 	_vt_physical_shadow_table.add_page(page);
 
-					// TODO: update shadow tile to pages.
-				}
+				// 	// TODO: update shadow tile to pages.
+				// }
 
 				if (data.x == INVALID_SIZE_32 || data.y == INVALID_SIZE_32)  continue;
 

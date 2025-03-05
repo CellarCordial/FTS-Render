@@ -77,8 +77,10 @@ VertexOutput main(uint instance_id: SV_InstanceID, uint vertex_index : SV_Vertex
     {
     case 0: output.color = color_hash(triangle_index); break;
     case 1: output.color = color_hash(cluster_index); break;
+#if NANITE
     case 2: output.color = color_hash(cluster.group_id); break;
     case 3: output.color = color_hash(cluster.mip_level); break;
+#endif
     };
 
 #if NANITE
@@ -92,7 +94,14 @@ VertexOutput main(uint instance_id: SV_InstanceID, uint vertex_index : SV_Vertex
     Vertex vertex = cluster_vertex_buffer[cluster.vertex_offset + index_id];
     
     GeometryConstant geometry = geometry_constant_buffer[cluster.geometry_id];
-    float4 world_pos = mul(float4(vertex.position, 1.0f), geometry.world_matrix);
+
+    float4x4 scale = float4x4(
+        0.01, 0.0, 0.0, 0.0,
+        0.0, -0.01, 0.0, 0.0, 
+        0.0, 0.0, -0.01, 0.0,
+        0.0, 0.0, 0.0, 1.0
+    );
+    float4 world_pos = mul(mul(float4(vertex.position, 1.0f), geometry.world_matrix), scale);
 
     output.sv_position = mul(world_pos, reverse_z_view_proj);
 
