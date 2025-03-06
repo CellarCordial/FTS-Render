@@ -135,7 +135,7 @@ namespace fantasy
 
 	FinalTest::FinalTest(GraphicsAPI api) : TestBase(api)
 	{
-		_init_model_paths.emplace_back("asset/model/Sponza/Sponza.gltf");
+		_init_model_paths.emplace_back("asset/model/Bunny/Bunny.gltf");
 	}
 
     RenderPassInterface* FinalTest::init_render_pass(RenderGraph* render_graph)

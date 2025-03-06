@@ -41,10 +41,12 @@ namespace fantasy
         uint32_t _hzb_resolution = 1024u;
 		uint32_t _cluster_group_count = 0;
 		constant::MeshClusterCullingPassConstant _pass_constant;
+		std::vector<GeometryConstantGpu> _geometry_constants;
 
         std::vector<MeshClusterGroupGpu> _mesh_cluster_groups;
         std::vector<MeshClusterGpu> _mesh_clusters;
 
+		std::shared_ptr<BufferInterface> _geometry_constant_buffer;
 		std::shared_ptr<BufferInterface> _mesh_cluster_group_buffer;
 		std::shared_ptr<BufferInterface> _mesh_cluster_buffer;
 		std::shared_ptr<BufferInterface> _visible_cluster_id_buffer;

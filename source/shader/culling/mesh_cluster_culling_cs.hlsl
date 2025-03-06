@@ -26,7 +26,8 @@ RWStructuredBuffer<uint> visible_cluster_id_buffer : register(u1);
 
 StructuredBuffer<MeshClusterGroup> mesh_cluster_group_buffer : register(t0);
 StructuredBuffer<MeshCluster> mesh_cluster_buffer : register(t1);
-Texture2D hierarchical_zbuffer_texture : register(t2);
+StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t2);
+Texture2D hierarchical_zbuffer_texture : register(t3);
 
 SamplerState linear_clamp_sampler : register(s0);
 
@@ -74,7 +75,7 @@ bool hierarchical_zbuffer_cull(float3 view_space_position, float radius, float4x
     float cluster_near_z = view_space_position.z - radius;
     cluster_near_z = reverse_z_proj_matrix[2][2] + reverse_z_proj_matrix[3][2] / cluster_near_z;
 
-    return cluster_near_z > min_z - 0.1f;
+    return cluster_near_z > min_z;
 }
 
 bool frustum_cull(float3 view_space_position, float radius, float4x4 reverse_z_proj_matrix)
@@ -119,11 +120,22 @@ void main(uint3 thread_id: SV_DispatchThreadID)
         {
             uint cluster_id = group.cluster_index_offset + ix;
             MeshCluster cluster = mesh_cluster_buffer[cluster_id];
+            
+            GeometryConstant geometry_constant = geometry_constant_buffer[cluster.geometry_id];
+            float uniform_scale = max3(
+                geometry_constant.world_matrix[0][0], 
+                geometry_constant.world_matrix[1][1], 
+                geometry_constant.world_matrix[2][2]
+            );
 
 #if NANITE
+            float4 scaled_lod_bounding_sphere;
+            scaled_lod_bounding_sphere.xyz = mul(float4(cluster.lod_bounding_sphere.xyz, 1.0f), geometry_constant.world_matrix).xyz;
+            scaled_lod_bounding_sphere.w = cluster.lod_bounding_sphere.w * uniform_scale;
+
             bool visible = check_lod(
-                mul(float4(cluster.lod_bounding_sphere.xyz, 1.0f), view_matrix).xyz,
-                cluster.lod_bounding_sphere.w,
+                mul(float4(scaled_lod_bounding_sphere.xyz, 1.0f), view_matrix).xyz,
+                scaled_lod_bounding_sphere.w,
                 cluster.lod_error
             );
 #else
@@ -132,22 +144,28 @@ void main(uint3 thread_id: SV_DispatchThreadID)
 
             if (visible)
             {
-                float3 cluster_view_space_position = mul(float4(cluster.bounding_sphere.xyz, 1.0f), view_matrix).xyz;
+
+                float4 scaled_bounding_sphere;
+                scaled_bounding_sphere.xyz = mul(float4(cluster.bounding_sphere.xyz, 1.0f), geometry_constant.world_matrix).xyz;
+                scaled_bounding_sphere.w = cluster.bounding_sphere.w * uniform_scale;
+
+
+                float3 cluster_view_space_position = mul(float4(scaled_bounding_sphere.xyz, 1.0f), view_matrix).xyz;
 
                 // 包围球在 z 轴上的最远端不超过近平面或最近端超过远平面, 则将该 cluster 剔除.
-                // if (
-                //     cluster_view_space_position.z + cluster.bounding_sphere.w < near_plane ||
-                //     cluster_view_space_position.z - cluster.bounding_sphere.w > far_plane
-                // )
-                //     continue;
+                if (
+                    cluster_view_space_position.z + scaled_bounding_sphere.w < near_plane ||
+                    cluster_view_space_position.z - scaled_bounding_sphere.w > far_plane
+                )
+                    continue;
 
                 // 判定是否在视锥体内, 以及从 hzb 中采样深度值进行比较.
-                // visible = 
-                //           hierarchical_zbuffer_cull(
-                //             cluster_view_space_position,
-                //             cluster.bounding_sphere.w,
-                //             reverse_z_proj_matrix
-                //           );
+                visible = frustum_cull(cluster_view_space_position, 2.0f, reverse_z_proj_matrix) && 
+                          hierarchical_zbuffer_cull(
+                            cluster_view_space_position,
+                            scaled_bounding_sphere.w,
+                            reverse_z_proj_matrix
+                          );
                 
                 if (visible)
                 {

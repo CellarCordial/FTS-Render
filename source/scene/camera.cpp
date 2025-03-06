@@ -7,7 +7,7 @@ namespace fantasy
     Camera::Camera(GLFWwindow* window) : 
         _window(window)
     {
-        set_lens(60.0f, 1.0f * CLIENT_WIDTH / CLIENT_HEIGHT, 0.01f, 100.0f);
+        set_lens(60.0f, 1.0f * CLIENT_WIDTH / CLIENT_HEIGHT, 0.01f, 200.0f);
         update_view_matrix();
         prev_view_matrix = view_matrix;
     }

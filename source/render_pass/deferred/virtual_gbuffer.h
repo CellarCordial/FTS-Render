@@ -47,9 +47,7 @@ namespace fantasy
 
 		std::vector<Vertex> _cluster_vertices;
 		std::vector<uint32_t> _cluster_triangles;
-		std::vector<GeometryConstantGpu> _geometry_constants;
 
-		std::shared_ptr<BufferInterface> _geometry_constant_buffer;
 		std::shared_ptr<BufferInterface> _cluster_vertex_buffer;
 		std::shared_ptr<BufferInterface> _cluster_triangle_buffer;
 		std::shared_ptr<BufferInterface> _draw_indexed_indirect_arguments_buffer;

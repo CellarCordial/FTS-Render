@@ -237,8 +237,8 @@ namespace fantasy
 	
 			if (!_resource_writed)
 			{
-				bool res = world->each<VirtualMesh, Mesh, Material>(
-					[&](Entity* entity, VirtualMesh* virtual_mesh, Mesh* mesh, Material* material) -> bool
+				bool res = world->each<VirtualMesh>(
+					[&](Entity* entity, VirtualMesh* virtual_mesh) -> bool
 					{
 						for (const auto& virtual_submesh : virtual_mesh->_submeshes)
 						{
@@ -270,22 +270,6 @@ namespace fantasy
 							}
 #endif
 						}
-						for (const auto& submesh : mesh->submeshes)
-						{
-							const auto& submaterial = material->submaterials[submesh.material_index];
-							_geometry_constants.emplace_back(
-								GeometryConstantGpu{
-									.world_matrix = submesh.world_matrix,
-									.inv_trans_world = inverse(transpose(submesh.world_matrix)),
-									.base_color = float4(submaterial.base_color_factor),
-									.occlusion = submaterial.occlusion_factor,
-									.roughness = submaterial.roughness_factor,
-									.metallic = submaterial.metallic_factor,
-									.emissive = float4(submaterial.emissive_factor),
-									.texture_resolution = material->image_resolution
-								}
-							);
-						}
 						return true;
 					}
 				);
@@ -294,16 +278,6 @@ namespace fantasy
 	
 				DeviceInterface* device = cmdlist->get_deivce();
 
-				
-				ReturnIfFalse(_geometry_constant_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
-						BufferDesc::create_structured_buffer(
-							sizeof(GeometryConstantGpu) * _geometry_constants.size(), 
-							sizeof(GeometryConstantGpu),
-							"geometry_constant_buffer"
-						)
-					)
-				));
-				cache->collect(_geometry_constant_buffer, ResourceType::Buffer);
 	
 				ReturnIfFalse(_cluster_vertex_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
 						BufferDesc::create_structured_buffer(
@@ -315,11 +289,10 @@ namespace fantasy
 				));
 				cache->collect(_cluster_vertex_buffer, ResourceType::Buffer);
 	
-				ReturnIfFalse(cmdlist->write_buffer(_geometry_constant_buffer.get(), _geometry_constants.data(), sizeof(GeometryConstantGpu) * _geometry_constants.size()));
 				ReturnIfFalse(cmdlist->write_buffer(_cluster_vertex_buffer.get(), _cluster_vertices.data(), sizeof(Vertex) * _cluster_vertices.size()));
 
 				_binding_set.reset();
-				_binding_set_items[1] = BindingSetItem::create_structured_buffer_srv(0, _geometry_constant_buffer);
+				_binding_set_items[1] = BindingSetItem::create_structured_buffer_srv(0, check_cast<BufferInterface>(cache->require("geometry_constant_buffer")));
 				_binding_set_items[2] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("visible_cluster_id_buffer")));
 				_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("mesh_cluster_buffer")));
 				_binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(3, _cluster_vertex_buffer);
@@ -367,7 +340,6 @@ namespace fantasy
 	{
 		_cluster_vertices.clear(); _cluster_vertices.shrink_to_fit();
 		_cluster_triangles.clear(); _cluster_triangles.shrink_to_fit();
-		_geometry_constants.clear(); _geometry_constants.shrink_to_fit();
 		return true;
 	}
 

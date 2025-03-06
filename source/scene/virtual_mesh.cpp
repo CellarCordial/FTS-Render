@@ -1110,9 +1110,13 @@ namespace fantasy
 			
 			quads.erase(quads.begin(), quads.begin() + quad_num_per_cluster);
 
-			std::vector<float3> vertex_positons(vertices.size());
-			for (uint32_t jx = 0; jx < vertices.size(); ++jx) vertex_positons[jx] = vertices[jx].position;
-
+			std::vector<float3> vertex_positons;
+			vertex_positons.reserve(vertices.size());
+			for (uint32_t jx = 0; jx < vertices.size(); ++jx)
+			{
+				if (vertices[jx].normal == float3()) continue;
+				vertex_positons.push_back(vertices[jx].position);
+			}
 			cluster.bounding_sphere = Sphere(vertex_positons);
 		}
 	}
