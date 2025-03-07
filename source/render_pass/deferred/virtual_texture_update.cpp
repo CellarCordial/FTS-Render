@@ -1,11 +1,7 @@
 #include "virtual_texture_update.h"
-#include "../../dynamic_rhi/dynamic_rhi.h"
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
 #include "../../scene/scene.h"
-#include "../../gui/gui_panel.h"
-#include <cstring>
-#include <d3d12.h>
 
 
 namespace fantasy
@@ -149,6 +145,7 @@ namespace fantasy
 			_compute_state.binding_sets.resize(1);
 			_compute_state.pipeline = _pipeline.get();
 		}
+
 		return true;
 	}
 

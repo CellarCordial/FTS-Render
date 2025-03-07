@@ -233,12 +233,11 @@ namespace fantasy
 					}
 					_compute_state.binding_sets[0] = _binding_sets[ix].get();
 					_pass_constants[ix].input_mip_level = _current_calculate_mip - 1;
-					_pass_constants[ix].output_resolution = { _current_texture_resolution >> _current_calculate_mip,
-															  _current_texture_resolution >> _current_calculate_mip };
+					_pass_constants[ix].output_resolution = _current_texture_resolution >> _current_calculate_mip;
 	
 					uint2 thread_group_num = {
-						static_cast<uint32_t>((align(_pass_constants[ix].output_resolution.x, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
-						static_cast<uint32_t>((align(_pass_constants[ix].output_resolution.y, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
+						static_cast<uint32_t>((align(_pass_constants[ix].output_resolution, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
+						static_cast<uint32_t>((align(_pass_constants[ix].output_resolution, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
 					};
 	
 					ReturnIfFalse(cmdlist->dispatch(_compute_state, thread_group_num.x, thread_group_num.y, 1, &_pass_constants[ix]));

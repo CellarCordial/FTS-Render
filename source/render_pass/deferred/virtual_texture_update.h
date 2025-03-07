@@ -22,6 +22,8 @@ namespace fantasy
 			uint4 vt_texture_mip_offset[VT_TEXTURE_MIP_LEVELS / 4 + 1];
 			uint4 vt_axis_mip_tile_num[VT_TEXTURE_MIP_LEVELS / 4 + 1];
 			uint32_t vt_texture_id_offset = 0;
+
+			uint32_t enable_virtual_texture_visual = 0;
 		};
 	}
 

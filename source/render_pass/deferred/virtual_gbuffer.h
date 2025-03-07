@@ -24,7 +24,7 @@ namespace fantasy
 			float4x4 reverse_z_view_proj;
 			float4x4 view_matrix;
 		
-			uint32_t view_mode = 0;
+			int32_t view_mode = 0;
 			uint32_t vt_page_size = VT_PAGE_SIZE;
 		};
 	}

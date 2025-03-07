@@ -4,6 +4,7 @@
 #include "../../scene/virtual_mesh.h"
 #include "../../scene/camera.h"
 #include "../../scene/scene.h"
+#include <d3d12.h>
 
 namespace fantasy
 {
@@ -216,7 +217,6 @@ namespace fantasy
 			_graphics_state.viewport_state = ViewportState::create_default_viewport(CLIENT_WIDTH, CLIENT_HEIGHT);
 			_graphics_state.indirect_buffer = check_cast<BufferInterface>(cache->require("virtual_gbuffer_draw_indirect_buffer")).get();
 		}
-
 
 		return true;
 	}

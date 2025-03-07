@@ -6,7 +6,7 @@
 #include <array>
 #include <memory>
 
-#define SINGLE_GEOMETRY_TEST 1 
+#define SINGLE_GEOMETRY_TEST 0
 
 namespace fantasy
 {

@@ -152,20 +152,20 @@ void main(uint3 thread_id: SV_DispatchThreadID)
 
                 float3 cluster_view_space_position = mul(float4(scaled_bounding_sphere.xyz, 1.0f), view_matrix).xyz;
 
-                // 包围球在 z 轴上的最远端不超过近平面或最近端超过远平面, 则将该 cluster 剔除.
-                if (
-                    cluster_view_space_position.z + scaled_bounding_sphere.w < near_plane ||
-                    cluster_view_space_position.z - scaled_bounding_sphere.w > far_plane
-                )
-                    continue;
+                // // 包围球在 z 轴上的最远端不超过近平面或最近端超过远平面, 则将该 cluster 剔除.
+                // if (
+                //     cluster_view_space_position.z + scaled_bounding_sphere.w < near_plane ||
+                //     cluster_view_space_position.z - scaled_bounding_sphere.w > far_plane
+                // )
+                //     continue;
 
-                // 判定是否在视锥体内, 以及从 hzb 中采样深度值进行比较.
-                visible = frustum_cull(cluster_view_space_position, 2.0f, reverse_z_proj_matrix) && 
-                          hierarchical_zbuffer_cull(
-                            cluster_view_space_position,
-                            scaled_bounding_sphere.w,
-                            reverse_z_proj_matrix
-                          );
+                // // 判定是否在视锥体内, 以及从 hzb 中采样深度值进行比较.
+                // visible = frustum_cull(cluster_view_space_position, scaled_bounding_sphere.w, reverse_z_proj_matrix) && 
+                //           hierarchical_zbuffer_cull(
+                //             cluster_view_space_position,
+                //             scaled_bounding_sphere.w,
+                //             reverse_z_proj_matrix
+                //           );
                 
                 if (visible)
                 {

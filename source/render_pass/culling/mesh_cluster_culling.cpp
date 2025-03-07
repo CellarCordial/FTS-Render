@@ -123,7 +123,7 @@ namespace fantasy
 
         _pass_constant.hzb_resolution = _hzb_resolution;
         ReturnIfFalse(cache->collect_constants("hzb_resolution", &_hzb_resolution));
- 
+
 		return true;
 	}
 

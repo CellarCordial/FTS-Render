@@ -15,6 +15,8 @@ cbuffer pass_constants : register(b0)
     uint4 vt_texture_mip_offset_uint4[VT_TEXTURE_MIP_LEVELS_UINT_4];
     uint4 vt_axis_mip_tile_num_uint4[VT_TEXTURE_MIP_LEVELS_UINT_4];
     uint vt_texture_id_offset;
+
+    uint enable_virtual_texture_visual;
 };
 
 StructuredBuffer<uint> vt_indirect_buffer : register(t0);
@@ -86,8 +88,15 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     float4 vt_base_color = vt_base_color_physical_texture.Sample(linear_clamp_sampler, physical_uv);
     if (dot(vt_base_color, vt_base_color) != 0.0f)
     {
-        float4 base_color = vt_base_color * base_color_texture[pixel_id];
-        base_color_texture[pixel_id] = base_color;
+        if (bool(enable_virtual_texture_visual) && (any(interal_uv <= 1) || any(vt_page_size - interal_uv <= 1))) 
+        {
+            base_color_texture[pixel_id] = float4(1.0f, 1.0f, 0.0f, 1.0f);
+        }
+        else 
+        {
+            float4 base_color = vt_base_color * base_color_texture[pixel_id];
+            base_color_texture[pixel_id] = base_color;
+        }
     }
 
     float3 vt_pbr = vt_pbr_physical_texture.Sample(linear_clamp_sampler, physical_uv).rgb;

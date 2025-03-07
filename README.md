@@ -13,8 +13,22 @@ xmake build GPU-Driven-SDF-DDGI
 - Press mouse right button and `w, a, s, d, q, e`
 
 
-## Display
+## Display (gif need time to load, please wait for a moment.)
 
 ### Precomputed Atmospheric Scattering
-![](image/Atmosphere.gif)
+![](image/atmosphere.gif)
+
+### GPU Driven
+#### Virtual Geometry
+![](image/virtual_geometry.gif)
+
+#### Nanite(Experimental)
+![](image/nanite.gif)
+
+#### Frustum & Hi-z Culling
+![](image/frustum_hi-z_cullling.gif)
+
+#### Virtual Texture (All geometry texture)
+![](image/virtual_texture.gif)
+
 
