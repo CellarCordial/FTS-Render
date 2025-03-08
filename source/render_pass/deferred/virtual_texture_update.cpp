@@ -30,8 +30,10 @@ namespace fantasy
 		}
 		_vt_feed_back_read_back_buffer = check_cast<BufferInterface>(cache->require("vt_feed_back_read_back_buffer"));
 
+		_vt_axis_shadow_tile_num = VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE;
 		_vt_feed_back_resolution = { CLIENT_WIDTH / VT_FEED_BACK_SCALE_FACTOR, CLIENT_HEIGHT / VT_FEED_BACK_SCALE_FACTOR };
 		_vt_feed_back_data.resize(_vt_feed_back_resolution.x * _vt_feed_back_resolution.y, uint3(INVALID_SIZE_32));
+		_vt_shadow_indirect_data.resize(_vt_axis_shadow_tile_num * _vt_axis_shadow_tile_num, uint2(INVALID_SIZE_32));
 
 		ReturnIfFalse(cache->collect_constants("vt_new_shadow_pages", &_vt_new_shadow_pages));
 
@@ -109,15 +111,14 @@ namespace fantasy
 				cache->collect(_vt_physical_textures[ix], ResourceType::Texture);
 			}
 
-			ReturnIfFalse(_vt_shadow_indirect_texture = std::shared_ptr<TextureInterface>(device->create_texture(
-				TextureDesc::create_read_write_texture(
-					_vt_feed_back_resolution.x,
-					_vt_feed_back_resolution.y,
-					Format::RG32_UINT,
-					"vt_shadow_indirect_texture"
+			ReturnIfFalse(_vt_shadow_indrect_buffer = std::shared_ptr<BufferInterface>(device->create_buffer(
+				BufferDesc::create_structured_buffer(
+					sizeof(uint2) * _vt_shadow_indirect_data.size(),
+					sizeof(uint2),
+					"vt_shadow_indirect_buffer"
 				)
 			)));
-			cache->collect(_vt_shadow_indirect_texture, ResourceType::Texture);
+			cache->collect(_vt_shadow_indrect_buffer, ResourceType::Buffer);
 		}
 
 		// Binding Set.
@@ -178,7 +179,7 @@ namespace fantasy
 						_vt_new_shadow_pages.push_back(page);
 						_vt_physical_shadow_table.add_page(page);
 					}
-					// TODO: update shadow tile to pages.
+					_vt_shadow_indirect_data[page.tile_id.x + page.tile_id.y * _vt_axis_shadow_tile_num] = page.physical_position_in_page;
 				}
 
 				if (data.x == INVALID_SIZE_32 || data.y == INVALID_SIZE_32)  continue;
@@ -238,11 +239,16 @@ namespace fantasy
 					CommandQueueType::Compute 
 				);
 			}
-
+			
 			ReturnIfFalse(cmdlist->write_buffer(
 				_vt_indirect_buffer.get(), 
 				_vt_indirect_data.data(), 
 				_vt_indirect_data.size() * sizeof(uint32_t)
+			));
+			ReturnIfFalse(cmdlist->write_buffer(
+				_vt_shadow_indrect_buffer.get(), 
+				_vt_shadow_indirect_data.data(), 
+				_vt_shadow_indirect_data.size() * sizeof(uint2)
 			));
 			
 			uint2 thread_group_num = {

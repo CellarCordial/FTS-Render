@@ -42,6 +42,7 @@ namespace fantasy
 		constant::VirtualTextureUpdatePassConstant _pass_constant;
 
 		std::vector<uint32_t> _vt_indirect_data;
+		std::vector<uint2> _vt_shadow_indirect_data;
 
 		std::vector<VTShadowPage> _vt_new_shadow_pages;
 		VTPhysicalShadowTable _vt_physical_shadow_table;
@@ -50,6 +51,7 @@ namespace fantasy
 		VTPhysicalTable _vt_physical_table;
 
 		uint2 _vt_feed_back_resolution;
+		uint32_t _vt_axis_shadow_tile_num = 0;
 		std::vector<uint3> _vt_feed_back_data;
 		std::unordered_map<uint64_t, std::pair<TextureTilesMapping::Region, uint32_t>> _geometry_texture_region_cache;
 
@@ -57,8 +59,8 @@ namespace fantasy
 		
 		std::shared_ptr<BufferInterface> _vt_feed_back_read_back_buffer;
 		
-		std::shared_ptr<TextureInterface> _vt_shadow_indirect_texture;
 		std::shared_ptr<BufferInterface> _vt_indirect_buffer;
+		std::shared_ptr<BufferInterface> _vt_shadow_indrect_buffer;
 		std::array<std::shared_ptr<TextureInterface>, Material::TextureType_Num> _vt_physical_textures;
 
 		std::shared_ptr<BindingLayoutInterface> _binding_layout;

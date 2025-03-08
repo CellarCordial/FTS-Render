@@ -64,7 +64,7 @@ namespace fantasy
         float3 position = { 0.0f, 0.1f, 5.0f };
         float3 direction = { 0.0f, 0.0f, -1.0f };
         float3 up = { 0.0f, 1.0f, 0.0f };
-        int32_t speed = 5;
+        int32_t speed = 10;
 
     private:
 		float _vert_radians = 0.0f;

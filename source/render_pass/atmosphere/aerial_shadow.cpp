@@ -18,7 +18,7 @@ namespace fantasy
 		_final_texture = check_cast<TextureInterface>(cache->require("final_texture"));
 		// Binding Layout.
 		{
-			BindingLayoutItemArray binding_layout_items(14);
+			BindingLayoutItemArray binding_layout_items(15);
 			binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::AerialShadowConstant));
 			binding_layout_items[1] = BindingLayoutItem::create_constant_buffer(1);
 			binding_layout_items[2] = BindingLayoutItem::create_texture_uav(0);
@@ -27,12 +27,13 @@ namespace fantasy
 			binding_layout_items[5] = BindingLayoutItem::create_texture_srv(2);
 			binding_layout_items[6] = BindingLayoutItem::create_texture_srv(3);
 			binding_layout_items[7] = BindingLayoutItem::create_texture_srv(4);
-			binding_layout_items[8] = BindingLayoutItem::create_texture_srv(5);
+			binding_layout_items[8] = BindingLayoutItem::create_structured_buffer_srv(5);
 			binding_layout_items[9] = BindingLayoutItem::create_texture_srv(6);
 			binding_layout_items[10] = BindingLayoutItem::create_texture_srv(7);
-			binding_layout_items[11] = BindingLayoutItem::create_sampler(0);
-			binding_layout_items[12] = BindingLayoutItem::create_sampler(1);
-			binding_layout_items[13] = BindingLayoutItem::create_sampler(2);
+			binding_layout_items[11] = BindingLayoutItem::create_texture_srv(8);
+			binding_layout_items[12] = BindingLayoutItem::create_sampler(0);
+			binding_layout_items[13] = BindingLayoutItem::create_sampler(1);
+			binding_layout_items[14] = BindingLayoutItem::create_sampler(2);
 			ReturnIfFalse(_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = binding_layout_items }
 			)));
@@ -82,7 +83,7 @@ namespace fantasy
 
 		// Binding Set.
 		{
-			BindingSetItemArray binding_set_items(14);
+			BindingSetItemArray binding_set_items(15);
 			binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::AerialShadowConstant));
 			binding_set_items[1] = BindingSetItem::create_constant_buffer(1, check_cast<BufferInterface>(cache->require("atmosphere_properties_buffer")));
 			binding_set_items[2] = BindingSetItem::create_texture_uav(0, _final_texture);
@@ -91,12 +92,13 @@ namespace fantasy
 			binding_set_items[5] = BindingSetItem::create_texture_srv(2, check_cast<TextureInterface>(cache->require("base_color_texture")));
 			binding_set_items[6] = BindingSetItem::create_texture_srv(3, check_cast<TextureInterface>(cache->require("aerial_lut_texture")));
 			binding_set_items[7] = BindingSetItem::create_texture_srv(4, check_cast<TextureInterface>(cache->require("transmittance_texture")));
-			binding_set_items[8] = BindingSetItem::create_texture_srv(5, check_cast<TextureInterface>(cache->require("shadow_map_texture")), TextureSubresourceSet{}, Format::R32_FLOAT);
-			binding_set_items[9] = BindingSetItem::create_texture_srv(6, _blue_noise_texture);
-			binding_set_items[10] = BindingSetItem::create_texture_srv(7, check_cast<TextureInterface>(cache->require("geometry_uv_mip_id_texture")));
-			binding_set_items[11] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
-			binding_set_items[12] = BindingSetItem::create_sampler(1, check_cast<SamplerInterface>(cache->require("point_clamp_sampler")));
-			binding_set_items[13] = BindingSetItem::create_sampler(2, check_cast<SamplerInterface>(cache->require("point_wrap_sampler")));
+			binding_set_items[8] = BindingSetItem::create_structured_buffer_srv(5, check_cast<BufferInterface>(cache->require("vt_shadow_indirect_buffer")));
+			binding_set_items[9] = BindingSetItem::create_texture_srv(6, check_cast<TextureInterface>(cache->require("vt_physical_shadow_texture")));
+			binding_set_items[10] = BindingSetItem::create_texture_srv(7, _blue_noise_texture);
+			binding_set_items[11] = BindingSetItem::create_texture_srv(8, check_cast<TextureInterface>(cache->require("geometry_uv_mip_id_texture")));
+			binding_set_items[12] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
+			binding_set_items[13] = BindingSetItem::create_sampler(1, check_cast<SamplerInterface>(cache->require("point_clamp_sampler")));
+			binding_set_items[14] = BindingSetItem::create_sampler(2, check_cast<SamplerInterface>(cache->require("point_wrap_sampler")));
 			ReturnIfFalse(_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 				BindingSetDesc{ .binding_items = binding_set_items },
 				_binding_layout

@@ -120,7 +120,7 @@ void main(uint3 thread_id: SV_DispatchThreadID)
         {
             uint cluster_id = group.cluster_index_offset + ix;
             MeshCluster cluster = mesh_cluster_buffer[cluster_id];
-            
+
             GeometryConstant geometry_constant = geometry_constant_buffer[cluster.geometry_id];
             float uniform_scale = max3(
                 geometry_constant.world_matrix[0][0], 
@@ -144,7 +144,6 @@ void main(uint3 thread_id: SV_DispatchThreadID)
 
             if (visible)
             {
-
                 float4 scaled_bounding_sphere;
                 scaled_bounding_sphere.xyz = mul(float4(cluster.bounding_sphere.xyz, 1.0f), geometry_constant.world_matrix).xyz;
                 scaled_bounding_sphere.w = cluster.bounding_sphere.w * uniform_scale;
@@ -153,19 +152,14 @@ void main(uint3 thread_id: SV_DispatchThreadID)
                 float3 cluster_view_space_position = mul(float4(scaled_bounding_sphere.xyz, 1.0f), view_matrix).xyz;
 
                 // // 包围球在 z 轴上的最远端不超过近平面或最近端超过远平面, 则将该 cluster 剔除.
-                // if (
-                //     cluster_view_space_position.z + scaled_bounding_sphere.w < near_plane ||
-                //     cluster_view_space_position.z - scaled_bounding_sphere.w > far_plane
-                // )
-                //     continue;
+                if (
+                    cluster_view_space_position.z + scaled_bounding_sphere.w < near_plane ||
+                    cluster_view_space_position.z - scaled_bounding_sphere.w > far_plane
+                )
+                    continue;
 
                 // // 判定是否在视锥体内, 以及从 hzb 中采样深度值进行比较.
-                // visible = frustum_cull(cluster_view_space_position, scaled_bounding_sphere.w, reverse_z_proj_matrix) && 
-                //           hierarchical_zbuffer_cull(
-                //             cluster_view_space_position,
-                //             scaled_bounding_sphere.w,
-                //             reverse_z_proj_matrix
-                //           );
+                visible = frustum_cull(cluster_view_space_position, scaled_bounding_sphere.w, reverse_z_proj_matrix);
                 
                 if (visible)
                 {

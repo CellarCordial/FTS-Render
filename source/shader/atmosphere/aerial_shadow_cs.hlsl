@@ -20,6 +20,11 @@ cbuffer pass_constant : register(b0)
     float3 camera_position;
     float world_scale;
 
+    uint vt_shadow_page_size;
+    uint vt_virtual_shadow_resolution;
+    uint vt_physical_shadow_resolution;
+    uint vt_virtual_shadow_axis_tile_num;
+
     uint2 client_resolution;
 };
 
@@ -37,9 +42,10 @@ Texture2D base_color_texture : register(t2);
 
 Texture3D<float4> aerial_lut_texture : register(t3);
 Texture2D<float3> transmittance_texture : register(t4);
-Texture2D<float> shadow_map_texture : register(t5);
-Texture2D<float2> blue_noise_texture : register(t6);
-Texture2D<float4> geometry_uv_mip_id_texture : register(t7);
+StructuredBuffer<uint2> vt_shadow_indirect_buffer : register(t5);
+Texture2D<float> vt_physical_shadow_texture : register(t6);
+Texture2D<float2> blue_noise_texture : register(t7);
+Texture2D<float4> geometry_uv_mip_id_texture : register(t8);
 
 SamplerState linear_clamp_sampler : register(s0);
 SamplerState point_clamp_sampler : register(s1);
@@ -85,7 +91,12 @@ void main(uint3 thread_id : SV_DispatchThreadID)
     float shadow_factor = 1.0f;
     if (all(saturate(shadow_uv) == shadow_uv))
     {
-        float depth = shadow_map_texture.Sample(point_clamp_sampler, shadow_uv);
+        uint2 shadow_pixel_id = uint2(shadow_uv * vt_virtual_shadow_resolution);
+        uint2 interal_uv = shadow_pixel_id % vt_shadow_page_size;
+        uint2 tile_id = shadow_pixel_id / vt_shadow_page_size;
+        uint2 page_id = vt_shadow_indirect_buffer[tile_id.x + tile_id.y * vt_virtual_shadow_axis_tile_num];
+        float2 uv = float2(interal_uv + page_id * vt_shadow_page_size) / vt_physical_shadow_resolution;
+        float depth = vt_physical_shadow_texture.Sample(point_clamp_sampler, uv);
         shadow_factor = float(shadow_clip.z <= depth);
     }
 

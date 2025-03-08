@@ -24,8 +24,10 @@ namespace fantasy
 				float3 tile_right = normalize(cross(float3(0.0f, 1.0f, 0.0f), _directional_light->direction));
 				float3 tile_up = normalize(cross(_directional_light->direction, tile_right));
 		
-				float3 vert_offset = tile_right * _directional_light->orthographic_length / axis_tile_num;
-				float3 horz_offset = tile_up * _directional_light->orthographic_length / axis_tile_num;
+				// 以左上角为原点.
+				float3 horz_offset = tile_right * _directional_light->orthographic_length / axis_tile_num;
+				float3 vert_offset = tile_up * _directional_light->orthographic_length / axis_tile_num;
+				float3 offset = -(horz_offset - vert_offset);
 		
 				float tile_orthographic_length = _directional_light->orthographic_length / axis_tile_num;
 				_shadow_tile_proj_matrix = orthographic_left_hand(
@@ -36,18 +38,18 @@ namespace fantasy
 				);
 				
 				_shadow_tile_view_matrixs.resize(axis_tile_num * axis_tile_num);
-
-				float3 first_tile_look =  -(vert_offset + horz_offset) * (axis_tile_num * 0.5f - 0.5f);
-				float3 first_tile_center = _directional_light->get_position() - (vert_offset + horz_offset) * (axis_tile_num * 0.5f - 0.5f);
+				
+				float3 first_tile_look =  offset * (axis_tile_num * 0.5f - 0.5f);
+				float3 first_tile_center = _directional_light->get_position() + offset * (axis_tile_num * 0.5f - 0.5f);
 				for (uint32_t y = 0; y < axis_tile_num; ++y)
 				{
 					for (uint32_t x = 0; x < axis_tile_num; ++x)
 					{
-						float3 offset = x * vert_offset + y * horz_offset;
+						float3 tile_offset = x * horz_offset - y * vert_offset;
 						
 						_shadow_tile_view_matrixs[x + y * axis_tile_num] = look_at_left_hand(
-							first_tile_center + offset,
-							first_tile_look + offset,
+							first_tile_center + tile_offset,
+							first_tile_look + tile_offset,
 							float3(0.0f, 1.0f, 0.0f)
 						);
 					}
@@ -131,6 +133,7 @@ namespace fantasy
 				DeviceInterface* device = cmdlist->get_deivce();
 				_cull_binding_set_items[3] = BindingSetItem::create_structured_buffer_srv(0, check_cast<BufferInterface>(cache->require("mesh_cluster_group_buffer")));
 				_cull_binding_set_items[4] = BindingSetItem::create_structured_buffer_srv(1, check_cast<BufferInterface>(cache->require("mesh_cluster_buffer")));
+				_cull_binding_set_items[5] = BindingSetItem::create_structured_buffer_srv(2, check_cast<BufferInterface>(cache->require("geometry_constant_buffer")));
 				ReturnIfFalse(_cull_binding_set = std::unique_ptr<BindingSetInterface>(device->create_binding_set(
 					BindingSetDesc{ .binding_items = _cull_binding_set_items },
 					_cull_binding_layout
@@ -266,14 +269,15 @@ namespace fantasy
 	{
 		// Binding Layout.
 		{
-			BindingLayoutItemArray cull_binding_layout_items(7);
+			BindingLayoutItemArray cull_binding_layout_items(8);
 			cull_binding_layout_items[0] = BindingLayoutItem::create_push_constants(0, sizeof(constant::ShadowCullingConstant));
 			cull_binding_layout_items[1] = BindingLayoutItem::create_structured_buffer_uav(0);
 			cull_binding_layout_items[2] = BindingLayoutItem::create_structured_buffer_uav(1);
 			cull_binding_layout_items[3] = BindingLayoutItem::create_structured_buffer_srv(0);
 			cull_binding_layout_items[4] = BindingLayoutItem::create_structured_buffer_srv(1);
-			cull_binding_layout_items[5] = BindingLayoutItem::create_texture_srv(2);
-			cull_binding_layout_items[6] = BindingLayoutItem::create_sampler(0);
+			cull_binding_layout_items[5] = BindingLayoutItem::create_structured_buffer_srv(2);
+			cull_binding_layout_items[6] = BindingLayoutItem::create_texture_srv(3);
+			cull_binding_layout_items[7] = BindingLayoutItem::create_sampler(0);
 			ReturnIfFalse(_cull_binding_layout = std::unique_ptr<BindingLayoutInterface>(device->create_binding_layout(
 				BindingLayoutDesc{ .binding_layout_items = cull_binding_layout_items }
 			)));
@@ -285,11 +289,12 @@ namespace fantasy
 			cs_compile_desc.shader_name = "culling/shadow_culling_cs.hlsl";
 			cs_compile_desc.entry_point = "main";
 			cs_compile_desc.target = ShaderTarget::Compute;
-			cs_compile_desc.defines.resize(2);
+			cs_compile_desc.defines.resize(3);
 			cs_compile_desc.defines[0] = ("THREAD_GROUP_SIZE_X=" + std::to_string(THREAD_GROUP_SIZE_X));
-			cs_compile_desc.defines[1] = ("HI_Z_CULLING=0");
+			cs_compile_desc.defines[1] = ("NANITE=" + std::to_string(NANITE));
+			cs_compile_desc.defines[2] = ("HI_Z_CULLING=0");
 			ShaderData cs_data = compile_shader(cs_compile_desc);
-			cs_compile_desc.defines[1] = ("HI_Z_CULLING=1");
+			cs_compile_desc.defines[2] = ("HI_Z_CULLING=1");
 			ShaderData hi_z_cs_data = compile_shader(cs_compile_desc);
 
 
@@ -334,12 +339,12 @@ namespace fantasy
  
 		// Binding Set.
 		{
-			_cull_binding_set_items.resize(7);
+			_cull_binding_set_items.resize(8);
 			_cull_binding_set_items[0] = BindingSetItem::create_push_constants(0, sizeof(constant::ShadowCullingConstant));
 			_cull_binding_set_items[1] = BindingSetItem::create_structured_buffer_uav(0, _vt_shadow_draw_indirect_buffer);
 			_cull_binding_set_items[2] = BindingSetItem::create_structured_buffer_uav(1, _vt_shadow_visible_cluster_buffer);
-			_cull_binding_set_items[5] = BindingSetItem::create_texture_srv(2, _shadow_hi_z_texture);
-			_cull_binding_set_items[6] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
+			_cull_binding_set_items[6] = BindingSetItem::create_texture_srv(3, _shadow_hi_z_texture);
+			_cull_binding_set_items[7] = BindingSetItem::create_sampler(0, check_cast<SamplerInterface>(cache->require("linear_clamp_sampler")));
 		}
 
 		// Compute state.

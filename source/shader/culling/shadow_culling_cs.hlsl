@@ -1,5 +1,6 @@
 // #define THREAD_GROUP_SIZE_X 1
 // #define HI_Z_CULLING 1
+// #define NANITE 1
 
 #include "../common/indirect_argument.hlsl"
 #include "../common/gbuffer.hlsl"
@@ -27,7 +28,8 @@ RWStructuredBuffer<uint2> vt_shadow_visible_cluster_buffer : register(u1);
 
 StructuredBuffer<MeshClusterGroup> mesh_cluster_group_buffer : register(t0);
 StructuredBuffer<MeshCluster> mesh_cluster_buffer : register(t1);
-Texture2D<float> shadow_hi_z_texture : register(t2);
+StructuredBuffer<GeometryConstant> geometry_constant_buffer : register(t2);
+Texture2D<float> shadow_hi_z_texture : register(t3);
 
 SamplerState linear_clamp_sampler : register(s0);
 
@@ -95,10 +97,10 @@ void main(uint3 thread_id : SV_DispatchThreadID)
 
     float pixel_length = shadow_orthographic_length / shadow_map_resolution;
 
-#if HI_Z_CULLING
+#if NANITE
     bool visible = pixel_length < group.max_parent_lod_error;
 #else
-    bool visible = group.mip_level == group.max_mip_level - 1;
+    bool visible = true;
 #endif
 
     if (visible)
@@ -107,19 +109,29 @@ void main(uint3 thread_id : SV_DispatchThreadID)
         {
             uint cluster_id = group.cluster_index_offset + ix;
             MeshCluster cluster = mesh_cluster_buffer[cluster_id];
-            
-#if HI_Z_CULLING
+
+            GeometryConstant geometry_constant = geometry_constant_buffer[cluster.geometry_id];
+            float uniform_scale = max3(
+                geometry_constant.world_matrix[0][0], 
+                geometry_constant.world_matrix[1][1], 
+                geometry_constant.world_matrix[2][2]
+            );
+
+#if NANITE
             if (pixel_length < cluster.lod_error) return;   // check lod.
 #endif
+            float4 scaled_bounding_sphere;
+            scaled_bounding_sphere.xyz = mul(float4(cluster.bounding_sphere.xyz, 1.0f), geometry_constant.world_matrix).xyz;
+            scaled_bounding_sphere.w = cluster.bounding_sphere.w * uniform_scale;
 
             float3 cluster_view_space_position = mul(
-                float4(cluster.bounding_sphere.xyz, 1.0f), 
+                float4(scaled_bounding_sphere.xyz, 1.0f), 
                 shadow_view_matrix
             ).xyz;
 
-            visible = tile_cull(cluster_view_space_position, cluster.bounding_sphere.w);
+            visible = tile_cull(cluster_view_space_position, scaled_bounding_sphere.w);
 #if HI_Z_CULLING
-            visible = hierarchical_zbuffer_cull(cluster_view_space_position, cluster.bounding_sphere.w);
+            visible = hierarchical_zbuffer_cull(cluster_view_space_position, scaled_bounding_sphere.w);
 #endif
             if (visible)
             {

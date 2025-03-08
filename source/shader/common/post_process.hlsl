@@ -20,7 +20,7 @@ float3 simple_post_process(float2 seed, float3 color)
     // 抖动.
     float rand = frac(sin(dot(seed, float2(12.9898f, 78.233f) * 2.0f)) * 43758.5453f);
     color = 255.0f * saturate(pow(color, 1.0f / 2.2f));
-    color = select(any(rand.xxx < (color - floor(color))), ceil(color), floor(color));
+    color = any(rand.xxx < (color - floor(color))) ? ceil(color) : floor(color);
 
     return color / 255.0f;
 }

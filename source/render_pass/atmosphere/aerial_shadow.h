@@ -3,6 +3,7 @@
 
 #include "../../render_graph/render_pass.h"
 #include "../../core/math/matrix.h"
+#include "../../scene/virtual_texture.h"
 #include "../../scene/image.h"
 
 
@@ -25,6 +26,11 @@ namespace fantasy
         
             float3 camera_position;
             float world_scale;
+            
+            uint32_t vt_shadow_page_size = VT_SHADOW_PAGE_SIZE;
+            uint32_t vt_virtual_shadow_resolution = VT_VIRTUAL_SHADOW_RESOLUTION;
+            uint32_t vt_physical_shadow_resolution = VT_PHYSICAL_SHADOW_RESOLUTION;
+            uint32_t vt_virtual_shadow_axis_tile_num = VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE;
             
             uint2 client_resolution = { CLIENT_WIDTH, CLIENT_HEIGHT };
         };
