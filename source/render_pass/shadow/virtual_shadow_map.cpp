@@ -12,49 +12,63 @@ namespace fantasy
 #define THREAD_GROUP_SIZE_X 16u
 #define THREAD_GROUP_SIZE_Y 16u
 
+	void VirtualShadowMapPass::recalculate_shadow_view_matrixs()
+	{
+		uint32_t axis_tile_num = (VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE);
+		float3 tile_right = normalize(cross(float3(0.0f, 1.0f, 0.0f), _directional_light->direction));
+		float3 tile_up = normalize(cross(_directional_light->direction, tile_right));
+
+		// 以左上角为原点.
+		float3 horz_offset = tile_right * _directional_light->orthographic_length / axis_tile_num;
+		float3 vert_offset = tile_up * _directional_light->orthographic_length / axis_tile_num;
+		float3 offset = -(horz_offset - vert_offset);
+
+		float tile_orthographic_length = _directional_light->orthographic_length / axis_tile_num;
+		_shadow_tile_proj_matrix = orthographic_left_hand(
+			tile_orthographic_length, 
+			tile_orthographic_length, 
+			_directional_light->near_plane, 
+			_directional_light->far_plane
+		);
+		
+		_shadow_tile_view_matrixs.resize(axis_tile_num * axis_tile_num);
+		
+		float3 first_tile_look =  offset * (axis_tile_num * 0.5f - 0.5f);
+		float3 first_tile_center = _directional_light->get_position() + offset * (axis_tile_num * 0.5f - 0.5f);
+		for (uint32_t y = 0; y < axis_tile_num; ++y)
+		{
+			for (uint32_t x = 0; x < axis_tile_num; ++x)
+			{
+				float3 tile_offset = x * horz_offset - y * vert_offset;
+				
+				_shadow_tile_view_matrixs[x + y * axis_tile_num] = look_at_left_hand(
+					first_tile_center + tile_offset,
+					first_tile_look + tile_offset,
+					float3(0.0f, 1.0f, 0.0f)
+				);
+			}
+		}
+	}
+
+
 	bool VirtualShadowMapPass::compile(DeviceInterface* device, RenderResourceCache* cache)
 	{
+		cache->get_world()->get_global_entity()->get_component<event::UpdateShadowMap>()->add_event(
+			[this]() -> bool
+			{
+				_update_shadow_map = true;
+				recalculate_shadow_view_matrixs();
+				return true;
+			}
+		);
+
 		cache->get_world()->get_global_entity()->get_component<event::AddModel>()->add_event(
 			[this]() -> bool
 			{
 				_resource_writed = false;	
 				_update_shadow_map = true;
 
-				uint32_t axis_tile_num = (VT_VIRTUAL_SHADOW_RESOLUTION / VT_SHADOW_PAGE_SIZE);
-				float3 tile_right = normalize(cross(float3(0.0f, 1.0f, 0.0f), _directional_light->direction));
-				float3 tile_up = normalize(cross(_directional_light->direction, tile_right));
-		
-				// 以左上角为原点.
-				float3 horz_offset = tile_right * _directional_light->orthographic_length / axis_tile_num;
-				float3 vert_offset = tile_up * _directional_light->orthographic_length / axis_tile_num;
-				float3 offset = -(horz_offset - vert_offset);
-		
-				float tile_orthographic_length = _directional_light->orthographic_length / axis_tile_num;
-				_shadow_tile_proj_matrix = orthographic_left_hand(
-					tile_orthographic_length, 
-					tile_orthographic_length, 
-					_directional_light->near_plane, 
-					_directional_light->far_plane
-				);
-				
-				_shadow_tile_view_matrixs.resize(axis_tile_num * axis_tile_num);
-				
-				float3 first_tile_look =  offset * (axis_tile_num * 0.5f - 0.5f);
-				float3 first_tile_center = _directional_light->get_position() + offset * (axis_tile_num * 0.5f - 0.5f);
-				for (uint32_t y = 0; y < axis_tile_num; ++y)
-				{
-					for (uint32_t x = 0; x < axis_tile_num; ++x)
-					{
-						float3 tile_offset = x * horz_offset - y * vert_offset;
-						
-						_shadow_tile_view_matrixs[x + y * axis_tile_num] = look_at_left_hand(
-							first_tile_center + tile_offset,
-							first_tile_look + tile_offset,
-							float3(0.0f, 1.0f, 0.0f)
-						);
-					}
-				}
-
+				recalculate_shadow_view_matrixs();
 				return true;
 			}
 		);
@@ -91,7 +105,7 @@ namespace fantasy
 	{
 		ReturnIfFalse(cmdlist->open());
         
-		if (SceneSystem::loaded_submesh_count != 0)
+		if (SceneSystem::loaded_submesh_count != 0 && _update_shadow_map)
 		{
 			_shadow_map_cull_constant.group_count = *_cluster_group_count;
 			_shadow_map_cull_constant.far_plane = _directional_light->far_plane;
@@ -157,68 +171,65 @@ namespace fantasy
 			}
 
 			
-			if (_update_shadow_map)
-			{
-				cmdlist->clear_buffer_uint(
-					_vt_shadow_draw_indirect_buffer.get(), 
-					BufferRange(0, sizeof(DrawIndexedIndirectArguments)), 
-					0
-				);
-	
-				cmdlist->clear_buffer_uint(
-					_vt_shadow_visible_cluster_buffer.get(), 
-					BufferRange(0, _vt_shadow_visible_cluster_buffer->get_desc().byte_size), 
-					0
-				);
-				
-				_cull_compute_state.pipeline = _cull_pipeline.get();
-				ReturnIfFalse(cmdlist->dispatch(
-					_cull_compute_state, 
-					align(*_cluster_group_count, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X, 
-					1, 
-					1, 
-					&_shadow_map_cull_constant
-				));
-				
-				ReturnIfFalse(clear_depth_stencil_attachment(cmdlist, _shadow_map_frame_buffer.get()));
-	
-				ReturnIfFalse(cmdlist->draw_indirect(_shadow_map_graphics_state, 0, 1, &_shadow_map_constants));
-	
-				cmdlist->set_texture_state(
-					_shadow_map_texture.get(), 
-					TextureSubresourceSet{}, 
-					ResourceStates::GraphicsShaderResource | ResourceStates::DepthRead
-				);
-	
-				cmdlist->clear_texture_float(
-					_shadow_hi_z_texture.get(), 
-					TextureSubresourceSet{
-						.base_mip_level = 0,
-						.mip_level_count = _shadow_hi_z_texture->get_desc().mip_levels,
-						.base_array_slice = 0,
-						.array_slice_count = 1
-					}, 
-					Color{ 0.0f }
-				);
-	
-				uint2 thread_group_num = {
-					static_cast<uint32_t>((align(_hi_z_update_pass_constants[0].hzb_resolution, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
-					static_cast<uint32_t>((align(_hi_z_update_pass_constants[0].hzb_resolution, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
-				};
-				
-				for (uint32_t ix = 0; ix < _hi_z_update_pass_constants.size(); ++ix)
-				{
-					ReturnIfFalse(cmdlist->dispatch(
-						_hi_z_update_compute_state, 
-						thread_group_num.x, 
-						thread_group_num.y, 
-						1, 
-						&_hi_z_update_pass_constants[ix]
-					));
-				}
+			cmdlist->clear_buffer_uint(
+				_vt_shadow_draw_indirect_buffer.get(), 
+				BufferRange(0, sizeof(DrawIndexedIndirectArguments)), 
+				0
+			);
 
-				cmdlist->clear_texture_uint(_vt_physical_shadow_texture.get(), TextureSubresourceSet{}, std::bit_cast<uint32_t>(1.0f));
+			cmdlist->clear_buffer_uint(
+				_vt_shadow_visible_cluster_buffer.get(), 
+				BufferRange(0, _vt_shadow_visible_cluster_buffer->get_desc().byte_size), 
+				0
+			);
+			
+			_cull_compute_state.pipeline = _cull_pipeline.get();
+			ReturnIfFalse(cmdlist->dispatch(
+				_cull_compute_state, 
+				align(*_cluster_group_count, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X, 
+				1, 
+				1, 
+				&_shadow_map_cull_constant
+			));
+			
+			ReturnIfFalse(clear_depth_stencil_attachment(cmdlist, _shadow_map_frame_buffer.get()));
+
+			ReturnIfFalse(cmdlist->draw_indirect(_shadow_map_graphics_state, 0, 1, &_shadow_map_constants));
+
+			cmdlist->set_texture_state(
+				_shadow_map_texture.get(), 
+				TextureSubresourceSet{}, 
+				ResourceStates::GraphicsShaderResource | ResourceStates::DepthRead
+			);
+
+			cmdlist->clear_texture_float(
+				_shadow_hi_z_texture.get(), 
+				TextureSubresourceSet{
+					.base_mip_level = 0,
+					.mip_level_count = _shadow_hi_z_texture->get_desc().mip_levels,
+					.base_array_slice = 0,
+					.array_slice_count = 1
+				}, 
+				Color{ 0.0f }
+			);
+
+			uint2 thread_group_num = {
+				static_cast<uint32_t>((align(_hi_z_update_pass_constants[0].hzb_resolution, THREAD_GROUP_SIZE_X) / THREAD_GROUP_SIZE_X)),
+				static_cast<uint32_t>((align(_hi_z_update_pass_constants[0].hzb_resolution, THREAD_GROUP_SIZE_Y) / THREAD_GROUP_SIZE_Y)),
+			};
+			
+			for (uint32_t ix = 0; ix < _hi_z_update_pass_constants.size(); ++ix)
+			{
+				ReturnIfFalse(cmdlist->dispatch(
+					_hi_z_update_compute_state, 
+					thread_group_num.x, 
+					thread_group_num.y, 
+					1, 
+					&_hi_z_update_pass_constants[ix]
+				));
 			}
+
+			cmdlist->clear_texture_uint(_vt_physical_shadow_texture.get(), TextureSubresourceSet{}, std::bit_cast<uint32_t>(1.0f));
 
 			_cull_compute_state.pipeline = _hi_z_cull_pipeline.get();
 			for (uint32_t ix = 0; ix < _cull_pass_constants.size(); ++ix)
@@ -258,6 +269,7 @@ namespace fantasy
 					TextureSlice{}
 				);
 			}
+
 			_update_shadow_map = false;
 		}
 

@@ -1,6 +1,7 @@
 #include "virtual_texture_update.h"
 #include "../../shader/shader_compiler.h"
 #include "../../core/tools/check_cast.h"
+#include "../../scene/light.h"
 #include "../../scene/scene.h"
 
 
@@ -20,6 +21,13 @@ namespace fantasy
 			[this]() -> bool
 			{
 				_update_texture_region_cache = true;
+				return true;
+			}
+		);
+		cache->get_world()->get_global_entity()->get_component<event::UpdateShadowMap>()->add_event(
+			[this]() -> bool
+			{
+				_vt_physical_shadow_table.reset();
 				return true;
 			}
 		);

@@ -1,10 +1,18 @@
 #ifndef SCENE_LGIHT_H
 #define SCENE_LGIHT_H
+
 #include "../core/math/matrix.h"
 #include "../core/tools/delegate.h"
 
 namespace fantasy 
 {
+    namespace event
+	{
+        DELCARE_DELEGATE_EVENT(AddPointLight);
+        DELCARE_DELEGATE_EVENT(AddSpotLight);
+		DELCARE_MULTI_DELEGATE_EVENT(UpdateShadowMap);
+	};
+
     struct PointLight
     {
         float4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
@@ -26,17 +34,11 @@ namespace fantasy
         float max_distance = 0.0f;
     };
 
-    namespace event 
-    {
-        DELCARE_DELEGATE_EVENT(AddPointLight);
-        DELCARE_DELEGATE_EVENT(AddSpotLight);
-    }
-
     struct DirectionalLight
     {
         float4 color = { 1.0f, 1.0f, 1.0f, 1.0f };
         float intensity = 5.0f;
-        float2 angle = { 240.0f, 10.0f };
+        float2 angle = { 270.0f, 40.0f };
         float sun_angular_radius = 0.9999f;
 
         float3 direction;

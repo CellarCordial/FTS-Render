@@ -21,7 +21,7 @@ namespace fantasy
     static const uint32_t VT_TEXTURE_MIP_LEVELS = 5; // std::log2(HIGHEST_TEXTURE_RESOLUTION / VT_PAGE_SIZE) + 1
 
     static const uint32_t VT_SHADOW_PAGE_SIZE = 1024;
-    static const uint32_t VT_VIRTUAL_SHADOW_RESOLUTION = 16384;
+    static const uint32_t VT_VIRTUAL_SHADOW_RESOLUTION = 32768;
     static const uint32_t VT_PHYSICAL_SHADOW_RESOLUTION = 8192;
 
     namespace event

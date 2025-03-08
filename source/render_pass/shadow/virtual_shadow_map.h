@@ -54,7 +54,8 @@ namespace fantasy
 		bool compile_shadow_map_pass(DeviceInterface* device, RenderResourceCache* cache);
 		bool compile_hi_z_update_pass(DeviceInterface* device, RenderResourceCache* cache);
 		bool compile_virtual_shadow_pass(DeviceInterface* device, RenderResourceCache* cache);
-
+		void recalculate_shadow_view_matrixs();
+		
 	private:
 		bool _resource_writed = false;
 		bool _update_shadow_map = true;

@@ -13,7 +13,9 @@ xmake build GPU-Driven-SDF-DDGI
 - Press mouse right button and `w, a, s, d, q, e`
 
 
-## Display (gif need time to load, please wait for a moment.)
+## Display 
+(gif may need time to load, please wait a moment.)
+![](image/bunny.png)
 
 ### Precomputed Atmospheric Scattering
 ![](image/atmosphere.gif)

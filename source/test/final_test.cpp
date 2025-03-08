@@ -19,6 +19,7 @@
 #include "../render_pass/atmosphere/sun_disk.h"
 #include "../render_pass/atmosphere/sky_lut.h"
 #include "../render_pass/atmosphere/sky.h"
+#include "../scene/light.h"
 #include "imgui.h"
 #include "test_base.h"
 
@@ -176,6 +177,31 @@ namespace fantasy
 
 		World* world = render_graph->get_resource_cache()->get_world();
 		constant::AtmosphereProperties* properties = world->get_global_entity()->assign<constant::AtmosphereProperties>();
+
+		DirectionalLight* light = world->get_global_entity()->get_component<DirectionalLight>();
+
+		gui::add(
+			[this, properties, light, world]()
+			{
+				if (ImGui::TreeNode("Sun"))
+				{
+					bool dirty = ImGui::SliderFloat("Intensity", &light->intensity, 0.0f, 20.0f);
+					ImGui::ColorEdit3("Color", &light->color.x);
+
+					bool angle_changed = false;
+					if (ImGui::SliderFloat("angle Vert", &light->angle.x, 0.0f, 360.0f)) angle_changed = true;
+					if (ImGui::SliderFloat("angle Horz", &light->angle.y, 0.0f, 180.0f)) angle_changed = true;
+
+					if (angle_changed)
+					{
+						light->update_direction_view_proj();
+						world->get_global_entity()->get_component<event::UpdateShadowMap>()->broadcast();
+					}
+
+					ImGui::TreePop();
+				}
+			}
+		);
 
 
 		return sun_disk_pass;

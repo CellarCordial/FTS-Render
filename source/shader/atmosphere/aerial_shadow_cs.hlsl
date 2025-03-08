@@ -1,6 +1,7 @@
 // #define THREAD_GROUP_SIZE_X 1
 // #define THREAD_GROUP_SIZE_Y 1
 
+#include "../common/shadow.hlsl"
 #include "../common/post_process.hlsl"
 #include "../common/atmosphere_properties.hlsl"
 
@@ -83,26 +84,21 @@ void main(uint3 thread_id : SV_DispatchThreadID)
 
     float3 sun_radiance = base_color_texture[pixel_id].xyz * max(0.0f, dot(world_space_normal, -sun_dir));
 
-    // 将物体位置沿着法线稍微偏移 0.03 个单位。这种偏移可以避免阴影失真 z-fighting.
-    float4 shadow_clip = mul(float4(world_space_position + 0.07 * world_space_normal, 1.0f), shadow_view_proj);
-    float2 shadow_ndc = shadow_clip.xy / shadow_clip.w;
-    float2 shadow_uv = 0.5f + float2(0.5f, -0.5f) * shadow_ndc;
-
-    float shadow_factor = 1.0f;
-    if (all(saturate(shadow_uv) == shadow_uv))
-    {
-        uint2 shadow_pixel_id = uint2(shadow_uv * vt_virtual_shadow_resolution);
-        uint2 interal_uv = shadow_pixel_id % vt_shadow_page_size;
-        uint2 tile_id = shadow_pixel_id / vt_shadow_page_size;
-        uint2 page_id = vt_shadow_indirect_buffer[tile_id.x + tile_id.y * vt_virtual_shadow_axis_tile_num];
-        float2 uv = float2(interal_uv + page_id * vt_shadow_page_size) / vt_physical_shadow_resolution;
-        float depth = vt_physical_shadow_texture.Sample(point_clamp_sampler, uv);
-        shadow_factor = float(shadow_clip.z <= depth);
-    }
+    float shadow_factor = estimate_shadow(
+        world_space_position + 0.07 * world_space_normal, // 将物体位置沿着法线稍微偏移, 这种偏移可以避免阴影失真 z-fighting.
+        shadow_view_proj,
+        vt_shadow_page_size,
+        vt_virtual_shadow_resolution,
+        vt_physical_shadow_resolution,
+        vt_shadow_indirect_buffer,
+        vt_physical_shadow_texture,
+        linear_clamp_sampler
+    );
 
     float3 out_color = sun_intensity * (shadow_factor * sun_radiance * sun_transmittance * eye_transmittance + in_scatter);
     out_color = simple_post_process(pixel_id, out_color);
     final_texture[pixel_id] = float4(out_color, 1.0f); 
 }
+
 
 #endif

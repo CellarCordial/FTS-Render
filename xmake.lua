@@ -13,8 +13,8 @@ add_defines(
     "NOMINMAX", 
     "NANITE=0",
     "HLSL_SHADER",
-    "CLIENT_WIDTH=800",
-    "CLIENT_HEIGHT=600",
+    "CLIENT_WIDTH=1920",
+    "CLIENT_HEIGHT=1080",
     "FLIGHT_FRAME_NUM=3", 
     "PROJ_DIR=\"" .. normalized_proj_dir .. "/\""
 )

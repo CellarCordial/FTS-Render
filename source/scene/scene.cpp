@@ -33,6 +33,7 @@ namespace fantasy
 		// _global_entity->assign<event::AddSpotLight>();
 		// _global_entity->assign<event::AddPointLight>();
 		_global_entity->assign<event::GenerateMipmap>();
+		_global_entity->assign<event::UpdateShadowMap>();
 		// _global_entity->assign<event::UpdateGlobalSdf>();
 		// _global_entity->assign<event::GenerateSurfaceCache>();
 		_global_entity->assign<DirectionalLight>()->update_direction_view_proj();
